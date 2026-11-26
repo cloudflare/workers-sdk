@@ -1,5 +1,7 @@
+import type { CloudflareConfig, ContainerConfig, WorkerConfig } from "./types";
+
 export interface ConfigContext {
-	// Whether the config is being evaluated for a Preview build.
+	/** Whether the config is being evaluated for a Preview build. */
 	isPreview: boolean;
 
 	/**
@@ -12,68 +14,111 @@ export interface ConfigContext {
 }
 
 /**
- * The authored config in any of its supported shapes: a plain value, a promise,
- * or a function of {@link ConfigContext}.
+ * A configuration value, promise, or factory. Factories can be passed directly
+ * for automatic resolution with the current context or called explicitly with
+ * another context before they are used.
  */
 export type ConfigInput<T> =
 	| T
 	| Promise<T>
 	| ((ctx: ConfigContext) => T | Promise<T>);
 
-type ConfigObject = Record<string, unknown>;
+/** Recursively apply declared config properties without expanding open records. */
+type ContextualProperties<
+	TInput extends object,
+	TConfig,
+> = TInput extends readonly unknown[]
+	? TConfig extends readonly (infer TElement)[]
+		? {
+				[K in keyof TInput]: ContextualConfig<TInput[K], TElement>;
+			}
+		: TConfig
+	: string extends keyof TConfig
+		? TConfig
+		: {
+				[K in keyof TConfig]: K extends keyof TInput
+					? ContextualConfig<TInput[K], TConfig[K]>
+					: TConfig[K];
+			};
 
-export type ConfigWithType<T extends ConfigObject, TType extends string> = T & {
-	type: TType;
-};
+type ContextualConfig<TInput, TConfig> =
+	TInput extends Promise<infer TValue>
+		? Promise<ContextualConfig<TValue, TConfig>>
+		: TInput extends (ctx: ConfigContext) => infer TResult
+			? (ctx: ConfigContext) => ContextualConfig<TResult, TConfig>
+			: TConfig extends unknown
+				? TInput extends TConfig
+					? TInput &
+							(TInput extends object
+								? ContextualProperties<TInput, TConfig>
+								: TConfig)
+					: never
+				: never;
 
-type DefinedConfigValue<TValue, TType extends string> =
-	TValue extends Promise<infer TConfig extends ConfigObject>
-		? Promise<ConfigWithType<TConfig, TType>>
-		: TValue extends ConfigObject
-			? ConfigWithType<TValue, TType>
-			: never;
+export type ContainerDefinition<T extends ContainerConfig = ContainerConfig> =
+	ConfigInput<T>;
 
-type DefinedConfig<TInput, TType extends string> = TInput extends (
-	ctx: ConfigContext
-) => infer TResult
-	? (ctx: ConfigContext) => DefinedConfigValue<TResult, TType>
-	: DefinedConfigValue<TInput, TType>;
+export type WorkerDefinition<T extends WorkerConfig = WorkerConfig> =
+	ConfigInput<T>;
 
-/** Add a config type while preserving its value, promise, or function shape. */
-function addConfigType<
-	TConfig extends ConfigObject,
-	const TType extends string,
->(
-	config: ConfigInput<TConfig>,
-	type: TType
-): ConfigInput<ConfigWithType<TConfig, TType>> {
-	function addType(value: TConfig): ConfigWithType<TConfig, TType> {
-		return { ...value, type };
-	}
+/** A Worker name, value, promise, or context-aware factory. */
+export type WorkerReference = string | WorkerDefinition;
 
-	if (typeof config === "function") {
-		return (ctx) => {
-			const result = config(ctx);
-			return result instanceof Promise ? result.then(addType) : addType(result);
-		};
-	}
-
-	return config instanceof Promise ? config.then(addType) : addType(config);
+/**
+ * Used to define the default export in `cloudflare.config.ts`.
+ *
+ * @example
+ * ```typescript
+ * import { defineConfig } from "@cloudflare/config";
+ *
+ * export default defineConfig({
+ *   worker: {
+ *     name: "my-worker",
+ *     compatibilityDate: "2026-09-17",
+ *   },
+ * });
+ * ```
+ */
+export function defineConfig<
+	const TInput extends ConfigInput<CloudflareConfig>,
+>(config: TInput & ContextualConfig<TInput, CloudflareConfig>): TInput {
+	return config;
 }
 
-/** Create a type-safe config helper for a particular export type. */
-export function createConfigDefiner<
-	TConfigInput extends ConfigObject,
-	const TType extends string,
->(type: TType) {
-	function define<const TInput extends ConfigInput<TConfigInput>>(
-		config: TInput
-	): DefinedConfig<TInput, TType>;
-	function define(
-		config: ConfigInput<TConfigInput>
-	): ConfigInput<ConfigWithType<TConfigInput, TType>> {
-		return addConfigType(config, type);
-	}
+/**
+ * Define a Container.
+ *
+ * @example
+ * ```typescript
+ * import { defineContainer } from "@cloudflare/config";
+ *
+ * const container = defineContainer({
+ *   name: "my-container",
+ *   image: { dockerfile: "./Dockerfile" },
+ * });
+ * ```
+ */
+export function defineContainer<
+	const TInput extends ConfigInput<ContainerConfig>,
+>(config: TInput & ContextualConfig<TInput, ContainerConfig>): TInput {
+	return config;
+}
 
-	return define;
+/**
+ * Define a Worker.
+ *
+ * @example
+ * ```typescript
+ * import { defineWorker } from "@cloudflare/config";
+ *
+ * const worker = defineWorker({
+ *   name: "my-worker",
+ *   compatibilityDate: "2026-09-17",
+ * });
+ * ```
+ */
+export function defineWorker<const TInput extends ConfigInput<WorkerConfig>>(
+	config: TInput & ContextualConfig<TInput, WorkerConfig>
+): TInput {
+	return config;
 }

@@ -1,4 +1,8 @@
-import type { OAuthConsentPages, OAuthFlowContext } from "../context";
+import type {
+	OAuthConsentPages,
+	OAuthFlowContext,
+	TemporaryAccountLogger,
+} from "../context";
 import type { FileFormat } from "./file-format";
 
 /** Minimal shape of the interactive `select` prompt's options for account selection. */
@@ -18,6 +22,14 @@ export interface AccountSelectOptions {
 export interface AuthContext {
 	/** The consumer's logger (drop-in for wrangler's logger singleton). */
 	logger: OAuthFlowContext["logger"];
+
+	/**
+	 * Where temporary-account status messages go: the terms notice, the
+	 * proof-of-work notice, and the "Temporary account ready" claim details.
+	 * These are not command output, so a CLI whose commands write parseable
+	 * output to stdout should send them to stderr. Defaults to {@link logger}.
+	 */
+	temporaryAccountLogger?: TemporaryAccountLogger;
 
 	/**
 	 * User-Agent header sent with the account/membership REST calls
@@ -58,9 +70,14 @@ export interface CliDescriptor {
 	 */
 	displayName: string;
 
+	/** Temporary-account flag spelling in user guidance. Defaults to `--temporary-account`. */
+	temporaryAccountFlag?: string;
+
 	/** Commands surfaced in auth guidance. */
 	commands: {
 		login: string;
+		/** Command that clears cached auth state. */
+		logout: string;
 		whoami: string;
 		createProfile: string;
 		/**
@@ -110,6 +127,13 @@ export interface CliDescriptor {
 	fileFormat: FileFormat;
 
 	/**
+	 * Whether an account selected from the current credentials is persisted in
+	 * the config cache for later invocations. When disabled, the selection is
+	 * retained only for the lifetime of the auth instance. Defaults to `false`.
+	 */
+	persistAccountSelection?: boolean;
+
+	/**
 	 * Filename prefix for the cached account selection in the config cache
 	 * (e.g. `"wrangler-account"` → `wrangler-account.json`). Always JSON.
 	 */
@@ -123,9 +147,9 @@ export interface CliDescriptor {
 	cacheNamespace?: string;
 
 	/**
-	 * Label for the CLI's config file, used in "set `account_id` in your <file>"
-	 * hints. A getter so it can reflect runtime config state (wrangler resolves
-	 * this from `configFileName(undefined)`).
+	 * Label for the CLI's account config file, used in account ID guidance. A
+	 * getter so it can reflect runtime config state (wrangler resolves this from
+	 * `configFileName(undefined)`).
 	 */
 	getConfigFileLabel: () => string;
 

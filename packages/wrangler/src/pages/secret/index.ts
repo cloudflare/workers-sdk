@@ -1,12 +1,14 @@
 import { getCloudflareAccountIdFromEnv } from "@cloudflare/workers-auth";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
-	configFileName,
 	FatalError,
-	findWranglerConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isInteractive } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	findWranglerConfig,
+} from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
 import { readPagesConfig } from "../../config";
@@ -22,7 +24,7 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../errors";
 import type { PagesProject } from "../download-config";
 import type { PagesConfigCache } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function isPagesEnv(env: string): env is "production" | "preview" {
 	return ["production", "preview"].includes(env);

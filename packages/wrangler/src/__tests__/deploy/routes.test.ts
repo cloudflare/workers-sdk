@@ -41,6 +41,7 @@ import {
 	mockPublishRoutesFallbackRequest,
 	mockPublishRoutesRequest,
 	mockPublishSchedulesRequest,
+	mockPutImageTransformationsRequest,
 	mockServiceScriptData,
 	mockUnauthorizedPublishRoutesRequest,
 	writeAssets,
@@ -243,6 +244,167 @@ describe("deploy", () => {
 				  "warn": "",
 				}
 			`);
+		});
+
+		describe("--zone and --zone-id flags", () => {
+			it("should attach a single --zone to all --route patterns", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				// Registered after the upload mock so it takes precedence over the
+				// subdomain handler the upload mock derives from the (route-less) config.
+				mockUpdateWorkerSubdomain({ enabled: false });
+				// Route conflict resolution looks up the zone by its name.
+				mockGetZones(expect, "example.com", [{ id: "example-com-id" }]);
+				mockGetZoneWorkerRoutes(expect, "example-com-id");
+				mockPublishRoutesRequest({
+					routes: [
+						{ pattern: "app.example.com/*", zone_name: "example.com" },
+						{ pattern: "api.example.com/*", zone_name: "example.com" },
+					],
+				});
+				await runWrangler(
+					"deploy ./index --x-route-zones --route app.example.com/* --route api.example.com/* --zone example.com"
+				);
+				expect(std.out).toContain("app.example.com/* (zone name: example.com)");
+				expect(std.out).toContain("api.example.com/* (zone name: example.com)");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should pair --zone values with --route patterns in argument order", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				// Registered after the upload mock so it takes precedence over the
+				// subdomain handler the upload mock derives from the (route-less) config.
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockGetZonesMulti(expect, {
+					"example.com": {
+						accountId: "some-account-id",
+						zones: [{ id: "example-com-id" }],
+					},
+					"example.net": {
+						accountId: "some-account-id",
+						zones: [{ id: "example-net-id" }],
+					},
+				});
+				mockGetZoneWorkerRoutesMulti(expect, {
+					"example-com-id": [],
+					"example-net-id": [],
+				});
+				mockPublishRoutesRequest({
+					routes: [
+						{ pattern: "a.example.com/*", zone_name: "example.com" },
+						{ pattern: "b.example.net/*", zone_name: "example.net" },
+					],
+				});
+				await runWrangler(
+					"deploy ./index --x-route-zones --route a.example.com/* --zone example.com --route b.example.net/* --zone example.net"
+				);
+				expect(std.out).toContain("a.example.com/* (zone name: example.com)");
+				expect(std.out).toContain("b.example.net/* (zone name: example.net)");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should pair --zone-id values with --route patterns in argument order", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				// Registered after the upload mock so it takes precedence over the
+				// subdomain handler the upload mock derives from the (route-less) config.
+				mockUpdateWorkerSubdomain({ enabled: false });
+				// With an explicit zone id there is no zone lookup by name.
+				mockGetZoneWorkerRoutesMulti(expect, {
+					"example-com-id": [],
+					"example-net-id": [],
+				});
+				mockPublishRoutesRequest({
+					routes: [
+						{ pattern: "a.example.com/*", zone_id: "example-com-id" },
+						{ pattern: "b.example.net/*", zone_id: "example-net-id" },
+					],
+				});
+				await runWrangler(
+					"deploy ./index --x-route-zones --route a.example.com/* --zone-id example-com-id --route b.example.net/* --zone-id example-net-id"
+				);
+				expect(std.out).toContain("a.example.com/* (zone id: example-com-id)");
+				expect(std.out).toContain("b.example.net/* (zone id: example-net-id)");
+				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should error when --zone is used without --experimental-route-zones", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				await expect(
+					runWrangler(
+						"deploy ./index --route a.example.com/* --zone example.com"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --zone and --zone-id are experimental and require the --experimental-route-zones (--x-route-zones) flag.]`
+				);
+			});
+
+			it("should error when --zone and --zone-id are used together", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				await expect(
+					runWrangler(
+						"deploy ./index --x-route-zones --route a.example.com/* --zone example.com --zone-id example-com-id"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Conflicting options: --zone and --zone-id cannot be used together. Please provide only one.]`
+				);
+			});
+
+			it("should error when the number of --zone values does not match the number of --route values", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				await expect(
+					runWrangler(
+						"deploy ./index --x-route-zones --route a.example.com/* --route b.example.com/* --route c.example.com/* --zone example.com --zone example.net"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Received 2 --zone values for 3 --route values. Pass either a single --zone value to apply to all routes, or exactly one --zone value per --route in the same order.]`
+				);
+			});
+
+			it("should error when more --zone-id values than --route values are passed", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				await expect(
+					runWrangler(
+						"deploy ./index --x-route-zones --route a.example.com/* --zone-id one --zone-id two"
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Received 2 --zone-id values for 1 --route values. Pass either a single --zone-id value to apply to all routes, or exactly one --zone-id value per --route in the same order.]`
+				);
+			});
+
+			it("should error when --zone is passed without --route", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({ routes: ["example.com/*"] });
+				writeWorkerSource();
+				await expect(
+					runWrangler("deploy ./index --x-route-zones --zone example.com")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: --zone can only be used together with --route. To attach a zone to routes defined in your config file, set "zone_name" or "zone_id" on each route there instead.]`
+				);
+			});
 		});
 
 		it("should deploy to a route with a SaaS domain", async ({ expect }) => {
@@ -519,6 +681,44 @@ describe("deploy", () => {
 					domains: [{ hostname: "api.example.com" }],
 				});
 				await runWrangler("deploy ./index");
+				expect(std.out).toContain("api.example.com (custom domain)");
+			});
+
+			it("should not check for zone route conflicts when only custom domains are configured", async ({
+				expect,
+			}) => {
+				// Regression test for https://github.com/cloudflare/workers-sdk/issues/15863:
+				// with `workers_dev: false` and only custom-domain routes, every deploy
+				// after the first used to query `/zones/:zoneId/workers/routes`, which
+				// fails for API tokens without `Zone > Workers Routes > Read` permission.
+				writeWranglerConfig({
+					workers_dev: false,
+					routes: [{ pattern: "api.example.com", custom_domain: true }],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				let zoneRoutesRequests = 0;
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				msw.use(
+					http.get("*/zones/:zoneId/workers/routes", () => {
+						zoneRoutesRequests++;
+						return HttpResponse.json(createFetchResult([]));
+					})
+				);
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+
+				await runWrangler("deploy ./index");
+
+				expect(zoneRoutesRequests).toBe(0);
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
@@ -1633,6 +1833,168 @@ Update them to point to this script instead?`,
 		});
 		it.todo("should error if it's a workers.dev route");
 	});
+	describe("images url_transformations", () => {
+		it("should apply url_transformations after deploying", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: {
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["cdn.example.com"],
+					},
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["cdn.example.com"] },
+			});
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toContain(
+				"Images URL transformations: enabled (cdn.example.com)"
+			);
+		});
+
+		it("should apply a named environment's own url_transformations", async () => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+				env: {
+					staging: { images: { url_transformations: { enabled: false } } },
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", env: "staging" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: false },
+				env: "staging",
+			});
+
+			await runWrangler("deploy ./index --env staging");
+		});
+
+		it("should not apply top-level url_transformations to a named environment", async () => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+				env: { staging: {} },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", env: "staging" });
+
+			await runWrangler("deploy ./index --env staging");
+		});
+
+		it("should error if url_transformations could not be applied", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true },
+				status: 500,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"The Worker was deployed, but its Images URL transformations setting could not be applied:\n" +
+					"A request to the Cloudflare API (/accounts/some-account-id/settings/transformations/workers/test-name) failed.\n" +
+					"Authentication error [code: 10000]\n\n" +
+					"Re-run the same `wrangler deploy` command to retry."
+			);
+		});
+
+		it("should show the API's reason and not suggest a retry if url_transformations is rejected", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: {
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["bad host.com"],
+					},
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["bad host.com"] },
+				status: 400,
+				errors: [
+					{
+						code: 10015,
+						message:
+							'invalid allowed_origins: Origin #0 "bad host.com" has error',
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"The Worker was deployed, but its Images URL transformations setting could not be applied:\n" +
+					'invalid allowed_origins: Origin #0 "bad host.com" has error [code: 10015]\n\n' +
+					"Fix the Images URL transformations setting in your configuration and run `wrangler deploy` again."
+			);
+		});
+
+		it("should suggest checking permissions if url_transformations is forbidden", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true },
+				status: 403,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"The Worker was deployed, but its Images URL transformations setting could not be applied:\n" +
+					"A request to the Cloudflare API (/accounts/some-account-id/settings/transformations/workers/test-name) failed.\n" +
+					"Authentication error [code: 10000]\n\n" +
+					"Check that your API token has permission to edit Workers scripts on this account, then run `wrangler deploy` again."
+			);
+		});
+
+		it("should still deploy triggers if url_transformations could not be applied", async ({
+			expect,
+		}) => {
+			const crons = ["*/5 * * * *"];
+			writeWranglerConfig({
+				triggers: { crons },
+				images: {
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["bad host.com"],
+					},
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPublishSchedulesRequest({ crons });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["bad host.com"] },
+				status: 400,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"could not be applied"
+			);
+			expect(std.out).toContain("schedule: */5 * * * *");
+		});
+	});
+
 	describe("triggers", () => {
 		it("should deploy the worker with a scheduled trigger", async () => {
 			const crons = ["*/5 * * * *", "0 18 * * 6L"];

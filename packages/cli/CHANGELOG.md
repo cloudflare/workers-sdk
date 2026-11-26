@@ -1,5 +1,291 @@
 # @cloudflare/cli
 
+## 0.3.13
+
+### Patch Changes
+
+- [#17070](https://github.com/cloudflare/workers-sdk/pull/17070) [`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`657179d`](https://github.com/cloudflare/workers-sdk/commit/657179d3d707a244038168675292b288e0a1f4ef), [`b007991`](https://github.com/cloudflare/workers-sdk/commit/b00799168dc2580013ea3c9b7d4f4505e120afa2), [`5970e6a`](https://github.com/cloudflare/workers-sdk/commit/5970e6a842b36665ab092f54ae276d34b02e3a29)]:
+  - @cloudflare/workers-utils@0.57.0
+
+## 0.3.12
+
+### Patch Changes
+
+- [#17031](https://github.com/cloudflare/workers-sdk/pull/17031) [`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-19
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`95fd4c2`](https://github.com/cloudflare/workers-sdk/commit/95fd4c2500f96b80bdf712a78f4546a2dd8e7d22), [`be6aa81`](https://github.com/cloudflare/workers-sdk/commit/be6aa81eb24c8ac86e6fa0a0274a3c9257f58e24), [`56974d4`](https://github.com/cloudflare/workers-sdk/commit/56974d49141e72b19b33b74a19c160f734128108), [`08eeaf4`](https://github.com/cloudflare/workers-sdk/commit/08eeaf4846ee4cd65a3cf73d063dbb88df322033), [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a), [`4f5b118`](https://github.com/cloudflare/workers-sdk/commit/4f5b1182f2481ddafbc84e32d654fd4fa415128f), [`629f135`](https://github.com/cloudflare/workers-sdk/commit/629f135e4259c6a19aa9331a7346d993b8ef328a)]:
+  - @cloudflare/workers-utils@0.56.0
+
+## 0.3.11
+
+### Patch Changes
+
+- [#17003](https://github.com/cloudflare/workers-sdk/pull/17003) [`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-18
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`3595295`](https://github.com/cloudflare/workers-sdk/commit/3595295869341f8c6e7ec369e24181e8bb95e20c), [`d04e667`](https://github.com/cloudflare/workers-sdk/commit/d04e667fadbc4b28666236ae9d85a3cae6bee557), [`6750663`](https://github.com/cloudflare/workers-sdk/commit/67506630c514912ad02d74c44a3b30c959e9a9f3)]:
+  - @cloudflare/workers-utils@0.55.0
+
+## 0.3.10
+
+### Patch Changes
+
+- [#16974](https://github.com/cloudflare/workers-sdk/pull/16974) [`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-17
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`77b5ca7`](https://github.com/cloudflare/workers-sdk/commit/77b5ca764e55c936137442b918aa32e7bafb8666)]:
+  - @cloudflare/workers-utils@0.54.2
+
+## 0.3.9
+
+### Patch Changes
+
+- [#16946](https://github.com/cloudflare/workers-sdk/pull/16946) [`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-16
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`e97c9f8`](https://github.com/cloudflare/workers-sdk/commit/e97c9f8bd2cdbd15faf402b146582e49d65dd1a7), [`349fc4e`](https://github.com/cloudflare/workers-sdk/commit/349fc4e7443aa744cbe129f84f28571bf8625155)]:
+  - @cloudflare/workers-utils@0.54.1
+
+## 0.3.8
+
+### Patch Changes
+
+- [#16849](https://github.com/cloudflare/workers-sdk/pull/16849) [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-12
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16886](https://github.com/cloudflare/workers-sdk/pull/16886) [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-13
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`f005593`](https://github.com/cloudflare/workers-sdk/commit/f005593c1ed0d1f429dafc6919c4335f4d5070c7), [`3cea40b`](https://github.com/cloudflare/workers-sdk/commit/3cea40b078519222db432b5edf827ddc3e629a2a), [`63eb6da`](https://github.com/cloudflare/workers-sdk/commit/63eb6daa0eda348e1f9e86a506cfd80d104a1e28), [`3b1b408`](https://github.com/cloudflare/workers-sdk/commit/3b1b40832ac323de709001d9cc3823517b988985)]:
+  - @cloudflare/workers-utils@0.54.0
+
+## 0.3.7
+
+### Patch Changes
+
+- Updated dependencies [[`8d2bb3d`](https://github.com/cloudflare/workers-sdk/commit/8d2bb3dccf55ba8ac3fdf8ac12cca7cd52a5bad0)]:
+  - @cloudflare/workers-utils@0.53.1
+
+## 0.3.6
+
+### Patch Changes
+
+- [#16810](https://github.com/cloudflare/workers-sdk/pull/16810) [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-10
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`6af492e`](https://github.com/cloudflare/workers-sdk/commit/6af492e92394c3e638bda4cf6d560698cef1c715), [`cdc970b`](https://github.com/cloudflare/workers-sdk/commit/cdc970b7bd39dcd42af65bdadab7c38ce0b409fb), [`44b39b0`](https://github.com/cloudflare/workers-sdk/commit/44b39b02765d246479f49b690f9e9b3d8645a303)]:
+  - @cloudflare/workers-utils@0.53.0
+
+## 0.3.5
+
+### Patch Changes
+
+- [#16746](https://github.com/cloudflare/workers-sdk/pull/16746) [`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-06
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16792](https://github.com/cloudflare/workers-sdk/pull/16792) [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-09
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`abf924e`](https://github.com/cloudflare/workers-sdk/commit/abf924ee1820b4af139f21dffc877eaf6122c056), [`de10016`](https://github.com/cloudflare/workers-sdk/commit/de100160f243451355480e8f815d0f7d4b3ec8b9), [`cff83d0`](https://github.com/cloudflare/workers-sdk/commit/cff83d0220b51c7cfdf422bcd5091a8fbea76d81), [`c64fdfb`](https://github.com/cloudflare/workers-sdk/commit/c64fdfba7d2531b4f58d7b76474f2ae636b17044)]:
+  - @cloudflare/workers-utils@0.52.1
+
+## 0.3.4
+
+### Patch Changes
+
+- [#16695](https://github.com/cloudflare/workers-sdk/pull/16695) [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-04
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`dc35efb`](https://github.com/cloudflare/workers-sdk/commit/dc35efbd3cdfe67b3ef972c75b8faae65dfed195), [`b2061f4`](https://github.com/cloudflare/workers-sdk/commit/b2061f40f812d8888b461f68506552b58f8e468b), [`f1d81a2`](https://github.com/cloudflare/workers-sdk/commit/f1d81a20c8e535ec7cb870143283f4a683fec70d)]:
+  - @cloudflare/workers-utils@0.52.0
+
+## 0.3.3
+
+### Patch Changes
+
+- [#16670](https://github.com/cloudflare/workers-sdk/pull/16670) [`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-03
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`b14b9dc`](https://github.com/cloudflare/workers-sdk/commit/b14b9dcc360d1e05bb29a87287624603c2c60815)]:
+  - @cloudflare/workers-utils@0.51.1
+
+## 0.3.2
+
+### Patch Changes
+
+- [#16642](https://github.com/cloudflare/workers-sdk/pull/16642) [`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-02
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`d38cb02`](https://github.com/cloudflare/workers-sdk/commit/d38cb020c1540f61126657d0ae077972c0e23b67), [`51bbf8b`](https://github.com/cloudflare/workers-sdk/commit/51bbf8b257dbf5c7a8f26600f5875ba45acbe89c), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72), [`1598fd3`](https://github.com/cloudflare/workers-sdk/commit/1598fd39bda582e62dddd37d539d1e50dada5e72)]:
+  - @cloudflare/workers-utils@0.51.0
+
+## 0.3.1
+
+### Patch Changes
+
+- [#16635](https://github.com/cloudflare/workers-sdk/pull/16635) [`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-01
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`76e18a8`](https://github.com/cloudflare/workers-sdk/commit/76e18a8fb42ac9df45e052c8c2d8747873fb1286)]:
+  - @cloudflare/workers-utils@0.50.2
+
+## 0.3.0
+
+### Minor Changes
+
+- [#16367](https://github.com/cloudflare/workers-sdk/pull/16367) [`b4653b4`](https://github.com/cloudflare/workers-sdk/commit/b4653b40cdc6e176c4e5ac98696cf0dae641ff6b) Thanks [@MattieTK](https://github.com/MattieTK)! - Support writing `.assetsignore` files that keep local secrets and Pages-only files out of uploaded static assets
+
+  `maybeAppendWranglerToGitIgnoreLikeFile` now takes an options object. `additionalEntries` appends further entries after the Wrangler ones, skipping any already in the file or already queued. `requireEnvWildcard` makes the helper add `.env*` unless the file already has it, so that a narrower existing entry such as `.env` does not leave `.env.production` or `.env.local` to be uploaded. `PROJECT_ROOT_ASSETS_IGNORE_ENTRIES` lists the entries to add when a project root is used as the static assets directory.
+
+### Patch Changes
+
+- Updated dependencies [[`8b64bec`](https://github.com/cloudflare/workers-sdk/commit/8b64becbd3817abb28654e270c0e0104170f29d7)]:
+  - @cloudflare/workers-utils@0.50.1
+
+## 0.2.10
+
+### Patch Changes
+
+- Updated dependencies [[`a95d647`](https://github.com/cloudflare/workers-sdk/commit/a95d647f9459e40a00871346b81082abbb27d2b3)]:
+  - @cloudflare/workers-utils@0.50.0
+
+## 0.2.9
+
+### Patch Changes
+
+- [#16403](https://github.com/cloudflare/workers-sdk/pull/16403) [`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-22
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#16437](https://github.com/cloudflare/workers-sdk/pull/16437) [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-10-23
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`5f82a56`](https://github.com/cloudflare/workers-sdk/commit/5f82a5699d3e5a58c3218c7c375d780d54cadf4e), [`e651d7c`](https://github.com/cloudflare/workers-sdk/commit/e651d7c0dd8e171dcc1820679f9f46601971d876), [`8a30d8e`](https://github.com/cloudflare/workers-sdk/commit/8a30d8eec16110dcaaeb0822768ac03a5b45a902), [`23ef63a`](https://github.com/cloudflare/workers-sdk/commit/23ef63a0aaa0264e9611b364f6d635297c287d90), [`bcd618d`](https://github.com/cloudflare/workers-sdk/commit/bcd618d0e622a020fd2cb658df0620a5e3ec2206)]:
+  - @cloudflare/workers-utils@0.49.0
+
+## 0.2.8
+
+### Patch Changes
+
+- Updated dependencies [[`08f22d3`](https://github.com/cloudflare/workers-sdk/commit/08f22d36f42100af8b83ae9556643f63b536a4e9), [`182d6de`](https://github.com/cloudflare/workers-sdk/commit/182d6ded7126c29daa6f8d2eea5f175421b29917)]:
+  - @cloudflare/workers-utils@0.48.0
+
+## 0.2.7
+
+### Patch Changes
+
+- Updated dependencies [[`017bf9b`](https://github.com/cloudflare/workers-sdk/commit/017bf9b5117a8a511f4ed2c10dd2bd0b80b24c31)]:
+  - @cloudflare/workers-utils@0.47.3
+
+## 0.2.6
+
+### Patch Changes
+
+- Updated dependencies [[`dc3e4df`](https://github.com/cloudflare/workers-sdk/commit/dc3e4df999e9d774469c6292a7b92b1f427b3dd9)]:
+  - @cloudflare/workers-utils@0.47.2
+
+## 0.2.5
+
+### Patch Changes
+
+- Updated dependencies [[`ad7ff45`](https://github.com/cloudflare/workers-sdk/commit/ad7ff45076f762253268d03c28b5384f43889999), [`93c1069`](https://github.com/cloudflare/workers-sdk/commit/93c10696930e50e310b8b49a8e792671bf371e82)]:
+  - @cloudflare/workers-utils@0.47.1
+
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies [[`b75421f`](https://github.com/cloudflare/workers-sdk/commit/b75421fcd5b2d8208cefb38882479773a7387df4), [`2b1a0ca`](https://github.com/cloudflare/workers-sdk/commit/2b1a0ca78c30403934ab9df9b6264185d473b3ef), [`aa2f9b7`](https://github.com/cloudflare/workers-sdk/commit/aa2f9b73ed1177bceb83fd730eb9e47cbabc8c7f)]:
+  - @cloudflare/workers-utils@0.47.0
+
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [[`7f57b1c`](https://github.com/cloudflare/workers-sdk/commit/7f57b1c60002ae3f077dd9c1e8cc482371065ef4)]:
+  - @cloudflare/workers-utils@0.46.0
+
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [[`aee2842`](https://github.com/cloudflare/workers-sdk/commit/aee2842bd1852b3187202f7746da5fd59ed36d44)]:
+  - @cloudflare/workers-utils@0.45.1
+
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies [[`b9f1cdc`](https://github.com/cloudflare/workers-sdk/commit/b9f1cdc198533687f6b64ce72499a3ca04b2bf85), [`a0712e5`](https://github.com/cloudflare/workers-sdk/commit/a0712e578e45908ed5e46235828a434b49cf8f22)]:
+  - @cloudflare/workers-utils@0.45.0
+
+## 0.2.0
+
+### Minor Changes
+
+- [#15851](https://github.com/cloudflare/workers-sdk/pull/15851) [`74a520e`](https://github.com/cloudflare/workers-sdk/commit/74a520ea55c56e8f61764bfdcff1c5aceabcfefd) Thanks [@NuroDev](https://github.com/NuroDev)! - Add a `cwd` option to package installation helpers
+
+  Package installations can now run in a specified working directory. npm package manifest updates also use that directory.
+
+### Patch Changes
+
+- Updated dependencies [[`8c4b8a3`](https://github.com/cloudflare/workers-sdk/commit/8c4b8a3ee8d2f6cc6df96338ee819d25a10a7394), [`8280086`](https://github.com/cloudflare/workers-sdk/commit/8280086df5571607ab614fa09684c2d78fcdd58b)]:
+  - @cloudflare/workers-utils@0.44.0
+
+## 0.1.39
+
+### Patch Changes
+
+- Updated dependencies [[`8f7916c`](https://github.com/cloudflare/workers-sdk/commit/8f7916cd72cd0f6a3bcef80abc8ad4509b13026a)]:
+  - @cloudflare/workers-utils@0.43.0
+
+## 0.1.38
+
+### Patch Changes
+
+- Updated dependencies [[`479e1e8`](https://github.com/cloudflare/workers-sdk/commit/479e1e8eaf05764da7950c42c38cff2a98f00e3f), [`15799d4`](https://github.com/cloudflare/workers-sdk/commit/15799d4b61adc6317a506d700846ebaeeb558095), [`bdda4c3`](https://github.com/cloudflare/workers-sdk/commit/bdda4c3b3c028d3d4dab5ea4c5af8040ed7ed1d8), [`fc3cbaa`](https://github.com/cloudflare/workers-sdk/commit/fc3cbaa4150a3cf30502286452153806bf8800d2)]:
+  - @cloudflare/workers-utils@0.42.0
+
+## 0.1.37
+
+### Patch Changes
+
+- Updated dependencies [[`8fade73`](https://github.com/cloudflare/workers-sdk/commit/8fade73f63289d3e4b64004669bca7e06d19c0e3)]:
+  - @cloudflare/workers-utils@0.41.2
+
+## 0.1.36
+
+### Patch Changes
+
+- Updated dependencies [[`59267fc`](https://github.com/cloudflare/workers-sdk/commit/59267fc79d1f7925a15369ca0125290df2404bfb)]:
+  - @cloudflare/workers-utils@0.41.1
+
+## 0.1.35
+
+### Patch Changes
+
+- Updated dependencies [[`45b3b81`](https://github.com/cloudflare/workers-sdk/commit/45b3b810809ee01cefbd53bea3a5ebc50bdb1c6c), [`95af41d`](https://github.com/cloudflare/workers-sdk/commit/95af41d564f7476cdda8c5923208c3b8a3ec2a11)]:
+  - @cloudflare/workers-utils@0.41.0
+
 ## 0.1.34
 
 ### Patch Changes

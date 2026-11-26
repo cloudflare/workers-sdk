@@ -6,8 +6,9 @@ import {
 	BUILD_OUTPUT_ROOT,
 	getContainerConfigPath,
 	getWorkerDir,
+	writeContainerConfig,
 } from "@cloudflare/build-output-utils";
-import { InputContainerSchema } from "@cloudflare/config";
+import { ContainerConfigSchema } from "@cloudflare/config";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
@@ -29,6 +30,15 @@ vi.mock("../src/utils", async (importOriginal) => ({
 	runDockerCmdWithOutput: vi.fn(),
 	verifyDockerInstalled: vi.fn(),
 }));
+vi.mock("@cloudflare/build-output-utils", async (importOriginal) => {
+	const original =
+		await importOriginal<typeof import("@cloudflare/build-output-utils")>();
+
+	return {
+		...original,
+		writeContainerConfig: vi.fn(original.writeContainerConfig),
+	};
+});
 
 const UUIDS: `${string}-${string}-${string}-${string}-${string}`[] = [
 	"11111111-1111-4111-8111-111111111111",
@@ -59,14 +69,13 @@ describe("buildAndWriteContainerOutput", () => {
 	it("preserves remote references without invoking Docker", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
+		const config = ContainerConfigSchema.parse({
 			name: "remote-container",
 			image: { reference: "registry.example.com/app:latest" },
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { remote: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -75,7 +84,10 @@ describe("buildAndWriteContainerOutput", () => {
 		expect(startContainerBuild).not.toHaveBeenCalled();
 		expect(
 			JSON.parse(
-				fs.readFileSync(getContainerConfigPath(root, "remote"), "utf8")
+				fs.readFileSync(
+					getContainerConfigPath(root, "remote-container"),
+					"utf8"
+				)
 			)
 		).toEqual(config);
 	});
@@ -83,9 +95,8 @@ describe("buildAndWriteContainerOutput", () => {
 	it("builds a standard Container with resolved paths and build variables", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
-			name: "My Container",
+		const config = ContainerConfigSchema.parse({
+			name: "My_Container",
 			image: {
 				dockerfile: "./container/Dockerfile",
 				buildContext: "./container",
@@ -94,11 +105,11 @@ describe("buildAndWriteContainerOutput", () => {
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "/usr/bin/docker",
 		});
-		const localTag = expectedBuildOutputTag(root, "My Container", BUILD_IDS[0]);
+		const localTag = expectedBuildOutputTag(root, "My_Container", BUILD_IDS[0]);
 
 		expect(verifyDockerInstalled).toHaveBeenCalledOnce();
 		expect(startContainerBuild).toHaveBeenCalledWith({
@@ -113,7 +124,9 @@ describe("buildAndWriteContainerOutput", () => {
 			verifyDockerIsRunning: false,
 		});
 		expect(
-			JSON.parse(fs.readFileSync(getContainerConfigPath(root, "app"), "utf8"))
+			JSON.parse(
+				fs.readFileSync(getContainerConfigPath(root, "my_container"), "utf8")
+			)
 		).toEqual({
 			...config,
 			image: { localReference: localTag },
@@ -123,14 +136,13 @@ describe("buildAndWriteContainerOutput", () => {
 	it("uses a valid fallback when a Container name has no repository characters", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
+		const config = ContainerConfigSchema.parse({
 			name: "🔥",
 			image: { dockerfile: "./container/Dockerfile" },
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -147,14 +159,13 @@ describe("buildAndWriteContainerOutput", () => {
 	it("trims project-scoped repository names to Docker's length limit", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
-			name: "a".repeat(300),
+		const config = ContainerConfigSchema.parse({
+			name: "a".repeat(240),
 			image: { dockerfile: "./container/Dockerfile" },
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -167,9 +178,8 @@ describe("buildAndWriteContainerOutput", () => {
 	it("builds Durable Object named images and preserves remote images", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
-			name: "Session Container",
+		const config = ContainerConfigSchema.parse({
+			name: "Session_Container",
 			schedulingPolicy: "durable-object",
 			images: {
 				"Primary Image": { dockerfile: "./primary/Dockerfile" },
@@ -179,18 +189,18 @@ describe("buildAndWriteContainerOutput", () => {
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { sessions: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
 		const primaryTag = expectedBuildOutputTag(
 			root,
-			"Session Container-Primary Image",
+			"Session_Container-Primary Image",
 			BUILD_IDS[0]
 		);
 		const workerTag = expectedBuildOutputTag(
 			root,
-			"Session Container-worker",
+			"Session_Container-worker",
 			BUILD_IDS[0]
 		);
 
@@ -220,7 +230,10 @@ describe("buildAndWriteContainerOutput", () => {
 		});
 		expect(
 			JSON.parse(
-				fs.readFileSync(getContainerConfigPath(root, "sessions"), "utf8")
+				fs.readFileSync(
+					getContainerConfigPath(root, "session_container"),
+					"utf8"
+				)
 			)
 		).toEqual({
 			...config,
@@ -239,14 +252,13 @@ describe("buildAndWriteContainerOutput", () => {
 	it("preserves a Durable Object Container with no images", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
-			name: "Session Container",
+		const config = ContainerConfigSchema.parse({
+			name: "Session_Container",
 			schedulingPolicy: "durable-object",
 		});
 
 		await buildAndWriteContainerOutput({
-			containers: { sessions: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -254,19 +266,20 @@ describe("buildAndWriteContainerOutput", () => {
 		expect(startContainerBuild).not.toHaveBeenCalled();
 		expect(
 			JSON.parse(
-				fs.readFileSync(getContainerConfigPath(root, "sessions"), "utf8")
+				fs.readFileSync(
+					getContainerConfigPath(root, "session_container"),
+					"utf8"
+				)
 			)
 		).toEqual(config);
 	});
 
 	it("cleans images built before a later build fails", async ({ expect }) => {
-		const first = InputContainerSchema.parse({
-			type: "container",
+		const first = ContainerConfigSchema.parse({
 			name: "first",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
-		const second = InputContainerSchema.parse({
-			type: "container",
+		const second = ContainerConfigSchema.parse({
 			name: "second",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
@@ -280,7 +293,7 @@ describe("buildAndWriteContainerOutput", () => {
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { first, second },
+				containers: [first, second],
 				root,
 				pathToDocker: "docker",
 			})
@@ -296,28 +309,48 @@ describe("buildAndWriteContainerOutput", () => {
 		);
 	});
 
+	it("normalizes Container directory names", async ({ expect }) => {
+		const config = ContainerConfigSchema.parse({
+			name: "API Container",
+			image: { reference: "registry.example.com/app:latest" },
+		});
+
+		await buildAndWriteContainerOutput({
+			containers: [config],
+			root,
+			pathToDocker: "docker",
+		});
+
+		expect(
+			JSON.parse(
+				fs.readFileSync(getContainerConfigPath(root, "api-container"), "utf8")
+			)
+		).toEqual(config);
+	});
+
 	it("removes partial output and current build tags when writing fails", async ({
 		expect,
 	}) => {
-		const first = InputContainerSchema.parse({
-			type: "container",
+		const first = ContainerConfigSchema.parse({
 			name: "first",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
-		const second = InputContainerSchema.parse({
-			type: "container",
+		const second = ContainerConfigSchema.parse({
 			name: "second",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
+		vi.mocked(writeContainerConfig).mockRejectedValueOnce(
+			new Error("write failed")
+		);
 		seedWorkerOutput(root);
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { first, "invalid/name": second },
+				containers: [first, second],
 				root,
 				pathToDocker: "docker",
 			})
-		).rejects.toThrow("Container directory names");
+		).rejects.toThrow("write failed");
 		expect(fs.existsSync(getBuildOutputPath(root))).toBe(false);
 		expect(cleanupBuiltImages).toHaveBeenCalledWith(
 			[
@@ -332,11 +365,37 @@ describe("buildAndWriteContainerOutput", () => {
 		);
 	});
 
+	it("rejects Container names with colliding directory names", async ({
+		expect,
+	}) => {
+		const first = ContainerConfigSchema.parse({
+			name: "API:prod",
+			image: { reference: "registry.example.com/api:latest" },
+		});
+		const second = ContainerConfigSchema.parse({
+			name: "api-prod",
+			image: { reference: "registry.example.com/api-2:latest" },
+		});
+		seedWorkerOutput(root);
+
+		await expect(
+			buildAndWriteContainerOutput({
+				containers: [first, second],
+				root,
+				pathToDocker: "docker",
+			})
+		).rejects.toThrow(
+			'Container names "API:prod" and "api-prod" resolve to the same Build Output directory "api-prod".'
+		);
+		expect(verifyDockerInstalled).not.toHaveBeenCalled();
+		expect(startContainerBuild).not.toHaveBeenCalled();
+		expect(fs.existsSync(getBuildOutputPath(root))).toBe(false);
+	});
+
 	it("removes complete output when Docker verification fails", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
+		const config = ContainerConfigSchema.parse({
 			name: "app",
 			image: { dockerfile: "./Dockerfile" },
 		});
@@ -347,7 +406,7 @@ describe("buildAndWriteContainerOutput", () => {
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { app: config },
+				containers: [config],
 				root,
 				pathToDocker: "docker",
 			})
@@ -359,8 +418,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("removes the previous tag before rebuilding deleted output", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
+		const config = ContainerConfigSchema.parse({
 			name: "api",
 			image: { dockerfile: "./Dockerfile" },
 		});
@@ -374,13 +432,13 @@ describe("buildAndWriteContainerOutput", () => {
 			.mockReturnValueOnce(UUIDS[1]);
 
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
 		removeDirSync(path.resolve(root, ".cloudflare/output"));
 		await buildAndWriteContainerOutput({
-			containers: { app: config },
+			containers: [config],
 			root,
 			pathToDocker: "docker",
 		});
@@ -406,7 +464,7 @@ describe("buildAndWriteContainerOutput", () => {
 		vi.mocked(runDockerCmdWithOutput).mockReturnValue(staleTag);
 
 		await buildAndWriteContainerOutput({
-			containers: {},
+			containers: [],
 			root,
 			pathToDocker: "docker",
 		});
@@ -418,23 +476,88 @@ describe("buildAndWriteContainerOutput", () => {
 		);
 	});
 
+	it("does not invoke Docker when neither this build nor the previous output has Containers", async ({
+		expect,
+	}) => {
+		await buildAndWriteContainerOutput({
+			containers: [],
+			root,
+			pathToDocker: "docker",
+			previousOutputHadContainers: false,
+		});
+
+		expect(runDockerCmdWithOutput).not.toHaveBeenCalled();
+		expect(verifyDockerInstalled).not.toHaveBeenCalled();
+		expect(cleanupBuiltImages).not.toHaveBeenCalled();
+	});
+
+	it("removes previous tags when the previous output had Containers and this build has none", async ({
+		expect,
+	}) => {
+		const staleTag = expectedBuildOutputTag(root, "old-api", BUILD_IDS[1]);
+		vi.mocked(runDockerCmdWithOutput).mockReturnValue(staleTag);
+
+		await buildAndWriteContainerOutput({
+			containers: [],
+			root,
+			pathToDocker: "docker",
+			previousOutputHadContainers: true,
+		});
+
+		expect(runDockerCmdWithOutput).toHaveBeenCalledOnce();
+		expect(cleanupBuiltImages).toHaveBeenCalledWith(
+			[{ localTag: staleTag }],
+			"docker"
+		);
+	});
+
+	it("removes previous tags when Containers are configured and the previous output had none", async ({
+		expect,
+	}) => {
+		const config = ContainerConfigSchema.parse({
+			name: "api",
+			image: { dockerfile: "./Dockerfile" },
+		});
+		const staleTag = expectedBuildOutputTag(root, "api", BUILD_IDS[1]);
+		vi.mocked(runDockerCmdWithOutput).mockReturnValue(staleTag);
+
+		await buildAndWriteContainerOutput({
+			containers: [config],
+			root,
+			pathToDocker: "docker",
+			previousOutputHadContainers: false,
+		});
+
+		expect(runDockerCmdWithOutput).toHaveBeenCalledWith("docker", [
+			"image",
+			"ls",
+			"--filter",
+			`reference=${path.posix.dirname(staleTag)}/*`,
+			"--format",
+			"{{.Repository}}:{{.Tag}}",
+		]);
+		expect(cleanupBuiltImages).toHaveBeenCalledWith(
+			[{ localTag: staleTag }],
+			"docker"
+		);
+		expect(startContainerBuild).toHaveBeenCalledOnce();
+	});
+
 	it("rejects image names that normalize to the same repository", async ({
 		expect,
 	}) => {
-		const first = InputContainerSchema.parse({
-			type: "container",
-			name: "My API",
+		const first = ContainerConfigSchema.parse({
+			name: "My_-API",
 			image: { dockerfile: "./first/Dockerfile" },
 		});
-		const second = InputContainerSchema.parse({
-			type: "container",
+		const second = ContainerConfigSchema.parse({
 			name: "my-api",
 			image: { dockerfile: "./second/Dockerfile" },
 		});
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { first, second },
+				containers: [first, second],
 				root,
 				pathToDocker: "docker",
 			})
@@ -443,7 +566,7 @@ describe("buildAndWriteContainerOutput", () => {
 		expect(cleanupBuiltImages).toHaveBeenCalledWith(
 			[
 				{
-					localTag: expectedBuildOutputTag(root, "My API", BUILD_IDS[0]),
+					localTag: expectedBuildOutputTag(root, "My_-API", BUILD_IDS[0]),
 				},
 			],
 			"docker"
@@ -453,8 +576,7 @@ describe("buildAndWriteContainerOutput", () => {
 	it("does not require Docker to clean a registry-only build", async ({
 		expect,
 	}) => {
-		const config = InputContainerSchema.parse({
-			type: "container",
+		const config = ContainerConfigSchema.parse({
 			name: "remote-container",
 			image: { reference: "registry.example.com/app:latest" },
 		});
@@ -464,7 +586,7 @@ describe("buildAndWriteContainerOutput", () => {
 
 		await expect(
 			buildAndWriteContainerOutput({
-				containers: { remote: config },
+				containers: [config],
 				root,
 				pathToDocker: "docker",
 			})
@@ -490,7 +612,7 @@ function expectedBuildOutputTag(
 function seedWorkerOutput(rootDirectory: string): void {
 	const workerDirectory = getWorkerDir(rootDirectory);
 	fs.mkdirSync(workerDirectory, { recursive: true });
-	fs.writeFileSync(path.join(workerDirectory, "config.json"), "{}");
+	fs.writeFileSync(path.join(workerDirectory, "worker.config.json"), "{}");
 }
 
 function getBuildOutputPath(rootDirectory: string): string {

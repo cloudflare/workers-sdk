@@ -164,6 +164,14 @@ describe("createWorkerUploadForm — optional metadata fields", () => {
 			expected: true,
 		},
 		{
+			label: "Durable Objects code update strategy",
+			overrides: {
+				code_update_strategy: { mode: "deferred", max_delay: 45.678 },
+			},
+			key: "code_update_strategy",
+			expected: { mode: "deferred", max_delay: 45.678 },
+		},
+		{
 			label: "placement",
 			overrides: { placement: { mode: "smart" } },
 			key: "placement",
@@ -315,6 +323,64 @@ describe("createWorkerUploadForm — unsafe metadata", () => {
 		const metadata = getMetadata(form);
 		expect(metadata.custom_key).toBe("custom_value");
 	});
+
+	it("should prefer an unsafe code update strategy override", ({ expect }) => {
+		const form = createWorkerUploadForm(
+			createEsmWorker({
+				code_update_strategy: { mode: "deferred", max_delay: 300 },
+			}),
+			{},
+			{
+				unsafe: {
+					metadata: { code_update_strategy: { mode: "immediate" } },
+				},
+			}
+		);
+		const metadata = getMetadata(form);
+		expect(metadata.code_update_strategy).toEqual({ mode: "immediate" });
+	});
+});
+
+describe("createWorkerUploadForm — assets metadata", () => {
+	it("should include base_path for worker and assets uploads", ({ expect }) => {
+		const worker = createEsmWorker({
+			assets: {
+				routerConfig: { has_user_worker: true },
+				jwt: "test-jwt",
+				assetConfig: {
+					html_handling: "auto-trailing-slash",
+					not_found_handling: "single-page-application",
+					base_path: "/subpath",
+				},
+			} as CfWorkerInit["assets"],
+		});
+		const form = createWorkerUploadForm(worker, {});
+		const metadata = getMetadata(form);
+		expect(metadata.assets).toMatchObject({
+			jwt: "test-jwt",
+			config: {
+				html_handling: "auto-trailing-slash",
+				not_found_handling: "single-page-application",
+				base_path: "/subpath",
+			},
+		});
+	});
+
+	it("should omit base_path when it is not configured", ({ expect }) => {
+		const worker = createEsmWorker({
+			assets: {
+				routerConfig: { has_user_worker: true },
+				jwt: "test-jwt",
+				assetConfig: {
+					html_handling: "auto-trailing-slash",
+					not_found_handling: "single-page-application",
+				},
+			} as CfWorkerInit["assets"],
+		});
+		const form = createWorkerUploadForm(worker, {});
+		const metadata = getMetadata(form);
+		expect(metadata.assets).not.toHaveProperty("config.base_path");
+	});
 });
 
 describe("createWorkerUploadForm — static assets only", () => {
@@ -326,6 +392,7 @@ describe("createWorkerUploadForm — static assets only", () => {
 				assetConfig: {
 					html_handling: "auto-trailing-slash",
 					not_found_handling: "single-page-application",
+					base_path: "/subpath",
 				},
 			} as CfWorkerInit["assets"],
 		});
@@ -336,6 +403,7 @@ describe("createWorkerUploadForm — static assets only", () => {
 			config: {
 				html_handling: "auto-trailing-slash",
 				not_found_handling: "single-page-application",
+				base_path: "/subpath",
 			},
 		});
 		// Should NOT have main_module or bindings

@@ -1,4 +1,5 @@
-import type { CfPlacement, Config } from "@cloudflare/workers-utils";
+import type { CfPlacement } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Parse placement out of a Config

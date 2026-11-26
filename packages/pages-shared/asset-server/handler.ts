@@ -1,5 +1,6 @@
 import {
 	generateRulesMatcher,
+	normalizeRedirectTarget,
 	replacer,
 } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import {
@@ -226,7 +227,7 @@ export async function generateHandler<
 				: {},
 			({ status, to }, replacements) => ({
 				status,
-				to: replacer(to, replacements),
+				to: normalizeRedirectTarget(to, replacements),
 			})
 		);
 
@@ -635,7 +636,10 @@ export async function generateHandler<
 							// Check if the asset has changed since last written to cache
 							// or if the cached entry is getting too old and should have
 							// it's expiration reset.
-							const match = await assetPreservationCache.match(request);
+							// Look the entry up by URL, the same key `put()` writes and
+							// `notFound()` reads. `match(request)` never matches a HEAD
+							// request, so every HEAD request would rewrite the entry.
+							const match = await assetPreservationCache.match(request.url);
 							if (
 								!match ||
 								assetKey !== (await match.text()) ||

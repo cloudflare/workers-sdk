@@ -5,6 +5,9 @@
 // than capturing it at wiring time.
 
 export const DefaultScopes = {
+	"k2.read":
+		"See K2 stream configurations and bind existing streams to Workers.",
+	"k2.write": "Create and manage K2 stream configurations.",
 	"account:read":
 		"See your account info such as account details, analytics, and memberships.",
 	"user:read":
@@ -46,6 +49,8 @@ export const DefaultScopes = {
 		"See and change Email Sending settings and configuration.",
 	"browser:write": "See and manage Browser Run sessions",
 	"challenge-widgets.write": "See and change Turnstile widgets",
+	"billing:write":
+		"See and change Cloudflare billing data such as billing profiles, payment methods, and subscriptions.",
 } as const;
 
 /**

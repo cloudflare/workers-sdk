@@ -8,7 +8,10 @@ import {
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
+import {
+	VERSION_NOT_DEPLOYED_ERR_CODE,
+	VERSION_SETTINGS_NOT_DEPLOYED_ERR_CODE,
+} from "../secret";
 import {
 	WORKER_NOT_FOUND_ERR_CODE,
 	workerNotFoundErrorMessage,
@@ -378,7 +381,7 @@ describe("wrangler secret", () => {
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: Failed to automatically retrieve account IDs for the logged in user.
-						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your Wrangler configuration file.
+						In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or in your Wrangler configuration file.
 						Alternatively, try running \`wrangler login\` to re-authenticate.]
 					`);
 				});
@@ -413,7 +416,7 @@ describe("wrangler secret", () => {
 					await expect(runWrangler("secret put the-key --name script-name"))
 						.rejects.toThrowErrorMatchingInlineSnapshot(`
 						[Error: More than one account available but unable to select one in non-interactive mode.
-						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+						Please set the appropriate account ID in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
 						  \`Account One\`: \`account-1\`
 						  \`Account Two\`: \`account-2\`
@@ -1121,6 +1124,56 @@ describe("wrangler secret", () => {
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
+		it.for(["file", "stdin"])(
+			"should upload literal dotenv values from %s without process overrides",
+			async (source, { expect }) => {
+				vi.stubEnv("API_TOKEN", "process-token");
+				vi.stubEnv("EMPTY_SECRET", "");
+				const contents =
+					"API_TOKEN=file-token\nEMPTY_SECRET=file-value\nPASSWORD=pa$word";
+				if (source === "file") {
+					writeFileSync("secrets.env", contents);
+				} else {
+					mockReadlineInput(contents);
+				}
+
+				let requestBody: unknown;
+				msw.use(
+					http.patch(
+						"*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk",
+						async ({ request }) => {
+							requestBody = await request.json();
+							return HttpResponse.json(createFetchResult(null));
+						}
+					)
+				);
+
+				await runWrangler(
+					`secret bulk ${source === "file" ? "secrets.env " : ""}--name script-name`
+				);
+
+				expect(requestBody).toEqual({
+					secrets: {
+						API_TOKEN: {
+							name: "API_TOKEN",
+							text: "file-token",
+							type: "secret_text",
+						},
+						EMPTY_SECRET: {
+							name: "EMPTY_SECRET",
+							text: "file-value",
+							type: "secret_text",
+						},
+						PASSWORD: {
+							name: "PASSWORD",
+							text: "pa$word",
+							type: "secret_text",
+						},
+					},
+				});
+			}
+		);
+
 		it("should fail if file is not valid JSON", async ({ expect }) => {
 			writeFileSync("secret.json", "bad file content");
 
@@ -1237,6 +1290,80 @@ describe("wrangler secret", () => {
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should error if the latest version is not deployed", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+				})
+			);
+
+			msw.use(
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.scriptName).toEqual("script-name");
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: VERSION_NOT_DEPLOYED_ERR_CODE,
+									message: "latest is not deployed",
+								},
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(runWrangler("secret bulk ./secret.json --name script-name"))
+				.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.
+				This limitation exists to prevent accidental deployment when using Worker versions and secrets together.
+				To resolve this, you have two options:
+				(1) use the \`wrangler versions secret bulk\` instead, which allows you to update secrets without deploying; or
+				(2) deploy the latest version first, then modify secrets.
+				Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.]
+			`);
+		});
+
+		it("should rewrite the logpush/tail_consumers settings error when the latest version is not deployed", async ({
+			expect,
+		}) => {
+			writeFileSync(
+				"secret.json",
+				JSON.stringify({
+					"secret-name-1": "secret_text",
+				})
+			);
+
+			msw.use(
+				http.patch(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets-bulk`,
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: VERSION_SETTINGS_NOT_DEPLOYED_ERR_CODE,
+									message:
+										"Script edit failed. You attempted to deploy the latest version with modified settings, but the latest version isn't currently deployed.",
+								},
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+
+			await expect(
+				runWrangler("secret bulk ./secret.json --name script-name")
+			).rejects.toThrow(/wrangler versions secret bulk/);
 		});
 
 		it("throws a meaningful error", async ({ expect }) => {

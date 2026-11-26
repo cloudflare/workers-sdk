@@ -39,7 +39,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: {
@@ -81,6 +80,72 @@ describe("ProxyClient", () => {
 		expect(event.data).toBe("echo:hello");
 	});
 
+	test("preserves error codes and names thrown by RPC bindings", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: {
+							BINDING: {
+								type: "worker",
+								worker: "binding",
+								exportName: "BindingEntrypoint",
+							},
+						},
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["enhanced_error_serialization"],
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							class BindingError extends Error {
+								name = "BindingError";
+								constructor(message, code, numericCode) {
+									super(message);
+									this.code = code;
+									this.numericCode = numericCode;
+								}
+							}
+							export class BindingEntrypoint extends WorkerEntrypoint {
+								get(name) {
+									throw new BindingError("Repository not found: " + name + ".", "NOT_FOUND", 10200);
+								}
+							}
+							export default { fetch() { return new Response(null, { status: 404 }); } };
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: { get(name: string): Promise<never> };
+		}>();
+
+		let error: unknown;
+		try {
+			await BINDING.get("missing");
+		} catch (caught) {
+			error = caught;
+		}
+		expect(error).toBeInstanceOf(Error);
+		expect(error).toMatchObject({
+			name: "BindingError",
+			message: "Repository not found: missing.",
+			code: "NOT_FOUND",
+			numericCode: 10200,
+		});
+	});
+
 	test("preserves original URL for service binding fetch", async ({
 		expect,
 	}) => {
@@ -88,7 +153,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: {
@@ -126,7 +190,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "entry",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -195,7 +258,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},
@@ -220,7 +282,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},
@@ -248,12 +309,34 @@ describe("ProxyClient", () => {
 		expect(() => defaultCache.match(key)).toThrow(error);
 		expect(() => namedCache.match(key)).toThrow(error);
 	});
+	test("rejects getters disposed while the synchronous worker starts", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
+		await mf.ready;
+		const rejected = expect(mf.getCaches()).rejects.toMatchObject({
+			code: "ERR_DISPOSED",
+		});
+		// Let getCaches() get past `ready` and start the worker before disposing
+		await new Promise((resolve) => setImmediate(resolve));
+		await mf.dispose();
+		await rejected;
+	});
 	test("logging proxies provides useful information", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},
@@ -287,7 +370,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						// Asynchronous functions must reject rather than throw. This was
 						// gated behind the `capture_async_api_throws` flag, which became the
@@ -348,7 +430,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -371,7 +452,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -393,7 +473,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -451,12 +530,121 @@ describe("ProxyClient", () => {
 		}
 	});
 
+	test("puts R2ObjectBody#body back to R2", async ({ expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
+		useDispose(mf);
+
+		const bucket = await mf.getR2Bucket("BUCKET");
+		const value = "value".repeat(100_000);
+		await bucket.put("source", value);
+		await bucket.put("empty-source", "");
+
+		const source = await bucket.get("source");
+		assert(source != null);
+		await bucket.put("copy", source.body);
+		const copy = await bucket.get("copy");
+		assert(copy != null);
+		expect(await text(copy.body)).toBe(value);
+
+		const emptySource = await bucket.get("empty-source");
+		assert(emptySource != null);
+		await bucket.put("empty-copy", emptySource.body);
+		const emptyCopy = await bucket.get("empty-copy");
+		assert(emptyCopy != null);
+		expect(await text(emptyCopy.body)).toBe("");
+
+		// Check errors thrown before the stream is consumed are still propagated
+		const unread = await bucket.get("source");
+		assert(unread != null);
+		await expect(bucket.put("x".repeat(1025), unread.body)).rejects.toThrow(
+			"put: The specified object name is not valid. (10020)"
+		);
+	});
+
+	test("puts R2ObjectBody#body to R2 in another instance", async ({
+		expect,
+	}) => {
+		const opts = {
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		} satisfies ConstructorParameters<typeof Miniflare>[0];
+		const sourceMf = new Miniflare(opts);
+		useDispose(sourceMf);
+		const destinationMf = new Miniflare(opts);
+		useDispose(destinationMf);
+
+		const sourceBucket = await sourceMf.getR2Bucket("BUCKET");
+		const destinationBucket = await destinationMf.getR2Bucket("BUCKET");
+		await sourceBucket.put("key", "value");
+		const source = await sourceBucket.get("key");
+		assert(source != null);
+		await destinationBucket.put("key", source.body);
+		const copy = await destinationBucket.get("key");
+		assert(copy != null);
+		expect(await text(copy.body)).toBe("value");
+	});
+
+	test("puts R2ObjectBody#body from another copy of Miniflare to R2", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BUCKET: { type: "r2", name: "BUCKET" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+			],
+		});
+		useDispose(mf);
+
+		// Simulate a body returned by a separately loaded copy of Miniflare,
+		// which can only share the length through the global symbol registry
+		const value = "value";
+		const body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(new TextEncoder().encode(value));
+				controller.close();
+			},
+		});
+		Object.defineProperty(body, Symbol.for("miniflare.kStreamLength"), {
+			value: value.length,
+		});
+
+		const bucket = await mf.getR2Bucket("BUCKET");
+		await bucket.put("key", body);
+		const copy = await bucket.get("key");
+		assert(copy != null);
+		expect(await text(copy.body)).toBe(value);
+	});
+
 	test("can `JSON.stringify()` proxies", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -495,7 +683,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "entry",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(
@@ -512,7 +699,6 @@ describe("ProxyClient", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: "do-worker",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(`export class TestObject {
@@ -644,7 +830,6 @@ describe("ProxyClient", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 					},

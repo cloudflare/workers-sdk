@@ -5,7 +5,7 @@ import {
 	experimentalNewConfigArg,
 } from "../experimental-config/cli-flag";
 import { createCLIParser } from "../index";
-import { runBuildOutput } from "./run-build-output";
+import { writeBuildOutput } from "./write-build-output";
 
 export const buildCommand = createCommand({
 	metadata: {
@@ -33,7 +33,7 @@ export const buildCommand = createCommand({
 	},
 	async handler(buildArgs) {
 		if (buildArgs.experimentalCfBuildOutput) {
-			await runBuildOutput(buildArgs);
+			await writeBuildOutput(buildArgs);
 			return;
 		}
 

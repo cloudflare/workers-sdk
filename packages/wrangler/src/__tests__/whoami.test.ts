@@ -335,6 +335,8 @@ describe("whoami", () => {
 
 			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
 
+			  - k2.read
+			  - k2.write
 			  - account:read
 			  - user:read
 			  - workers:write
@@ -362,6 +364,7 @@ describe("whoami", () => {
 			  - email_sending:write
 			  - browser:write
 			  - challenge-widgets.write
+			  - billing:write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -412,6 +415,8 @@ describe("whoami", () => {
 
 			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
 
+			  - k2.read
+			  - k2.write
 			  - account:read
 			  - user:read
 			  - workers:write
@@ -439,6 +444,7 @@ describe("whoami", () => {
 			  - email_sending:write
 			  - browser:write
 			  - challenge-widgets.write
+			  - billing:write
 
 
 			🎢 Membership roles in "Account Two": Contact account super admin to change your permissions.
@@ -543,6 +549,8 @@ describe("whoami", () => {
 
 			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
 
+			  - k2.read
+			  - k2.write
 			  - account:read
 			  - user:read
 			  - workers:write
@@ -570,6 +578,7 @@ describe("whoami", () => {
 			  - email_sending:write
 			  - browser:write
 			  - challenge-widgets.write
+			  - billing:write
 
 
 			🎢 Unable to get membership roles. Make sure you have permissions to read the account. Are you missing the \`User->Memberships->Read\` permission?"

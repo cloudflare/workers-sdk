@@ -35,21 +35,23 @@ export function mockSubDomainRequest(
 	}
 }
 
-/** Create a mock handler to fetch the  <script>.<user>.workers.dev subdomain status*/
+/** Create a mock handler to fetch a Worker's subdomain configuration and URLs. */
 export function mockGetWorkerSubdomain({
 	enabled,
 	previews_enabled = enabled,
+	subdomain = "test-sub-domain",
 	env,
 	expectedAccountId = "some-account-id",
 	expectedScriptName = "test-name" + (env ? `-${env}` : ""),
 }: {
 	enabled: boolean;
 	previews_enabled?: boolean;
+	subdomain?: string | false;
 	env?: string | undefined;
 	expectedAccountId?: string;
 	expectedScriptName?: string | false;
 }) {
-	const url = `*/accounts/:accountId/workers/scripts/:scriptName/subdomain`;
+	const url = `*/accounts/:accountId/workers/workers/:scriptName`;
 	msw.use(
 		http.get(
 			url,
@@ -59,8 +61,21 @@ export function mockGetWorkerSubdomain({
 					assert(params.scriptName === expectedScriptName);
 				}
 
+				const workerName = String(params.scriptName);
+				const urlFields = subdomain
+					? {
+							url: `https://${workerName}.${subdomain}.workers.dev`,
+							preview_url_suffix: `-${workerName}.${subdomain}.workers.dev`,
+						}
+					: {};
 				return HttpResponse.json(
-					createFetchResult({ enabled, previews_enabled })
+					createFetchResult({
+						subdomain: {
+							enabled,
+							previews_enabled,
+							...urlFields,
+						},
+					})
 				);
 			},
 			{ once: true }

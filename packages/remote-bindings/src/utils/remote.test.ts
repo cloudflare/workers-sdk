@@ -22,7 +22,7 @@ function makeAuthError(code: number, status = 400): APIError {
 describe("RemoteSessionAuthenticationError", () => {
 	it("preserves the cause and telemetry message", ({ expect }) => {
 		const cause = new Error("original API error");
-		const error = new RemoteSessionAuthenticationError(cause);
+		const error = new RemoteSessionAuthenticationError(cause, "Wrangler");
 
 		expect(error.cause).toBe(cause);
 		expect(error.telemetryMessage).toBe("remote dev authentication error");
@@ -33,7 +33,10 @@ describe("RemoteSessionAuthenticationError", () => {
 	}) => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-token");
 
-		const error = new RemoteSessionAuthenticationError(new Error("api error"));
+		const error = new RemoteSessionAuthenticationError(
+			new Error("api error"),
+			"Wrangler"
+		);
 
 		expect(error.message).toMatchInlineSnapshot(`
 			"This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
@@ -52,7 +55,10 @@ describe("RemoteSessionAuthenticationError", () => {
 		vi.stubEnv("CLOUDFLARE_API_KEY", "");
 		vi.stubEnv("CLOUDFLARE_EMAIL", "");
 
-		const error = new RemoteSessionAuthenticationError(new Error("api error"));
+		const error = new RemoteSessionAuthenticationError(
+			new Error("api error"),
+			"Wrangler"
+		);
 
 		expect(error.message).toMatchInlineSnapshot(`
 			"This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
@@ -62,6 +68,22 @@ describe("RemoteSessionAuthenticationError", () => {
 			  - Run \`wrangler whoami\` to check your current authentication status.
 			  - Run \`wrangler logout\` and then \`wrangler login\` to re-authenticate."
 		`);
+	});
+
+	it("names cf's commands for cf", ({ expect }) => {
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "");
+		vi.stubEnv("CLOUDFLARE_API_KEY", "");
+		vi.stubEnv("CLOUDFLARE_EMAIL", "");
+
+		const error = new RemoteSessionAuthenticationError(
+			new Error("api error"),
+			"cf"
+		);
+
+		expect(error.message).toContain(
+			"  - Run `cf auth whoami` to check your current authentication status.\n" +
+				"  - Run `cf auth logout` and then `cf auth login` to re-authenticate."
+		);
 	});
 });
 
@@ -76,7 +98,7 @@ describe("handlePreviewSessionCreationError", () => {
 			let thrown: unknown;
 
 			try {
-				handlePreviewSessionCreationError(cause, "test-account-id");
+				handlePreviewSessionCreationError(cause, "test-account-id", "Wrangler");
 			} catch (error) {
 				thrown = error;
 			}

@@ -668,6 +668,63 @@ describe("collectPackageDependencies", () => {
 		]);
 	});
 
+	it("should collect packages whose entry point sits next to a nested package.json", async ({
+		expect,
+	}) => {
+		// Mirrors the layout of `hono`: no `./package.json` export, and a
+		// `dist/cjs/package.json` that only contains `{"type": "commonjs"}`.
+		const pkgPath = path.join(process.cwd(), "node_modules", "hono");
+		const cjsPath = path.join(pkgPath, "dist", "cjs");
+		fs.mkdirSync(cjsPath, { recursive: true });
+		fs.writeFileSync(path.join(cjsPath, "index.js"), "module.exports = {}");
+		fs.writeFileSync(
+			path.join(cjsPath, "package.json"),
+			JSON.stringify({ type: "commonjs" }, null, 2)
+		);
+		fs.writeFileSync(
+			path.join(pkgPath, "package.json"),
+			JSON.stringify(
+				{
+					name: "hono",
+					version: "4.13.18",
+					type: "module",
+					exports: {
+						".": {
+							import: "./dist/index.js",
+							require: "./dist/cjs/index.js",
+						},
+					},
+				},
+				null,
+				2
+			)
+		);
+
+		fs.writeFileSync(
+			"package.json",
+			JSON.stringify(
+				{
+					name: "test-project",
+					dependencies: {
+						hono: "^4.13.0",
+					},
+				},
+				null,
+				2
+			)
+		);
+
+		const result = await collectPackageDependencies(process.cwd());
+
+		expect(result).toEqual([
+			{
+				name: "hono",
+				packageJsonVersion: "^4.13.0",
+				installedVersion: "4.13.18",
+			},
+		]);
+	});
+
 	it("should use devDependencies version when duplicate exists in dependencies", async ({
 		expect,
 	}) => {

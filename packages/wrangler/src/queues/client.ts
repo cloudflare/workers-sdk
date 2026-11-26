@@ -26,7 +26,7 @@ import type {
 	QueueResponse,
 	TypedConsumerResponse,
 } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 // Queue types now live in `@cloudflare/deploy-helpers`; re-export them here so
 // existing `../client` imports across the queue commands keep working.
@@ -53,6 +53,10 @@ const queuesUrl = (accountId: string, queueId?: string): string => {
 	}
 	return url;
 };
+
+function queueCreateCommand(queueName: string): string {
+	return `wrangler queues create ${queueName}`;
+}
 
 export async function createQueue(
 	config: Config,
@@ -122,7 +126,7 @@ export async function getQueue(
 	queueName: string
 ): Promise<QueueResponse> {
 	const accountId = await requireAuth(config);
-	return getQueueImpl(config, accountId, queueName);
+	return getQueueImpl(config, accountId, queueName, queueCreateCommand);
 }
 
 export async function ensureQueuesExistByConfig(config: Config) {
@@ -149,7 +153,7 @@ async function ensureQueuesExist(config: Config, queueNames: string[]) {
 			for (const queue of queueNames) {
 				if (!queueSet.has(queue)) {
 					throw new UserError(
-						`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`,
+						`Queue "${queue}" does not exist. To create it, run: ${queueCreateCommand(queue)}`,
 						{ telemetryMessage: "queues config missing queue" }
 					);
 				}
@@ -193,7 +197,13 @@ export async function postConsumer(
 	body: PostTypedConsumerBody
 ): Promise<TypedConsumerResponse> {
 	const accountId = await requireAuth(config);
-	return postConsumerImpl(config, accountId, queueName, body);
+	return postConsumerImpl(
+		config,
+		accountId,
+		queueName,
+		body,
+		queueCreateCommand
+	);
 }
 
 export async function putConsumerById(
@@ -220,7 +230,8 @@ export async function putConsumer(
 		queueName,
 		scriptName,
 		envName,
-		body
+		body,
+		queueCreateCommand
 	);
 }
 
@@ -237,7 +248,12 @@ export async function deletePullConsumer(
 	queueName: string
 ): Promise<void> {
 	const accountId = await requireAuth(config);
-	return deletePullConsumerImpl(config, accountId, queueName);
+	return deletePullConsumerImpl(
+		config,
+		accountId,
+		queueName,
+		queueCreateCommand
+	);
 }
 
 export async function listConsumers(
@@ -245,7 +261,7 @@ export async function listConsumers(
 	queueName: string
 ): Promise<Consumer[]> {
 	const accountId = await requireAuth(config);
-	return listConsumersImpl(config, accountId, queueName);
+	return listConsumersImpl(config, accountId, queueName, queueCreateCommand);
 }
 
 export async function deleteWorkerConsumer(
@@ -260,7 +276,8 @@ export async function deleteWorkerConsumer(
 		accountId,
 		queueName,
 		scriptName,
-		envName
+		envName,
+		queueCreateCommand
 	);
 }
 

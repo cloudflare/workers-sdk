@@ -331,9 +331,15 @@ by the links above.
 ## How does the dev registry work?
 
 Refer to [`src/shared/DEV_REGISTRY.md`](./src/shared/DEV_REGISTRY.md) for the
-full architecture. In short: when multiple `wrangler dev` sessions run
-simultaneously, they advertise their workerd debug port address via JSON files in
-`~/.wrangler/registry/`. A synthetic proxy worker inside workerd uses the
+full architecture. When enabled, Miniflare instances advertise their workerd
+debug port addresses via JSON files in a shared registry. Native Miniflare v5
+enables this by default at `<Cloudflare config directory>/dev-registry/v5/`.
+`CLOUDFLARE_DEV_REGISTRY_PATH` overrides an explicit `unsafeDevRegistryPath`,
+which overrides that default; `enableDevRegistry: false` disables the registry.
+Integrations may retain explicit paths, so sessions must use the same effective
+registry directory to discover each other.
+
+A synthetic proxy worker inside workerd uses the
 `workerdDebugPort` binding to connect to remote workers' debug ports via native
 Cap'n Proto RPC, enabling cross-process service bindings, Durable Object access,
 RPC, and tail forwarding without any HTTP proxying.

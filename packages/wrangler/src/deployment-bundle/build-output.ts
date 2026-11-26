@@ -1,63 +1,53 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
-	cleanBuildOutputDir,
-	getWorkerAssetsDir,
 	getWorkerBundleDir,
-	writeSettingsConfig,
+	writeAssets,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
-	ParsedInputSettingsConfig,
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
 
-interface WriteBuildOutputArgs {
+interface WriteWorkerOutputArgs {
 	root: string;
-	parsedWorkerConfig: ParsedInputWorkerConfig;
-	parsedSettingsConfig: ParsedInputSettingsConfig | undefined;
-	/** The mode the build was produced in, recorded in the top-level config. */
-	mode: string | undefined;
-	isPreview: boolean;
+	workerConfig: ParsedWorkerConfig;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }
 
 /**
- * Write the Worker's `.cloudflare/output/v0/workers/default/` directory
+ * Write the Worker's `.cloudflare/output/v1/workers/default/` directory
  * tree from an in-memory `WorkerBuildResult` and `AssetsOptions`.
  */
-export async function writeBuildOutput({
+export async function writeWorkerOutput({
 	root,
-	parsedWorkerConfig,
-	parsedSettingsConfig,
-	mode,
-	isPreview,
+	workerConfig,
 	buildResult,
 	assetsOptions,
-}: WriteBuildOutputArgs): Promise<void> {
+}: WriteWorkerOutputArgs): Promise<void> {
 	if (buildResult === undefined && assetsOptions === undefined) {
 		throw new UserError(
 			"Cannot emit build output: the Worker has no entrypoint and no assets directory.",
 			{ telemetryMessage: "build output missing entrypoint and assets" }
 		);
 	}
-	await cleanBuildOutputDir(root);
 
 	const [manifest] = await Promise.all([
 		buildResult
 			? writeBundle({ root, buildResult })
 			: Promise.resolve(undefined),
-		assetsOptions ? writeAssets({ root, assetsOptions }) : Promise.resolve(),
+		assetsOptions
+			? writeAssets({ root, sourceDirectory: assetsOptions.directory })
+			: Promise.resolve(),
 	]);
 
-	await writeWorkerConfig({ root, config: parsedWorkerConfig, manifest });
-	await writeSettingsConfig(root, parsedSettingsConfig, mode, isPreview);
+	await writeWorkerConfig({ root, config: workerConfig, manifest });
 }
 
 async function writeBundle({
@@ -66,12 +56,13 @@ async function writeBundle({
 }: {
 	root: string;
 	buildResult: WorkerBuildResult;
-}): Promise<ParsedOutputWorkerConfig["manifest"]> {
+}): Promise<ParsedBuildOutputWorkerConfig["manifest"]> {
 	const bundleDir = getWorkerBundleDir(root);
 	await fsp.mkdir(bundleDir, { recursive: true });
 
-	const modules: NonNullable<ParsedOutputWorkerConfig["manifest"]>["modules"] =
-		{};
+	const modules: NonNullable<
+		ParsedBuildOutputWorkerConfig["manifest"]
+	>["modules"] = {};
 
 	// Entry module
 	const entryKey = stripLeadingDotSlash(
@@ -90,9 +81,10 @@ async function writeBundle({
 	}
 
 	// Source maps. `buildResult.sourceMaps` is already gated by
-	// `uploadSourceMaps` inside `buildWorker` (undefined when off) and
+	// `uploadSourceMaps` inside `buildWorker` (undefined when explicitly off) and
 	// contains the main module's map plus any module maps, each named
-	// `<module>.map` (e.g. `index.js.map`).
+	// `<module>.map` (e.g. `index.js.map`). `buildWorker` makes their `sources`
+	// relative to their location in the bundle directory.
 	for (const sourceMap of buildResult.sourceMaps ?? []) {
 		const key = stripLeadingDotSlash(sourceMap.name);
 		await writeBundleFile(bundleDir, key, sourceMap.content);
@@ -100,20 +92,6 @@ async function writeBundle({
 	}
 
 	return { type: "complete", mainModule: entryKey, modules };
-}
-
-async function writeAssets({
-	root,
-	assetsOptions,
-}: {
-	root: string;
-	assetsOptions: AssetsOptions;
-}): Promise<void> {
-	const assetsDir = getWorkerAssetsDir(root);
-	await fsp.mkdir(assetsDir, { recursive: true });
-	await fsp.cp(assetsOptions.directory, assetsDir, {
-		recursive: true,
-	});
 }
 
 async function writeBundleFile(

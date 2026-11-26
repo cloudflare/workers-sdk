@@ -8,7 +8,7 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { createFetchResult, msw } from "../helpers/msw";
 import type { WorkflowConflict } from "../../deploy/check-workflow-conflicts";
 import type { Workflow } from "../../workflows/types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function mockWorkflowGet(workflowsByName: Record<string, Workflow | null>) {
 	msw.use(
@@ -277,7 +277,7 @@ describe("checkWorkflowConflicts", () => {
 		expect(message).toBe(
 			`The following workflow(s) already exist and belong to different workers:\n` +
 				`  - "my-workflow" (currently belongs to "other-worker")\n\n` +
-				`Deploying will reassign these workflows to "my-worker". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in the Wrangler config.`
+				`Deploying will reassign these workflows to "my-worker". Workflow names must be unique per account. If this reassignment is unintended, rename the workflow(s) in your Wrangler configuration.`
 		);
 	});
 });

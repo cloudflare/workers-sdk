@@ -10,13 +10,15 @@ export default defineConfig({
 	outDir: "dist",
 	dts: true,
 	tsconfig: "tsconfig.json",
-	external: (id) => {
-		const unprefixedId = id.charCodeAt(0) === 0 ? id.slice(1) : id;
-		return (
-			!unprefixedId.startsWith("worker:") &&
-			!unprefixedId.startsWith(".") &&
-			!path.isAbsolute(unprefixedId)
-		);
+	deps: {
+		neverBundle: (id) => {
+			const unprefixedId = id.charCodeAt(0) === 0 ? id.slice(1) : id;
+			return (
+				!unprefixedId.startsWith("worker:") &&
+				!unprefixedId.startsWith(".") &&
+				!path.isAbsolute(unprefixedId)
+			);
+		},
 	},
 	plugins: [embedWorkersPlugin()],
 });

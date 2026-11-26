@@ -2,10 +2,12 @@ import assert from "node:assert";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { Request } from "miniflare";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+import { createViteServer } from "vitest/node";
+import { realPackagePath } from "../src/pool/helpers";
 import {
 	decodeEncodedSpecifier,
 	encodeRedirectLocation,
@@ -17,13 +19,19 @@ import {
 } from "../src/shared/module-path";
 import type { Vite } from "vitest/node";
 
-// The fallback handler only reads `vite.pluginContainer.resolveId`, and only
-// when a specifier can't be resolved directly from the filesystem. Returning
-// `null` mimics Vite failing to resolve, exercising the 404 fall-through.
+// The fallback handler only reads `vite.environments.ssr.config` and
+// `vite.environments.ssr.pluginContainer.resolveId`, and only when a specifier
+// can't be resolved directly from the filesystem. Returning `null` mimics Vite
+// failing to resolve, exercising the 404 fall-through.
 function fakeVite(): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async () => null,
+		environments: {
+			ssr: {
+				config: { resolve: { preserveSymlinks: false } },
+				pluginContainer: {
+					resolveId: async () => null,
+				},
+			},
 		},
 	} as unknown as Vite.ViteDevServer;
 }
@@ -37,8 +45,13 @@ function fakeVite(): Vite.ViteDevServer {
 // same rooted path that branch would have produced reaches the same place.
 function fakeViteResolvingTo(id: string): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async () => ({ id }),
+		environments: {
+			ssr: {
+				config: { resolve: { preserveSymlinks: false } },
+				pluginContainer: {
+					resolveId: async () => ({ id }),
+				},
+			},
 		},
 	} as unknown as Vite.ViteDevServer;
 }
@@ -48,10 +61,15 @@ function fakeViteResolving(
 	resolvedIds: Record<string, string>
 ): Vite.ViteDevServer {
 	return {
-		pluginContainer: {
-			resolveId: async (specifier: string) => {
-				const id = resolvedIds[specifier];
-				return id === undefined ? null : { id };
+		environments: {
+			ssr: {
+				config: { resolve: { preserveSymlinks: false } },
+				pluginContainer: {
+					resolveId: async (specifier: string) => {
+						const id = resolvedIds[specifier];
+						return id === undefined ? null : { id };
+					},
+				},
 			},
 		},
 	} as unknown as Vite.ViteDevServer;
@@ -434,6 +452,83 @@ describe("built-ins unavailable at the Worker's compatibility settings", () => {
 	});
 });
 
+it("preserves Vitest 5's import.meta.url diagnostic", async ({ expect }) => {
+	const filePath = fileURLToPath(
+		new URL("module-evaluator.js", import.meta.resolve("vitest"))
+	);
+	const contents = fs.readFileSync(filePath, "utf8");
+	expect(contents).toContain("createRequire(import.meta.url)");
+
+	const response = await handleModuleFallbackRequest(
+		fakeVite(),
+		moduleFallbackRequest({
+			method: "import",
+			specifier: toWorkerdSpecifier(filePath),
+			referrer: toWorkerdSpecifier(import.meta.filename),
+		})
+	);
+
+	expect(response.status).toBe(200);
+	const body = (await response.json()) as { esModule?: string };
+	expect(body.esModule).toContain(contents);
+});
+
+it("only rewrites executable import.meta.url in legacy modules", async ({
+	expect,
+}) => {
+	const tmp = fs.realpathSync(
+		fs.mkdtempSync(path.join(os.tmpdir(), "mf-meta-"))
+	);
+	try {
+		const filePath = path.join(tmp, "module.mjs");
+		fs.writeFileSync(
+			filePath,
+			[
+				"export const actual = import.meta.url;",
+				"export const spaced = import . meta . url;",
+				"export const commented = import /*meta*/ . meta /*url*/ . url;",
+				'export const message = "Unexpected import.meta.url";',
+				"// import.meta.url",
+				"export const literal = `import.meta.url` ;",
+				"export const template = `url: ${import.meta.url}`;",
+				"export const pattern = /import.meta.url/;",
+				"export const other = import.meta.urlSuffix;",
+			].join("\n")
+		);
+		const response = await handleModuleFallbackRequest(
+			fakeVite(),
+			moduleFallbackRequest({
+				method: "import",
+				specifier: toWorkerdSpecifier(filePath),
+				referrer: toWorkerdSpecifier(path.join(tmp, "entry.mjs")),
+			})
+		);
+		expect(response.status).toBe(200);
+		const body = (await response.json()) as { esModule?: string };
+		expect(body.esModule).toContain(
+			`export const actual = ${JSON.stringify(pathToFileURL(filePath).href)};`
+		);
+		expect(body.esModule).toContain(
+			`export const spaced = ${JSON.stringify(pathToFileURL(filePath).href)};`
+		);
+		expect(body.esModule).toContain(
+			`export const commented = ${JSON.stringify(pathToFileURL(filePath).href)};`
+		);
+		expect(body.esModule).toContain(
+			'export const message = "Unexpected import.meta.url";'
+		);
+		expect(body.esModule).toContain("// import.meta.url");
+		expect(body.esModule).toContain("`import.meta.url`");
+		expect(body.esModule).toContain(
+			"`url: ${" + JSON.stringify(pathToFileURL(filePath).href) + "}`"
+		);
+		expect(body.esModule).toContain("/import.meta.url/");
+		expect(body.esModule).toContain("import.meta.urlSuffix");
+	} finally {
+		removeDirSync(tmp);
+	}
+});
+
 describe("handleModuleFallbackRequest new module registry", () => {
 	let tmp: string;
 
@@ -494,6 +589,59 @@ describe("handleModuleFallbackRequest new module registry", () => {
 		expect(await response.json()).toEqual({
 			name: specifier,
 			commonJsModule: contents,
+			namedExports: ["value"],
+		});
+	});
+
+	it("reads a nested package's type even after an ancestor's type was cached", async ({
+		expect,
+	}) => {
+		// The project root is `"type": "module"`
+		fs.writeFileSync(
+			path.join(tmp, "package.json"),
+			JSON.stringify({ type: "module" })
+		);
+		// A `.js` file with no `package.json` of its own, as emitted by a bundler,
+		// is classified by the project root, which caches that answer
+		fs.mkdirSync(path.join(tmp, "vendor"));
+		const vendorPath = path.join(tmp, "vendor", "empty.js");
+		fs.writeFileSync(vendorPath, "");
+		// A dependency with its own `"type": "commonjs"` package.json
+		const depDir = path.join(tmp, "node_modules", "cjs-dep");
+		fs.mkdirSync(path.join(depDir, "lib"), { recursive: true });
+		fs.writeFileSync(
+			path.join(depDir, "package.json"),
+			JSON.stringify({ name: "cjs-dep", type: "commonjs" })
+		);
+		const depPath = path.join(depDir, "lib", "index.js");
+		const depContents = "exports.value = 42;";
+		fs.writeFileSync(depPath, depContents);
+		const referrer = pathToFileURL(path.join(tmp, "entry.mjs")).href;
+
+		const vendorResponse = await handleModuleFallbackRequest(
+			fakeVite(),
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: pathToFileURL(vendorPath).href,
+				rawSpecifier: "./vendor/empty.js",
+				referrer,
+			})
+		);
+		expect(await vendorResponse.json()).toMatchObject({ esModule: "" });
+
+		const depSpecifier = pathToFileURL(depPath).href;
+		const depResponse = await handleModuleFallbackRequest(
+			fakeVite(),
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: depSpecifier,
+				rawSpecifier: "cjs-dep",
+				referrer,
+			})
+		);
+		expect(await depResponse.json()).toEqual({
+			name: depSpecifier,
+			commonJsModule: depContents,
 			namedExports: ["value"],
 		});
 	});
@@ -831,5 +979,137 @@ describe("handleModuleFallbackRequest new module registry", () => {
 				`import { VitestSnapshotEnvironment } from ${JSON.stringify(pathToFileURL(vitestRuntimePath).href)};`,
 			].join("\n"),
 		});
+	});
+});
+
+describe("realPackagePath", () => {
+	let tmp: string;
+
+	beforeEach(() => {
+		tmp = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "mf-real-")));
+		fs.mkdirSync(path.join(tmp, "store/pkg"), { recursive: true });
+		fs.writeFileSync(path.join(tmp, "store/pkg/index.js"), "");
+		fs.mkdirSync(path.join(tmp, "node_modules/.store/pkg"), {
+			recursive: true,
+		});
+		fs.writeFileSync(path.join(tmp, "node_modules/.store/pkg/index.js"), "");
+		fs.symlinkSync(
+			path.join(tmp, "store/pkg"),
+			path.join(tmp, "node_modules/pkg"),
+			"junction"
+		);
+		fs.symlinkSync(
+			path.join(tmp, "node_modules/.store/pkg"),
+			path.join(tmp, "node_modules/store-pkg"),
+			"junction"
+		);
+	});
+
+	afterEach(() => {
+		removeDirSync(tmp);
+	});
+
+	it("maps a package linked from a store to its real path", ({ expect }) => {
+		const root = tmp.replaceAll("\\", "/");
+		expect(realPackagePath(`${root}/node_modules/store-pkg/index.js?v=1`)).toBe(
+			`${root}/node_modules/.store/pkg/index.js?v=1`
+		);
+	});
+
+	it("keeps the fragment of a package path", ({ expect }) => {
+		const root = tmp.replaceAll("\\", "/");
+		expect(realPackagePath(`${root}/node_modules/store-pkg/index.js#a`)).toBe(
+			`${root}/node_modules/.store/pkg/index.js#a`
+		);
+	});
+
+	it("maps a file with # in its path", ({ expect }) => {
+		const root = tmp.replaceAll("\\", "/");
+		fs.mkdirSync(path.join(tmp, "node_modules/.store/pkg/#"));
+		fs.writeFileSync(path.join(tmp, "node_modules/.store/pkg/#/index.js"), "");
+		expect(realPackagePath(`${root}/node_modules/store-pkg/#/index.js`)).toBe(
+			`${root}/node_modules/.store/pkg/#/index.js`
+		);
+	});
+
+	it("keeps the symlinked path of a package linked from outside node_modules", ({
+		expect,
+	}) => {
+		const root = tmp.replaceAll("\\", "/");
+		expect(realPackagePath(`${root}/node_modules/pkg/index.js`)).toBe(
+			`${root}/node_modules/pkg/index.js`
+		);
+	});
+
+	it("leaves missing files unchanged", ({ expect }) => {
+		const root = tmp.replaceAll("\\", "/");
+		expect(realPackagePath(`${root}/node_modules/missing/index.js`)).toBe(
+			`${root}/node_modules/missing/index.js`
+		);
+	});
+});
+
+describe("resolving the runner's Vitest entry point", () => {
+	let tmp: string;
+	let vite: Vite.ViteDevServer;
+
+	// The project root can't resolve `vitest`, as in a workspace whose root
+	// package doesn't depend on it. The runner must still load the Vitest that
+	// this package resolves.
+	beforeEach(async () => {
+		tmp = fs.realpathSync(
+			fs.mkdtempSync(path.join(os.tmpdir(), "mf-fallback-vitest-"))
+		);
+		vite = await createViteServer({
+			root: tmp,
+			configFile: false,
+			logLevel: "silent",
+			server: { middlewareMode: true, ws: false },
+		});
+	});
+
+	afterEach(async () => {
+		await vite.close();
+		removeDirSync(tmp);
+	});
+
+	const vitestWorkerPath = fileURLToPath(import.meta.resolve("vitest/worker"));
+
+	it("resolves `vitest/worker` from this package with the legacy registry", async ({
+		expect,
+	}) => {
+		const response = await handleModuleFallbackRequest(
+			vite,
+			moduleFallbackRequest({
+				method: "import",
+				specifier: "/vitest/worker",
+				referrer: "/index.mjs",
+				rawSpecifier: "vitest/worker",
+			})
+		);
+
+		expect(response.status).toBe(301);
+		expect(response.headers.get("Location")).toBe(
+			toWorkerdSpecifier(vitestWorkerPath)
+		);
+	});
+
+	it("resolves `vitest/worker` from this package with the new registry", async ({
+		expect,
+	}) => {
+		const response = await handleModuleFallbackRequest(
+			vite,
+			v2ModuleFallbackRequest({
+				type: "import",
+				specifier: "file:///vitest/worker",
+				referrer: "file:///index.mjs",
+				rawSpecifier: "vitest/worker",
+			})
+		);
+
+		expect(response.status).toBe(301);
+		expect(response.headers.get("Location")).toBe(
+			pathToFileURL(vitestWorkerPath).href
+		);
 	});
 });

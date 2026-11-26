@@ -7,6 +7,7 @@ import { removeDirSync } from "@cloudflare/workers-utils/fs-helpers";
 import { test as originalTest } from "vitest";
 import { customTempProjectPath, isWindows } from "./constants";
 import { createTestLogStream } from "./log-stream";
+import { registerPackageManagerCache } from "./spawn";
 import type { Writable } from "node:stream";
 
 const C3_E2E_PREFIX = "tmp-e2e-c3";
@@ -41,9 +42,8 @@ const testProjectDir = (suite: string, test: string) => {
 				return;
 			}
 
-			realpathSync(mkdtempSync(nodePath.join(tmpdir(), `c3-tests-${suite}`)));
-			const filepath = getPath();
-			removeDirSync(filepath);
+			// Remove the scaffold and its sibling package caches together.
+			removeDirSync(tmpDirPath);
 		} catch (e) {
 			if (typeof e === "object" && e !== null && "code" in e) {
 				const code = e.code;
@@ -76,8 +76,9 @@ export const test = originalTest.extend<{
 		await use({ path: getPath(), name: getName() });
 		clean();
 	},
-	async logStream({ task, onTestFailed }, use) {
+	async logStream({ task, onTestFailed, project }, use) {
 		const { logPath, logStream } = createTestLogStream(task);
+		registerPackageManagerCache(logStream, project.path);
 
 		onTestFailed(() => {
 			// eslint-disable no-console -- raw console outputs for testing logs

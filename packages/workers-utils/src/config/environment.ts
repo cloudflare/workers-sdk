@@ -226,8 +226,9 @@ export type ContainerApp = {
 	 * The scheduling policy of the application
 	 * @optional
 	 * `"durable_object"` makes each Durable Object instance own its Container.
-	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`, and
-	 * application-wide log `observability` are supported on this entry.
+	 * In that mode, `name`, `class_name`, `scheduling_policy`, `images`,
+	 * application-wide log `observability`, `ssh`, and `authorized_keys` are
+	 * supported on this entry.
 	 *
 	 * @default "default"
 	 */
@@ -340,7 +341,7 @@ export type ContainerApp = {
 		/**
 		 * Restrict containers to compliance boundaries.
 		 */
-		jurisdiction?: "eu" | "fedramp";
+		jurisdiction?: "eu" | "fedramp" | "us";
 		/**
 		 * @hidden
 		 */
@@ -516,7 +517,25 @@ export interface WorkerEntrypointExport {
 	};
 }
 
-export type ConfiguredExport = DurableObjectExport | WorkerEntrypointExport;
+/**
+ * A single declarative Workflow export entry in the `exports` config map. The
+ * map key is the exported class name (the class extending `WorkflowEntrypoint`);
+ * `name` is the workflow's stable identity, used for instance and storage
+ * namespacing, and is required. The remaining settings match the ones accepted
+ * by `workflows` bindings.
+ */
+export interface WorkflowExport extends Pick<
+	WorkflowBinding,
+	"limits" | "concurrency" | "schedules" | "default_retention" | "jurisdiction"
+> {
+	type: "workflow";
+	name: string;
+}
+
+export type ConfiguredExport =
+	| DurableObjectExport
+	| WorkerEntrypointExport
+	| WorkflowExport;
 
 /**
  * The declarative `exports` map keyed by export name. Durable Object exports
@@ -811,6 +830,11 @@ interface EnvironmentInheritable {
 	/**
 	 * Include source maps when uploading this worker.
 	 *
+	 * Defaults to `true` for `wrangler deploy`, `wrangler versions upload`,
+	 * `wrangler preview` and `wrangler build --experimental-cf-build-output`,
+	 * where source maps that can't be resolved are skipped rather than failing
+	 * the upload.
+	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#source-maps
 	 *
 	 * @inheritable
@@ -914,6 +938,29 @@ export type DurableObjectBindings = {
 	environment?: string;
 }[];
 
+export type DurableObjectCodeUpdateStrategy = {
+	/** How Durable Object code updates should be applied. */
+	mode: "immediate" | "deferred";
+	/**
+	 * Maximum time, in seconds, to wait for Durable Objects to hibernate.
+	 * Defaults to 300 (5 minutes) and cannot exceed 86400 (24 hours).
+	 * @minimum 0
+	 * @maximum 86400
+	 * @multipleOf 0.001
+	 * @default 300
+	 */
+	max_delay?: number;
+};
+
+export type DurableObjectsConfig = {
+	bindings: DurableObjectBindings;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
+};
+
+export type RawDurableObjectsConfig = Omit<DurableObjectsConfig, "bindings"> & {
+	bindings?: DurableObjectBindings;
+};
+
 export const ARTIFACTS_EVENT_TYPES = [
 	"cf.artifacts.repo.created",
 	"cf.artifacts.repo.deleted",
@@ -939,6 +986,10 @@ export type ArtifactsEventTrigger = {
 		workflow_name: string;
 	}[];
 };
+
+export const WORKFLOW_JURISDICTIONS = ["eu", "fedramp", "us"] as const;
+
+export type WorkflowJurisdiction = (typeof WORKFLOW_JURISDICTIONS)[number];
 
 export type WorkflowBinding = {
 	/** The name of the binding used to refer to the Workflow */
@@ -972,7 +1023,31 @@ export type WorkflowBinding = {
 		/** How long to retain errored instances */
 		error_retention?: number | string;
 	};
+	/**
+	 * Optional jurisdiction that the Workflow's instances run and store their data in. It is set
+	 * when the Workflow is created and cannot be changed afterwards.
+	 */
+	jurisdiction?: WorkflowJurisdiction;
 };
+
+type ConnectHandlerConfigBase = {
+	/** The port to listen on. */
+	port: number;
+	/** The address to bind to. Defaults to `127.0.0.1`. */
+	address?: string;
+};
+
+type TcpConnectHandlerConfig = ConnectHandlerConfigBase & { protocol: "tcp" };
+
+type UdpConnectHandlerConfig = ConnectHandlerConfigBase & {
+	protocol: "udp";
+	/** The idle timeout in milliseconds after which a peer flow is closed. */
+	idle_timeout_ms?: number;
+	/** The maximum number of pending datagram bytes per peer flow. */
+	max_pending_bytes?: number;
+};
+
+type ConnectHandlerConfig = TcpConnectHandlerConfig | UdpConnectHandlerConfig;
 
 /**
  * The `EnvironmentNonInheritable` interface declares all the configuration fields for an environment
@@ -1026,7 +1101,7 @@ export interface EnvironmentNonInheritable {
 	};
 
 	/**
-	 * A list of durable objects that your Worker should be bound to.
+	 * Durable Object bindings and code update strategy for your Worker.
 	 *
 	 * For more information about Durable Objects, see the documentation at
 	 * https://developers.cloudflare.com/workers/learning/using-durable-objects
@@ -1039,9 +1114,7 @@ export interface EnvironmentNonInheritable {
 	 * @default {bindings:[]}
 	 * @nonInheritable
 	 */
-	durable_objects: {
-		bindings: DurableObjectBindings;
-	};
+	durable_objects: DurableObjectsConfig;
 
 	/**
 	 * A list of workflows that your Worker should be bound to.
@@ -1196,16 +1269,7 @@ export interface EnvironmentNonInheritable {
 	 * @default []
 	 * @nonInheritable
 	 */
-	connect: {
-		/** The transport protocol to listen for. */
-		protocol: "tcp";
-
-		/** The port to listen on. */
-		port: number;
-
-		/** The address to bind to. Defaults to `127.0.0.1`. */
-		address?: string;
-	}[];
+	connect: ConnectHandlerConfig[];
 
 	/**
 	 * Specifies R2 buckets that are bound to this Worker environment.
@@ -1259,6 +1323,8 @@ export interface EnvironmentNonInheritable {
 		database_name?: string;
 		/** The UUID of this D1 database (not required). */
 		database_id?: string;
+		/** The jurisdiction where an automatically provisioned D1 database will be created. */
+		jurisdiction?: string;
 		/** The UUID of this D1 database for Wrangler Dev (if specified). */
 		preview_database_id?: string;
 		/** The name of the migrations table for this D1 database (defaults to 'd1_migrations'). */
@@ -1380,6 +1446,11 @@ export interface EnvironmentNonInheritable {
 		id: string;
 		/** The local database connection string for `wrangler dev` */
 		localConnectionString?: string;
+		/**
+		 * Connect to the deployed Hyperdrive configuration during local development
+		 * instead of a local database.
+		 */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1435,6 +1506,8 @@ export interface EnvironmentNonInheritable {
 		binding: string;
 		/** The name of this dataset to write to. */
 		dataset?: string;
+		/** Whether the dataset should be remote or not in local development */
+		remote?: boolean;
 	}[];
 
 	/**
@@ -1452,6 +1525,23 @@ export interface EnvironmentNonInheritable {
 		| {
 				binding: string;
 				/** Whether the Browser binding should be remote or not in local development */
+				remote?: boolean;
+		  }
+		| undefined;
+
+	/**
+	 * An Analytics SQL binding.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default {}
+	 * @nonInheritable
+	 */
+	analytics:
+		| {
+				binding: string;
+				/** Whether the binding should connect to the remote service during local development. */
 				remote?: boolean;
 		  }
 		| undefined;
@@ -1477,7 +1567,7 @@ export interface EnvironmentNonInheritable {
 		| undefined;
 
 	/**
-	 * Binding to Cloudflare Images
+	 * Binding to Cloudflare Images, and configuration for Images URL transformations
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
 	 * and so must be specified in every named environment.
@@ -1489,9 +1579,20 @@ export interface EnvironmentNonInheritable {
 	 */
 	images:
 		| {
-				binding: string;
+				binding?: string;
 				/** Whether the Images binding should be remote or not in local development */
 				remote?: boolean;
+				/** Controls `/cdn-cgi/image/` URL transformations for requests served by this Worker */
+				url_transformations?: {
+					/** Whether URL transformations are enabled for this Worker */
+					enabled: boolean;
+					/**
+					 * Origins that images may be fetched from, in addition to the Worker's own zone,
+					 * e.g. `"images.example.com"`, `"*.example.com"` or `"example.com/images"`.
+					 * Don't include the protocol. Use `["*"]` to allow any origin. At most 10 entries.
+					 */
+					allowed_origins?: string[];
+				};
 		  }
 		| undefined;
 
@@ -1666,6 +1767,22 @@ export interface EnvironmentNonInheritable {
 	}[];
 
 	/**
+	 * K2 producer bindings. Create streams using the Dashboard or API.
+	 *
+	 * This field must be specified separately in each named environment.
+	 * @default []
+	 * @nonInheritable
+	 */
+	k2: {
+		/** The binding name exposed on the Worker's env object. */
+		binding: string;
+		/** The ID of the K2 stream. */
+		stream: string;
+		/** Always uses the real stream in development. Set true to suppress the usage warning; false is unsupported. */
+		remote?: boolean;
+	}[];
+
+	/**
 	 * Specifies Secret Store bindings that are bound to this Worker environment.
 	 *
 	 * NOTE: This field is not automatically inherited from the top level environment,
@@ -1740,6 +1857,26 @@ export interface EnvironmentNonInheritable {
 		app_id?: string;
 
 		/** Set to `true` to evaluate flags against the remote Flagship app during local dev, instead of the local simulator. */
+		remote?: boolean;
+	}[];
+
+	/**
+	 * Specifies RealtimeKit app bindings that are bound to this Worker environment.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	realtimekit: {
+		/** The binding name used to refer to the bound RealtimeKit app. */
+		binding: string;
+
+		/** The ID of the RealtimeKit app to bind to. */
+		app_id: string;
+
+		/** RealtimeKit has no local simulator. Set to `true` to use the remote RealtimeKit app during local dev. */
 		remote?: boolean;
 	}[];
 
@@ -1825,6 +1962,25 @@ export interface EnvironmentNonInheritable {
 				remote?: boolean;
 		  }
 	)[];
+
+	/**
+	 * Specifies OIDC token bindings. Each one issues short-lived OpenID Connect
+	 * tokens for this Worker's identity, for a single audience.
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	oidc_tokens: {
+		/** The binding name used to refer to the OIDC token binding in the Worker. */
+		binding: string;
+		/** The `aud` claim of every token the binding issues: 1 to 2048 printable ASCII characters, with no whitespace. */
+		audience: string;
+		/** The JWS algorithm that signs the tokens. Defaults to ES256; use RS256 for verifiers that only accept RS256. */
+		alg?: "ES256" | "RS256";
+	}[];
 }
 
 /**
@@ -1833,7 +1989,9 @@ export interface EnvironmentNonInheritable {
  * All the properties are optional, and will be replaced with defaults in the configuration that
  * is used in the rest of the codebase.
  */
-export type RawEnvironment = Partial<Environment>;
+export type RawEnvironment = Partial<Omit<Environment, "durable_objects">> & {
+	durable_objects?: RawDurableObjectsConfig;
+};
 
 /**
  * A bundling resolver rule, defining the modules type for paths that match the specified globs.
@@ -1855,6 +2013,16 @@ export type ConfigModuleRuleType =
 	| "Data"
 	| "PythonModule"
 	| "PythonRequirement";
+
+/**
+ * The rules applied after a Worker's own `rules`, so these modules can be
+ * imported without configuring them.
+ */
+export const DEFAULT_MODULE_RULES: Rule[] = [
+	{ type: "Text", globs: ["**/*.txt", "**/*.html", "**/*.sql"] },
+	{ type: "Data", globs: ["**/*.bin"] },
+	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
+];
 
 export type TailConsumer = {
 	/** The name of the service tail events will be forwarded to. */
@@ -1897,6 +2065,10 @@ export type Assets = {
 		| "none";
 	/** How to handle requests that do not match an asset. */
 	not_found_handling?: "single-page-application" | "404-page" | "none";
+	/**
+	 * The public URL prefix under which the application is served, e.g. `/subpath/`.
+	 */
+	base_path?: string;
 	/**
 	 * Matches will be routed to the User Worker, and matches to negative rules will go to the Asset Worker.
 	 *
@@ -2004,10 +2176,18 @@ export type ContainerEngine =
  */
 export interface PreviewsConfig
 	extends
-		Partial<EnvironmentNonInheritable>,
+		Partial<Omit<EnvironmentNonInheritable, "durable_objects" | "images">>,
 		Partial<
 			Pick<
 				EnvironmentInheritable,
 				"logpush" | "observability" | "limits" | "placement" | "cache"
 			>
-		> {}
+		> {
+	durable_objects?: { bindings: DurableObjectBindings };
+	/** Binding to Cloudflare Images. `url_transformations` is not supported in previews. */
+	images?: {
+		binding: string;
+		/** Whether the Images binding should be remote or not in local development */
+		remote?: boolean;
+	};
+}

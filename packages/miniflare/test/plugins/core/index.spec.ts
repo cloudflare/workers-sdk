@@ -18,7 +18,19 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 
 	// Generate self-signed certificate
 	childProcess.execSync(
-		'openssl req -newkey rsa:2048 -nodes -keyout key.pem -x509 -days 30 -out cert.pem -subj "/CN=localhost"',
+		'openssl req -newkey rsa:2048 -nodes -keyout ca-key.pem -x509 -days 30 -out ca.pem -subj "/CN=Test CA"',
+		{ cwd: tmp, stdio: "ignore" }
+	);
+	childProcess.execSync(
+		'openssl req -newkey rsa:2048 -nodes -keyout key.pem -out cert.csr -subj "/CN=localhost"',
+		{ cwd: tmp, stdio: "ignore" }
+	);
+	await fs.writeFile(
+		path.join(tmp, "extensions.cnf"),
+		"subjectAltName=DNS:localhost,IP:127.0.0.1\nbasicConstraints=critical,CA:FALSE\nextendedKeyUsage=serverAuth\n"
+	);
+	childProcess.execSync(
+		"openssl x509 -req -in cert.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 30 -out cert.pem -extfile extensions.cnf",
 		{ cwd: tmp, stdio: "ignore" }
 	);
 	const keyPath = path.join(tmp, "key.pem");
@@ -26,28 +38,30 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 	const key = await fs.readFile(keyPath);
 	const cert = await fs.readFile(certPath);
 
-	// Start HTTPS server with self-signed certificate
 	const responseBody = "secure body";
 	const server = https.createServer({ key, cert }, (req, res) => {
 		res.end(responseBody);
 	});
 	const stoppableServer = stoppable(server, /* grace */ 0);
 	const url = await new Promise<string>((resolve) => {
-		server.listen(0, () => {
+		server.listen(0, "127.0.0.1", () => {
 			onTestFinished(() => {
 				return new Promise((resolve, reject) =>
 					stoppableServer.stop((err) => (err ? reject(err) : resolve()))
 				);
 			});
 			const port = (server.address() as AddressInfo).port;
-			resolve(`https://localhost:${port}`);
+			resolve(`https://127.0.0.1:${port}`);
 		});
 	});
 
 	// Write NODE_EXTRA_CA_CERTS file, with multiple certificates
 	// (see https://github.com/cloudflare/miniflare/pull/587/files#r1271579671)
 	const caCertsPath = path.join(tmp, "bundle.pem");
-	const caCerts = [...tls.rootCertificates, cert];
+	const caCerts = [
+		...tls.rootCertificates,
+		await fs.readFile(path.join(tmp, "ca.pem")),
+	];
 	await fs.writeFile(
 		caCertsPath,
 		["## This is a comment which should be ignored\n"].concat(
@@ -73,7 +87,6 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
         workers: [
           {
             config: {
-              type: "worker",
               name: "",
               compatibilityDate: "2025-05-01",
               manifest: ${JSON.stringify(manifest)},

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.56.0",
+	"version": "2.0.0-rc.5",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -19,11 +19,7 @@
 		"url": "https://github.com/cloudflare/workers-sdk.git",
 		"directory": "packages/vite-plugin-cloudflare"
 	},
-	"bin": {
-		"cf-vite": "./bin/cf-vite"
-	},
 	"files": [
-		"bin",
 		"dist"
 	],
 	"type": "module",
@@ -34,10 +30,6 @@
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
-		},
-		"./experimental-config": {
-			"types": "./dist/experimental-config.d.mts",
-			"import": "./dist/experimental-config.mjs"
 		}
 	},
 	"publishConfig": {
@@ -53,30 +45,29 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
+		"@cloudflare/build-output-utils": "workspace:*",
+		"@cloudflare/config": "workspace:*",
+		"@cloudflare/runtime-types": "workspace:*",
 		"@cloudflare/unenv-preset": "workspace:*",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "catalog:default",
-		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
-		"@cloudflare/build-output-utils": "workspace:*",
-		"@cloudflare/config": "workspace:*",
+		"@cloudflare/cli-shared-helpers": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/remote-bindings": "workspace:*",
-		"@cloudflare/runtime-types": "workspace:*",
+		"@cloudflare/workers-auth": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
-		"@remix-run/node-fetch-server": "^0.8.0",
+		"@remix-run/node-fetch-server": "^1.0.0",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
 		"@types/ws": "^8.5.13",
 		"am-i-vibing": "^0.5.0",
-		"defu": "^6.1.4",
 		"get-port": "^7.1.0",
 		"magic-string": "^0.30.12",
 		"mlly": "^1.7.4",
@@ -86,17 +77,20 @@
 		"semver": "^7.7.1",
 		"tinyglobby": "catalog:default",
 		"tree-kill": "catalog:default",
-		"tsdown": "0.16.3",
+		"tsdown": "catalog:default",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vite-legacy": "npm:vite@7.1.12",
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"vite": "^6.1.0 || ^7.0.0 || ^8.0.0",
-		"wrangler": "workspace:^"
+		"vite": "^7.0.0 || ^8.0.0"
 	},
 	"workers-sdk": {
-		"prerelease": true
+		"prerelease": true,
+		"npmPrerelease": {
+			"tag": "rc",
+			"numbered": true
+		}
 	}
 }

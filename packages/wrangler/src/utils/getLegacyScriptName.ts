@@ -1,4 +1,4 @@
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Alternative to the getScriptName() because special Legacy cases allowed

@@ -1,6 +1,10 @@
 import { triggersDeploy } from "@cloudflare/deploy-helpers";
 import { createCommand, createNamespace } from "../core/create-command";
 import { resolveTriggersInput } from "../deployment-bundle/resolve-config-args";
+import {
+	routeZoneArgs,
+	validateRouteZoneArgs,
+} from "../deployment-bundle/route-zone-args";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 
@@ -39,8 +43,15 @@ export const triggersDeployCommand = createCommand({
 			requiresArg: true,
 			array: true,
 		},
+		...routeZoneArgs,
 		"dry-run": {
 			describe: "Don't actually deploy",
+			type: "boolean",
+			default: false,
+		},
+		"show-diff": {
+			describe:
+				"Show changes to routes, custom domains, cron schedules, workers.dev, and Preview URLs before deploying",
 			type: "boolean",
 			default: false,
 		},
@@ -58,19 +69,29 @@ export const triggersDeployCommand = createCommand({
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},
+	validateArgs(args) {
+		validateRouteZoneArgs(args);
+	},
 	async handler(args, { config }) {
 		metrics.sendMetricsEvent("deploy worker triggers", {
 			sendMetrics: config.send_metrics,
 		});
 		const props = resolveTriggersInput(args, config);
-		const accountId = args.dryRun ? undefined : await requireAuth(config);
+		const accountId =
+			args.dryRun && !args.showDiff ? undefined : await requireAuth(config);
 
 		await triggersDeploy({
 			config,
 			accountId,
 			firstDeploy: false,
 			dryRun: args.dryRun,
+			showDiff: args.showDiff,
 			validated: false,
+			queueCreateCommand: (queueName) => `wrangler queues create ${queueName}`,
+			workersDevConfigFieldName: "workers_dev",
+			workersDevConfigAssignment: (value) => `workers_dev = ${value}`,
+			previewUrlsConfigFieldName: "preview_urls",
+			previewUrlsConfigAssignment: (value) => `preview_urls = ${value}`,
 			...props,
 		});
 	},

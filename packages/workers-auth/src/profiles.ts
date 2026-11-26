@@ -1,5 +1,6 @@
 import path from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
+import { getCloudflareAuthProfileFromEnv } from "./env-vars";
 
 const RESERVED_PROFILE_NAMES = ["default", "staging"];
 
@@ -130,12 +131,13 @@ export function createProfileStore(args: {
 		configs: args.configs,
 		bindings,
 		resolve(resolveArgs) {
-			if (resolveArgs.profile) {
-				if (resolveArgs.profile === "default") {
+			const profile = resolveArgs.profile || getCloudflareAuthProfileFromEnv();
+			if (profile) {
+				if (profile === "default") {
 					return "default";
 				}
-				validateProfileName(resolveArgs.profile);
-				return resolveArgs.profile;
+				validateProfileName(profile);
+				return profile;
 			}
 
 			const dirProfile = bindings.getProfileForDirectory(resolveArgs.cwd);

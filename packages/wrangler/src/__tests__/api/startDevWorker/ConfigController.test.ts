@@ -12,6 +12,26 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runWrangler } from "../../helpers/run-wrangler";
 import type * as StartDevWorkerApi from "../../../api/startDevWorker";
 
+// Lets a test simulate a slow initial scan: a config watcher created while
+// `initialScanDelayMs` is set only starts watching, and only becomes ready,
+// that long after it is created.
+const chokidarMock = vi.hoisted(() => ({ initialScanDelayMs: 0 }));
+vi.mock("chokidar", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("chokidar")>();
+	return {
+		...actual,
+		watch: (...[paths, options]: Parameters<typeof actual.watch>) => {
+			const delay = chokidarMock.initialScanDelayMs;
+			if (delay === 0) {
+				return actual.watch(paths, options);
+			}
+			const watcher = new actual.FSWatcher(options);
+			setTimeout(() => watcher.add(paths), delay);
+			return watcher;
+		},
+	};
+});
+
 // Declaration-level pins for the exported input chain: a fresh object
 // literal gets excess-property checking, which fails to compile if any of
 // these signatures regresses to the base `StartDevWorkerInput` (the
@@ -60,7 +80,59 @@ describe("ConfigController", () => {
 		await controller.teardown();
 		logger.debug("teardown complete");
 		logger.resetLoggerLevel();
+		chokidarMock.initialScanDelayMs = 0;
 	});
+
+	it("uses the effective registry for runtime config and the initial bindings display", async ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_DEV_REGISTRY_PATH", "shared-registry");
+		await seed({
+			"src/index.ts": "export default {}",
+			"shared-registry/api-worker": JSON.stringify({
+				debugPortAddress: "127.0.0.1:9229",
+			}),
+		});
+
+		const config = await controller.set(
+			{
+				entrypoint: "src/index.ts",
+				bindings: { SERVICE: { type: "service", service: "api-worker" } },
+				dev: { registry: "legacy-registry", watch: false },
+			},
+			true
+		);
+
+		expect(config?.dev.registry).toBe(path.resolve("shared-registry"));
+		expect(std.out).toMatch(/env\.SERVICE \(api-worker\).*local \[connected\]/);
+		expect(controller.latestInput?.dev?.registry).toBe("legacy-registry");
+	});
+
+	it.for([undefined, ""])(
+		"preserves a disabled registry with an environment override: %s",
+		async (registry, { expect }) => {
+			vi.stubEnv("CLOUDFLARE_DEV_REGISTRY_PATH", "shared-registry");
+			await seed({
+				"src/index.ts": "export default {}",
+				"shared-registry/api-worker": JSON.stringify({
+					debugPortAddress: "127.0.0.1:9229",
+				}),
+			});
+
+			const config = await controller.set(
+				{
+					entrypoint: "src/index.ts",
+					bindings: { SERVICE: { type: "service", service: "api-worker" } },
+					dev: { registry, watch: false },
+				},
+				true
+			);
+
+			expect(config?.dev.registry).toBe(registry);
+			expect(std.out).not.toContain("[connected]");
+			expect(std.out).not.toContain("[not connected]");
+		}
+	);
 
 	it("should prompt user to update types if they're out of date", async ({
 		expect,
@@ -161,6 +233,76 @@ describe("ConfigController", () => {
 				},
 				projectRoot: process.cwd(),
 				entrypoint: path.join(process.cwd(), "src/index.ts"),
+			},
+		});
+	});
+
+	it.for([
+		{ remote: undefined, hostname: undefined },
+		{ remote: false, hostname: undefined },
+		{ remote: true, hostname: "route.example.com" },
+		{ remote: "minimal", hostname: "route.example.com" },
+	] as const)(
+		"should resolve the origin with inference disabled and remote=$remote",
+		async ({ remote, hostname }, { expect }) => {
+			await seed({
+				"src/index.ts": "export default {}",
+				"wrangler.json": JSON.stringify({
+					name: "my-worker",
+					main: "src/index.ts",
+					compatibility_date: "2024-06-01",
+					routes: [{ pattern: "route.example.com/*", zone_id: "some-zone-id" }],
+				}),
+			});
+
+			const config = await controller.set(
+				{
+					config: "./wrangler.json",
+					dev: { remote, inferOriginFromRoutes: false },
+				},
+				true
+			);
+
+			expect(config).toMatchObject({
+				dev: { origin: { hostname } },
+			});
+		}
+	);
+
+	it("should map UDP connect options for the local runtime", async ({
+		expect,
+	}) => {
+		const event = bus.waitFor("configUpdate");
+		await seed({
+			"src/index.ts": "export default {}",
+			"wrangler.json": JSON.stringify({
+				name: "udp-worker",
+				main: "src/index.ts",
+				compatibility_date: "2026-09-21",
+				connect: [
+					{
+						protocol: "udp",
+						port: 8080,
+						idle_timeout_ms: 1_000,
+						max_pending_bytes: 65_536,
+					},
+				],
+			}),
+		});
+
+		await controller.set({ config: "./wrangler.json" });
+
+		await expect(event).resolves.toMatchObject({
+			config: {
+				triggers: [
+					{
+						type: "connect",
+						protocol: "udp",
+						port: 8080,
+						idleTimeoutMs: 1_000,
+						maxPendingBytes: 65_536,
+					},
+				],
 			},
 		});
 	});
@@ -575,5 +717,44 @@ describe("ConfigController", () => {
 			).length;
 
 		expect(warningCount).toBe(1);
+	});
+
+	it("should notice config changes made as soon as the previous one is applied", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_CI_DISABLE_CONFIG_WATCHING", "false");
+		chokidarMock.initialScanDelayMs = 500;
+		const writeConfig = (edit: string) =>
+			seed({
+				"wrangler.toml": dedent /* toml */ `
+					name = "my-worker"
+					main = "src/index.js"
+					compatibility_date = "2024-06-01"
+
+					[vars]
+					EDIT = "${edit}"
+				`,
+			});
+		const configUpdateFor = (edit: string) =>
+			bus.waitFor(
+				"configUpdate",
+				(e) =>
+					e.config.bindings?.EDIT?.type === "plain_text" &&
+					e.config.bindings.EDIT.value === edit
+			);
+		await seed({ "src/index.js": "export default {}" });
+		await writeConfig("0");
+
+		const initial = configUpdateFor("0");
+		await controller.set({ config: "./wrangler.toml" });
+		await initial;
+
+		// Each write lands right after the previous one has been applied, so it
+		// is only noticed if the config file is being watched by then.
+		for (const edit of ["1", "2", "3"]) {
+			const update = configUpdateFor(edit);
+			await writeConfig(edit);
+			await expect(update).resolves.toBeDefined();
+		}
 	});
 });

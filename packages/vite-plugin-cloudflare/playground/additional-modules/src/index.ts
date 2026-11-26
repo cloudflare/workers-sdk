@@ -1,5 +1,3 @@
-import subpathHtml from "#html";
-import subpathHtmlWithExt from "#modules/html-example.html";
 import bin from "./modules/bin-example.bin";
 import html from "./modules/html-example.html";
 import sql from "./modules/sql-example.sql";
@@ -8,6 +6,8 @@ import text2 from "./modules/text__example__2.txt";
 import wasm from "./modules/wasm-example.wasm";
 import init from "./modules/wasm-example.wasm?init";
 import wasmWithModuleParam from "./modules/wasm-example.wasm?module";
+import subpathHtml from "#html";
+import subpathHtmlWithExt from "#modules/html-example.html";
 
 interface Instance {
 	exports: {

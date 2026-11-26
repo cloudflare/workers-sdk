@@ -9,7 +9,7 @@ export const pipelinesListCommand = createCommand({
 	metadata: {
 		description: "List all pipelines",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
@@ -98,7 +98,7 @@ export const pipelinesListCommand = createCommand({
 		);
 		if (failedPipelines.length > 0) {
 			logger.log(
-				`\n${failedPipelines.length} pipeline${failedPipelines.length === 1 ? " is" : "s are"} in a failed state. Run 'wrangler pipelines get <pipeline>' for details:`
+				`\n${failedPipelines.length} pipeline${failedPipelines.length === 1 ? " is" : "s are"} in a failed state. Run 'wrangler basin pipelines get <pipeline>' for details:`
 			);
 			for (const pipeline of failedPipelines) {
 				logger.log(
@@ -111,7 +111,7 @@ export const pipelinesListCommand = createCommand({
 
 		if (hasLegacyPipelines) {
 			logger.warn(
-				"⚠️  You have legacy pipelines. Consider creating new pipelines by running 'wrangler pipelines setup'."
+				"⚠️  You have legacy pipelines. Consider creating new pipelines by running 'wrangler basin pipelines setup'."
 			);
 		}
 	},

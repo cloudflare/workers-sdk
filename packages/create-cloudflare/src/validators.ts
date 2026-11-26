@@ -27,8 +27,8 @@ export const validateTemplateUrl = (value: Arg) => {
  * Checks that a candidate project path is valid.
  *
  * To be a valid target for a c3 project, it must:
- * - Be empty (excluding a small allow-list of files)
  * - Be a valid pages project name
+ * - Be empty (excluding a small allow-list of files)
  *
  * @param relativePath - The path to the project directory
  * @param args - The parsed argument array that was passed to c3
@@ -37,17 +37,7 @@ export const validateProjectDirectory = (
 	relativePath: string,
 	args: Partial<C3Args>
 ) => {
-	// Validate that the directory is non-existent or empty
 	const path = resolve(relativePath);
-	const existsAlready = existsSync(path);
-
-	if (existsAlready) {
-		for (const file of readdirSync(path)) {
-			if (!isAllowedExistingFile(file)) {
-				return `Directory \`${relativePath}\` already exists and contains files that might conflict. Please choose a new name.`;
-			}
-		}
-	}
 
 	// Ensure the name is valid per the pages schema
 	// Skip this if we're initializing from an existing workers script, since some
@@ -67,6 +57,17 @@ export const validateProjectDirectory = (
 
 		if (projectName.length > 58) {
 			return `Project names must be less than 58 characters.`;
+		}
+	}
+
+	// Validate that the directory is non-existent or empty
+	const existsAlready = existsSync(path);
+
+	if (existsAlready) {
+		for (const file of readdirSync(path)) {
+			if (!isAllowedExistingFile(file)) {
+				return `Directory \`${relativePath}\` already exists and contains files that might conflict. Please choose a new name.`;
+			}
 		}
 	}
 };

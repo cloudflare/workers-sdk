@@ -215,6 +215,32 @@ describe("deploy", () => {
 			);
 		});
 	});
+	describe("explicit resource management", () => {
+		it("should preserve using declarations instead of lowering them", async ({
+			expect,
+		}) => {
+			writeWranglerConfig();
+			fs.writeFileSync(
+				"index.js",
+				`
+export default {
+	async fetch() {
+		await using session = { async [Symbol.asyncDispose]() {} };
+		using socket = { [Symbol.dispose]() {} };
+		return new Response("ok");
+	},
+};
+`
+			);
+			await runWrangler("deploy index.js --dry-run --outdir dist");
+
+			const output = fs.readFileSync("dist/index.js", "utf-8");
+			expect(output).toContain("await using session = ");
+			expect(output).toContain("using socket = ");
+			expect(output).not.toContain("__using");
+			expect(output).not.toContain("__callDispose");
+		});
+	});
 	describe("custom builds", () => {
 		beforeEach(() => {
 			vi.unstubAllGlobals();
@@ -435,7 +461,7 @@ describe("deploy", () => {
 				Worker Startup Time: 100 ms
 				Uploaded test-name-testEnv (TIMINGS)
 				Deployed test-name-testEnv triggers (TIMINGS)
-				  https://test-name-testEnv.test-sub-domain.workers.dev
+				  https://test-name-testenv.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1322,6 +1348,62 @@ export default { fetch() { return new Response(mod); } };`;
 			});
 
 			await runWrangler("deploy");
+		});
+
+		it("should include source map with bundle by default", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({ main: "index.ts" });
+			writeWorkerSource({ format: "ts" });
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": expect.stringMatching(
+						/"sources":\["another.ts","index.ts"\],"sourceRoot":"".*"file":"index.js"/
+					),
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should skip unresolvable source maps by default rather than failing", async () => {
+			writeWranglerConfig({ no_bundle: true, main: "index.js" });
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=missing.js.map"
+			);
+
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedMainModule: "index.js",
+				expectedModules: {
+					"index.js.map": null,
+				},
+			});
+
+			await runWrangler("deploy");
+		});
+
+		it("should fail on unresolvable source maps when upload_source_maps = true", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				no_bundle: true,
+				main: "index.js",
+				upload_source_maps: true,
+			});
+			fs.writeFileSync(
+				"index.js",
+				`export default { fetch() { return new Response("Hello World"); } }\n` +
+					"//# sourceMappingURL=missing.js.map"
+			);
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				/Invalid source map path in .*index\.js: .*missing\.js\.map does not exist\./
+			);
 		});
 
 		it("should not include source map with bundle when upload_source_maps = false", async () => {

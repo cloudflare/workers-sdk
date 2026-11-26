@@ -38,7 +38,7 @@ import type {
 	PlacementEvent,
 	PlacementWithEvents,
 } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export function listDeploymentsYargs(args: CommonYargsArgv) {
 	return args

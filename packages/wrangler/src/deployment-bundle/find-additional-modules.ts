@@ -10,12 +10,8 @@ import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
 import { tryAttachSourcemapToModule } from "./source-maps";
 import type { ParsedRules } from "./rules";
-import type {
-	Entry,
-	CfModule,
-	CfModuleType,
-	Rule,
-} from "@cloudflare/workers-utils";
+import type { Entry, CfModule, CfModuleType } from "@cloudflare/workers-utils";
+import type { Rule } from "@cloudflare/workers-utils/config";
 
 async function* getFiles(
 	configPath: string | undefined,

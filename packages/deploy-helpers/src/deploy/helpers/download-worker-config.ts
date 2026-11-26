@@ -1,13 +1,12 @@
-import {
-	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	constructWranglerConfig,
-} from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { constructWranglerConfig } from "@cloudflare/workers-utils/config";
 import { fetchResult } from "../../shared/context";
 import type {
-	RawConfig,
+	ComplianceConfig,
 	ServiceMetadataRes,
-	WorkerMetadata,
+	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 type CustomDomainsRes = {
 	id: string;
@@ -41,12 +40,15 @@ type RoutesRes = {
 }[];
 
 /**
- * Downloads all information required to construct a Wrangler config file for a Worker from the API
+ * Downloads the information required to construct a Wrangler config file for a Worker from the API.
  */
 export async function fetchWorkerConfig(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
-	environment: string
+	environment: string,
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ) {
 	const [
 		bindings,
@@ -56,28 +58,32 @@ export async function fetchWorkerConfig(
 		serviceEnvMetadata,
 		cronTriggers,
 	] = await Promise.all([
-		fetchResult<WorkerMetadata["bindings"]>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+		fetchResult<WorkerMetadataBinding[]>(
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
 		),
-		fetchResult<RoutesRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
-		),
-		fetchResult<CustomDomainsRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
-		),
+		fetchRoutes
+			? fetchResult<RoutesRes>(
+					complianceConfig,
+					`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
+				)
+			: Promise.resolve([]),
+		fetchCustomDomains
+			? fetchResult<CustomDomainsRes>(
+					complianceConfig,
+					`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
+				)
+			: Promise.resolve([]),
 		fetchResult<WorkerSubdomainRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
 		),
 		fetchResult<ServiceMetadataRes["default_environment"]>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}`
 		),
 		fetchResult<CronTriggersRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			complianceConfig,
 			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
 		),
 	]).catch((e) => {
@@ -101,10 +107,13 @@ export async function fetchWorkerConfig(
  * approximates what a wrangler config object for the worker was/would have been.
  */
 export async function downloadWorkerConfig(
+	complianceConfig: ComplianceConfig,
 	workerName: string,
 	environment: string,
 	entrypoint: string,
-	accountId: string
+	accountId: string,
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ): Promise<RawConfig> {
 	const {
 		bindings,
@@ -113,18 +122,33 @@ export async function downloadWorkerConfig(
 		subdomainStatus,
 		serviceEnvMetadata,
 		cronTriggers,
-	} = await fetchWorkerConfig(accountId, workerName, environment);
+	} = await fetchWorkerConfig(
+		complianceConfig,
+		accountId,
+		workerName,
+		environment,
+		fetchRoutes,
+		fetchCustomDomains
+	);
+
+	const { script } = serviceEnvMetadata;
+	if (!script) {
+		throw new UserError(
+			`Cannot download configuration for Worker "${workerName}" because it has no uploaded script. Deploy the Worker first.`,
+			{ telemetryMessage: "worker config download script missing" }
+		);
+	}
 
 	return constructWranglerConfig({
 		name: workerName,
 		entrypoint,
-		compatibility_date: serviceEnvMetadata.script.compatibility_date,
-		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
-		tags: serviceEnvMetadata.script.tags,
-		migration_tag: serviceEnvMetadata.script.migration_tag,
-		tail_consumers: serviceEnvMetadata.script.tail_consumers,
-		observability: serviceEnvMetadata.script.observability,
-		limits: serviceEnvMetadata.script.limits,
+		compatibility_date: script.compatibility_date,
+		compatibility_flags: script.compatibility_flags,
+		tags: script.tags,
+		migration_tag: script.migration_tag,
+		tail_consumers: script.tail_consumers,
+		observability: script.observability,
+		limits: script.limits,
 		bindings,
 		routes,
 		domains: customDomains,
@@ -132,8 +156,8 @@ export async function downloadWorkerConfig(
 		schedules: cronTriggers.schedules.map((s) => ({
 			cron: s.cron,
 		})),
-		placement: serviceEnvMetadata.script.placement_mode
-			? { mode: serviceEnvMetadata.script.placement_mode }
+		placement: script.placement_mode
+			? { mode: script.placement_mode }
 			: undefined,
 		logpush: undefined,
 	});

@@ -25,6 +25,7 @@ type Manifest = NonNullable<MiniflareWorkerConfig["manifest"]>;
 type ManifestModule = Manifest["modules"][string];
 type Assets = NonNullable<MiniflareWorkerConfig["assets"]>;
 type ServiceBinding = Extract<Env[string], { type: "worker" }>;
+type TailConsumer = NonNullable<MiniflareWorkerConfig["tailConsumers"]>[number];
 
 export function convertV4MiniflareOptions(
 	options: V4MiniflareOptions
@@ -59,6 +60,9 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		handleUncaughtError: options.handleUncaughtError,
 		upstream: options.upstream,
 		cf: options.cf,
+		// The v4 adapter preserves its opt-in registry semantics, including for
+		// isolated Vitest pools that have never advertised their Workers.
+		enableDevRegistry: Boolean(options.unsafeDevRegistryPath),
 		unsafeDevRegistryPath: options.unsafeDevRegistryPath,
 		unsafeHandleDevRegistryUpdate: options.unsafeHandleDevRegistryUpdate,
 		unsafeProxySharedSecret: options.unsafeProxySharedSecret,
@@ -127,7 +131,6 @@ function convertWorkerOptions(
 	);
 
 	const config: MiniflareWorkerConfig = {
-		type: "worker",
 		name: worker.name ?? "",
 		compatibilityDate: worker.compatibilityDate ?? FALLBACK_COMPATIBILITY_DATE,
 		compatibilityFlags: worker.compatibilityFlags,
@@ -141,6 +144,11 @@ function convertWorkerOptions(
 		config.triggers.push({ type: "fetch", pattern: route });
 	}
 
+	for (const cron of worker.cronTriggers ?? []) {
+		config.triggers ??= [];
+		config.triggers.push({ type: "scheduled", schedule: cron });
+	}
+
 	for (const connectHandler of worker.connectHandlers ?? []) {
 		config.triggers ??= [];
 		config.triggers.push({ type: "connect", ...connectHandler });
@@ -151,6 +159,7 @@ function convertWorkerOptions(
 	addNamespaceBindings(env, "d1", worker.d1Databases, isRemote);
 	addR2Bindings(env, worker.r2Buckets, isRemote);
 	addDurableObjectBindings(env, exports, config.name, worker, isRemote);
+	addWorkflowExports(exports, worker);
 	addQueueBindings(
 		env,
 		config,
@@ -159,8 +168,17 @@ function convertWorkerOptions(
 		isRemote
 	);
 	addServiceBindings(env, worker.serviceBindings, isRemote);
-	addServiceBindingArray(config, worker.tails, false);
-	addServiceBindingArray(config, worker.streamingTails, true);
+	const tailConsumers = convertTailConsumers(worker.tails, "tails");
+	if (tailConsumers !== undefined) {
+		config.tailConsumers = tailConsumers;
+	}
+	const streamingTailConsumers = convertTailConsumers(
+		worker.streamingTails,
+		"streamingTails"
+	);
+	if (streamingTailConsumers !== undefined) {
+		config.experimental = { streamingTailConsumers };
+	}
 	addProductBindings(env, exports, config, worker, isRemote);
 
 	legacy.wasmBindings = worker.wasmBindings;
@@ -189,7 +207,9 @@ function convertWorkerOptions(
 	dev.unsafeEphemeralDurableObjects = worker.unsafeEphemeralDurableObjects;
 	dev.stripCfConnectingIp = worker.stripCfConnectingIp;
 	dev.zone = worker.zone;
-	dev.access = worker.access;
+	if (worker.access !== undefined) {
+		config.access = { dev: worker.access };
+	}
 
 	const options: WorkerOptions = { config };
 	if (Object.values(legacy).some((value) => value !== undefined)) {
@@ -446,6 +466,29 @@ function addDurableObjectExport(
 	exports[object.className] = exported as Exports[string];
 }
 
+/**
+ * Translate the declarative `workflowExports` carrier (keyed by the exported
+ * class name) into `exports` entries. This is the export-side counterpart to
+ * the `workflows` binding loop in `addProductBindings`: bindings expose a
+ * workflow to another Worker via `env`, whereas exports declare a workflow this
+ * Worker owns on `ctx.exports`.
+ */
+function addWorkflowExports(exports: Exports, worker: ParsedV4WorkerOptions) {
+	for (const [className, workflow] of Object.entries(
+		worker.workflowExports ?? {}
+	)) {
+		exports[className] = {
+			type: "workflow",
+			name: workflow.name,
+			events: workflow.events,
+			limits:
+				workflow.stepLimit === undefined
+					? undefined
+					: { steps: workflow.stepLimit },
+		} as Exports[string];
+	}
+}
+
 function addQueueBindings(
 	env: Env,
 	config: MiniflareWorkerConfig,
@@ -505,13 +548,14 @@ function addServiceBindings(
 	}
 }
 
-function addServiceBindingArray(
-	config: MiniflareWorkerConfig,
+function convertTailConsumers(
 	bindings: ParsedV4WorkerOptions["tails"],
-	streaming: boolean
-) {
-	const option = streaming ? "streamingTails" : "tails";
-	for (const binding of bindings ?? []) {
+	option: "tails" | "streamingTails"
+): TailConsumer[] | undefined {
+	if (bindings === undefined || bindings.length === 0) {
+		return undefined;
+	}
+	return bindings.map((binding) => {
 		if (hasRemoteProxyConnectionString(binding)) {
 			throwUnsupportedOption(`${option}[].remoteProxyConnectionString`);
 		}
@@ -519,14 +563,12 @@ function addServiceBindingArray(
 		if (converted.type !== "worker" || typeof converted.worker !== "string") {
 			throwUnsupportedOption(option);
 		}
-		config.tailConsumers ??= [];
-		config.tailConsumers.push({
+		return {
 			worker: converted.worker,
 			entrypoint: converted.exportName,
 			props: converted.props,
-			streaming,
-		});
-	}
+		};
+	});
 }
 
 function hasRemoteProxyConnectionString(
@@ -636,6 +678,14 @@ function addProductBindings(
 			dev: { remote: isRemote(worker.ai.remoteProxyConnectionString) },
 		};
 	}
+	if (worker.analyticsSql !== undefined) {
+		env[worker.analyticsSql.binding] = {
+			type: "analytics-sql",
+			dev: {
+				remote: isRemote(worker.analyticsSql.remoteProxyConnectionString),
+			},
+		};
+	}
 	for (const [name, binding] of Object.entries(worker.agentMemory ?? {})) {
 		env[name] = {
 			type: "agent-memory",
@@ -664,13 +714,20 @@ function addProductBindings(
 	for (const [name, binding] of Object.entries(
 		worker.analyticsEngineDatasets ?? {}
 	)) {
-		env[name] = { type: "analytics-engine-dataset", name: binding.dataset };
+		env[name] = {
+			type: "analytics-engine-dataset",
+			name: binding.dataset,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
 	}
 	for (const [name, value] of Object.entries(worker.hyperdrives ?? {})) {
+		const isRemoteEntry = typeof value === "object" && !(value instanceof URL);
 		env[name] = {
 			type: "hyperdrive",
-			id: name,
-			dev: { connectionString: String(value) },
+			id: isRemoteEntry && value.id ? value.id : name,
+			dev: isRemoteEntry
+				? { remote: isRemote(value.remoteProxyConnectionString) }
+				: { connectionString: String(value) },
 		};
 	}
 	for (const [name, binding] of Object.entries(worker.ratelimits ?? {})) {
@@ -681,6 +738,13 @@ function addProductBindings(
 		};
 	}
 	addPipelineBindings(env, worker.pipelines, isRemote);
+	for (const [name, binding] of Object.entries(worker.k2 ?? {})) {
+		env[name] = {
+			type: "k2",
+			id: binding.stream,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const binding of worker.email?.send_email ?? []) {
 		env[binding.name] = {
 			type: "send-email",
@@ -748,6 +812,13 @@ function addProductBindings(
 			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
 		};
 	}
+	for (const [name, binding] of Object.entries(worker.realtimekit ?? {})) {
+		env[name] = {
+			type: "realtime-kit",
+			id: binding.app_id,
+			dev: { remote: isRemote(binding.remoteProxyConnectionString) },
+		};
+	}
 	for (const [name, binding] of Object.entries(worker.artifacts ?? {})) {
 		env[name] = {
 			type: "artifacts",
@@ -777,10 +848,15 @@ function addProductBindings(
 			name: workflow.name,
 			worker: targetWorkerName,
 			exportName: workflow.className,
-			limits:
-				workflow.stepLimit === undefined
+			unsafeConfig:
+				workflow.events === undefined && workflow.stepLimit === undefined
 					? undefined
-					: { steps: workflow.stepLimit },
+					: {
+							events: workflow.events,
+							...(workflow.stepLimit === undefined
+								? {}
+								: { limits: { steps: workflow.stepLimit } }),
+						},
 		};
 	}
 }
@@ -795,14 +871,14 @@ function addPipelineBindings(
 	}
 	if (Array.isArray(pipelines)) {
 		for (const name of pipelines) {
-			env[name] = { type: "pipeline", name };
+			env[name] = { type: "pipeline", streamId: name };
 		}
 		return;
 	}
 	for (const [name, binding] of Object.entries(pipelines)) {
 		env[name] = {
 			type: "pipeline",
-			name:
+			streamId:
 				typeof binding === "string"
 					? binding
 					: "stream" in binding
@@ -831,6 +907,7 @@ function configAssets(
 	config.assets = {
 		directory: assets.directory,
 		hasUserWorker: getBooleanProperty(assets.routerConfig, "has_user_worker"),
+		basePath: getStringProperty(assets.assetConfig, "base_path"),
 		htmlHandling: getHtmlHandling(
 			getStringProperty(assets.assetConfig, "html_handling")
 		),

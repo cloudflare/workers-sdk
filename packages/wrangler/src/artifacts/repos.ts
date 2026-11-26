@@ -45,7 +45,7 @@ const forceArg = {
 export const artifactsReposNamespace = createNamespace({
 	metadata: {
 		description: "Manage Artifacts repositories",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 });
@@ -110,7 +110,7 @@ function formatDefinedValues(
 export const artifactsReposCreateCommand = createCommand({
 	metadata: {
 		description: "Create an Artifacts repository",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {
@@ -161,7 +161,7 @@ export const artifactsReposCreateCommand = createCommand({
 export const artifactsReposListCommand = createCommand({
 	metadata: {
 		description: "List Artifacts repositories in a namespace",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {
@@ -199,7 +199,7 @@ export const artifactsReposListCommand = createCommand({
 export const artifactsReposGetCommand = createCommand({
 	metadata: {
 		description: "Get an Artifacts repository",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {
@@ -226,7 +226,7 @@ export const artifactsReposGetCommand = createCommand({
 export const artifactsReposDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete an Artifacts repository",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {
@@ -267,7 +267,7 @@ export const artifactsReposDeleteCommand = createCommand({
 export const artifactsReposIssueTokenCommand = createCommand({
 	metadata: {
 		description: "Issue a repo-scoped Artifacts token",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 	},
 	behaviour: {

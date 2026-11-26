@@ -281,9 +281,9 @@ describe("versions upload", () => {
 			).resolves.toBeUndefined();
 
 			expect(previewAccountRequests).toBe(1);
-			expect(std.out).toContain(TEMPORARY_TERMS_NOTICE);
-			expect(std.out).toContain("Temporary account ready:");
-			expect(std.out).toContain("Account: Preview Account Alpha (created)");
+			expect(std.err).toContain(TEMPORARY_TERMS_NOTICE);
+			expect(std.err).toContain("Temporary account ready:");
+			expect(std.err).toContain("Account: Preview Account Alpha (created)");
 			expect(std.out).toContain("Uploaded test-name");
 		});
 	});
@@ -426,6 +426,22 @@ describe("versions upload", () => {
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993
 			Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
 		`);
+	});
+
+	test("should get the preview URL suffix from the Worker resource", async () => {
+		mockGetScript();
+		mockUploadVersion(true);
+		mockGetWorkerSubdomain({ enabled: true, previews_enabled: true });
+		writeWranglerConfig({ name: "test-name", main: "./index.js" });
+		writeWorkerSource();
+		setIsTTY(false);
+
+		await expect(runWrangler("versions upload")).resolves.toBeUndefined();
+
+		expect(std.out).toContain("Worker Version ID:");
+		expect(std.out).toContain(
+			"Version Preview URL: https://51e4886e-test-name.test-sub-domain.workers.dev"
+		);
 	});
 
 	test("should allow specifying --preview-alias", async () => {
@@ -823,7 +839,7 @@ describe("versions upload", () => {
 			});
 
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in Wrangler configuration. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo top-level \`name\` has been defined in your wrangler.toml. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.[0m
 
 				"
 			`);
@@ -1060,15 +1076,7 @@ describe("versions upload", () => {
 		});
 
 		test.for([
-			{
-				bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
-				containers: [],
-			},
 			{ bindingName: "USER_IMAGES", containers: [] },
-			{
-				bindingName: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
-				containers: undefined,
-			},
 			{ bindingName: "USER_IMAGES", containers: undefined },
 		])(
 			"keeps variables without generating Container image bindings: %j",
@@ -1581,6 +1589,19 @@ describe("versions upload", () => {
 				"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first."
 			);
 		});
+
+		test.for([null, undefined])(
+			"should require deploy first when the service script is %s",
+			async (script, { expect }) => {
+				mockGetScript({ default_environment: { script } });
+				writeWranglerConfig({ name: "test-name", main: "./index.js" });
+				writeWorkerSource();
+
+				await expect(runWrangler("versions upload")).rejects.toThrow(
+					"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first."
+				);
+			}
+		);
 	});
 
 	describe("non-interactive/CI behavior", () => {
@@ -1743,6 +1764,58 @@ describe("versions upload", () => {
 			);
 			expect(std.out).not.toContain("Uploaded");
 			expect(process.exitCode).not.toBe(0);
+		});
+
+		test("should not fetch routes when checking dashboard config in strict mode", async ({
+			expect,
+		}) => {
+			let routeRequests = 0;
+			let customDomainRequests = 0;
+			mockGetScript({
+				default_environment: {
+					environment: "production",
+					script: {
+						last_deployed_from: "dash",
+						tag: "test-tag",
+						tags: null,
+					},
+				},
+			});
+			mockRemoteWorkerConfig([]);
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/services/:serviceName/environments/:env/routes",
+					() => {
+						routeRequests++;
+						return HttpResponse.json({}, { status: 403 });
+					}
+				),
+				http.get("*/accounts/:accountId/workers/domains/records", () => {
+					customDomainRequests++;
+					return HttpResponse.json({}, { status: 403 });
+				})
+			);
+			mockUploadVersion(false);
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				compatibility_date: "2024-01-01",
+				routes: ["example.com/*"],
+			});
+			writeWorkerSource();
+
+			await runWrangler("versions upload --strict");
+
+			expect(routeRequests).toBe(0);
+			expect(customDomainRequests).toBe(0);
+			expect(std.warn).not.toContain(
+				"Uploading the Worker will override the remote configuration with your local one."
+			);
+			expect(std.err).not.toContain(
+				"Aborting the upload operation because of conflicts"
+			);
+			expect(std.out).toContain("Uploaded test-name");
 		});
 
 		test("should abort in non-interactive strict mode when remote secrets would be overridden", async ({
@@ -2019,7 +2092,7 @@ describe("versions upload", () => {
 					expect.objectContaining({
 						type: "d1",
 						name: "MY_DB",
-						id: "d1-db-id-1",
+						database_id: "d1-db-id-1",
 					}),
 					expect.objectContaining({
 						type: "service",
@@ -2762,13 +2835,7 @@ describe("versions upload", () => {
 						...(imageMap === "populated" && { images: imageRefs }),
 					},
 				]);
-				expect(metadata.bindings).not.toEqual(
-					expect.arrayContaining([
-						expect.objectContaining({
-							name: "EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES",
-						}),
-					])
-				);
+				expect(metadata.bindings).toEqual([]);
 				expect(preparationRequests).toEqual(
 					imageMap === "empty" ? [] : [{ image }]
 				);
@@ -2957,6 +3024,103 @@ describe("versions upload", () => {
 			);
 			await expect(rejection).rejects.not.toThrow(
 				/declared in `exports` but not yet provisioned/
+			);
+		});
+	});
+
+	describe("workflow exports", () => {
+		beforeEach(() => {
+			setIsTTY(false);
+		});
+
+		test("sends workflow exports with their settings without provisioning the Workflow", async ({
+			expect,
+		}) => {
+			mockGetScript();
+			const requests = mockUploadVersion(false, 0);
+			let workflowPuts = 0;
+			msw.use(
+				http.get("*/accounts/:accountId/workflows/:workflowName", () =>
+					HttpResponse.json(
+						createFetchResult(null, false, [
+							{ code: 10200, message: "Workflow not found" },
+						]),
+						{ status: 404 }
+					)
+				),
+				http.put("*/accounts/:accountId/workflows/:workflowName", () => {
+					workflowPuts++;
+					return HttpResponse.json(createFetchResult({}));
+				})
+			);
+
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					exports: {
+						MyWorkflow: {
+							type: "workflow",
+							name: "my-workflow",
+							limits: { steps: 10 },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+			writeWorkerSource();
+
+			await runWrangler("versions upload --config ./wrangler.json");
+
+			const request = requests[requests.length - 1];
+			expect(request.headers.get("Cloudflare-Workers-Script-Api-Date")).toBe(
+				"2026-11-09"
+			);
+			const metadata = await getMetadata(request);
+			expect(metadata.exports).toEqual({
+				MyWorkflow: {
+					type: "workflow",
+					name: "my-workflow",
+					limits: { steps: 10 },
+				},
+			});
+			expect(workflowPuts).toBe(0);
+		});
+
+		test("rejects a binding and an export that declare the same Workflow with different classes", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-name",
+					main: "./index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "OldWorkflow",
+						},
+					],
+					exports: {
+						MyWorkflow: { type: "workflow", name: "my-workflow" },
+					},
+				},
+				"./wrangler.json"
+			);
+			fs.writeFileSync(
+				"index.js",
+				dedent`
+					import { WorkflowEntrypoint } from "cloudflare:workers";
+					export default {};
+					export class OldWorkflow extends WorkflowEntrypoint {}
+					export class MyWorkflow extends WorkflowEntrypoint {}
+				`
+			);
+
+			await expect(
+				runWrangler("versions upload --config ./wrangler.json")
+			).rejects.toThrow(
+				'"workflows[0]" and "exports.MyWorkflow" both declare the Workflow "my-workflow", but with different classes ("OldWorkflow" and "MyWorkflow").'
 			);
 		});
 	});

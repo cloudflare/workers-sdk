@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as recast from "recast";
-import * as esprimaParser from "recast/parsers/esprima";
+import * as babelParser from "recast/parsers/babel";
 import * as typescriptParser from "recast/parsers/typescript";
 import type { Program } from "esprima";
 
@@ -40,7 +40,7 @@ export { print, types } from "recast";
  */
 export function parseJs(src: string): recast.types.namedTypes.File {
 	try {
-		return recast.parse(src, { parser: esprimaParser });
+		return recast.parse(src, { parser: babelParser });
 	} catch {
 		throw new Error("Error parsing js template.");
 	}
@@ -65,7 +65,7 @@ export function parseTs(src: string): recast.types.namedTypes.File {
 // Selects the correct parser based on the file extension
 export function parseFile(filePath: string) {
 	const lang = path.extname(filePath).slice(1);
-	const parser = lang === "js" ? esprimaParser : typescriptParser;
+	const parser = lang === "js" ? babelParser : typescriptParser;
 
 	try {
 		const fileContents = readFileSync(path.resolve(filePath), "utf-8");

@@ -195,10 +195,13 @@ export async function downloadWorker(accountId: string, workerName: string) {
 	);
 
 	const config = await downloadWorkerConfig(
+		COMPLIANCE_REGION_CONFIG_UNKNOWN,
 		workerName,
 		defaultEnvironment,
 		entrypoint,
-		accountId
+		accountId,
+		true,
+		true
 	);
 
 	if (config.assets) {

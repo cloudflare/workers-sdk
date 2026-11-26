@@ -10,25 +10,27 @@ import type {
 	Config,
 	Environment,
 	PreviewsConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export const REPLACE_ME = "<REPLACE_ME>";
 
 export type PreviewTopLevelSettings = {
-	[K in keyof Pick<
-		Environment,
-		| "define"
-		| "observability"
-		| "logpush"
-		| "limits"
-		| "placement"
-		| "cache"
-		| "containers"
-		| "tail_consumers"
-		| "streaming_tail_consumers"
-		| "queues"
-		| "triggers"
-	>]: Environment[K] | undefined;
+	[
+		K in keyof Pick<
+			Environment,
+			| "define"
+			| "observability"
+			| "logpush"
+			| "limits"
+			| "placement"
+			| "cache"
+			| "containers"
+			| "tail_consumers"
+			| "streaming_tail_consumers"
+			| "queues"
+			| "triggers"
+		>
+	]: Environment[K] | undefined;
 };
 
 export type PreviewSettingConversion =
@@ -75,12 +77,32 @@ export function convertPreviewBaseToPreviewsConfig(
 	return convertedSettings;
 }
 
+/**
+ * Projects production config into the `previews` shape. Previews only support the Images binding,
+ * not `url_transformations`, so only the binding is carried over.
+ */
+function productionAsPreviews(config: Config): PreviewsConfig {
+	const { images, ...rest } = config;
+	return {
+		...rest,
+		images: images?.binding
+			? {
+					binding: images.binding,
+					...(images.remote !== undefined && { remote: images.remote }),
+				}
+			: undefined,
+	};
+}
+
 /** Creates local Preview configuration without copying production values. */
 export function convertProductionToPreviewsConfig(
 	config: Config
 ): ProposedPreviewsConfig {
 	const convertedSettings = convertPreviewSettings(
-		extractConfigBindings({ ...config, previews: config }),
+		extractConfigBindings({
+			...config,
+			previews: productionAsPreviews(config),
+		}),
 		{
 			define: config.define,
 			observability: config.observability,
@@ -107,7 +129,10 @@ export function convertProductionToPreviewsConfig(
 export function getProductionBindingsExpectedInPreview(
 	config: Config
 ): EnvBindings {
-	const bindings = extractConfigBindings({ ...config, previews: config });
+	const bindings = extractConfigBindings({
+		...config,
+		previews: productionAsPreviews(config),
+	});
 	return Object.fromEntries(
 		Object.entries(bindings).filter(
 			([name, binding]) =>
@@ -427,6 +452,9 @@ export function convertBinding(
 		case "browser":
 			config = { browser: { binding: name } };
 			break;
+		case "analytics":
+			config = { analytics: { binding: name } };
+			break;
 		case "ai":
 			config = {
 				ai: {
@@ -672,6 +700,19 @@ export function convertBinding(
 				],
 			};
 			break;
+		case "k2":
+			if (binding.stream === undefined) {
+				break;
+			}
+			config = {
+				k2: [
+					{
+						binding: name,
+						stream: usePlaceholderValue ? REPLACE_ME : binding.stream,
+					},
+				],
+			};
+			break;
 		case "secrets_store_secret":
 			if (binding.store_id === undefined || binding.secret_name === undefined) {
 				break;
@@ -712,6 +753,19 @@ export function convertBinding(
 				],
 			};
 			break;
+		case "realtimekit":
+			if (binding.app_id === undefined) {
+				break;
+			}
+			config = {
+				realtimekit: [
+					{
+						binding: name,
+						app_id: usePlaceholderValue ? REPLACE_ME : binding.app_id,
+					},
+				],
+			};
+			break;
 		case "ratelimit":
 			if (binding.namespace_id === undefined || binding.simple === undefined) {
 				break;
@@ -743,6 +797,22 @@ export function convertBinding(
 			break;
 		case "worker_loader":
 			config = { worker_loaders: [{ binding: name }] };
+			break;
+		case "oidc_token":
+			if (binding.audience === undefined) {
+				break;
+			}
+			config = {
+				oidc_tokens: [
+					{
+						binding: name,
+						audience: usePlaceholderValue ? REPLACE_ME : binding.audience,
+						...((binding.alg === "ES256" || binding.alg === "RS256") && {
+							alg: binding.alg,
+						}),
+					},
+				],
+			};
 			break;
 		default:
 			break;

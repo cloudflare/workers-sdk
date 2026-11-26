@@ -100,7 +100,10 @@ export const cloudchamberBuildCommand = createCommand({
 	},
 	positionalArgs: ["PATH"],
 	async handler(args, { config }) {
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({
+			logger,
+			fetchResult,
+		});
 		await fillOpenAPIConfiguration(config, cloudchamberScope);
 		await buildCommand(
 			args as StrictYargsOptionsToInterface<typeof buildYargs>,
@@ -130,7 +133,10 @@ export const cloudchamberPushCommand = createCommand({
 	},
 	positionalArgs: ["TAG"],
 	async handler(args, { config }) {
-		initContainersSharedContext({ logger, fetchResult });
+		initContainersSharedContext({
+			logger,
+			fetchResult,
+		});
 		await fillOpenAPIConfiguration(config, cloudchamberScope);
 		await pushCommand(
 			args as StrictYargsOptionsToInterface<typeof pushYargs>,

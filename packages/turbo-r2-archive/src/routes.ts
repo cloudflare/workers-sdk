@@ -27,7 +27,9 @@ router.onError((error, c) => {
 router.use("*", cors());
 
 router.use("*", async (c, next) => {
-	const middleware = bearerAuth({ token: c.env.TURBO_TOKEN });
+	const middleware = bearerAuth<{ Bindings: Env }>({
+		token: c.env.TURBO_TOKEN,
+	});
 	await middleware(c, next);
 });
 

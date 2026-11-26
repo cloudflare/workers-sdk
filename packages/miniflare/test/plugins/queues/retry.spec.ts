@@ -25,7 +25,7 @@ async function getControlStub(
 	return stub;
 }
 
-describe.sequential("Queues: retry", () => {
+describe("Queues: retry", { concurrent: false }, () => {
 	let batches: string[][] = [];
 	let mf: Miniflare;
 	let object: MiniflareDurableObjectControlStub;
@@ -39,7 +39,6 @@ describe.sequential("Queues: retry", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						env: {

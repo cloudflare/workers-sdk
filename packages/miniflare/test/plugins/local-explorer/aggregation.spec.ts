@@ -50,7 +50,6 @@ describe("Cross-process aggregation", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -80,6 +79,8 @@ describe("Cross-process aggregation", () => {
 								worker: "worker-a",
 								exportName: "WorkflowA",
 							},
+							FLAGS_A: { type: "flagship", id: "app-a" },
+							SHARED_A: { type: "flagship", id: "shared-app" },
 						},
 						exports: {
 							MyDO: { type: "durable-object", storage: "legacy-kv" },
@@ -97,7 +98,6 @@ describe("Cross-process aggregation", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -126,6 +126,8 @@ describe("Cross-process aggregation", () => {
 								worker: "worker-b",
 								exportName: "WorkflowB",
 							},
+							FLAGS_B: { type: "flagship", id: "app-b" },
+							SHARED_B: { type: "flagship", id: "shared-app" },
 						},
 						exports: {
 							OtherDO: { type: "durable-object", storage: "legacy-kv" },
@@ -386,6 +388,86 @@ describe("Cross-process aggregation", () => {
 		});
 	});
 
+	describe("Flagship aggregation", () => {
+		const FLAG = {
+			key: "peer-flag",
+			enabled: true,
+			default_variation: "off",
+			variations: { on: true, off: false },
+			rules: [],
+		};
+
+		test("only lists local Flagship apps without shared storage", async ({
+			expect,
+		}) => {
+			const response = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps`
+			);
+			const data = (await response.json()) as ListResponse;
+
+			expect(normalizeListResponse(data)).toMatchInlineSnapshot(`
+				{
+				  "result": [
+				    {
+				      "bindings": [
+				        "FLAGS_A",
+				      ],
+				      "id": "app-a",
+				    },
+				    {
+				      "bindings": [
+				        "SHARED_A",
+				      ],
+				      "id": "shared-app",
+				    },
+				  ],
+				  "result_info": {
+				    "count": 2,
+				  },
+				}
+			`);
+		});
+
+		test("does not read a peer's flags without shared storage", async ({
+			expect,
+		}) => {
+			const adminB = (await instanceB.getFlagshipBindingAPI("FLAGS_B"))();
+			await adminB.putFlag(FLAG);
+
+			const response = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags`
+			);
+
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: [],
+			});
+			await adminB.deleteFlag(FLAG.key);
+		});
+
+		test("writes an arbitrary app ID locally", async ({ expect }) => {
+			const response = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(FLAG),
+				}
+			);
+			expect(response.status).toBe(201);
+			await response.json(); // Consume body
+
+			const adminB = (await instanceB.getFlagshipBindingAPI("FLAGS_B"))();
+			expect(await adminB.listFlags()).toStrictEqual([]);
+			const local = await instanceA.dispatchFetch(
+				`${BASE_URL}/flagship/apps/app-b/flags/peer-flag`
+			);
+			expect(await local.json()).toMatchObject({
+				result: { key: "peer-flag" },
+			});
+		});
+	});
+
 	describe("r2 bucket aggregation", () => {
 		test("only lists local R2 buckets without shared storage", async ({
 			expect,
@@ -405,6 +487,7 @@ describe("Cross-process aggregation", () => {
 			expect(data.result_info).toMatchInlineSnapshot(`
 				{
 				  "count": 1,
+				  "total_count": 1,
 				}
 			`);
 
@@ -445,7 +528,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -495,7 +577,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b1",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -531,7 +612,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b2",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -544,7 +624,6 @@ describe("Multi-worker peer deduplication", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: "worker-shared",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -576,7 +655,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-d",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -595,7 +673,6 @@ describe("Multi-worker peer deduplication", () => {
 				},
 				{
 					config: {
-						type: "worker",
 						name: "worker-shared",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -625,7 +702,6 @@ describe("Multi-worker peer deduplication", () => {
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-c",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(`
@@ -800,7 +876,6 @@ describe("Same ID across multiple instances with different persistence directori
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -831,7 +906,6 @@ describe("Same ID across multiple instances with different persistence directori
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -934,7 +1008,6 @@ describe("Same ID across multiple instances with same persistence directories", 
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -962,7 +1035,6 @@ describe("Same ID across multiple instances with same persistence directories", 
 				{
 					dev: { unsafeRegisterWorker: true },
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(

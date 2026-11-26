@@ -21,10 +21,13 @@ import type {
 	AssetConfigMetadata,
 	CfWorkerInit,
 	ExportsReconciliationResult,
-	RawConfig,
-	RawEnvironment,
 	WorkerMetadata,
 } from "@cloudflare/workers-utils";
+import type {
+	DurableObjectCodeUpdateStrategy,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils/config";
 import type { HttpResponseResolver } from "msw";
 
 /** Create a mock handler for the request to upload a worker script. */
@@ -49,6 +52,8 @@ export function mockUploadWorkerRequest(
 		 * envelope alongside the success response so deploy.ts can render it.
 		 */
 		mockUploadReturnsExportsReconciliation?: ExportsReconciliationResult;
+		/** Version ID returned by either the legacy upload or versions API. */
+		mockUploadReturnsVersionId?: string;
 		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
 		expectedUnsafeMetaData?: Record<string, unknown>;
 		expectedCapnpSchema?: string;
@@ -73,7 +78,9 @@ export function mockUploadWorkerRequest(
 		}[];
 		expectedAnnotations?: Record<string, string | undefined>;
 		expectedDeploymentMessage?: string;
+		expectedDurableObjectsCodeUpdateStrategy?: DurableObjectCodeUpdateStrategy;
 		expectedBindingsInherit?: "strict";
+		expectedScriptApiDate?: string | null;
 	} = {}
 ) {
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
@@ -101,6 +108,11 @@ export function mockUploadWorkerRequest(
 		if (expectedDispatchNamespace) {
 			expect(params.dispatchNamespace).toEqual(expectedDispatchNamespace);
 		}
+		if (options.expectedScriptApiDate !== undefined) {
+			expect(request.headers.get("Cloudflare-Workers-Script-Api-Date")).toEqual(
+				options.expectedScriptApiDate
+			);
+		}
 
 		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
 		const formBody = await request.formData();
@@ -125,11 +137,13 @@ export function mockUploadWorkerRequest(
 			expect(metadata.keep_bindings).toEqual(
 				expect.arrayContaining(["plain_text", "json"])
 			);
-		} else if (keepSecrets) {
+		}
+		if (keepSecrets) {
 			expect(metadata.keep_bindings).toEqual(
 				expect.arrayContaining(["secret_text", "secret_key"])
 			);
-		} else {
+		}
+		if (!keepVars && !keepSecrets) {
 			expect(metadata.keep_bindings).toBeFalsy();
 		}
 
@@ -177,7 +191,14 @@ export function mockUploadWorkerRequest(
 		if ("expectedAnnotations" in options) {
 			expect(metadata.annotations).toEqual(expectedAnnotations);
 		}
-
+		if (
+			useOldUploadApi &&
+			"expectedDurableObjectsCodeUpdateStrategy" in options
+		) {
+			expect(metadata.code_update_strategy).toEqual(
+				expectedDurableObjectsCodeUpdateStrategy
+			);
+		}
 		if (expectedUnsafeMetaData !== undefined) {
 			Object.keys(expectedUnsafeMetaData).forEach((key) => {
 				expect(metadata[key]).toEqual(expectedUnsafeMetaData[key]);
@@ -198,7 +219,7 @@ export function mockUploadWorkerRequest(
 					pipeline_hash: "hash9999",
 					mutable_pipeline_id: "mutableId",
 					tag: "sample-tag",
-					deployment_id: "Galaxy-Class",
+					deployment_id: options.mockUploadReturnsVersionId ?? "Galaxy-Class",
 					startup_time_ms: 100,
 					...(mockUploadReturnsExportsReconciliation && {
 						exports_reconciliation: mockUploadReturnsExportsReconciliation,
@@ -209,7 +230,7 @@ export function mockUploadWorkerRequest(
 
 		return HttpResponse.json(
 			createFetchResult({
-				id: "Galaxy-Class",
+				id: options.mockUploadReturnsVersionId ?? "Galaxy-Class",
 				startup_time_ms: 100,
 				resources: {
 					script: {
@@ -247,13 +268,17 @@ export function mockUploadWorkerRequest(
 		expectedContainers,
 		expectedAnnotations,
 		keepVars,
-		keepSecrets,
+		keepSecrets: keepSecretsOverride,
 		expectedDispatchNamespace,
 		useOldUploadApi,
 		expectedObservability,
 		expectedSettingsPatch,
 		expectedDeploymentMessage,
+		expectedDurableObjectsCodeUpdateStrategy,
 	} = options;
+	const isAssetsOnly =
+		expectedAssets !== undefined && expectedMainModule === undefined;
+	const keepSecrets = keepSecretsOverride ?? !isAssetsOnly;
 
 	const expectedScriptName =
 		options.expectedScriptName ?? "test-name" + (env ? `-${env}` : "");
@@ -281,13 +306,24 @@ export function mockUploadWorkerRequest(
 			http.post(
 				"*/accounts/:accountId/workers/scripts/:scriptName/deployments",
 				async ({ request }) => {
-					if ("expectedDeploymentMessage" in options) {
+					if (
+						"expectedDeploymentMessage" in options ||
+						"expectedDurableObjectsCodeUpdateStrategy" in options
+					) {
 						const body = (await request.json()) as {
 							annotations?: { "workers/message"?: string };
+							code_update_strategy?: DurableObjectCodeUpdateStrategy;
 						};
-						expect(body.annotations?.["workers/message"]).toEqual(
-							expectedDeploymentMessage
-						);
+						if ("expectedDeploymentMessage" in options) {
+							expect(body.annotations?.["workers/message"]).toEqual(
+								expectedDeploymentMessage
+							);
+						}
+						if ("expectedDurableObjectsCodeUpdateStrategy" in options) {
+							expect(body.code_update_strategy).toEqual(
+								expectedDurableObjectsCodeUpdateStrategy
+							);
+						}
 					}
 					return HttpResponse.json(createFetchResult({ id: "Deployment-ID" }));
 				}

@@ -9,7 +9,7 @@ import {
 	FatalError,
 	getCloudflareApiEnvironmentFromEnv,
 } from "@cloudflare/workers-utils";
-import { createNamespace } from "../core/create-command";
+import { createAlias, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import { generateR2ServiceToken, getR2Bucket } from "./client";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -159,12 +159,19 @@ export function parseTransform(spec: string) {
 	};
 }
 
-export const pipelinesNamespace = createNamespace({
+export const basinPipelinesNamespace = createNamespace({
 	metadata: {
 		description: "🚰 Manage Cloudflare Pipelines",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 		category: "Storage & databases",
+	},
+});
+
+export const pipelinesAlias = createAlias({
+	aliasOf: "wrangler basin pipelines",
+	metadata: {
+		hidden: true,
 	},
 });
 

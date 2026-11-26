@@ -2,20 +2,24 @@ import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils";
 import {
+	BUILD_OUTPUT_ROOT,
 	DEFAULT_WORKER_DIRECTORY_NAME,
 	getBuildOutputDir,
 	getContainerConfigPath,
 	getContainerDir,
-	getSettingsConfigPath,
+	getRootConfigPath,
+	getWorkerAssetsDir,
 	getWorkerConfigPath,
 	getWorkerDir,
 } from "./paths";
 import type {
-	ParsedInputSettingsConfig,
-	ParsedInputWorkerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputSettingsConfig,
-	ParsedOutputWorkerConfig,
+	ParsedSettings,
+	ParsedWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputProducer,
+	ParsedBuildOutputRootConfig,
+	ParsedBuildOutputWorkerConfig,
+	ConfigContext,
 } from "@cloudflare/config";
 
 /**
@@ -25,15 +29,60 @@ export async function cleanBuildOutputDir(root: string): Promise<void> {
 	await removeDir(getBuildOutputDir(root));
 }
 
+export interface WriteAssetsOptions {
+	root: string;
+	sourceDirectory: string;
+}
+
+/**
+ * Copy static assets into the Build Output Specification tree.
+ *
+ * Symlinks are dereferenced so the output remains portable and self-contained.
+ *
+ * When the project root is itself the asset source, the reserved
+ * `.cloudflare` directory is omitted so the nested output is not copied into
+ * itself.
+ */
+export async function writeAssets({
+	root,
+	sourceDirectory,
+}: WriteAssetsOptions): Promise<void> {
+	const assetsDir = getWorkerAssetsDir(root);
+	await fsp.mkdir(assetsDir, { recursive: true });
+
+	if (path.resolve(sourceDirectory) !== path.resolve(root)) {
+		await fsp.cp(sourceDirectory, assetsDir, {
+			recursive: true,
+			force: false,
+			dereference: true,
+		});
+		return;
+	}
+
+	const entries = await fsp.readdir(sourceDirectory);
+	await Promise.all(
+		entries
+			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
+			.map((entry) =>
+				fsp.cp(path.join(sourceDirectory, entry), path.join(assetsDir, entry), {
+					recursive: true,
+					force: false,
+					dereference: true,
+				})
+			)
+	);
+}
+
 export interface WriteWorkerConfigOptions {
 	root: string;
-	config: ParsedInputWorkerConfig;
-	manifest?: ParsedOutputWorkerConfig["manifest"];
+	config: ParsedWorkerConfig;
+	manifest?: ParsedBuildOutputWorkerConfig["manifest"];
 	directoryName?: string;
 }
 
 /**
- * Write an output Worker `config.json` to the Build Output Specification tree.
+ * Write an output Worker `worker.config.json` to the Build Output Specification
+ * tree.
  *
  * - Workers mode: `manifest` is provided (bundle/ present on disk).
  * - Assets-only mode: `manifest` is omitted (no bundle/ directory).
@@ -45,7 +94,7 @@ export async function writeWorkerConfig({
 	directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
 }: WriteWorkerConfigOptions): Promise<void> {
 	const { entrypoint: _entrypoint, ...rest } = config;
-	const outputConfig: ParsedOutputWorkerConfig = { ...rest, manifest };
+	const outputConfig: ParsedBuildOutputWorkerConfig = { ...rest, manifest };
 	await fsp.mkdir(getWorkerDir(root, directoryName), { recursive: true });
 	await fsp.writeFile(
 		getWorkerConfigPath(root, directoryName),
@@ -55,13 +104,13 @@ export async function writeWorkerConfig({
 
 export interface WriteContainerConfigOptions {
 	root: string;
-	config: ParsedOutputContainerConfig;
+	config: ParsedBuildOutputContainerConfig;
 	directoryName: string;
 }
 
 /**
- * Write an output Container `config.json` to the Build Output Specification
- * tree.
+ * Write an output Container `container.config.json` to the Build Output
+ * Specification tree.
  *
  * Local Dockerfiles must already have been built and represented by a
  * `localReference` in the output config.
@@ -80,29 +129,54 @@ export async function writeContainerConfig({
 	);
 }
 
+export interface WriteRootConfigOptions {
+	root: string;
+	/**
+	 * Settings declared at the top level of `cloudflare.config.ts`. Omitted
+	 * from the file when not given or when none of them is set.
+	 */
+	settings?: ParsedSettings;
+	/** Build context supplied at build time. */
+	buildContext: ConfigContext;
+	/**
+	 * The tool writing the tree, such as a framework adapter or build plugin.
+	 * Readers use it only in error messages and diagnostics. Omitted from the
+	 * file when not given.
+	 */
+	producer?: ParsedBuildOutputProducer;
+}
+
 /**
- * Write the top-level `config.json` to the Build Output Specification tree.
+ * Write the root `config.json` to the Build Output Specification tree.
  *
- * Holds the project settings shared by every Worker, plus the build mode and
- * whether the build is for a Preview. Always written, even without declared
- * settings or a mode.
- *
- * `mode` is omitted when undefined, which is the case for Wrangler builds that
- * selected no mode (Vite always resolves one).
+ * Holds the tool that wrote the tree, the settings declared at the top level
+ * of `cloudflare.config.ts` and the build context supplied at build time.
  */
-export async function writeSettingsConfig(
-	root: string,
-	settings: ParsedInputSettingsConfig | undefined,
-	mode?: string,
-	isPreview = false
-): Promise<void> {
-	const outputConfig: ParsedOutputSettingsConfig = {
-		...settings,
-		type: "settings",
-		...(isPreview ? { isPreview: true } : {}),
-		...(mode !== undefined ? { mode } : {}),
+export async function writeRootConfig({
+	root,
+	settings,
+	buildContext,
+	producer,
+}: WriteRootConfigOptions): Promise<void> {
+	const outputConfig: ParsedBuildOutputRootConfig = {
+		...(producer === undefined ? {} : { producer }),
+		...(hasSettings(settings) ? { settings } : {}),
+		buildContext,
 	};
-	const configPath = getSettingsConfigPath(root);
+	const configPath = getRootConfigPath(root);
 	await fsp.mkdir(path.dirname(configPath), { recursive: true });
 	await fsp.writeFile(configPath, JSON.stringify(outputConfig));
+}
+
+/**
+ * Whether any setting is set. Writers emit a key only when it is used, so an
+ * object whose settings are all `undefined` is left out like a missing one.
+ */
+function hasSettings(
+	settings: ParsedSettings | undefined
+): settings is ParsedSettings {
+	return (
+		settings !== undefined &&
+		Object.values(settings).some((value) => value !== undefined)
+	);
 }

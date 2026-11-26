@@ -11,6 +11,7 @@ import {
 	cloudchamberScope,
 	fillOpenAPIConfiguration,
 	handleFailure,
+	isValidImageTag,
 	promiseSpinner,
 } from "../common";
 import type { containersScope } from "../../containers";
@@ -20,7 +21,8 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 interface CatalogWithTagsResponse {
 	repositories: Record<string, string[]>;
@@ -161,7 +163,7 @@ async function listImages(
 		responses = responses.map((resp) => {
 			return {
 				name: resp.name,
-				tags: resp.tags.filter((t) => !t.startsWith("sha256")),
+				tags: resp.tags.filter(isValidImageTag),
 			};
 		});
 	}

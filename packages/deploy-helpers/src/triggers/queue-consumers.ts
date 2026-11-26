@@ -1,7 +1,8 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
 import type { TriggerDeployment } from "../shared/types";
-import type { Config, ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type QueueJurisdiction = "eu" | "us" | "fedramp";
 
@@ -120,12 +121,16 @@ export async function listQueues(
 export async function getQueue(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	queueName: string
+	queueName: string,
+	queueCreateCommand?: (queueName: string) => string
 ): Promise<QueueResponse> {
 	const queues = await listQueues(complianceConfig, accountId, 1, queueName);
 	if (queues.length === 0) {
+		const createQueueGuidance = queueCreateCommand
+			? ` To create it, run: ${queueCreateCommand(queueName)}`
+			: "";
 		throw new UserError(
-			`Queue "${queueName}" does not exist. To create it, run: wrangler queues create ${queueName}`,
+			`Queue "${queueName}" does not exist.${createQueueGuidance}`,
 			{ telemetryMessage: "queues lookup missing queue" }
 		);
 	}
@@ -136,9 +141,15 @@ export async function postConsumer(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	queueName: string,
-	body: PostTypedConsumerBody
+	body: PostTypedConsumerBody,
+	queueCreateCommand?: (queueName: string) => string
 ): Promise<TypedConsumerResponse> {
-	const queue = await getQueue(complianceConfig, accountId, queueName);
+	const queue = await getQueue(
+		complianceConfig,
+		accountId,
+		queueName,
+		queueCreateCommand
+	);
 	return postConsumerById(complianceConfig, accountId, queue.queue_id, body);
 }
 
@@ -181,9 +192,15 @@ export async function putConsumer(
 	queueName: string,
 	scriptName: string,
 	envName: string | undefined,
-	body: PostTypedConsumerBody
+	body: PostTypedConsumerBody,
+	queueCreateCommand?: (queueName: string) => string
 ): Promise<TypedConsumerResponse> {
-	const queue = await getQueue(complianceConfig, accountId, queueName);
+	const queue = await getQueue(
+		complianceConfig,
+		accountId,
+		queueName,
+		queueCreateCommand
+	);
 	const targetConsumer = await resolveWorkerConsumerByName(
 		complianceConfig,
 		accountId,
@@ -297,9 +314,15 @@ async function deleteConsumerById(
 export async function deletePullConsumer(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	queueName: string
+	queueName: string,
+	queueCreateCommand?: (queueName: string) => string
 ): Promise<void> {
-	const queue = await getQueue(complianceConfig, accountId, queueName);
+	const queue = await getQueue(
+		complianceConfig,
+		accountId,
+		queueName,
+		queueCreateCommand
+	);
 	const consumer = queue.consumers[0];
 	if (consumer?.type !== "http_pull") {
 		throw new UserError(`No http_pull consumer exists for queue ${queueName}`, {
@@ -340,9 +363,15 @@ export async function deleteNotificationConsumer(
 export async function listConsumers(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	queueName: string
+	queueName: string,
+	queueCreateCommand?: (queueName: string) => string
 ): Promise<Consumer[]> {
-	const queue = await getQueue(complianceConfig, accountId, queueName);
+	const queue = await getQueue(
+		complianceConfig,
+		accountId,
+		queueName,
+		queueCreateCommand
+	);
 	return queue.consumers;
 }
 
@@ -351,9 +380,15 @@ export async function deleteWorkerConsumer(
 	accountId: string,
 	queueName: string,
 	scriptName: string,
-	envName: string | undefined
+	envName: string | undefined,
+	queueCreateCommand?: (queueName: string) => string
 ): Promise<void> {
-	const queue = await getQueue(complianceConfig, accountId, queueName);
+	const queue = await getQueue(
+		complianceConfig,
+		accountId,
+		queueName,
+		queueCreateCommand
+	);
 	const targetConsumer = await resolveWorkerConsumerByName(
 		complianceConfig,
 		accountId,
@@ -373,12 +408,18 @@ export async function updateQueueConsumers(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	config: Config
+	config: Config,
+	queueCreateCommand: (queueName: string) => string
 ): Promise<Promise<TriggerDeployment>[]> {
 	const consumers = config.queues.consumers || [];
 	const updateConsumers: Promise<TriggerDeployment>[] = [];
 	for (const consumer of consumers) {
-		const queue = await getQueue(complianceConfig, accountId, consumer.queue);
+		const queue = await getQueue(
+			complianceConfig,
+			accountId,
+			consumer.queue,
+			queueCreateCommand
+		);
 
 		const body: PostTypedConsumerBody = {
 			type: "worker",
@@ -410,7 +451,8 @@ export async function updateQueueConsumers(
 					consumer.queue,
 					scriptName,
 					envName,
-					body
+					body,
+					queueCreateCommand
 				).then(
 					() => ({ targets: [`Consumer for ${consumer.queue}`] }),
 					(error) => ({ targets: [], error })
@@ -419,7 +461,13 @@ export async function updateQueueConsumers(
 			continue;
 		}
 		updateConsumers.push(
-			postConsumer(complianceConfig, accountId, consumer.queue, body).then(
+			postConsumer(
+				complianceConfig,
+				accountId,
+				consumer.queue,
+				body,
+				queueCreateCommand
+			).then(
 				() => ({
 					targets: [`Consumer for ${consumer.queue}`],
 				}),
@@ -443,7 +491,8 @@ export async function ensureQueuesExistByConfig(
 	config: Config,
 	accountId: string,
 	includeProducers = true,
-	scriptName?: string
+	scriptName?: string,
+	queueCreateCommand?: (queueName: string) => string
 ) {
 	const producerNames = (config.queues.producers || []).flatMap((producer) => {
 		if (producer.queue) {
@@ -483,8 +532,11 @@ export async function ensureQueuesExistByConfig(
 
 			for (const queue of queueNames) {
 				if (!queueSet.has(queue)) {
+					const createQueueGuidance = queueCreateCommand
+						? ` To create it, run: ${queueCreateCommand(queue)}`
+						: "";
 					throw new UserError(
-						`Queue "${queue}" does not exist. To create it, run: wrangler queues create ${queue}`,
+						`Queue "${queue}" does not exist.${createQueueGuidance}`,
 						{ telemetryMessage: "queues config missing queue" }
 					);
 				}

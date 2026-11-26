@@ -33,7 +33,6 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -60,7 +59,6 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -88,7 +86,6 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -113,7 +110,6 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -138,7 +134,6 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),
@@ -166,7 +161,6 @@ describe("CLOUDFLARE_CF_FETCH_ENABLED environment variable", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(""),

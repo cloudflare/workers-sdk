@@ -15,7 +15,7 @@ export function displaySinkConfiguration(
 	}
 
 	const general: Record<string, string> = {
-		Type: sink.type === "r2" ? "R2" : "R2 Data Catalog",
+		Type: sink.type === "r2" ? "R2" : "Basin Catalog",
 	};
 
 	if (includeTimestamps) {

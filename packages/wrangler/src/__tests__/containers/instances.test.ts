@@ -80,7 +80,8 @@ const MOCK_DO_INSTANCES = {
 	],
 };
 
-const APP_ID = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee";
+const APP_ID = "a03f56b7-5c4f-4502-a892-947a2d8412e6";
+const DURABLE_OBJECT_APP_ID = "458b755b379844af88d7dd9edc536b9e";
 
 describe("containers instances", () => {
 	const std = mockConsoleMethods();
@@ -136,7 +137,9 @@ describe("containers instances", () => {
 		);
 	});
 
-	it("should render a table (non-TTY)", async ({ expect }) => {
+	it("should accept a legacy application ID and render a table (non-TTY)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
 		msw.use(
@@ -166,6 +169,32 @@ describe("containers instances", () => {
 			│ 22222222-2222-2222-2222-222222222222 │ provisioning │ iad01 │ 2 │ 2025-06-01T11:00:00Z │
 			└─┴─┴─┴─┴─┘"
 		`);
+	});
+
+	it("should accept a Durable Object application ID unchanged", async ({
+		expect,
+	}) => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		msw.use(
+			http.get(
+				"*/dash/applications/:id/instances",
+				({ params }) => {
+					expect(params.id).toBe(DURABLE_OBJECT_APP_ID);
+					return HttpResponse.json({
+						success: true,
+						result: { instances: [], durable_objects: [] },
+						result_info: { per_page: 50 },
+						errors: [],
+						messages: [],
+					});
+				},
+				{ once: true }
+			)
+		);
+
+		await runWrangler(`containers instances ${DURABLE_OBJECT_APP_ID}`);
+		expect(std.out).toContain("No instances found");
 	});
 
 	it("should render DO instance table (non-TTY)", async ({ expect }) => {
@@ -214,14 +243,25 @@ describe("containers instances", () => {
 		).rejects.toThrow(/--per-page must be at least 1/);
 	});
 
-	it("should error on invalid ID format", async ({ expect }) => {
+	it("should reject an invalid ID without making a request", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		setWranglerConfig({});
+		let requestCount = 0;
+		msw.use(
+			http.get("*/dash/applications/:id/instances", () => {
+				requestCount++;
+				return HttpResponse.json({ success: true });
+			})
+		);
+
 		await expect(
 			runWrangler("containers instances not-a-uuid")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Expected an application ID but got not-a-uuid. Use \`wrangler containers list\` to view your containers and corresponding IDs.]`
 		);
+		expect(requestCount).toBe(0);
 	});
 
 	it("should error on missing ID", async ({ expect }) => {

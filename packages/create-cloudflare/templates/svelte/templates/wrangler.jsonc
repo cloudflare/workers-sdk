@@ -1,0 +1,11 @@
+{
+  "name": "<WORKER_NAME>",
+  "compatibility_date": "<COMPATIBILITY_DATE>",
+  "compatibility_flags": ["nodejs_als"],
+  "assets": {
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  }
+}

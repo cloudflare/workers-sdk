@@ -1,36 +1,44 @@
-import fs from "node:fs";
-import path from "node:path";
+import { readD1Migrations as readD1MigrationsFromOptions } from "@cloudflare/workers-utils";
 import type { D1Migration } from "../shared/d1";
 
+// Declared here so the plugin's public types don't depend on workers-utils,
+// which is bundled. Passing them to the shared function keeps them in sync.
+export type ReadD1MigrationsOptions = {
+	projectPath?: string;
+	migrationsDir?: string;
+	migrationsPattern?: string;
+};
+
 /**
- * Reads all migrations in `migrationsPath`, ordered by migration number.
- * Each migration will have its contents split into an array of SQL queries.
+ * Reads D1 migration files, ordered by migration number. Each migration has
+ * its contents split into an array of SQL queries.
+ *
+ * Pass a directory path to keep the historical behaviour of reading top-level
+ * `*.sql` files in that directory. Pass options to discover files the same way
+ * Wrangler does, including nested layouts such as
+ * `0001_init/migration.sql` via `migrationsPattern`.
  */
 export async function readD1Migrations(
-	migrationsPath: string
+	migrationsPathOrOptions: string | ReadD1MigrationsOptions
 ): Promise<D1Migration[]> {
-	// noinspection SuspiciousTypeOfGuard
-	if (typeof migrationsPath !== "string") {
-		throw new TypeError(
-			"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string'."
-		);
+	if (typeof migrationsPathOrOptions === "string") {
+		return readD1MigrationsFromOptions({
+			projectPath: migrationsPathOrOptions,
+			migrationsDir: ".",
+			migrationsPattern: "*.sql",
+		});
 	}
 
-	const { unstable_splitSqlQuery } = await import("wrangler"); // (lazy)
-	const names = fs
-		.readdirSync(migrationsPath)
-		.filter((name) => name.endsWith(".sql"));
-	names.sort((a, b) => {
-		const aNumber = parseInt(a.split("_")[0]);
-		const bNumber = parseInt(b.split("_")[0]);
-		return aNumber - bNumber;
-	});
-	return names.map((name) => {
-		const migrationPath = path.join(migrationsPath, name);
-		const migration = fs.readFileSync(migrationPath, "utf8");
-		const queries = unstable_splitSqlQuery(migration);
-		return { name, queries };
-	});
+	if (
+		migrationsPathOrOptions !== null &&
+		typeof migrationsPathOrOptions === "object"
+	) {
+		return readD1MigrationsFromOptions(migrationsPathOrOptions);
+	}
+
+	throw new TypeError(
+		"Failed to execute 'readD1Migrations': parameter 1 is not of type 'string' or 'object'."
+	);
 }
 
 export type { D1Migration };

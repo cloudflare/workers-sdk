@@ -108,6 +108,7 @@ describe("startup profile", () => {
 			const expectedMethods = {
 				STARTUP_KV: "get",
 				STARTUP_D1: "prepare",
+				STARTUP_LEGACY_D1: "prepare",
 				STARTUP_R2: "get",
 				STARTUP_QUEUE: "send",
 				STARTUP_SERVICE: "fetch",
@@ -133,7 +134,8 @@ describe("startup profile", () => {
 						type: "kv_namespace",
 						namespace_id: "startup-kv",
 					},
-					{ name: "STARTUP_D1", type: "d1", id: "startup-d1" },
+					{ name: "STARTUP_D1", type: "d1", database_id: "startup-d1" },
+					{ name: "STARTUP_LEGACY_D1", type: "d1", id: "startup-legacy-d1" },
 					{
 						name: "STARTUP_R2",
 						type: "r2_bucket",
@@ -201,6 +203,7 @@ describe("startup profile", () => {
 			"STARTUP_ARTIFACTS",
 			"STARTUP_HELLO_WORLD",
 			"STARTUP_FLAGSHIP",
+			"STARTUP_REALTIMEKIT",
 			"STARTUP_RATELIMIT",
 			"STARTUP_VPC_SERVICE",
 			"STARTUP_VPC_NETWORK",
@@ -287,6 +290,11 @@ describe("startup profile", () => {
 						name: "STARTUP_FLAGSHIP",
 						type: "flagship",
 						app_id: "startup-app",
+					},
+					{
+						name: "STARTUP_REALTIMEKIT",
+						type: "realtimekit",
+						app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
 					},
 					{
 						name: "STARTUP_RATELIMIT",
@@ -390,6 +398,11 @@ describe("startup profile", () => {
 				bindings: [
 					{ name: "INHERITED", type: "inherit" },
 					{
+						name: "STARTUP_OIDC_TOKEN",
+						type: "oidc_token",
+						audience: "https://api.example.com",
+					},
+					{
 						name: "STARTUP_DO",
 						type: "durable_object_namespace",
 						class_name: "StartupDurableObject",
@@ -454,6 +467,40 @@ describe("startup profile", () => {
 
 		await expect(analyseBundle(workerBundle)).rejects.toThrow(
 			'The upload contains bindings that cannot be reproduced locally during startup profiling: "INHERITED" ("inherit").'
+		);
+	});
+
+	it("identifies an OIDC token binding read during module evaluation", async ({
+		expect,
+	}) => {
+		const workerBundle = new FormData();
+		workerBundle.set(
+			"metadata",
+			JSON.stringify({
+				main_module: "index.js",
+				bindings: [
+					{
+						name: "API_TOKEN",
+						type: "oidc_token",
+						audience: "https://api.example.com",
+					},
+				],
+			})
+		);
+		workerBundle.set(
+			"index.js",
+			new File(
+				[
+					`import { env } from "cloudflare:workers";
+					if (env.API_TOKEN === undefined) throw new Error("missing binding");`,
+				],
+				"index.js",
+				{ type: "application/javascript+module" }
+			)
+		);
+
+		await expect(analyseBundle(workerBundle)).rejects.toThrow(
+			'The upload contains bindings that cannot be reproduced locally during startup profiling: "API_TOKEN" ("oidc_token").'
 		);
 	});
 

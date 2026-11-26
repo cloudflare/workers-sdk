@@ -5,6 +5,8 @@ import type { CSSProperties, JSX, ReactNode } from "react";
 
 export interface EmailListRow {
 	id: string;
+	navigationId?: string;
+	navigable?: boolean;
 	primary: string;
 	secondary: string;
 	secondaryTitle: string;
@@ -18,14 +20,15 @@ interface EmailListProps<T> {
 	disabled: boolean;
 	emptyState: ReactNode;
 	error: string | null;
-	getRow: (item: T) => EmailListRow;
+	getRow: (item: T, index: number) => EmailListRow;
 	hasNext: boolean;
 	hasPrevious: boolean;
 	items: T[];
 	onNext: () => void;
 	onPrevious: () => void;
 	onRefresh: () => void;
-	onRowClick: (id: string) => void;
+	onRowClick: (id: string, item: T) => void;
+	renderRowActions?: (item: T, row: EmailListRow) => ReactNode;
 	refreshing: boolean;
 	selectedId?: string | null;
 	style?: CSSProperties;
@@ -47,6 +50,7 @@ export function EmailList<T>({
 	onPrevious,
 	onRefresh,
 	onRowClick,
+	renderRowActions,
 	refreshing,
 	selectedId,
 	style,
@@ -99,19 +103,11 @@ export function EmailList<T>({
 			) : (
 				<div className="min-h-0 w-full flex-1 overflow-y-auto">
 					<div className="flex flex-col items-stretch overflow-hidden rounded-lg border border-kumo-fill bg-kumo-base">
-						{items.map((item) => {
-							const row = getRow(item);
+						{items.map((item, index) => {
+							const row = getRow(item, index);
 							const selected = selectedId === row.id;
-							return (
-								<button
-									aria-pressed={selectedId === undefined ? undefined : selected}
-									className={`grid h-12 min-h-12 w-full shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-3 border-b border-kumo-fill px-4 text-left text-sm last:border-b-0 hover:bg-kumo-fill ${
-										selected ? "bg-kumo-fill" : "bg-kumo-base"
-									}`}
-									key={row.id}
-									onClick={() => onRowClick(row.id)}
-									type="button"
-								>
+							const rowContent = (
+								<>
 									<span className="flex min-w-0 items-center gap-2">
 										{row.warning ? (
 											<span
@@ -139,7 +135,34 @@ export function EmailList<T>({
 									<span className="shrink-0 text-kumo-subtle">
 										{row.timestamp}
 									</span>
-								</button>
+								</>
+							);
+							const rowClassName = `grid h-12 min-h-12 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-3 px-4 text-left text-sm ${
+								selected ? "bg-kumo-fill" : "bg-kumo-base"
+							}`;
+							return (
+								<div
+									className="flex min-w-0 shrink-0 border-b border-kumo-fill last:border-b-0"
+									key={row.id}
+								>
+									{row.navigable === false ? (
+										<div className={rowClassName}>{rowContent}</div>
+									) : (
+										<button
+											aria-pressed={
+												selectedId === undefined ? undefined : selected
+											}
+											className={`${rowClassName} focus-visible:outline-kumo-ring hover:bg-kumo-fill focus-visible:z-10 focus-visible:outline-2 focus-visible:outline-offset-[-2px]`}
+											onClick={() =>
+												onRowClick(row.navigationId ?? row.id, item)
+											}
+											type="button"
+										>
+											{rowContent}
+										</button>
+									)}
+									{renderRowActions ? renderRowActions(item, row) : null}
+								</div>
 							);
 						})}
 					</div>

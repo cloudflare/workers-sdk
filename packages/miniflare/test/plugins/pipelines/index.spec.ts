@@ -7,7 +7,6 @@ test("supports declaring pipelines", async () => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2024-12-30",
 					manifest: singleModuleManifest(`export default {
@@ -16,7 +15,7 @@ test("supports declaring pipelines", async () => {
             return new Response(null, { status: 204 });
         },
     }`),
-					env: { PIPELINE: { type: "pipeline", name: "PIPELINE" } },
+					env: { PIPELINE: { type: "pipeline", streamId: "PIPELINE" } },
 				},
 			},
 		],

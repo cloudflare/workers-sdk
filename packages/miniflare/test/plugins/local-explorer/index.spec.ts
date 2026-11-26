@@ -24,7 +24,6 @@ describe("Local Explorer API validation", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -199,6 +198,8 @@ describe("Local Explorer API validation", () => {
 			"http://localhost:8787",
 			"http://127.0.0.1:8787",
 			"http://[::1]:8787",
+			"http://my-app.localhost:5173",
+			"https://deep.my-app.localhost",
 		]) {
 			res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
 				headers: { Origin: origin },
@@ -236,6 +237,9 @@ describe("Local Explorer API validation", () => {
 		expect(res.headers.get("Access-Control-Allow-Methods")).toBe(
 			"GET, POST, PUT, PATCH, DELETE, OPTIONS"
 		);
+		expect(res.headers.get("Access-Control-Allow-Headers")).toContain(
+			"X-Miniflare-Explorer-Refresh"
+		);
 		await res.arrayBuffer();
 
 		// blocked origin
@@ -263,13 +267,36 @@ describe("Local Explorer API validation", () => {
 		expect(status).toBe(403);
 	});
 
-	test("blocks subdomains of localhost hostnames", async ({ expect }) => {
-		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
-			headers: { Origin: "http://sub.localhost:8787" },
-		});
-		expect(res.status).toBe(403);
-		await res.arrayBuffer();
-	});
+	test.for([
+		["my-app.localhost:5173", 200],
+		["deep.my-app.localhost", 200],
+		["evillocalhost", 403],
+		["localhost.evil.com", 403],
+		["my-app.localhost.evil.com", 403],
+	] as const)(
+		"validates local hostname %s",
+		async ([hostname, status], { expect }) => {
+			for (const header of ["Host", "Origin"]) {
+				const url = await mf.ready;
+				const actualStatus = await new Promise<number>((resolve, reject) => {
+					const req = http.get(
+						`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
+						{
+							headers: {
+								[header]: header === "Host" ? hostname : `https://${hostname}`,
+							},
+						},
+						(res) => {
+							res.resume();
+							resolve(res.statusCode ?? 0);
+						}
+					);
+					req.on("error", reject);
+				});
+				expect(actualStatus, header).toBe(status);
+			}
+		}
+	);
 
 	describe("routing", () => {
 		test("serves OpenAPI spec at /cdn-cgi/local/explorer/api", async ({
@@ -325,6 +352,74 @@ describe("Local Explorer API validation", () => {
 	});
 });
 
+describe("Local Explorer works with additional allowed hosts", () => {
+	let mf: Miniflare;
+
+	beforeAll(() => {
+		mf = new Miniflare({
+			unsafeLocalExplorer: true,
+			unsafeCdnCgiAllowedHosts: [
+				"my-app.test",
+				".example.com",
+				"test.trycloudflare.com",
+			],
+			workers: [
+				{
+					config: {
+						name: "allowed-hosts",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+					},
+				},
+			],
+		});
+	});
+
+	afterAll(async () => {
+		await disposeWithRetry(mf);
+	});
+
+	test.for([
+		["localhost:8787", 200],
+		["my-app.test:5173", 200],
+		["example.com", 200],
+		["sub.example.com", 200],
+		["deep.sub.example.com", 200],
+		["test.trycloudflare.com", 200],
+		["sub.my-app.test", 403],
+		["evilmy-app.test", 403],
+		["notexample.com", 403],
+		["example.com.evil.com", 403],
+		["other.trycloudflare.com", 403],
+		["evil.com", 403],
+	] as const)(
+		"validates configured hostname %s",
+		async ([hostname, status], { expect }) => {
+			for (const header of ["Host", "Origin"]) {
+				const url = await mf.ready;
+				const actualStatus = await new Promise<number>((resolve, reject) => {
+					const req = http.get(
+						`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
+						{
+							headers: {
+								[header]: header === "Host" ? hostname : `https://${hostname}`,
+							},
+						},
+						(res) => {
+							res.resume();
+							resolve(res.statusCode ?? 0);
+						}
+					);
+					req.on("error", reject);
+				});
+				expect(actualStatus, header).toBe(status);
+			}
+		}
+	);
+});
+
 describe("Local Explorer works with custom routes", () => {
 	let mf: Miniflare;
 
@@ -335,7 +430,6 @@ describe("Local Explorer works with custom routes", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -481,7 +575,6 @@ describe("Local Explorer works with wildcard routes", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -554,7 +647,6 @@ describe("Local Explorer works with upstream", () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -632,9 +724,13 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 	let instanceA: Miniflare;
 	let instanceB: Miniflare;
 	let registryPath: string;
+	let projectARoot: string;
+	let projectBRoot: string;
 
 	beforeAll(async () => {
 		registryPath = mkdtempSync(path.join(tmpdir(), "mf-registry-"));
+		projectARoot = path.join(registryPath, "project-a");
+		projectBRoot = path.join(registryPath, "project-b");
 
 		// Instance A has two workers
 		instanceA = new Miniflare({
@@ -643,11 +739,17 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
-					dev: { unsafeRegisterWorker: true },
+					dev: {
+						rootPath: projectARoot,
+						unsafeRegisterWorker: true,
+					},
 					config: {
-						type: "worker",
 						name: "worker-a1",
 						compatibilityDate: "2025-01-01",
+						triggers: [
+							{ type: "scheduled", schedule: "*/5 * * * *" },
+							{ type: "scheduled", schedule: " 0 17 * * SUN " },
+						],
 						manifest: singleModuleManifest(`
 						export class TestDO {
 							constructor(state) { this.state = state; }
@@ -673,9 +775,12 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 					},
 				},
 				{
-					dev: { unsafeRegisterWorker: true },
+					dev: {
+						// Equivalent spelling must produce the same persistence scope.
+						rootPath: `${projectARoot}${path.sep}.${path.sep}`,
+						unsafeRegisterWorker: true,
+					},
 					config: {
-						type: "worker",
 						name: "worker-a2",
 						compatibilityDate: "2025-01-01",
 						manifest: singleModuleManifest(
@@ -696,11 +801,14 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			unsafeDevRegistryPath: registryPath,
 			workers: [
 				{
-					dev: { unsafeRegisterWorker: true },
+					dev: {
+						rootPath: projectBRoot,
+						unsafeRegisterWorker: true,
+					},
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-01-01",
+						triggers: [{ type: "scheduled", schedule: "0 0 * * *" }],
 						manifest: singleModuleManifest(
 							`export default { fetch() { return new Response("Worker B"); } }`
 						),
@@ -735,8 +843,21 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 		const res = await instanceA.dispatchFetch(`${BASE_URL}/local/workers`);
 		expect(res.status).toBe(200);
 
-		const data = await res.json();
-		expect(data).toMatchInlineSnapshot(`
+		const data = (await res.json()) as {
+			result: Array<Record<string, unknown>>;
+			[key: string]: unknown;
+		};
+		const scopes = data.result.map((worker) => worker.persistenceScope);
+		expect(scopes[0]).toEqual(expect.stringMatching(/^[0-9a-f]{64}$/));
+		expect(scopes[0]).toBe(scopes[1]);
+		expect(scopes[2]).not.toBe(scopes[0]);
+		expect(JSON.stringify(data)).not.toContain(projectARoot);
+		expect(JSON.stringify(data)).not.toContain(projectBRoot);
+		const dataWithoutPersistenceScopes = {
+			...data,
+			result: data.result.map(({ persistenceScope: _, ...worker }) => worker),
+		};
+		expect(dataWithoutPersistenceScopes).toMatchInlineSnapshot(`
 			{
 			  "errors": [],
 			  "messages": [],
@@ -758,6 +879,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			            "useSqlite": false,
 			          },
 			        ],
+			        "flagship": [],
 			        "kv": [
 			          {
 			            "bindingName": "MY_KV",
@@ -782,11 +904,18 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			      },
 			      "isSelf": true,
 			      "name": "worker-a1",
+			      "triggers": {
+			        "crons": [
+			          "*/5 * * * *",
+			          " 0 17 * * SUN ",
+			        ],
+			      },
 			    },
 			    {
 			      "bindings": {
 			        "d1": [],
 			        "do": [],
+			        "flagship": [],
 			        "kv": [
 			          {
 			            "bindingName": "KV_A2",
@@ -799,6 +928,9 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			      },
 			      "isSelf": true,
 			      "name": "worker-a2",
+			      "triggers": {
+			        "crons": [],
+			      },
 			    },
 			    {
 			      "bindings": {
@@ -809,6 +941,7 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			          },
 			        ],
 			        "do": [],
+			        "flagship": [],
 			        "kv": [],
 			        "r2": [],
 			        "sendEmail": [],
@@ -816,6 +949,11 @@ describe("Local Explorer /api/local/workers endpoint", () => {
 			      },
 			      "isSelf": false,
 			      "name": "worker-b",
+			      "triggers": {
+			        "crons": [
+			          "0 0 * * *",
+			        ],
+			      },
 			    },
 			  ],
 			  "success": true,

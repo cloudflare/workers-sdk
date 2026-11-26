@@ -5,16 +5,18 @@ import {
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
 import {
-	configFileName,
 	DEFAULT_COMPAT_DATE,
-	extractBindingsOfType,
-	formatConfigSnippet,
 	getDisableConfigWatching,
 	getDockerPath,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	extractBindingsOfType,
+	formatConfigSnippet,
+} from "@cloudflare/workers-utils/config";
 import { watch } from "chokidar";
-import { getWorkerRegistry } from "miniflare";
+import { getWorkerRegistry, resolveDevRegistryPath } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig, readNewConfig } from "../../config";
@@ -55,7 +57,8 @@ import type {
 	WranglerStartDevWorkerInput,
 } from "./types";
 import type { LoginOrRefreshFailureReason } from "@cloudflare/workers-auth";
-import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
+import type { CfUnsafe } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { WorkerRegistry } from "miniflare";
 
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
@@ -161,9 +164,13 @@ async function resolveDevConfig(
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
+			// Full and minimal remote preview sessions use the origin hostname
+			// as their host, so both ignore the local-mode opt-out.
 			hostname:
 				host ??
-				((input.dev?.inferOriginFromRoutes ?? true)
+				((input.dev?.inferOriginFromRoutes ?? true) ||
+				input.dev?.remote === true ||
+				input.dev?.remote === "minimal"
 					? getInferredHost(routes, config.configPath)
 					: undefined),
 		},
@@ -235,6 +242,11 @@ function getLoginOrRefreshFailureErrorMessage(
 			" Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful.\n" +
 			"Either:\n" +
 			` - Run \`wrangler login\` to try again${localFallback}${whoamiTip}`,
+		"token-refresh-unreachable":
+			" Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. Your stored credentials were left unchanged.\n" +
+			"Either:\n" +
+			" - Check your network connection (connectivity, proxy, or IPv6) and try again; `WRANGLER_LOG=debug` shows the underlying error" +
+			`${localFallback}${whoamiTip}`,
 	};
 	const errorMessageBody = errorMessageBodies[failureReason];
 	const errorMessage = errorMessagePrefix + errorMessageBody;
@@ -333,11 +345,30 @@ async function resolveTriggers(
 
 	const connectHandlers =
 		config.connect?.map<Extract<Trigger, { type: "connect" }>>((c) => ({
-			...c,
 			type: "connect",
+			protocol: c.protocol,
+			port: c.port,
+			address: c.address,
+			...(c.protocol === "udp"
+				? {
+						idleTimeoutMs: c.idle_timeout_ms,
+						maxPendingBytes: c.max_pending_bytes,
+					}
+				: {}),
 		})) ?? [];
 
-	return [...devRoutes, ...queueConsumers, ...crons, ...connectHandlers];
+	const artifactsEvents =
+		config.triggers.events?.map<Extract<Trigger, { type: "artifacts-event" }>>(
+			(event) => ({ type: "artifacts-event", event })
+		) ?? [];
+
+	return [
+		...devRoutes,
+		...queueConsumers,
+		...crons,
+		...connectHandlers,
+		...artifactsEvents,
+	];
 }
 
 async function resolveConfig(
@@ -350,6 +381,17 @@ async function resolveConfig(
 	config: StartDevWorkerOptions;
 	printCurrentBindings: (registry: WorkerRegistry | null) => void;
 }> {
+	// Keep registry readers and runtime registration on the same effective path.
+	// An absent or empty registry still explicitly disables discovery in Wrangler.
+	if (input.dev?.registry) {
+		input = {
+			...input,
+			dev: {
+				...input.dev,
+				registry: resolveDevRegistryPath(input.dev.registry),
+			},
+		};
+	}
 	if (
 		config.pages_build_output_dir &&
 		input.dev?.multiworkerPrimary === false
@@ -646,22 +688,59 @@ export class ConfigController extends Controller {
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
 
 	#configWatcher?: ReturnType<typeof watch>;
+	// Sorted, so that the same set of paths always compares equal.
+	#configWatcherPaths: string[] = [];
+	#configWatcherReady?: Promise<void>;
 	#abortController?: AbortController;
 
-	async #ensureWatchingConfig(configPaths: string | string[] | undefined) {
-		await this.#configWatcher?.close();
-		if (configPaths === undefined) {
-			return;
+	// Resolves once every path in `configPaths` is being watched, so that any
+	// change made afterwards emits a `change` event. A change made before a
+	// path's watcher is ready goes unnoticed, which is why an unchanged set of
+	// paths keeps its existing watcher rather than getting a new one.
+	async #ensureWatchingConfig(configPaths: string[], signal: AbortSignal) {
+		const paths = [...configPaths].sort();
+		const unchanged =
+			paths.length === this.#configWatcherPaths.length &&
+			paths.every((p, i) => p === this.#configWatcherPaths[i]);
+		if (!unchanged) {
+			// Update all the state before awaiting anything, so that a concurrent
+			// update sees the new watcher rather than creating another one.
+			const previousWatcher = this.#configWatcher;
+			this.#configWatcher = undefined;
+			this.#configWatcherReady = undefined;
+			this.#configWatcherPaths = paths;
+			if (paths.length > 0) {
+				const watcher = this.#watchConfig(paths);
+				this.#configWatcher = watcher;
+				this.#configWatcherReady = new Promise((resolve) =>
+					watcher.once("ready", () => resolve())
+				);
+			}
+			await previousWatcher?.close();
 		}
-		const paths = typeof configPaths === "string" ? [configPaths] : configPaths;
-		if (paths.length === 0) {
-			return;
+		const ready = this.#configWatcherReady;
+		if (ready !== undefined && !signal.aborted) {
+			// A superseding update or teardown aborts `signal`, possibly by closing
+			// the watcher before it is ready, so stop waiting then.
+			await new Promise<void>((resolve) => {
+				signal.addEventListener("abort", () => resolve());
+				void ready.then(resolve);
+			});
 		}
-		this.#configWatcher = watch(paths, {
+	}
+
+	#watchConfig(paths: string[]) {
+		const watcher = watch(paths, {
 			persistent: true,
 			ignoreInitial: true,
-		}).on("change", async (changedPath) => {
-			if (this.#configWatcher?.closed) {
+			// Without this, chokidar drops a path's `change` event if it comes
+			// within 50 ms of the previous one, losing a write made just after a
+			// reload. Waiting for writes to finish skips that throttle, and also
+			// avoids reading a partly written file.
+			awaitWriteFinish: { stabilityThreshold: 50, pollInterval: 10 },
+		});
+		return watcher.on("change", async (changedPath) => {
+			if (watcher.closed) {
 				return;
 			}
 			logger.debug(`${path.basename(changedPath)} changed...`);
@@ -754,25 +833,25 @@ export class ConfigController extends Controller {
 				}
 			}
 
+			let watchPaths: string[] = [];
 			if (!getDisableConfigWatching() && input.dev?.watch !== false) {
 				// Under `--experimental-new-config`, watch the transitive deps of both
 				// `cloudflare.config.ts` and `wrangler.config.ts` (deduped, with
 				// `node_modules` excluded by `@cloudflare/config`'s loader).
 				// Otherwise fall back to the legacy single-file watch.
-				const watchPaths = newConfig
-					? Array.from(newConfig.dependencies)
-					: fileConfig.configPath;
-				await this.#ensureWatchingConfig(watchPaths);
-			} else {
-				await this.#configWatcher?.close();
-				this.#configWatcher = undefined;
+				if (newConfig) {
+					watchPaths = Array.from(newConfig.dependencies);
+				} else if (fileConfig.configPath !== undefined) {
+					watchPaths = [fileConfig.configPath];
+				}
 			}
+			await this.#ensureWatchingConfig(watchPaths, signal);
 
 			// Under `--experimental-new-config`, run the new-config type-gen path
 			// instead of the legacy `checkTypesDiff`.
-			if (newConfig && fileConfig.configPath) {
+			if (newConfig) {
 				await regenerateNewConfigTypes({
-					cloudflareConfigPath: fileConfig.configPath,
+					cloudflareConfigPath: newConfig.cloudflareConfigPath,
 					workerConfig: newConfig.parsedConfig.worker,
 					types: newConfig.types,
 				});
@@ -833,6 +912,9 @@ export class ConfigController extends Controller {
 		await super.teardown();
 		this.#abortController?.abort();
 		await this.#configWatcher?.close();
+		this.#configWatcher = undefined;
+		this.#configWatcherReady = undefined;
+		this.#configWatcherPaths = [];
 		logger.debug("ConfigController teardown complete");
 	}
 

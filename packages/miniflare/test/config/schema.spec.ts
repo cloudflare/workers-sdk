@@ -12,7 +12,6 @@ vi.mock("../../src/plugins/shared/constants", () => ({
 describe("MiniflareWorkerConfigSchema", () => {
 	test("requires manifest modulesRoot to be absolute", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			manifest: {
@@ -35,7 +34,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("defaults manifest modulesRoot to cwd", ({ expect }) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			manifest: {
@@ -50,7 +48,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 	test("requires dev rootPath to be absolute", ({ expect }) => {
 		const result = WorkerOptionsSchema.safeParse({
 			config: {
-				type: "worker",
 				name: "api",
 				compatibilityDate: "2026-01-01",
 			},
@@ -71,7 +68,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 	test("defaults dev rootPath to cwd", ({ expect }) => {
 		const parsed = WorkerOptionsSchema.parse({
 			config: {
-				type: "worker",
 				name: "api",
 				compatibilityDate: "2026-01-01",
 			},
@@ -84,7 +80,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 		expect,
 	}) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -109,7 +104,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("rejects duplicate singleton bindings", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -133,7 +127,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("allows duplicate non-singleton bindings", ({ expect }) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -152,7 +145,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 		expect,
 	}) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -165,7 +157,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("preserves explicit resource binding identifiers", ({ expect }) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -190,7 +181,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 	test("requires Hyperdrive dev.connectionString", ({ expect }) => {
 		const result = MiniflareWorkerConfigSchema.safeParse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			env: {
@@ -203,14 +193,14 @@ describe("MiniflareWorkerConfigSchema", () => {
 			expect(result.error.issues).toEqual([
 				expect.objectContaining({
 					path: ["env", "HYPERDRIVE", "dev", "connectionString"],
-					message: "Invalid input: expected string, received undefined",
+					message:
+						"A Hyperdrive binding requires a connection string unless it sets 'remote': true.",
 				}),
 			]);
 		}
 
 		expect(
 			MiniflareWorkerConfigSchema.parse({
-				type: "worker",
 				name: "api",
 				compatibilityDate: "2026-01-01",
 				env: {
@@ -233,36 +223,62 @@ describe("MiniflareWorkerConfigSchema", () => {
 		});
 	});
 
-	test("rejects dev options on Workflow bindings", ({ expect }) => {
-		const result = MiniflareWorkerConfigSchema.safeParse({
-			type: "worker",
-			name: "api",
-			compatibilityDate: "2026-01-01",
-			env: {
-				WORKFLOW: {
-					type: "workflow",
-					name: "workflow",
-					worker: "api",
-					exportName: "Workflow",
-					dev: { remote: true },
+	test.for([
+		{ key: "dev", value: { remote: true } },
+		{ key: "limits", value: { steps: 10 } },
+	])(
+		"rejects top-level $key options on Workflow bindings",
+		({ key, value }, { expect }) => {
+			const result = MiniflareWorkerConfigSchema.safeParse({
+				name: "api",
+				compatibilityDate: "2026-01-01",
+				env: {
+					WORKFLOW: {
+						type: "workflow",
+						name: "workflow",
+						worker: "api",
+						exportName: "Workflow",
+						[key]: value,
+					},
 				},
-			},
-		});
+			});
 
-		expect(result.success).toBe(false);
-		if (!result.success) {
-			expect(result.error.issues).toEqual([
-				expect.objectContaining({
-					path: ["env", "WORKFLOW"],
-					message: 'Unrecognized key: "dev"',
-				}),
-			]);
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.error.issues).toEqual([
+					expect.objectContaining({
+						path: ["env", "WORKFLOW"],
+						message: `Unrecognized key: "${key}"`,
+					}),
+				]);
+			}
 		}
+	);
+
+	test("allows a remote Hyperdrive binding without dev.connectionString", ({
+		expect,
+	}) => {
+		expect(
+			MiniflareWorkerConfigSchema.parse({
+				name: "api",
+				compatibilityDate: "2026-01-01",
+				env: {
+					HYPERDRIVE: {
+						type: "hyperdrive",
+						id: "hyperdrive",
+						dev: { remote: true },
+					},
+				},
+			}).env?.HYPERDRIVE
+		).toEqual({
+			type: "hyperdrive",
+			id: "hyperdrive",
+			dev: { remote: true },
+		});
 	});
 
 	test("strips tombstoned durable object exports", ({ expect }) => {
 		const parsed = MiniflareWorkerConfigSchema.parse({
-			type: "worker",
 			name: "api",
 			compatibilityDate: "2026-01-01",
 			exports: {
@@ -300,6 +316,30 @@ describe("MiniflareWorkerConfigSchema", () => {
 		});
 	});
 
+	test("preserves workflow exports", ({ expect }) => {
+		const parsed = MiniflareWorkerConfigSchema.parse({
+			name: "api",
+			compatibilityDate: "2026-01-01",
+			exports: {
+				GreetingWorkflow: { type: "workflow", name: "greeting" },
+				BatchWorkflow: {
+					type: "workflow",
+					name: "batch",
+					limits: { steps: 10 },
+				},
+			},
+		});
+
+		expect(parsed.exports).toEqual({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: {
+				type: "workflow",
+				name: "batch",
+				limits: { steps: 10 },
+			},
+		});
+	});
+
 	test("rejects unresolved Container images on live Durable Object exports", ({
 		expect,
 	}) => {
@@ -315,7 +355,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 
 		for (const exported of exports) {
 			const result = MiniflareWorkerConfigSchema.safeParse({
-				type: "worker",
 				name: "api",
 				compatibilityDate: "2026-01-01",
 				exports: {
@@ -334,7 +373,6 @@ describe("MiniflareWorkerConfigSchema", () => {
 describe("MiniflareOptionsSchema", () => {
 	const worker = {
 		config: {
-			type: "worker" as const,
 			name: "worker",
 			compatibilityDate: "2025-01-01",
 		},

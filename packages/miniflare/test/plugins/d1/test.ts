@@ -33,7 +33,6 @@ export async function setupTest(
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(script),

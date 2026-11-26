@@ -65,7 +65,6 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "unsafe-plugin-worker",
 					// Use a compatibility date that supports RPCs
 					compatibilityDate: "2025-08-04",
@@ -79,7 +78,6 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -113,7 +111,6 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "unsafe-plugin-worker",
 					// Use a compatibility date that supports RPCs
 					compatibilityDate: "2025-08-04",
@@ -127,7 +124,6 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -157,7 +153,6 @@ test("Supports specifying an unsafe plugin will be loaded into Miniflare and wil
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "unsafe-plugin-worker",
 					// Use a compatibility date that supports RPCs
 					compatibilityDate: "2025-08-04",

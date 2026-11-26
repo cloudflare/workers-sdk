@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Response } from "miniflare";
@@ -51,6 +52,23 @@ async function handleSnapshotRequest(
 	return new Response(null, { status: 405 });
 }
 
+// Based on https://github.com/vitest-dev/vitest/blob/v5.0.0/packages/coverage-istanbul/src/commands.ts
+async function handleCoverageRequest(
+	request: Request,
+	coverageFilesDirectory: string
+): Promise<Response> {
+	if (request.method !== "POST") {
+		return new Response(null, { status: 405 });
+	}
+
+	const filePath = path.join(
+		coverageFilesDirectory,
+		`coverage-${randomUUID()}.json`
+	);
+	await fs.writeFile(filePath, new Uint8Array(await request.arrayBuffer()));
+	return new Response(filePath);
+}
+
 export async function listDurableObjectIds(
 	request: Request,
 	mf: Miniflare,
@@ -60,26 +78,32 @@ export async function listDurableObjectIds(
 		return new Response(null, { status: 405 });
 	}
 
-	const bindingName = url.searchParams.get("binding_name");
-	if (bindingName === null) {
+	const className = url.searchParams.get("class_name");
+	if (className === null) {
 		return new Response(null, { status: 400 });
 	}
 
 	const workerName = url.searchParams.get("worker_name") ?? undefined;
-	const ids = await mf.listDurableObjectIds(bindingName, workerName);
+	const ids = await mf.listDurableObjectIds(className, workerName);
 	return Response.json(ids);
 }
 
-export function handleLoopbackRequest(
-	request: Request,
-	mf: Miniflare
-): Awaitable<Response> {
-	const url = new URL(request.url);
-	if (url.pathname === "/snapshot") {
-		return handleSnapshotRequest(request, url);
-	}
-	if (url.pathname === "/durable-objects") {
-		return listDurableObjectIds(request, mf, url);
-	}
-	return new Response(null, { status: 404 });
+/** Creates the Node-side loopback service used by the Vitest runner Worker. */
+export function createLoopbackHandler(coverageFilesDirectory: string) {
+	return function handleLoopbackRequest(
+		request: Request,
+		mf: Miniflare
+	): Awaitable<Response> {
+		const url = new URL(request.url);
+		if (url.pathname === "/snapshot") {
+			return handleSnapshotRequest(request, url);
+		}
+		if (url.pathname === "/coverage") {
+			return handleCoverageRequest(request, coverageFilesDirectory);
+		}
+		if (url.pathname === "/durable-objects") {
+			return listDurableObjectIds(request, mf, url);
+		}
+		return new Response(null, { status: 404 });
+	};
 }

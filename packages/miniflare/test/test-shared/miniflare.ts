@@ -255,7 +255,6 @@ export function miniflareTest<Env, Context extends MiniflareTestContext>(
 		const baseConfig = firstWorker?.config;
 		const config: WorkerConfig = {
 			...baseConfig,
-			type: "worker",
 			name: baseConfig?.name ?? "",
 			compatibilityDate:
 				baseConfig?.compatibilityDate ?? DEFAULT_TEST_COMPATIBILITY_DATE,

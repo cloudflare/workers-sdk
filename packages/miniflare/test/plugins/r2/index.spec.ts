@@ -24,7 +24,6 @@ import type {
 	R2Bucket,
 	R2Conditional,
 	R2ListOptions,
-	R2Object,
 	R2ObjectBody,
 } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
@@ -62,7 +61,6 @@ const opts: Partial<MiniflareOptions> = {
 	workers: [
 		{
 			config: {
-				type: "worker",
 				name: "",
 				compatibilityDate: "2025-05-01",
 				env: { BUCKET: { type: "r2", name: "bucket" } },
@@ -519,7 +517,7 @@ test("put: stores only if passes onlyIf", async ({ expect }) => {
 	};
 	const fail = async (cond: R2Conditional) => {
 		const object = await r2.put("key", "2", { onlyIf: cond });
-		expect(object as R2Object | null).toBe(null);
+		expect(object).toBe(null);
 		expect(await (await r2.get("key"))?.text()).toBe("1");
 		// No `reset()` as we've just checked we didn't update anything
 	};
@@ -542,7 +540,7 @@ test("put: stores only if passes onlyIf", async ({ expect }) => {
 
 	// Check non-existent key with failed condition
 	const object = await r2.put("no-key", "2", { onlyIf: { etagMatches: etag } });
-	expect(object as R2Object | null).toBe(null);
+	expect(object).toBe(null);
 });
 test("put: validates metadata size", async ({ expect }) => {
 	const { r2 } = ctx;
@@ -552,21 +550,29 @@ test("put: validates metadata size", async ({ expect }) => {
 	);
 
 	// Check with ASCII characters
-	await r2.put("key", "value", { customMetadata: { key: "x".repeat(2045) } });
+	await r2.put("key", "value", { customMetadata: { key: "x".repeat(8189) } });
 	await expect(
-		r2.put("key", "value", { customMetadata: { key: "x".repeat(2046) } })
+		r2.put("key", "value", { customMetadata: { key: "x".repeat(8190) } })
 	).rejects.toThrow(metadataError);
-	await r2.put("key", "value", { customMetadata: { hi: "x".repeat(2046) } });
+	await r2.put("key", "value", { customMetadata: { hi: "x".repeat(8190) } });
+
+	// Check the limit applies to the total size of all keys and values
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
+	await r2.put("key", "value", { customMetadata });
+	expect((await r2.head("key"))?.customMetadata).toEqual(customMetadata);
+	await expect(
+		r2.put("key", "value", { customMetadata: { ...customMetadata, a: "" } })
+	).rejects.toThrow(metadataError);
 
 	// Check with extended characters: note "🙂" is 2 UTF-16 code units, so
 	// `"🙂".length === 2`, and it requires 4 bytes to store
-	await r2.put("key", "value", { customMetadata: { key: "🙂".repeat(511) } }); // 3 + 4*511 = 2047
-	await r2.put("key", "value", { customMetadata: { key1: "🙂".repeat(511) } }); // 4 + 4*511 = 2048
+	await r2.put("key", "value", { customMetadata: { key: "🙂".repeat(2047) } }); // 3 + 4*2047 = 8191
+	await r2.put("key", "value", { customMetadata: { key1: "🙂".repeat(2047) } }); // 4 + 4*2047 = 8192
 	await expect(
-		r2.put("key", "value", { customMetadata: { key12: "🙂".repeat(511) } })
+		r2.put("key", "value", { customMetadata: { key12: "🙂".repeat(2047) } })
 	).rejects.toThrow(metadataError);
 	await expect(
-		r2.put("key", "value", { customMetadata: { key: "🙂".repeat(512) } })
+		r2.put("key", "value", { customMetadata: { key: "🙂".repeat(2048) } })
 	).rejects.toThrow(metadataError);
 });
 test("put: can copy values", async ({ expect }) => {
@@ -574,7 +580,6 @@ test("put: can copy values", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { BUCKET: { type: "r2", name: "BUCKET" } },
@@ -786,6 +791,16 @@ test("list: lists keys with startAfter and limit (where startAfter doesn't match
 			["key1", "key2"],
 			["key3", "key4"],
 		],
+	});
+});
+test("list: paginates with startAfter and cursor using UTF-8 key order", async ({
+	expect,
+}) => {
+	// "Ａ" (U+FF21) sorts after emoji in UTF-16 but before them in UTF-8
+	await testList(expect, {
+		keys: ["Ａ", "📷", "📸"],
+		options: { startAfter: "Ａ", limit: 1 },
+		pages: [["📷"], ["📸"]],
 	});
 });
 test("list: accepts long prefix", async ({ expect }) => {
@@ -1042,7 +1057,6 @@ test("operations persist stored data", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
@@ -1105,7 +1119,6 @@ test("operations permit strange bucket names", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: { BUCKET: { type: "r2", name: id } },
@@ -1147,6 +1160,22 @@ test("createMultipartUpload", async ({ expect }) => {
 		new Error(
 			`createMultipartUpload: The specified object name is not valid. (10020)`
 		)
+	);
+});
+test("createMultipartUpload: validates metadata size", async ({ expect }) => {
+	const { r2 } = ctx;
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
+	const upload = await r2.createMultipartUpload("key", { customMetadata });
+	const part = await upload.uploadPart(1, "value");
+	await upload.complete([part]);
+	expect((await r2.head("key"))?.customMetadata).toEqual(customMetadata);
+
+	await expect(
+		r2.createMultipartUpload("key", {
+			customMetadata: { ...customMetadata, a: "" },
+		})
+	).rejects.toThrow(
+		"createMultipartUpload: Your metadata headers exceed the maximum allowed metadata size. (10012)"
 	);
 });
 test("uploadPart", async ({ expect }) => {

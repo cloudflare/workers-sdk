@@ -68,7 +68,6 @@ test("persists Durable Object data in-memory between options reloads", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT(responsePrefix)),
@@ -131,7 +130,6 @@ test("persists Durable Object data on file-system", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT()),
@@ -192,7 +190,6 @@ test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT()),
@@ -216,18 +213,19 @@ test("lists Durable Object ids with persisted storage", async ({ expect }) => {
 	const firstId = namespace.idFromName("/first").toString();
 	const secondId = namespace.idFromName("/second").toString();
 
-	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual([]);
+	await expect(mf.listDurableObjectIds("Counter")).resolves.toEqual([]);
 
 	let res = await mf.dispatchFetch("http://localhost/first");
 	expect(await res.text()).toBe("1");
 	res = await mf.dispatchFetch("http://localhost/second");
 	expect(await res.text()).toBe("1");
 
-	await expect(mf.listDurableObjectIds("COUNTER")).resolves.toEqual(
-		[firstId, secondId].sort()
-	);
 	await expect(mf.listDurableObjectIds("Counter")).resolves.toEqual(
 		[firstId, secondId].sort()
+	);
+	// Not by binding name
+	await expect(mf.listDurableObjectIds("COUNTER")).rejects.toThrow(
+		'No Durable Object class named "COUNTER" found in "worker" worker.'
 	);
 });
 
@@ -238,7 +236,6 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "entry",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
@@ -259,7 +256,6 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT("a: ")),
@@ -282,7 +278,6 @@ test("multiple Workers access same Durable Object data", async ({ expect }) => {
 			},
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT("b: ")),
@@ -342,7 +337,6 @@ test("can use Durable Object ID from one object in another", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "a",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/id" }],
@@ -378,7 +372,6 @@ test("can use Durable Object ID from one object in another", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "b",
 					compatibilityDate: "2025-05-01",
 					triggers: [{ type: "fetch", pattern: "*/*" }],
@@ -429,7 +422,6 @@ test("proxies Durable Object methods", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(COUNTER_SCRIPT("")),
@@ -474,7 +466,6 @@ test("proxies Durable Object methods", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -529,7 +520,6 @@ describe("evictions", { concurrent: true }, () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(STATEFUL_SCRIPT()),
@@ -571,7 +561,6 @@ describe("evictions", { concurrent: true }, () => {
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(STATEFUL_SCRIPT()),
@@ -613,7 +602,6 @@ const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export class SQLiteDurableObject {
@@ -676,7 +664,6 @@ test("gets SQLite storage for Durable Objects", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`
@@ -800,7 +787,6 @@ test("colo-local actors", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export class TestObject {
@@ -841,8 +827,8 @@ test("colo-local actors", async ({ expect }) => {
 	res = await stub.fetch("http://localhost");
 	expect(await res.text()).toBe("body:thing2");
 
-	await expect(mf.listDurableObjectIds("OBJECT")).rejects.toThrow(
-		`Cannot list Durable Object ids for "OBJECT" because the namespace uses ephemeral local storage.`
+	await expect(mf.listDurableObjectIds("TestObject")).rejects.toThrow(
+		`Cannot list Durable Object ids for "TestObject" because the namespace uses ephemeral local storage.`
 	);
 });
 
@@ -853,7 +839,6 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "worker-a",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest("export default {}"),
@@ -869,7 +854,6 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 			workers: [
 				{
 					config: {
-						type: "worker",
 						name: "worker-a",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest(`
@@ -893,7 +877,6 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 				},
 				{
 					config: {
-						type: "worker",
 						name: "worker-b",
 						compatibilityDate: "2025-05-01",
 						manifest: singleModuleManifest("export default {}"),
@@ -944,7 +927,6 @@ test("Durable Object RPC calls do not block Node.js event loop", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(BLOCKING_DO_SCRIPT),
@@ -988,7 +970,6 @@ test("Durable Object RPC calls complete when unblocked", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(BLOCKING_DO_SCRIPT),

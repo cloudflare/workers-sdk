@@ -310,7 +310,23 @@ export class ProxyServer implements DurableObject {
 				const argsSize = parseInt(argsSizeHeader);
 				assert(!Number.isNaN(argsSize));
 				assert(request.body !== null);
-				const [encodedArgs, rest] = await readPrefix(request.body, argsSize);
+				// If the client sent the stream's length, restore it on the rest of
+				// the request body, as some APIs (e.g. `R2Bucket#put()`) reject
+				// streams without one.
+				const streamSizeHeader = request.headers.get(
+					CoreHeaders.OP_STREAM_SIZE
+				);
+				let restTransform: IdentityTransformStream | undefined;
+				if (streamSizeHeader !== null) {
+					const streamSize = parseInt(streamSizeHeader);
+					assert(!Number.isNaN(streamSize));
+					restTransform = new FixedLengthStream(streamSize);
+				}
+				const [encodedArgs, rest] = await readPrefix(
+					request.body,
+					argsSize,
+					restTransform
+				);
 				unbufferedRest = rest;
 				const stringifiedArgs = DECODER.decode(encodedArgs);
 				args = parseWithReadableStreams(
@@ -331,9 +347,14 @@ export class ProxyServer implements DurableObject {
 					result = transform.output(args[2]);
 				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
 					// let's resolve RpcPromise instances right away (to support serialization)
-					result = await func(...args);
-					// Mark that we've awaited this RPC call, so we set the Promise header below
-					rpcAwaited = true;
+					try {
+						result = await func(...args);
+					} finally {
+						// Mark that we've awaited this RPC call, so we set the Promise header
+						// below, even if the call rejected: the client must parse a rejection
+						// as an async response too.
+						rpcAwaited = true;
+					}
 				} else {
 					result = func.apply(target, args);
 				}

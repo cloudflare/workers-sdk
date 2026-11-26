@@ -141,7 +141,11 @@ export function mockExchangeRefreshTokenForAccessToken({
 	respondWith,
 	domain = "dash.cloudflare.com",
 }: {
-	respondWith: "refreshSuccess" | "refreshError" | "badResponse";
+	respondWith:
+		| "refreshSuccess"
+		| "refreshError"
+		| "badResponse"
+		| "networkError";
 	domain?: string;
 }) {
 	msw.use(
@@ -171,6 +175,9 @@ export function mockExchangeRefreshTokenForAccessToken({
 							},
 							{ status: 400 }
 						);
+					case "networkError":
+						// No HTTP response at all, like a DNS failure or connect timeout.
+						return HttpResponse.error();
 					case "badResponse":
 						return HttpResponse.text(
 							`<html> <body> This shouldn't be sent, but should be handled </body> </html>`,

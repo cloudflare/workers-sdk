@@ -38,7 +38,6 @@ beforeEach(async () => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					env: {

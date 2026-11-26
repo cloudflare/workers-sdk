@@ -99,6 +99,49 @@ async function expectPersistedEmail(
 	);
 }
 
+test.for(["string", "stream"])(
+	"EmailMessage exposes a raw byte stream when constructed from a %s",
+	async (inputType, { expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-03-17",
+						manifest: singleModuleManifest(dedent /* javascript */ `
+							import { EmailMessage } from "cloudflare:email";
+
+							export default {
+								async fetch(request) {
+									const input = ${JSON.stringify(inputType)} === "string"
+										? await request.text()
+										: request.body;
+									const message = new EmailMessage(
+										"sender@example.com", "recipient@example.com", input
+									);
+									if (!(message.raw instanceof ReadableStream)) {
+										throw new Error("Expected EmailMessage.raw to be a ReadableStream");
+									}
+									return new Response(message.raw);
+								},
+							};
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const body = "Subject: Café\r\n\r\nHello!";
+		const response = await mf.dispatchFetch("http://localhost", {
+			method: "POST",
+			body,
+		});
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe(body);
+	}
+);
+
 test("Unbound send_email binding works", async ({ expect }) => {
 	const log = new TestLog();
 	const projectTmpPath = await useProjectTmpPath();
@@ -111,7 +154,6 @@ test("Unbound send_email binding works", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -159,7 +201,6 @@ test("Invalid email throws", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -202,7 +243,6 @@ test("Single allowed destination send_email binding works", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -260,7 +300,6 @@ test("Single allowed destination send_email binding throws if destination is not
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -309,7 +348,6 @@ test("Multiple allowed destination send_email binding works", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -359,7 +397,6 @@ test("Multiple allowed senders send_email binding works", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -409,7 +446,6 @@ test("Sending email from a sender not in the allowed list does not work", async 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -461,7 +497,6 @@ test("Multiple allowed send_email binding throws if destination is not equal", a
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -517,7 +552,6 @@ test("reply validation: x-auto-response-suppress", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
@@ -563,7 +597,6 @@ test("reply validation: Auto-Submitted", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
@@ -609,7 +642,6 @@ test("reply validation: only In-Reply-To", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
@@ -655,7 +687,6 @@ test("reply validation: only References", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
@@ -701,7 +732,6 @@ test("reply validation: >100 References", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
@@ -752,7 +782,6 @@ test("reply: mismatched From: header", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(REPLY_EMAIL_WORKER()),
@@ -798,7 +827,6 @@ test("reply: unparseable", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(REPLY_EMAIL_WORKER('""')),
@@ -844,7 +872,6 @@ test("reply: generates a message id when omitted", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(
@@ -913,7 +940,6 @@ test("reply: rejects an empty message id", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(
@@ -965,7 +991,6 @@ test("reply: supports EmailReplyMessageBuilder", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(dedent /* javascript */ `
@@ -1094,7 +1119,6 @@ test("reply: rejects invalid custom header names", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(dedent /* javascript */ `
@@ -1148,7 +1172,6 @@ test("reply: disallowed header", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(
@@ -1206,7 +1229,6 @@ test("reply: missing In-Reply-To", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(
@@ -1265,7 +1287,6 @@ test("reply: wrong In-Reply-To", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(
@@ -1325,7 +1346,6 @@ test("reply: invalid references", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(
@@ -1383,7 +1403,6 @@ test("reply: references generated correctly", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(
@@ -1499,7 +1518,6 @@ function useMessageBuilderMiniflare({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(workerScript),
@@ -2069,7 +2087,6 @@ test("MessageBuilder backward compatibility - old EmailMessage API still works",
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),
@@ -2136,7 +2153,6 @@ test("send() on an EmailMessage returns a synthesized messageId", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_RETURNS_RESULT_WORKER),
@@ -2184,7 +2200,6 @@ test("send() on an EmailMessage larger than 1 MiB is captured without the local 
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_RETURNS_RESULT_WORKER),
@@ -2250,7 +2265,6 @@ test("receiving an email larger than 1 MiB is captured without the local explore
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(dedent /* javascript */ `
@@ -2363,7 +2377,6 @@ test("send_email binding is available from getBindings", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(""),
@@ -2406,7 +2419,6 @@ test("disposing does not remove a concurrent email session", async ({
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-03-17",
 					manifest: singleModuleManifest(SEND_EMAIL_WORKER),

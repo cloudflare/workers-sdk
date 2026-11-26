@@ -51,7 +51,6 @@ const opts: Partial<MiniflareOptions> = {
 	workers: [
 		{
 			config: {
-				type: "worker",
 				name: "",
 				compatibilityDate: "2025-05-01",
 				env: { NAMESPACE: { type: "kv", id: "namespace" } },
@@ -356,11 +355,17 @@ test("bulk get: check metadata for falsy json values", async ({ expect }) => {
 	const { kv } = ctx;
 	await kv.put("key1", "0", { metadata: { testing: "zero" } });
 	await kv.put("key2", "false", { metadata: { testing: "false" } });
+	await kv.put("key3", "null", { metadata: { testing: "null" } });
 
-	const result: any = await kv.getWithMetadata(["key1", "key2"], "json");
-	const expectedResult: any = new Map([
+	const result = await kv.getWithMetadata(
+		["key1", "key2", "key3", "missing"],
+		"json"
+	);
+	const expectedResult = new Map<string, unknown>([
 		["key1", { value: 0, metadata: { testing: "zero" } }],
 		["key2", { value: false, metadata: { testing: "false" } }],
+		["key3", { value: null, metadata: { testing: "null" } }],
+		["missing", null],
 	]);
 	expect(result).toEqual(expectedResult);
 });
@@ -784,7 +789,6 @@ test("persists in-memory between options reloads", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: {
@@ -840,7 +844,6 @@ test("persists on file-system", async ({ expect }) => {
 		workers: [
 			{
 				config: {
-					type: "worker",
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: {

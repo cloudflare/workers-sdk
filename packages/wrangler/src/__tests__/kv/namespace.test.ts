@@ -4,7 +4,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -51,6 +51,14 @@ describe("kv", () => {
 				);
 			}
 
+			it("should show the jurisdiction option in help", async ({ expect }) => {
+				await runWrangler("kv namespace create --help");
+
+				expect(std.out).toMatch(
+					/--jurisdiction\s+The jurisdiction where the new namespace will be created \(e.g. "us", "eu", "fedramp"\)\s{2}\[string\]/
+				);
+			});
+
 			it("should error if no namespace is given", async ({ expect }) => {
 				await expect(
 					runWrangler("kv namespace create")
@@ -77,10 +85,13 @@ describe("kv", () => {
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
-					      --preview        Interact with a preview namespace  [boolean]
-					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
-					      --update-config  Automatically update your config file with the newly added resource  [boolean]
-					      --binding        The binding name of this resource in your Worker  [string]"
+					      --preview                      Interact with a preview namespace  [boolean]
+					      --jurisdiction                 The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")  [string]
+					      --experimental-mode, --x-mode  The storage mode for the new namespace. Instant mode offers lower-latency reads and faster global updates [private beta].
+					                                     Cannot be combined with --jurisdiction.  [string] [choices: "instant"]
+					      --use-remote                   Use a remote binding when adding the newly created resource to your config  [boolean]
+					      --update-config                Automatically update your config file with the newly added resource  [boolean]
+					      --binding                      The binding name of this resource in your Worker  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
@@ -117,10 +128,13 @@ describe("kv", () => {
 					  -v, --version         Show version number  [boolean]
 
 					OPTIONS
-					      --preview        Interact with a preview namespace  [boolean]
-					      --use-remote     Use a remote binding when adding the newly created resource to your config  [boolean]
-					      --update-config  Automatically update your config file with the newly added resource  [boolean]
-					      --binding        The binding name of this resource in your Worker  [string]"
+					      --preview                      Interact with a preview namespace  [boolean]
+					      --jurisdiction                 The jurisdiction where the new namespace will be created (e.g. "us", "eu", "fedramp")  [string]
+					      --experimental-mode, --x-mode  The storage mode for the new namespace. Instant mode offers lower-latency reads and faster global updates [private beta].
+					                                     Cannot be combined with --jurisdiction.  [string] [choices: "instant"]
+					      --use-remote                   Use a remote binding when adding the newly created resource to your config  [boolean]
+					      --update-config                Automatically update your config file with the newly added resource  [boolean]
+					      --binding                      The binding name of this resource in your Worker  [string]"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
 			          "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown arguments: def, ghi[0m
@@ -191,6 +205,60 @@ describe("kv", () => {
 				);
 				expect(std.out).toContain("✨ Success!");
 			});
+
+			it.for(["--experimental-mode", "--x-mode"])(
+				"should create an Instant namespace with %s",
+				async (flag, { expect }) => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/storage/kv/namespaces",
+							async ({ request, params }) => {
+								expect(params.accountId).toEqual("some-account-id");
+								const body = (await request.json()) as Record<string, string>;
+								expect(body.title).toEqual("UnitTestNamespace");
+								expect(body.mode).toEqual("instant");
+								return HttpResponse.json(
+									createFetchResult({ id: "some-namespace-id" }),
+									{ status: 200 }
+								);
+							},
+							{ once: true }
+						)
+					);
+
+					await runWrangler(
+						`kv namespace create UnitTestNamespace --binding MY_NS ${flag} instant`
+					);
+					expect(std.out).toContain(
+						'Creating namespace with title "UnitTestNamespace" (mode: instant)'
+					);
+					expect(std.out).toContain("✨ Success!");
+				}
+			);
+
+			it.for(["--experimental-mode", "--x-mode"])(
+				"should reject %s with --jurisdiction before creating a namespace",
+				async (flag, { expect }) => {
+					const createRequest = vi.fn(() =>
+						HttpResponse.json(createFetchResult({ id: "some-namespace-id" }))
+					);
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/storage/kv/namespaces",
+							createRequest
+						)
+					);
+
+					await expect(
+						runWrangler(
+							`kv namespace create UnitTestNamespace ${flag} instant --jurisdiction eu`
+						)
+					).rejects.toThrow(
+						"Arguments experimental-mode and jurisdiction are mutually exclusive"
+					);
+					expect(createRequest).not.toHaveBeenCalled();
+				}
+			);
 
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
 				it("should create a namespace", async ({ expect }) => {

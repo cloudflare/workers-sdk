@@ -4,7 +4,7 @@ import { singleModuleManifest, useDispose } from "../../test-shared";
 
 // Cloudflare Access local dev wiring.
 //
-// When `dev.access` is configured, Miniflare:
+// When `config.access.dev` is configured, Miniflare:
 // 1. Sets `accessBlobHeader` on the user worker so workerd reads a header to
 //    populate `ctx.access`.
 // 2. Injects that header from the entry worker on every incoming request.
@@ -12,13 +12,28 @@ import { singleModuleManifest, useDispose } from "../../test-shared";
 //    `accessBindingService` on the user worker so `ctx.access.getIdentity()`
 //    dispatches to it via JS-RPC.
 
-function plainWorker(script: string): WorkerOptions {
+type AccessConfig = NonNullable<WorkerOptions["config"]["access"]>;
+
+interface PlainWorkerOptions {
+	name?: string;
+	route?: string;
+	access?: AccessConfig;
+}
+
+function plainWorker(
+	script: string,
+	options: PlainWorkerOptions = {}
+): WorkerOptions {
 	return {
 		config: {
-			type: "worker",
-			name: "user",
+			name: options.name ?? "user",
 			compatibilityDate: "2026-06-01",
 			manifest: singleModuleManifest(script),
+			triggers:
+				options.route === undefined
+					? undefined
+					: [{ type: "fetch", pattern: options.route }],
+			access: options.access,
 		},
 	};
 }
@@ -27,14 +42,10 @@ describe("access (wiring)", () => {
 	test("worker with access config boots and serves", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [
-				{
-					...plainWorker(
-						`export default { async fetch() { return new Response("ok"); } }`
-					),
-					dev: {
-						access: { aud: "test-aud" },
-					},
-				},
+				plainWorker(
+					`export default { async fetch() { return new Response("ok"); } }`,
+					{ access: { dev: { aud: "test-aud" } } }
+				),
 			],
 		});
 		useDispose(mf);
@@ -48,8 +59,8 @@ describe("access (wiring)", () => {
 	test("ctx.access.aud is populated from config", async ({ expect }) => {
 		const mf = new Miniflare({
 			workers: [
-				{
-					...plainWorker(`
+				plainWorker(
+					`
 						export default {
 							async fetch(request, env, ctx) {
 								return Response.json({
@@ -57,11 +68,9 @@ describe("access (wiring)", () => {
 								});
 							}
 						}
-					`),
-					dev: {
-						access: { aud: "my-test-audience" },
-					},
-				},
+					`,
+					{ access: { dev: { aud: "my-test-audience" } } }
+				),
 			],
 		});
 		useDispose(mf);
@@ -76,22 +85,24 @@ describe("access (wiring)", () => {
 	}) => {
 		const mf = new Miniflare({
 			workers: [
-				{
-					...plainWorker(`
+				plainWorker(
+					`
 						export default {
 							async fetch(request, env, ctx) {
 								const identity = await ctx.access?.getIdentity();
 								return Response.json({ identity: identity ?? null });
 							}
 						}
-					`),
-					dev: {
+					`,
+					{
 						access: {
-							aud: "my-test-audience",
-							identity: { email: "user@example.com", sub: "user-123" },
+							dev: {
+								aud: "my-test-audience",
+								identity: { email: "user@example.com", sub: "user-123" },
+							},
 						},
-					},
-				},
+					}
+				),
 			],
 		});
 		useDispose(mf);
@@ -129,8 +140,8 @@ describe("access (wiring)", () => {
 	}) => {
 		const mf = new Miniflare({
 			workers: [
-				{
-					...plainWorker(`
+				plainWorker(
+					`
 						export default {
 							async fetch(request, env, ctx) {
 								return Response.json({
@@ -139,11 +150,9 @@ describe("access (wiring)", () => {
 								});
 							}
 						}
-					`),
-					dev: {
-						access: { aud: "my-test-audience" },
-					},
-				},
+					`,
+					{ access: { dev: { aud: "my-test-audience" } } }
+				),
 			],
 		});
 		useDispose(mf);
@@ -152,5 +161,57 @@ describe("access (wiring)", () => {
 		const body = await res.json();
 		// ctx.access should still be present even without identity configured
 		expect(body).toEqual({ hasAccess: true, identity: null });
+	});
+
+	test("uses the Access configuration for the routed Worker", async ({
+		expect,
+	}) => {
+		const script = `
+			export default {
+				async fetch(request, env, ctx) {
+					return Response.json({
+						aud: ctx.access?.aud,
+						identity: await ctx.access?.getIdentity(),
+					});
+				}
+			}
+		`;
+		const mf = new Miniflare({
+			workers: [
+				plainWorker(script, {
+					name: "worker-a",
+					route: "*/a",
+					access: {
+						dev: {
+							aud: "aud-a",
+							identity: { email: "a@example.com" },
+						},
+					},
+				}),
+				plainWorker(script, {
+					name: "worker-b",
+					route: "*/b",
+					access: {
+						dev: {
+							aud: "aud-b",
+							identity: { email: "b@example.com" },
+						},
+					},
+				}),
+			],
+		});
+		useDispose(mf);
+
+		const responseA = await mf.dispatchFetch("http://localhost/a");
+		expect(await responseA.json()).toEqual({
+			aud: "aud-a",
+			identity: { email: "a@example.com" },
+		});
+
+		const responseB = await mf.dispatchFetch("http://localhost/b");
+		expect(await responseB.json()).toEqual({
+			aud: "aud-b",
+			identity: { email: "b@example.com" },
+		});
 	});
 });

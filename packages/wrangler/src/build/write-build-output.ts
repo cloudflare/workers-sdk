@@ -1,0 +1,92 @@
+import { existsSync } from "node:fs";
+import {
+	cleanBuildOutputDir,
+	getContainersDir,
+	getWorkerBundleDir,
+	writeRootConfig,
+} from "@cloudflare/build-output-utils";
+import {
+	buildAndWriteContainerOutput,
+	initContainersSharedContext,
+} from "@cloudflare/containers-shared";
+import { getDockerPath } from "@cloudflare/workers-utils";
+import { version as wranglerVersion } from "../../package.json";
+import { fetchResult } from "../cfetch";
+import { readNewConfig } from "../config";
+import { writeWorkerOutput } from "../deployment-bundle/build-output";
+import { buildWorker } from "../deployment-bundle/maybe-build-worker";
+import {
+	cleanupDestination,
+	mergeBuildOutputProps,
+} from "../deployment-bundle/merge-config-args";
+import { logger } from "../logger";
+import { regenerateNewConfigTypes } from "../type-generation/new-config";
+import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
+
+/**
+ * Write the standalone Build Output Specification for `wrangler build`.
+ *
+ * The output is a self-contained `.cloudflare/output/v1/` directory.
+ */
+export async function writeBuildOutput({
+	env,
+	isPreview = false,
+}: {
+	env?: string;
+	isPreview?: boolean;
+}): Promise<void> {
+	const newConfig = await readNewConfig({ env }, { isPreview });
+	await regenerateNewConfigTypes({
+		cloudflareConfigPath: newConfig.cloudflareConfigPath,
+		workerConfig: newConfig.parsedConfig.worker,
+		types: newConfig.types,
+	});
+	const { config, parsedConfig, mode } = newConfig;
+	const { buildProps, assetsOptions } = await mergeBuildOutputProps(config);
+	const root = process.cwd();
+
+	let buildResult: WorkerBuildResult | undefined;
+	try {
+		if (buildProps) {
+			buildResult = await buildWorker(buildProps, config, {
+				sourceMapDirectory: getWorkerBundleDir(root),
+			});
+		}
+
+		// Checked before cleaning, so that a project with no Containers, now or in
+		// the output being replaced, does not run Docker to look for stale tags.
+		const previousOutputHadContainers = existsSync(getContainersDir(root));
+		await cleanBuildOutputDir(root);
+		await writeRootConfig({
+			root,
+			settings: {
+				accountId: parsedConfig.accountId,
+				complianceRegion: parsedConfig.complianceRegion,
+			},
+			buildContext: { isPreview, mode },
+			producer: { name: "wrangler", version: wranglerVersion },
+		});
+		await writeWorkerOutput({
+			root,
+			workerConfig: parsedConfig.worker,
+			buildResult,
+			assetsOptions,
+		});
+
+		initContainersSharedContext({
+			logger,
+			fetchResult,
+		});
+		const pathToDocker = getDockerPath();
+		await buildAndWriteContainerOutput({
+			containers: parsedConfig.containers ?? [],
+			root,
+			pathToDocker,
+			previousOutputHadContainers,
+		});
+	} finally {
+		if (buildProps) {
+			cleanupDestination(buildProps.destination);
+		}
+	}
+}

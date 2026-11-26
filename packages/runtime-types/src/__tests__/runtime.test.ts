@@ -65,7 +65,7 @@ describe("generateRuntimeTypes", () => {
 		// nodejs_compat flags are stripped from the dispatch URL; the remaining
 		// flags keep their original caller-provided order.
 		expect(dispatchFetchMock).toHaveBeenCalledWith(
-			"http://dummy.com/2024-11-06+flag_b+flag_a"
+			"http://dummy.invalid/2024-11-06+flag_b+flag_a"
 		);
 		expect(result.runtimeHeader).toBe(
 			getRuntimeHeader(WORKERD_VERSION, "2024-11-06", [
@@ -73,6 +73,21 @@ describe("generateRuntimeTypes", () => {
 				"flag_b",
 				"flag_a",
 			])
+		);
+	});
+
+	it("uses a reserved .invalid domain for the dispatch URL", async ({
+		expect,
+	}) => {
+		await generateRuntimeTypes({
+			compatibilityDate: "2024-11-06",
+		});
+
+		// dummy.com is a real, publicly registered domain; .invalid (RFC 2606)
+		// can never resolve, so a misrouted request fails closed instead of
+		// downloading web content into the generated types.
+		expect(dispatchFetchMock).toHaveBeenCalledWith(
+			"http://dummy.invalid/2024-11-06"
 		);
 	});
 
@@ -84,7 +99,7 @@ describe("generateRuntimeTypes", () => {
 		});
 
 		expect(dispatchFetchMock).toHaveBeenCalledWith(
-			"http://dummy.com/2026-08-04+no_nodejs_compat+no_nodejs_compat_v2"
+			"http://dummy.invalid/2026-08-04+no_nodejs_compat+no_nodejs_compat_v2"
 		);
 		expect(result.runtimeHeader).toBe(
 			getRuntimeHeader(WORKERD_VERSION, "2026-08-04", [])
@@ -100,6 +115,24 @@ describe("generateRuntimeTypes", () => {
 			compatibilityDate: "2024-11-06",
 			compatibilityFlags: ["flag_a"],
 			existingContent: `${header}\nsome preamble\n${RUNTIME_TYPES_MARKER}\nCACHED TYPES\nmore`,
+		});
+
+		expect(result).toEqual({
+			runtimeHeader: header,
+			runtimeTypes: "CACHED TYPES\nmore",
+			isCached: true,
+		});
+		expect(MiniflareMock).not.toHaveBeenCalled();
+	});
+
+	it("returns cached types when the existing content uses CRLF line endings", async ({
+		expect,
+	}) => {
+		const header = getRuntimeHeader(WORKERD_VERSION, "2024-11-06", []);
+
+		const result = await generateRuntimeTypes({
+			compatibilityDate: "2024-11-06",
+			existingContent: `${header}\r\n${RUNTIME_TYPES_MARKER}\r\nCACHED TYPES\r\nmore`,
 		});
 
 		expect(result).toEqual({

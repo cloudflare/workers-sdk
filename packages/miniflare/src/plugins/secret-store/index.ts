@@ -1,4 +1,3 @@
-import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import SCRIPT_SECRETS_STORE_SECRET from "worker:secrets-store/secret";
 import { SharedBindings } from "../../workers";
@@ -14,6 +13,7 @@ import {
 	ProxyNodeBinding,
 	SERVICE_LOOPBACK,
 } from "../shared";
+import { ensureSecretsStoreDirectory } from "./persistence";
 import type { Service, Worker_Binding } from "../../runtime";
 import type { Plugin } from "../shared";
 
@@ -58,13 +58,13 @@ export const SECRET_STORE_PLUGIN: Plugin = {
 			return [];
 		}
 
-		const persistPath = getPersistPath(
-			SECRET_STORE_PLUGIN_NAME,
-			tmpPath,
-			sharedOptions.resourcePersistencePath
+		const persistPath = await ensureSecretsStoreDirectory(
+			getPersistPath(
+				SECRET_STORE_PLUGIN_NAME,
+				tmpPath,
+				sharedOptions.resourcePersistencePath
+			)
 		);
-
-		await fs.mkdir(persistPath, { recursive: true });
 
 		const storageService = {
 			name: `${SECRET_STORE_PLUGIN_NAME}:storage`,

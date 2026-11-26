@@ -41,7 +41,13 @@ export const Route = createFileRoute("/email/sending")({
 		)?.name;
 		const response = await emailListSending({
 			query: { per_page: EMAIL_PAGE_SIZE, worker },
+			throwOnError: false,
 		});
+		if (response.error || !response.response.ok) {
+			throw new Error(
+				response.error?.errors?.[0]?.message ?? "Failed to load sent emails."
+			);
+		}
 		const emails = response.data?.result;
 		return {
 			emails: Array.isArray(emails) ? emails : [],
@@ -100,7 +106,13 @@ function EmailSendingView(): JSX.Element {
 		async (cursor?: string) => {
 			const response = await emailListSending({
 				query: { cursor, per_page: EMAIL_PAGE_SIZE, worker },
+				throwOnError: false,
 			});
+			if (response.error || !response.response.ok) {
+				throw new Error(
+					response.error?.errors?.[0]?.message ?? "Failed to load sent emails."
+				);
+			}
 			const result = response.data?.result;
 			return {
 				items: Array.isArray(result) ? result : [],

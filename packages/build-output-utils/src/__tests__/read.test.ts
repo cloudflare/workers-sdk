@@ -1,63 +1,77 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
 import {
-	InputSettingsSchema,
-	InputWorkerSchema,
-	OutputContainerSchema,
+	SettingsSchema,
+	WorkerConfigSchema,
+	BuildOutputContainerConfigSchema,
 } from "@cloudflare/config";
+import { removeDir } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { BuildOutputError } from "../errors";
 import {
-	getSettingsConfigPath,
+	DEFAULT_WORKER_DIRECTORY_NAME,
 	getContainerConfigPath,
 	getContainerDir,
+	getRootConfigPath,
 	getWorkerAssetsDir,
 	getWorkerBundleDir,
 	getWorkerConfigPath,
+	getWorkerDir,
 } from "../paths";
 import { readBuildOutput } from "../read";
 import {
 	writeContainerConfig,
-	writeSettingsConfig,
+	writeRootConfig,
 	writeWorkerConfig,
 } from "../write";
-import type { ParsedOutputWorkerConfig } from "@cloudflare/config";
+import type { BuildOutputWorker, BuildOutputWorkers } from "../read";
+import type { ParsedBuildOutputWorkerConfig } from "@cloudflare/config";
 
-const completeManifest: ParsedOutputWorkerConfig["manifest"] = {
+const completeManifest: ParsedBuildOutputWorkerConfig["manifest"] = {
 	type: "complete",
 	mainModule: "index.js",
 	modules: { "index.js": { type: "esm" } },
 };
 
-const parsedSettingsConfig = InputSettingsSchema.parse({
-	type: "settings",
+const producer = { name: "@cloudflare/vite-plugin", version: "2.3.0" };
+
+const parsedSettingsConfig = SettingsSchema.parse({
 	accountId: "1234567890",
 	complianceRegion: "public",
 });
 
-const parsedStandardContainerConfig = OutputContainerSchema.parse({
-	type: "container",
+const parsedStandardContainerConfig = BuildOutputContainerConfigSchema.parse({
 	name: "api-container",
 	image: { reference: "registry.example.com/api:latest" },
 });
 
-const parsedDurableObjectContainerConfig = OutputContainerSchema.parse({
-	type: "container",
-	name: "session-container",
-	schedulingPolicy: "durable-object",
-	images: {
-		default: { localReference: "session-container:latest" },
-	},
-});
+const parsedDurableObjectContainerConfig =
+	BuildOutputContainerConfigSchema.parse({
+		name: "session-container",
+		schedulingPolicy: "durable-object",
+		images: {
+			default: { localReference: "session-container:latest" },
+		},
+	});
 
 function inputWorkerConfig(name: string) {
-	return InputWorkerSchema.parse({
-		type: "worker",
+	return WorkerConfigSchema.parse({
 		name,
 		compatibilityDate: "2026-06-01",
 		entrypoint: "index.js",
 	});
+}
+
+function getWorker(
+	workers: BuildOutputWorkers,
+	directoryName: string
+): BuildOutputWorker {
+	const worker = workers[directoryName];
+	if (worker === undefined) {
+		throw new Error(`Expected Worker ${JSON.stringify(directoryName)}.`);
+	}
+	return worker;
 }
 
 async function writeBundleFiles(
@@ -79,18 +93,18 @@ async function writeBundleFiles(
  * `hasBundle` controls whether the config is written with a manifest and
  * whether the `bundle/` directory is created. `bundleDir` can override just the
  * directory creation (defaulting to `hasBundle`), which is useful for
- * exercising the "manifest present but bundle directory missing" validation.
+ * exercising stale manifests after a framework removes a bundle.
  */
 async function seedWorker(
 	root: string,
 	{
-		workerDirectoryName = "default",
+		directoryName = DEFAULT_WORKER_DIRECTORY_NAME,
 		name = "my-worker",
 		hasBundle = true,
 		bundleDir = hasBundle,
 		assets = false,
 	}: {
-		workerDirectoryName?: string;
+		directoryName?: string;
 		name?: string;
 		hasBundle?: boolean;
 		bundleDir?: boolean;
@@ -101,15 +115,15 @@ async function seedWorker(
 		root,
 		config: inputWorkerConfig(name),
 		manifest: hasBundle ? completeManifest : undefined,
-		directoryName: workerDirectoryName,
+		directoryName,
 	});
 	if (bundleDir) {
-		await fsp.mkdir(getWorkerBundleDir(root, workerDirectoryName), {
+		await fsp.mkdir(getWorkerBundleDir(root, directoryName), {
 			recursive: true,
 		});
 	}
 	if (assets) {
-		await fsp.mkdir(getWorkerAssetsDir(root, workerDirectoryName), {
+		await fsp.mkdir(getWorkerAssetsDir(root, directoryName), {
 			recursive: true,
 		});
 	}
@@ -117,68 +131,171 @@ async function seedWorker(
 
 describe("readBuildOutput", () => {
 	runInTempDir();
+	beforeEach(async () => {
+		await writeRootConfig({
+			root: process.cwd(),
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
+		});
+	});
 
-	it("reads and validates the default Worker, keeping the manifest", async ({
+	it.for([
+		[".cloudflare", "dir"],
+		[".cloudflare/output", "dir"],
+		[".cloudflare/output/v1", "dir"],
+		[".cloudflare/output/v1/workers/default/bundle/chunks/module.js", "file"],
+		[".cloudflare/output/v1/workers/default/assets/nested", "dir"],
+	] as const)(
+		"rejects a symlink at %s",
+		async ([relativePath, type], { expect }) => {
+			const root = process.cwd();
+			await seedWorker(root, { assets: true });
+			await writeBundleFiles(root, {
+				"chunks/module.js": "export default {};",
+			});
+			await fsp.mkdir(path.join(getWorkerAssetsDir(root), "nested"));
+
+			const symlinkPath = path.join(root, relativePath);
+			const targetPath = path.join(root, "symlink-target");
+			await fsp.rename(symlinkPath, targetPath);
+			await fsp.symlink(targetPath, symlinkPath, type);
+
+			await expect(readBuildOutput(root)).rejects.toThrow(
+				new BuildOutputError(
+					`symlink found at ${symlinkPath}. Symlinks are not permitted because the build output must be portable and self-contained.`
+				)
+			);
+		}
+	);
+
+	it("allows symlinks outside the build output directory", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
+		const linkedRoot = path.join(root, "linked-project");
+		await fsp.symlink(root, linkedRoot, "dir");
+		await fsp.symlink(
+			"does-not-exist",
+			path.join(root, ".cloudflare/cache"),
+			"dir"
+		);
 
-		const output = await readBuildOutput(root);
+		const output = await readBuildOutput(linkedRoot);
 
-		expect(output.version).toBe("v0");
-		expect(output.root).toBe(root);
-		expect(output.workers.default.configPath).toBe(getWorkerConfigPath(root));
-		expect(output.workers.default.bundleDir).toBe(getWorkerBundleDir(root));
-		expect(output.workers.default.assetsDir).toBeUndefined();
-
+		expect(output.root).toBe(linkedRoot);
 		expect(output.workers.default.config.name).toBe("my-worker");
-		expect(output.workers.default.config.manifest).toEqual(completeManifest);
-		expect(output.workers.default.config).not.toHaveProperty("entrypoint");
 	});
 
-	it("reads Workers keyed by directory name", async ({ expect }) => {
+	it.for([".cloudflare", ".cloudflare/output", ".cloudflare/output/v1"])(
+		"reports missing build output when %s is absent",
+		async (relativePath, { expect }) => {
+			const root = process.cwd();
+			await fsp.rename(
+				path.join(root, relativePath),
+				path.join(root, "old-output")
+			);
+
+			await expect(readBuildOutput(root)).rejects.toMatchObject({
+				name: "BuildOutputError",
+				code: "not-found",
+				foundVersions: [],
+				supportedVersions: ["v1"],
+				message: `Build Output Specification: No Build Output found in ${path.join(root, ".cloudflare/output")}.`,
+			});
+		}
+	);
+
+	it.for([".cloudflare", ".cloudflare/output", ".cloudflare/output/v1"])(
+		"reports missing build output when %s is a file",
+		async (relativePath, { expect }) => {
+			const root = process.cwd();
+			const directoryPath = path.join(root, relativePath);
+			await fsp.rename(directoryPath, path.join(root, "old-output"));
+			await fsp.writeFile(directoryPath, "");
+
+			await expect(readBuildOutput(root)).rejects.toMatchObject({
+				code: "not-found",
+			});
+		}
+	);
+
+	it("reads the default Worker, keeping the manifest", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root);
+
+		const output = await readBuildOutput(root);
+		const worker = output.workers.default;
+
+		expect(output.version).toBe("v1");
+		expect(output.root).toBe(root);
+		expect(worker.configPath).toBe(getWorkerConfigPath(root));
+		expect(worker.bundleDir).toBe(getWorkerBundleDir(root));
+		expect(worker.assetsDir).toBeUndefined();
+
+		expect(worker.config.name).toBe("my-worker");
+		expect(worker.config.manifest).toEqual(completeManifest);
+		expect(worker.config).not.toHaveProperty("entrypoint");
+	});
+
+	it("returns an absolute project root", async ({ expect }) => {
+		await seedWorker(process.cwd());
+
+		const output = await readBuildOutput(".");
+
+		expect(output.root).toBe(process.cwd());
+	});
+
+	it("reads additional Workers keyed by directory name", async ({ expect }) => {
+		const root = process.cwd();
 		await seedWorker(root, {
-			workerDirectoryName: "additional",
+			directoryName: "additional-worker",
 			name: "additional-worker",
 		});
+		await seedWorker(root);
 
 		const { workers } = await readBuildOutput(root);
+		const additionalWorker = getWorker(workers, "additional-worker");
 
-		expect(Object.keys(workers)).toEqual(["default", "additional"]);
-		expect(workers.additional?.config.name).toBe("additional-worker");
-		expect(workers.additional?.bundleDir).toBe(
-			getWorkerBundleDir(root, "additional")
+		expect(Object.keys(workers)).toHaveLength(2);
+		expect(Object.keys(workers)).toEqual(
+			expect.arrayContaining(["default", "additional-worker"])
+		);
+		expect(additionalWorker.config.name).toBe("additional-worker");
+		expect(additionalWorker.bundleDir).toBe(
+			getWorkerBundleDir(root, "additional-worker")
 		);
 	});
 
-	it("reads Containers keyed by directory name", async ({ expect }) => {
+	it("reads Containers", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root);
 		await writeContainerConfig({
 			root,
 			config: parsedDurableObjectContainerConfig,
-			directoryName: "session",
+			directoryName: parsedDurableObjectContainerConfig.name,
 		});
 		await writeContainerConfig({
 			root,
 			config: parsedStandardContainerConfig,
-			directoryName: "api",
+			directoryName: parsedStandardContainerConfig.name,
 		});
 
 		const { containers } = await readBuildOutput(root);
 
-		expect(Object.keys(containers)).toEqual(["api", "session"]);
-		expect(containers.api).toEqual({
-			configPath: getContainerConfigPath(root, "api"),
-			config: parsedStandardContainerConfig,
-		});
-		expect(containers.session).toEqual({
-			configPath: getContainerConfigPath(root, "session"),
-			config: parsedDurableObjectContainerConfig,
-		});
+		expect(containers).toHaveLength(2);
+		expect(containers).toEqual(
+			expect.arrayContaining([
+				{
+					configPath: getContainerConfigPath(root, "api-container"),
+					config: parsedStandardContainerConfig,
+				},
+				{
+					configPath: getContainerConfigPath(root, "session-container"),
+					config: parsedDurableObjectContainerConfig,
+				},
+			])
+		);
 	});
 
 	it("returns no Containers when the Containers directory is absent", async ({
@@ -189,17 +306,17 @@ describe("readBuildOutput", () => {
 
 		const { containers } = await readBuildOutput(root);
 
-		expect(containers).toEqual({});
+		expect(containers).toEqual([]);
 	});
 
-	it("still requires the default Worker when Containers are present", async ({
+	it("requires the default Worker when Containers are present", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await writeContainerConfig({
 			root,
 			config: parsedStandardContainerConfig,
-			directoryName: "api",
+			directoryName: parsedStandardContainerConfig.name,
 		});
 
 		await expect(readBuildOutput(root)).rejects.toThrow(
@@ -227,7 +344,7 @@ describe("readBuildOutput", () => {
 		await expect(readBuildOutput(root)).rejects.toThrow(/could not parse JSON/);
 	});
 
-	it("throws when a Container config fails schema validation", async ({
+	it("throws when a Container config does not match its schema", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
@@ -235,7 +352,7 @@ describe("readBuildOutput", () => {
 		await fsp.mkdir(getContainerDir(root, "api"), { recursive: true });
 		await fsp.writeFile(
 			getContainerConfigPath(root, "api"),
-			JSON.stringify({ type: "container", name: "api-container" })
+			JSON.stringify({ name: "api" })
 		);
 
 		await expect(readBuildOutput(root)).rejects.toThrow(
@@ -268,8 +385,8 @@ describe("readBuildOutput", () => {
 			"ignored.json": "{}",
 		});
 
-		const { manifest: resolvedManifest } = (await readBuildOutput(root)).workers
-			.default.config;
+		const { workers } = await readBuildOutput(root);
+		const { manifest: resolvedManifest } = workers.default.config;
 
 		expect(resolvedManifest).toEqual({
 			type: "complete",
@@ -293,8 +410,8 @@ describe("readBuildOutput", () => {
 			"unlisted.js": "export default {};",
 		});
 
-		const { manifest: resolvedManifest } = (await readBuildOutput(root)).workers
-			.default.config;
+		const { workers } = await readBuildOutput(root);
+		const { manifest: resolvedManifest } = workers.default.config;
 
 		expect(resolvedManifest).toEqual(completeManifest);
 	});
@@ -347,37 +464,66 @@ describe("readBuildOutput", () => {
 		await seedWorker(root, { hasBundle: false, assets: true });
 
 		const { workers } = await readBuildOutput(root);
+		const worker = workers.default;
 
-		expect(workers.default.bundleDir).toBeUndefined();
-		expect(workers.default.assetsDir).toBe(getWorkerAssetsDir(root));
+		expect(worker.bundleDir).toBeUndefined();
+		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));
 	});
 
-	it("throws when the config has a manifest but no bundle directory", async ({
+	it("ignores a stale manifest for an assets-only Worker", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
-		await seedWorker(root, { hasBundle: true, bundleDir: false });
+		await seedWorker(root, {
+			hasBundle: true,
+			bundleDir: false,
+			assets: true,
+		});
 
-		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
-		await expect(readBuildOutput(root)).rejects.toThrow(
-			/contains a manifest, but no bundle directory exists/
-		);
+		const { workers } = await readBuildOutput(root);
+		const worker = workers.default;
+
+		expect(worker.config.manifest).toBeUndefined();
+		expect(worker.bundleDir).toBeUndefined();
+		expect(worker.assetsDir).toBe(getWorkerAssetsDir(root));
 	});
 
-	it("throws when the Worker has neither a bundle nor an assets directory", async ({
+	it("omits an additional Worker with no deployable output", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
-		await seedWorker(root, { hasBundle: false, assets: false });
+		await seedWorker(root);
+		await seedWorker(root, {
+			directoryName: "prerender",
+			name: "prerender-worker",
+			hasBundle: true,
+			bundleDir: false,
+		});
+
+		const { workers } = await readBuildOutput(root);
+
+		expect(workers).not.toHaveProperty("prerender");
+	});
+
+	it("throws when the default Worker has no deployable output", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root, {
+			hasBundle: true,
+			bundleDir: false,
+			assets: false,
+		});
 
 		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
 		await expect(readBuildOutput(root)).rejects.toThrow(
-			/has neither a bundle directory .* nor an assets directory/
+			`Default Worker at ${getWorkerDir(root)} has neither a bundle directory (${getWorkerBundleDir(root)}) nor an assets directory (${getWorkerAssetsDir(root)}).`
 		);
 	});
 
 	it("throws when the Worker config is missing", async ({ expect }) => {
 		const root = process.cwd();
+		await fsp.mkdir(getWorkerDir(root), { recursive: true });
 
 		await expect(readBuildOutput(root)).rejects.toThrow(BuildOutputError);
 		await expect(readBuildOutput(root)).rejects.toThrow(
@@ -393,124 +539,405 @@ describe("readBuildOutput", () => {
 		await expect(readBuildOutput(root)).rejects.toThrow(/could not parse JSON/);
 	});
 
-	it("throws when the config fails schema validation", async ({ expect }) => {
+	it("throws when the Worker config does not match its schema", async ({
+		expect,
+	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		await fsp.writeFile(
-			getWorkerConfigPath(root),
-			JSON.stringify({ type: "worker" })
-		);
+		await fsp.writeFile(getWorkerConfigPath(root), JSON.stringify({}));
 
 		await expect(readBuildOutput(root)).rejects.toThrow(
 			/invalid Worker config/
 		);
 	});
 
-	it("returns the top-level settings when present", async ({ expect }) => {
+	it("returns the root config", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		await writeSettingsConfig(root, parsedSettingsConfig);
+		await writeRootConfig({
+			root: root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
+		});
 
-		const { settings } = await readBuildOutput(root);
+		const { rootConfig } = await readBuildOutput(root);
 
-		expect(settings).toEqual(parsedSettingsConfig);
+		expect(rootConfig).toEqual({
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
+		});
 	});
 
-	it("returns undefined settings when the top-level config is absent", async ({
+	it("throws when the root config is absent", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await fsp.rm(getRootConfigPath(root));
+
+		await expect(readBuildOutput(root)).rejects.toThrow(/no root config found/);
+	});
+
+	it("returns the build context recorded in the root config", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
+		await writeRootConfig({
+			root: root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: true, mode: "staging" },
+		});
 
-		const { settings } = await readBuildOutput(root);
+		const { rootConfig } = await readBuildOutput(root);
 
-		expect(settings).toBeUndefined();
+		expect(rootConfig).toEqual({
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: true, mode: "staging" },
+		});
 	});
 
-	it("returns the mode recorded in the top-level config", async ({
+	it("returns the build context when no mode was selected", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		await writeSettingsConfig(root, parsedSettingsConfig, "staging");
+		await writeRootConfig({
+			root: root,
+			settings: parsedSettingsConfig,
+			buildContext: { isPreview: false, mode: undefined },
+		});
 
-		const { settings } = await readBuildOutput(root);
+		const { rootConfig } = await readBuildOutput(root);
 
-		// The settings are returned whole, so `mode` sits alongside the fields
-		// the user declared.
-		expect(settings).toEqual({ ...parsedSettingsConfig, mode: "staging" });
-	});
-
-	it("returns an undefined mode when the top-level config records none", async ({
-		expect,
-	}) => {
-		const root = process.cwd();
-		await seedWorker(root);
-		await writeSettingsConfig(root, parsedSettingsConfig);
-
-		const { settings } = await readBuildOutput(root);
-
-		expect(settings?.mode).toBeUndefined();
-	});
-
-	it("returns an undefined mode when the top-level config is absent", async ({
-		expect,
-	}) => {
-		const root = process.cwd();
-		await seedWorker(root);
-
-		const { settings } = await readBuildOutput(root);
-
-		expect(settings?.mode).toBeUndefined();
+		expect(rootConfig.buildContext).toEqual({ isPreview: false });
 	});
 
 	it("throws when the recorded mode is not a string", async ({ expect }) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		const configPath = getSettingsConfigPath(root);
+		const configPath = getRootConfigPath(root);
 		await fsp.mkdir(path.dirname(configPath), { recursive: true });
 		await fsp.writeFile(
 			configPath,
-			JSON.stringify({ type: "settings", mode: 123 })
+			JSON.stringify({ buildContext: { isPreview: false, mode: 123 } })
 		);
 
-		await expect(readBuildOutput(root)).rejects.toThrow(
-			/invalid settings config/
-		);
+		await expect(readBuildOutput(root)).rejects.toThrow(/invalid root config/);
 	});
 
-	it("throws when the top-level config fails schema validation", async ({
+	it("throws when the root config does not match its schema", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
 		await seedWorker(root);
-		const configPath = getSettingsConfigPath(root);
+		const configPath = getRootConfigPath(root);
 		await fsp.mkdir(path.dirname(configPath), { recursive: true });
-		await fsp.writeFile(
-			configPath,
-			JSON.stringify({ type: "settings", nope: 1 })
-		);
+		await fsp.writeFile(configPath, JSON.stringify({ nope: 1 }));
 
-		await expect(readBuildOutput(root)).rejects.toThrow(
-			/invalid settings config/
-		);
+		await expect(readBuildOutput(root)).rejects.toThrow(/invalid root config/);
 	});
 
-	it("reads the top-level settings before the Worker config", async ({
+	it("reads the root config before Worker configs", async ({ expect }) => {
+		const root = process.cwd();
+		await fsp.mkdir(getWorkerDir(root), { recursive: true });
+		await fsp.writeFile(getWorkerConfigPath(root), "{ not json");
+		const configPath = getRootConfigPath(root);
+		await fsp.writeFile(configPath, JSON.stringify({ nope: 1 }));
+
+		await expect(readBuildOutput(root)).rejects.toThrow(/invalid root config/);
+	});
+
+	it("returns the producer recorded in the root config", async ({ expect }) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeRootConfig({
+			root,
+			buildContext: { isPreview: false, mode: undefined },
+			producer,
+		});
+
+		const { rootConfig } = await readBuildOutput(root);
+
+		expect(rootConfig).toEqual({
+			producer,
+			buildContext: { isPreview: false, mode: undefined },
+		});
+	});
+
+	it("rejects settings at the top level of the root config", async ({
 		expect,
 	}) => {
 		const root = process.cwd();
-		// Invalid settings plus a missing Worker config: the settings error
-		// surfaces first because settings are read first.
-		const configPath = getSettingsConfigPath(root);
-		await fsp.mkdir(path.dirname(configPath), { recursive: true });
+		await seedWorker(root);
 		await fsp.writeFile(
-			configPath,
-			JSON.stringify({ type: "settings", nope: 1 })
+			getRootConfigPath(root),
+			JSON.stringify({
+				accountId: "1234567890",
+				buildContext: { isPreview: false },
+			})
 		);
 
-		await expect(readBuildOutput(root)).rejects.toThrow(
-			/invalid settings config/
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "unknown-fields",
+			unknownFields: [{ file: "v1/config.json", path: "accountId" }],
+		});
+	});
+});
+
+describe("readBuildOutput version detection", () => {
+	runInTempDir();
+	beforeEach(async () => {
+		await writeRootConfig({
+			root: process.cwd(),
+			buildContext: { isPreview: false, mode: undefined },
+		});
+		await seedWorker(process.cwd());
+	});
+
+	function getVersionDir(root: string, version: string): string {
+		return path.join(root, ".cloudflare/output", version);
+	}
+
+	it("ignores entries that aren't version directories", async ({ expect }) => {
+		const root = process.cwd();
+		const outputDir = path.join(root, ".cloudflare/output");
+		await fsp.writeFile(path.join(outputDir, ".DS_Store"), "");
+		await fsp.writeFile(path.join(outputDir, "v2"), "");
+		await fsp.mkdir(path.join(outputDir, "v1-old"));
+		await fsp.mkdir(path.join(outputDir, "v01"));
+		await fsp.mkdir(path.join(outputDir, "latest"));
+
+		const output = await readBuildOutput(root);
+
+		expect(output.version).toBe("v1");
+	});
+
+	it("ignores symlinks in entries that aren't version directories", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await fsp.symlink(
+			getVersionDir(root, "v1"),
+			path.join(root, ".cloudflare/output/latest"),
+			"dir"
 		);
+
+		const output = await readBuildOutput(root);
+
+		expect(output.version).toBe("v1");
+	});
+
+	it("reports multiple versions before symlinks in another version", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		const staleVersionDir = getVersionDir(root, "v0");
+		await fsp.mkdir(staleVersionDir);
+		await fsp.symlink(
+			getRootConfigPath(root),
+			path.join(staleVersionDir, "config.json"),
+			"file"
+		);
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "multiple-versions",
+			foundVersions: ["v0", "v1"],
+		});
+	});
+
+	it("reports a newer version without checking its contents", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await fsp.rename(getVersionDir(root, "v1"), getVersionDir(root, "v2"));
+		await fsp.symlink(
+			path.join(root, "elsewhere"),
+			path.join(getVersionDir(root, "v2"), "linked"),
+			"dir"
+		);
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "newer-version",
+			foundVersions: ["v2"],
+		});
+	});
+
+	it("rejects a newer version", async ({ expect }) => {
+		const root = process.cwd();
+		await fsp.rename(getVersionDir(root, "v1"), getVersionDir(root, "v2"));
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			name: "BuildOutputError",
+			code: "newer-version",
+			foundVersions: ["v2"],
+			supportedVersions: ["v1"],
+			message:
+				"Build Output Specification: This Build Output uses format v2, but this reader supports v1. Upgrade the tool reading it.",
+		});
+	});
+
+	it("compares versions numerically", async ({ expect }) => {
+		const root = process.cwd();
+		await fsp.rename(getVersionDir(root, "v1"), getVersionDir(root, "v10"));
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "newer-version",
+			foundVersions: ["v10"],
+		});
+	});
+
+	it("rejects an older version", async ({ expect }) => {
+		const root = process.cwd();
+		await fsp.rename(getVersionDir(root, "v1"), getVersionDir(root, "v0"));
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "older-version",
+			foundVersions: ["v0"],
+			supportedVersions: ["v1"],
+			message:
+				"Build Output Specification: This Build Output uses the older v0 format. It was written by an out-of-date build tool. Upgrade it and rebuild.",
+		});
+	});
+
+	it("rejects more than one version directory", async ({ expect }) => {
+		const root = process.cwd();
+		await fsp.mkdir(getVersionDir(root, "v10"));
+		await fsp.mkdir(getVersionDir(root, "v0"));
+		const outputDir = path.join(root, ".cloudflare/output");
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "multiple-versions",
+			foundVersions: ["v0", "v1", "v10"],
+			supportedVersions: ["v1"],
+			message: `Build Output Specification: Found Build Output in more than one format (v0, v1, v10) in ${outputDir}. Delete ${outputDir} and rebuild.`,
+		});
+	});
+
+	it("reports an empty version directory as invalid", async ({ expect }) => {
+		const root = process.cwd();
+		await removeDir(getVersionDir(root, "v1"));
+		await fsp.mkdir(getVersionDir(root, "v1"));
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "invalid",
+			message: expect.stringMatching(/no root config found/),
+		});
+	});
+});
+
+describe("readBuildOutput unknown fields", () => {
+	runInTempDir();
+
+	async function writeJson(filePath: string, value: unknown): Promise<void> {
+		await fsp.writeFile(filePath, JSON.stringify(value));
+	}
+
+	it("lists unknown Worker config fields and names the producer", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await writeRootConfig({
+			root,
+			buildContext: { isPreview: false, mode: undefined },
+			producer,
+		});
+		await seedWorker(root, { assets: true });
+		const configPath = getWorkerConfigPath(root);
+		const config: unknown = JSON.parse(await fsp.readFile(configPath, "utf8"));
+		await writeJson(configPath, {
+			...(config as object),
+			newOption: true,
+			observability: { enabled: true, newSetting: 1 },
+		});
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "unknown-fields",
+			producer,
+			unknownFields: [
+				{
+					file: "v1/workers/default/worker.config.json",
+					path: "observability.newSetting",
+				},
+				{ file: "v1/workers/default/worker.config.json", path: "newOption" },
+			],
+			message: [
+				"Build Output Specification: v1/workers/default/worker.config.json contains fields this reader doesn't support:",
+				"  - observability.newSetting",
+				"  - newOption",
+				"The output was written by @cloudflare/vite-plugin 2.3.0. Upgrade the tool reading it.",
+			].join("\n"),
+		});
+	});
+
+	it("uses a generic message when no producer is recorded", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await writeRootConfig({
+			root,
+			buildContext: { isPreview: false, mode: undefined },
+		});
+		await seedWorker(root);
+		const containerDirectoryName = "api-container";
+		await writeContainerConfig({
+			root,
+			config: parsedStandardContainerConfig,
+			directoryName: containerDirectoryName,
+		});
+		const configPath = getContainerConfigPath(root, containerDirectoryName);
+		const config: unknown = JSON.parse(await fsp.readFile(configPath, "utf8"));
+		await writeJson(configPath, { ...(config as object), newOption: true });
+
+		const error: unknown = await readBuildOutput(root).catch((e: unknown) => e);
+
+		expect(error).toBeInstanceOf(BuildOutputError);
+		expect(error).toMatchObject({
+			code: "unknown-fields",
+			producer: undefined,
+			unknownFields: [
+				{
+					file: "v1/containers/api-container/container.config.json",
+					path: "newOption",
+				},
+			],
+			message: expect.stringMatching(
+				/The output was written by a newer build tool\. Upgrade the tool reading it\.$/
+			),
+		});
+	});
+
+	it("names the producer for unknown root config fields", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeJson(getRootConfigPath(root), {
+			producer,
+			settings: { newSetting: "value" },
+			buildContext: { isPreview: false, mode: undefined },
+		});
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "unknown-fields",
+			producer,
+			unknownFields: [{ file: "v1/config.json", path: "settings.newSetting" }],
+		});
+	});
+
+	it("reports unknown fields alongside other errors as invalid", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		await seedWorker(root);
+		await writeJson(getRootConfigPath(root), {
+			producer,
+			settings: { newSetting: "value" },
+		});
+
+		await expect(readBuildOutput(root)).rejects.toMatchObject({
+			code: "invalid",
+			producer,
+			unknownFields: undefined,
+			message: expect.stringMatching(/invalid root config/),
+		});
 	});
 });

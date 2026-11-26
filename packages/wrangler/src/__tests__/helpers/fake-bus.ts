@@ -32,13 +32,14 @@ export class FakeBus implements ControllerBus {
 	 * Wait for a specific event type to be dispatched.
 	 * @param type - The event type to wait for
 	 * @param predicate - Optional predicate to filter events
-	 * @param timeoutMs - Timeout in milliseconds (default: 15000)
+	 * @param timeoutMs - Timeout in milliseconds (default: 30000 on Windows,
+	 *   15000 elsewhere, to allow for slower runtime startup on Windows CI)
 	 * @returns Promise that resolves with the matching event
 	 */
 	waitFor<T extends EventType>(
 		type: T,
 		predicate?: (e: EventFor<T>) => boolean,
-		timeoutMs = 15000
+		timeoutMs = process.platform === "win32" ? 30_000 : 15_000
 	): Promise<EventFor<T>> {
 		return new Promise((resolve, reject) => {
 			const timer = setTimeout(

@@ -1,11 +1,11 @@
 import { URLSearchParams } from "node:url";
 import {
-	configFileName,
 	mapWorkerMetadataBindings,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
-import TOML from "smol-toml";
+import * as TOML from "smol-toml";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
@@ -18,10 +18,10 @@ import { printWranglerBanner } from "./wrangler-banner";
 import type { CommonYargsOptions } from "./yargs-types";
 import type {
 	ComplianceConfig,
-	Config,
 	ServiceMetadataRes,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { ArgumentsCamelCase } from "yargs";
 
 type DeploymentDetails = {
@@ -57,6 +57,26 @@ export type DeploymentListResult = {
 	items: DeploymentDetails[];
 };
 
+/** Resolve the script tag required by the legacy deployments API. */
+async function fetchWorkerTag(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	scriptName: string | undefined
+): Promise<string> {
+	const { default_environment } = await fetchResult<ServiceMetadataRes>(
+		complianceConfig,
+		`/accounts/${accountId}/workers/services/${scriptName}`
+	);
+	const tag = default_environment.script?.tag;
+	if (!tag) {
+		throw new UserError(
+			"This Worker has no uploaded script. Run `wrangler deploy` first.",
+			{ telemetryMessage: "deployments worker script missing" }
+		);
+	}
+	return tag;
+}
+
 export async function deployments(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
@@ -71,12 +91,11 @@ export async function deployments(
 		}
 	);
 
-	const scriptTag = (
-		await fetchResult<ServiceMetadataRes>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/services/${scriptName}`
-		)
-	).default_environment.script.tag;
+	const scriptTag = await fetchWorkerTag(
+		complianceConfig,
+		accountId,
+		scriptName
+	);
 
 	const params = new URLSearchParams({ order: "asc" });
 	const { items: deploys } = await fetchResult<DeploymentListResult>(
@@ -152,12 +171,11 @@ export async function rollbackDeployment(
 	message: string | undefined
 ) {
 	if (deploymentId === undefined) {
-		const scriptTag = (
-			await fetchResult<ServiceMetadataRes>(
-				complianceConfig,
-				`/accounts/${accountId}/workers/services/${scriptName}`
-			)
-		).default_environment.script.tag;
+		const scriptTag = await fetchWorkerTag(
+			complianceConfig,
+			accountId,
+			scriptName
+		);
 
 		const params = new URLSearchParams({ order: "asc" });
 		const { items: deploys } = await fetchResult<DeploymentListResult>(
@@ -268,12 +286,11 @@ export async function viewDeployment(
 		}
 	);
 
-	const scriptTag = (
-		await fetchResult<ServiceMetadataRes>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/services/${scriptName}`
-		)
-	).default_environment.script.tag;
+	const scriptTag = await fetchWorkerTag(
+		complianceConfig,
+		accountId,
+		scriptName
+	);
 
 	if (deploymentId === undefined) {
 		const params = new URLSearchParams({ order: "asc" });

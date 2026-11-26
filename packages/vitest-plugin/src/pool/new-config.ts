@@ -1,84 +1,261 @@
 import { existsSync } from "node:fs";
 import {
-	convertToWranglerConfig,
-	loadAndValidateConfig,
+	loadAndParseConfig,
+	SINGLETON_BINDING_TYPES,
 } from "@cloudflare/config";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import { createMiniflareExports } from "@cloudflare/containers-shared";
+import { formatZodError, getWorkerZone } from "@cloudflare/workers-utils";
+import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
+import { Log, LogLevel, resolveLocalBindings } from "miniflare";
+import type {
+	ParsedCloudflareConfig,
+	ParsedContainerConfig,
+	ParsedWorkerConfig,
+} from "@cloudflare/config";
+import type { ContainerDevRuntimeOptions } from "@cloudflare/containers-shared";
+import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
 export const NEW_CONFIG_FILENAME = "cloudflare.config.ts";
 
+const log = new Log(LogLevel.INFO, { prefix: "vpw" });
+
+export interface LoadedNewConfig {
+	settings: Pick<ParsedCloudflareConfig, "accountId" | "complianceRegion">;
+	worker: ParsedWorkerConfig;
+	/** Containers the config defines; Durable Object exports reference them by name. */
+	containers: ParsedContainerConfig[];
+	/** The mode config functions were called with. */
+	mode: string;
+	/** Values resolved from `.env` files and the process environment. */
+	localEnv: Record<string, string>;
+	/** Values from the selected `.dev.vars` file, if there is one. */
+	devVars: Record<string, string> | undefined;
+}
+
 /**
- * Load a `cloudflare.config.ts` and normalise it into the same `Config` shape
- * that `wrangler.unstable_readConfig()` produces for a Wrangler configuration
- * file, so that everything downstream (bindings, remote proxy sessions,
- * `unstable_getMiniflareWorkerOptions()`) is oblivious to which config format
- * the project uses.
+ * Load a `cloudflare.config.ts` in the shape Miniflare's native
+ * `WorkerOptions.config` accepts, without converting it to a Wrangler config.
  *
- * This mirrors the `@cloudflare/vite-plugin` implementation of
- * `experimental.newConfig`: load and validate via `@cloudflare/config`, convert
- * the result to a Wrangler `RawConfig`, then run it through the standard
- * Wrangler normalisation/validation pipeline.
+ * Loads and parses it with `@cloudflare/config`, then loads the `.env` and
+ * `.dev.vars` values in Vite's `envDir` that its secrets and Hyperdrive
+ * bindings are resolved from, once `miniflare` options are merged. Unlike
+ * `@cloudflare/vite-plugin`, it doesn't copy `CLOUDFLARE_*` tool settings into
+ * `process.env`, because Vitest runs every project in one process.
  *
  * @param configPath Absolute path to the `cloudflare.config.ts` file.
- * @param mode The Vite mode, passed to config functions as `ctx.mode`.
- * @returns The normalised config.
+ * @param mode The Vite mode, passed to config functions as `ctx.mode` and used
+ * to select mode-specific `.env`/`.dev.vars` files.
+ * @param envDir Vite's resolved `envDir`, or `false` to load no files.
+ * @returns The parsed config and the local values for its bindings.
  */
 export async function loadNewConfig(
 	configPath: string,
-	mode: string | undefined
-): Promise<Config> {
+	mode: string,
+	envDir: string | false
+): Promise<LoadedNewConfig> {
 	if (!existsSync(configPath)) {
 		throw new TypeError(
-			`\`experimental.newConfig\` is enabled but no \`${NEW_CONFIG_FILENAME}\` was found at ${configPath}.`
+			`\`config\` is enabled but no \`${NEW_CONFIG_FILENAME}\` was found at ${configPath}.`
 		);
 	}
 
-	const { result } = await loadAndValidateConfig(configPath, {
+	const { result } = await loadAndParseConfig(configPath, {
 		isPreview: false,
 		mode,
 	});
 
 	if (!result.success) {
 		throw new TypeError(
-			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${result.error.message}`
+			`Invalid \`${NEW_CONFIG_FILENAME}\`:\n${formatZodError(result.error)}`
 		);
 	}
 
-	const worker =
-		result.data.default?.type === "worker" ? result.data.default : undefined;
+	const worker = result.data.worker;
 
 	if (worker === undefined) {
 		throw new TypeError(
-			`\`${NEW_CONFIG_FILENAME}\` must have a default worker export.`
+			`\`${NEW_CONFIG_FILENAME}\` must define a Worker using the \`worker\` property.`
 		);
 	}
 
-	const settings =
-		result.data.settings?.type === "settings"
-			? result.data.settings
-			: undefined;
+	const [localEnv, devVars] = await Promise.all([
+		loadEnv(envDir, mode),
+		loadDevVars(envDir, mode),
+	]);
+	return {
+		settings: {
+			accountId: result.data.accountId,
+			complianceRegion: result.data.complianceRegion,
+		},
+		worker,
+		containers: result.data.containers ?? [],
+		mode,
+		localEnv: localEnv.values,
+		devVars,
+	};
+}
 
-	const rawConfig: RawConfig = convertToWranglerConfig(worker, settings);
+/**
+ * Merges the Worker declared in `cloudflare.config.ts`, already in Miniflare's
+ * native shape, into the Worker under test converted from `miniflare` options.
+ * `miniflare` options win:
+ * - bindings replace the config's with the same name, and a binding of a type a
+ *   Worker can only have one of replaces the config's of that type;
+ * - exports replace the config's with the same name, except Durable Object
+ *   classes the config declares;
+ * - queue consumers replace the config's for the same queue;
+ * - compatibility flags and tail consumers are added to the config's.
+ *
+ * The config's remaining secrets and Hyperdrive bindings are then resolved
+ * locally. Its assets binding and settings are dropped, unless `miniflare.assets`
+ * provides a directory. Durable Object exports that reference a Container get
+ * that Container's local runtime options.
+ *
+ * @param userWorker The Worker under test, converted from `miniflare` options.
+ * @param cloudflareConfig The loaded `cloudflare.config.ts`.
+ * @param customOptions Whether remote bindings are enabled, the config's remote
+ *   proxy session, if any, and the runtime options of its Container-backed
+ *   Durable Object classes, if any.
+ * @returns The merged Worker under test.
+ */
+export function mergeCloudflareConfigWorker(
+	userWorker: WorkerOptions,
+	{ worker, mode, localEnv, devVars }: LoadedNewConfig,
+	customOptions: {
+		remoteBindings?: boolean;
+		remoteProxyConnectionString?: RemoteProxyConnectionString;
+		containerRuntimeOptions?: Map<string, ContainerDevRuntimeOptions>;
+	}
+): WorkerOptions {
+	const {
+		assets: configAssets,
+		compatibilityFlags: configCompatibilityFlags,
+		entrypoint: _entrypoint,
+		env: configEnv,
+		exports: configExports,
+		experimental: configExperimental,
+		tailConsumers: configTailConsumers,
+		triggers: configTriggers,
+		...config
+	} = worker;
+	const userConfig = userWorker.config;
+	const userEnv = userConfig.env ?? {};
 
-	// Passing `configPath` as both the config path and the user config path
-	// resolves `main` relative to the config file's directory, and lets
-	// `unstable_getMiniflareWorkerOptions()` derive the Worker's `rootPath` from
-	// that same directory — matching how a Wrangler configuration file behaves.
-	const { config, diagnostics } = normalizeAndValidateConfig(
-		rawConfig,
-		configPath,
-		configPath,
-		{}
+	const userSingletonTypes = new Set(
+		Object.values(userEnv).flatMap((binding) =>
+			SINGLETON_BINDING_TYPES.has(binding.type) ? [binding.type] : []
+		)
+	);
+	const remainingConfigEnv: NonNullable<typeof configEnv> = {};
+	for (const [name, binding] of Object.entries(configEnv ?? {})) {
+		// Without `miniflare.assets`, there's no assets directory to serve
+		if (binding.type === "assets" && userConfig.assets === undefined) {
+			continue;
+		}
+		if (!(name in userEnv) && !userSingletonTypes.has(binding.type)) {
+			remainingConfigEnv[name] = binding;
+		}
+	}
+	// Only the bindings `miniflare` doesn't replace need local values, so
+	// `miniflare` can supply ones that have none, such as Hyperdrive connection
+	// strings
+	const workerEnv = resolveLocalBindings(remainingConfigEnv, {
+		workerName: worker.name,
+		localEnv,
+		devVars,
+		mode,
+		remoteBindings: customOptions.remoteBindings,
+		logger: log,
+	});
+
+	const workerExports: NonNullable<WorkerOptions["config"]["exports"]> =
+		createMiniflareExports({
+			exports: configExports,
+			containerRuntimeOptions: customOptions.containerRuntimeOptions,
+		});
+	// Binding a Durable Object in `miniflare` options also declares its class,
+	// with `legacy-kv` storage unless `useSQLite` is set, so keep the config's
+	// declaration of that class
+	const userExports = Object.fromEntries(
+		Object.entries(userConfig.exports ?? {}).filter(
+			([name, exported]) =>
+				exported.type !== "durable-object" ||
+				workerExports[name]?.type !== "durable-object"
+		)
 	);
 
-	if (diagnostics.hasWarnings()) {
-		console.warn(diagnostics.renderWarnings());
+	const userQueueConsumers = new Set(
+		(userConfig.triggers ?? []).flatMap((trigger) =>
+			trigger.type === "queue" ? [trigger.name] : []
+		)
+	);
+	const workerTriggers = (configTriggers ?? []).filter(
+		(trigger) =>
+			trigger.type !== "queue" || !userQueueConsumers.has(trigger.name)
+	);
+
+	// Miniflare routes all of a Worker's remote bindings through one proxy
+	const { remoteProxyConnectionString } = customOptions;
+	const userRemoteProxyConnectionString =
+		userWorker.dev?.remoteProxyConnectionString;
+	if (
+		userRemoteProxyConnectionString !== undefined &&
+		remoteProxyConnectionString !== undefined &&
+		String(userRemoteProxyConnectionString) !==
+			String(remoteProxyConnectionString)
+	) {
+		throw new Error(
+			"Remote bindings in `miniflare` options and in `cloudflare.config.ts` use different remote proxy sessions, but a Worker can only use one. Declare the remote bindings in `cloudflare.config.ts` instead."
+		);
 	}
 
-	if (diagnostics.hasErrors()) {
-		throw new TypeError(diagnostics.renderErrors());
-	}
+	return {
+		...userWorker,
+		config: {
+			...config,
+			// Converting `miniflare` options sets unused fields to `undefined`
+			...withoutUndefined(userConfig),
+			compatibilityFlags: [
+				...new Set([
+					...(configCompatibilityFlags ?? []),
+					...(userConfig.compatibilityFlags ?? []),
+				]),
+			],
+			env: { ...workerEnv, ...userEnv },
+			exports: { ...workerExports, ...userExports },
+			triggers: [...workerTriggers, ...(userConfig.triggers ?? [])],
+			tailConsumers: [
+				...(configTailConsumers ?? []),
+				...(userConfig.tailConsumers ?? []),
+			],
+			experimental: {
+				...configExperimental,
+				...withoutUndefined(userConfig.experimental ?? {}),
+				streamingTailConsumers: [
+					...(configExperimental?.streamingTailConsumers ?? []),
+					...(userConfig.experimental?.streamingTailConsumers ?? []),
+				],
+			},
+			assets:
+				userConfig.assets === undefined
+					? undefined
+					: {
+							...userConfig.assets,
+							...configAssets,
+							...withoutUndefined(userConfig.assets),
+						},
+		},
+		dev: {
+			...userWorker.dev,
+			zone: userWorker.dev?.zone ?? getWorkerZone(worker),
+			remoteProxyConnectionString:
+				userRemoteProxyConnectionString ?? remoteProxyConnectionString,
+		},
+	};
+}
 
-	return config;
+function withoutUndefined<T extends object>(value: T): Partial<T> {
+	return Object.fromEntries(
+		Object.entries(value).filter(([, entry]) => entry !== undefined)
+	) as Partial<T>;
 }

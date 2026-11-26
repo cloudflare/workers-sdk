@@ -7,11 +7,8 @@ import path, {
 	relative,
 	resolve as resolvePath,
 } from "node:path";
-import {
-	FatalError,
-	findWranglerConfig,
-	UserError,
-} from "@cloudflare/workers-utils";
+import { FatalError, UserError } from "@cloudflare/workers-utils";
+import { findWranglerConfig } from "@cloudflare/workers-utils/config";
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { readPagesConfig } from "../config";
 import { createCommand } from "../core/create-command";
@@ -34,8 +31,8 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
 import type { BundleResult } from "../deployment-bundle/bundle";
-import type { Config } from "@cloudflare/workers-utils";
-import type { NodeJSCompatMode } from "miniflare";
+import type { Config } from "@cloudflare/workers-utils/config";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 
 export const pagesFunctionsBuildCommand = createCommand({
 	metadata: {

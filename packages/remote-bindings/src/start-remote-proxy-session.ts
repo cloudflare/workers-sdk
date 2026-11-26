@@ -4,17 +4,17 @@ import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker";
-import { getRemoteBindingsAuthHook } from "./auth";
 import { initLogger } from "./logger";
 import { DevEnv } from "./startDevWorker/DevEnv";
-import { RemoteSessionAuthenticationError } from "./utils/remote";
+import { CLI_COMMANDS, RemoteSessionAuthenticationError } from "./utils/remote";
 import type { RemoteBindingsLogger } from "./logger";
+import type { RemoteBindingsCliDisplayName } from "./utils/remote";
 import type {
 	AsyncHook,
 	CfAccount,
-	Config,
 	StartDevWorkerInput,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { RemoteProxyConnectionString } from "miniflare";
 
 type ErrorEvent = {
@@ -25,9 +25,14 @@ type ErrorEvent = {
 
 export type StartRemoteProxySessionOptions = {
 	workerName?: string;
-	auth?: AsyncHook<CfAccount>;
+	/** Resolves the account ID and API token for the session. */
+	auth: AsyncHook<CfAccount>;
+	/** Defer authentication and the remote preview until the first binding call. */
+	lazy?: boolean;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
+	/** Consumer name used in actionable error messages. */
+	cliDisplayName: RemoteBindingsCliDisplayName;
 	logger: RemoteBindingsLogger;
 };
 
@@ -95,29 +100,43 @@ export async function startRemoteProxySession(
 ): Promise<RemoteProxySession> {
 	for (const [name, binding] of Object.entries(bindings ?? {})) {
 		if (binding.type === "flagship" && binding.app_id === undefined) {
+			// cf reads `cloudflare.config.ts`, where the app ID setting is `id`
+			const setting = options.cliDisplayName === "cf" ? "id" : "app_id";
+			const { createFlagshipApp } = CLI_COMMANDS[options.cliDisplayName];
 			throw new UserError(
-				`Flagship binding "${name}" has no \`app_id\` and has not been created, but needs to run remotely. Run \`wrangler flagship apps create\` to create an app.`,
+				`Flagship binding "${name}" has no \`${setting}\` and has not been created, but needs to run remotely. Run \`${createFlagshipApp}\` to create an app.`,
 				{ telemetryMessage: "flagship remote binding missing app_id" }
 			);
 		}
 	}
 
-	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
+	// The session hands its local proxy the remote connection in a control
+	// message sent through an undici `dispatcher`, which Bun's `fetch()` ignores,
+	// so every remote binding request would wait forever.
+	if (process.versions.bun) {
+		throw new UserError(
+			"Remote bindings can't work under Bun, because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes them through (https://github.com/oven-sh/bun/issues/39247). Run this using Node.js, or turn remote bindings off.",
+			{ telemetryMessage: "remote proxy session under bun" }
+		);
+	}
+
+	if (!options.lazy) {
+		options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
+	}
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
 	const workerConfig = {
 		name: options.workerName ?? randomUUID(),
+		cliDisplayName: options.cliDisplayName,
 		entrypointSource: remoteBindingsWorkerSource,
 		compatibilityDate: "2025-04-28",
-		compatibilityFlags: [],
+		// Keep custom error names and properties (for example Artifacts `code` and
+		// `numericCode`) when errors cross from the remote binding into this worker.
+		compatibilityFlags: ["enhanced_error_serialization"],
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
-		auth: getRemoteBindingsAuthHook(
-			options.auth,
-			undefined,
-			undefined,
-			options.logger
-		),
+		auth: options.auth,
+		lazy: options.lazy,
 		server: { port: 0, secure: false },
 	};
 
@@ -126,7 +145,11 @@ export async function startRemoteProxySession(
 		devEnv = new DevEnv(workerConfig);
 		devEnv.start();
 	} catch (startWorkerError: unknown) {
-		await devEnv?.teardown();
+		try {
+			await devEnv?.teardown();
+		} catch {
+			// Preserve the original startup error if cleanup also fails.
+		}
 		if (startWorkerError instanceof UserError) {
 			throw startWorkerError;
 		}
@@ -151,7 +174,9 @@ export async function startRemoteProxySession(
 	try {
 		const maybeError = await Promise.race([
 			maybeErrorPromise,
-			devEnv.proxy.localServerReady.promise,
+			options.lazy
+				? devEnv.proxy.ready.promise.then(() => undefined)
+				: devEnv.proxy.localServerReady.promise,
 		]);
 
 		if (maybeError && maybeError.error) {
@@ -180,15 +205,34 @@ export async function startRemoteProxySession(
 		remoteProxyConnectionString = (await devEnv.proxy.ready.promise)
 			.url as RemoteProxyConnectionString;
 	} catch (error) {
-		await devEnv.teardown();
+		try {
+			await devEnv.teardown();
+		} catch {
+			// Preserve the original startup error if cleanup also fails.
+		}
 		throw error;
 	} finally {
 		devEnv.removeListener("error", onStartupError);
 	}
+	if (options.lazy) {
+		devEnv.on("error", (error: unknown) => {
+			// As at startup, show an authentication failure's actionable guidance
+			// rather than the innermost API error, which doesn't explain the fix.
+			const details =
+				findRemoteSessionAuthError(error)?.message ??
+				formatRemoteProxySessionError(error) ??
+				"unknown error";
+			options.logger.warn(`Could not connect remote bindings: ${details}`);
+			options.logger.debug(error);
+		});
+	}
+	let disposePromise: Promise<void> | undefined;
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
-		const reloadComplete = events.once(devEnv, "reloadComplete");
+		const reloadComplete = options.lazy
+			? undefined
+			: events.once(devEnv, "reloadComplete");
 		devEnv.update({
 			...workerConfig,
 			bindings: toRawBindings(newBindings),
@@ -212,7 +256,11 @@ export async function startRemoteProxySession(
 		ready: Promise.resolve(),
 		remoteProxyConnectionString,
 		updateBindings,
-		dispose: () => devEnv.teardown(),
+		dispose: () => {
+			// Share the same cleanup attempt across calls, even if it fails.
+			disposePromise ??= devEnv.teardown();
+			return disposePromise;
+		},
 	};
 }
 

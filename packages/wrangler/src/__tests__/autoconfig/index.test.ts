@@ -16,7 +16,7 @@ import type {
 	AutoConfigDetails,
 	AutoConfigSummary,
 } from "@cloudflare/autoconfig";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 vi.mock("@cloudflare/autoconfig", async (importOriginal) => ({
 	...(await importOriginal()),

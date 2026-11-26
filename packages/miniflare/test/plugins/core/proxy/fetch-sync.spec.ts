@@ -1,6 +1,9 @@
 import { MessageChannel, Worker } from "node:worker_threads";
 import { test, vi } from "vitest";
-import { receiveReply } from "../../../../src/plugins/core/proxy/fetch-sync";
+import {
+	receiveReply,
+	SynchronousFetcher,
+} from "../../../../src/plugins/core/proxy/fetch-sync";
 
 vi.mock("../../../../src/plugins/core/errors", () => ({
 	JsonErrorSchema: {},
@@ -131,4 +134,22 @@ test("absorbs stale notifications until the requested generation is published", 
 	});
 	expect(await exited).toBe(0);
 	channel.port1.close();
+});
+
+test("warm() resolves once the worker can serve requests", async () => {
+	const fetcher = new SynchronousFetcher();
+	try {
+		await fetcher.warm();
+	} finally {
+		await fetcher.dispose();
+	}
+});
+
+test("warm() settles if the worker exits before it is ready", async () => {
+	// Miniflare#_getProxyClient() awaits warm(), so this would hang if the
+	// fetcher were disposed while its worker was still starting
+	const fetcher = new SynchronousFetcher();
+	const ready = fetcher.warm();
+	await fetcher.dispose();
+	await ready;
 });

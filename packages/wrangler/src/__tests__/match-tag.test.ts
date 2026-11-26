@@ -16,17 +16,14 @@ import { writeWorkerSource } from "./helpers/write-worker-source";
 describe("match-tag", () => {
 	mockAccountId();
 	mockApiToken();
-	function mockWorker(workerName: string, tag: string) {
+	function mockWorker(workerName: string, tag: string | null) {
 		const dummyWorker = {
 			id: workerName,
 			default_environment: {
 				environment: "production",
 				created_on: "1987-09-27",
 				modified_on: "1987-09-27",
-				script: {
-					id: workerName,
-					tag,
-				},
+				script: tag === null ? null : { id: workerName, tag },
 			},
 			created_on: "1987-09-27",
 			modified_on: "1987-09-27",
@@ -106,7 +103,7 @@ describe("match-tag", () => {
 	});
 
 	describe("error cases", () => {
-		it("catches worker not found from API and throws validation error", async ({
+		it("reports when the Worker is not found in the account", async ({
 			expect,
 		}) => {
 			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
@@ -118,7 +115,21 @@ describe("match-tag", () => {
 					"b-worker"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: The name in your Wrangler configuration file (b-worker) must match the name of your Worker. Please update the name field in your Wrangler configuration file.]`
+				`[Error: The Worker "b-worker" was not found in your account. Check that the name in your Wrangler configuration file is correct and that the Worker exists in this account.]`
+			);
+		});
+
+		it("reports a missing script as a Worker not found", async ({ expect }) => {
+			vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
+			mockWorker("my-worker", null);
+			await expect(
+				verifyWorkerMatchesCITag(
+					COMPLIANCE_REGION_CONFIG_UNKNOWN,
+					"some-account-id",
+					"my-worker"
+				)
+			).rejects.toThrow(
+				'The Worker "my-worker" was not found in your account.'
 			);
 		});
 
@@ -154,7 +165,7 @@ describe("match-tag", () => {
 					"network-error-worker"
 				)
 			).rejects.toMatchInlineSnapshot(
-				`[Error: Wrangler cannot validate that your Worker name matches what is expected by the build system. Please retry the build. If the problem persists, please contact support.]`
+				`[Error: The Worker name could not be validated against what is expected by the build system. Please retry the build. If the problem persists, please contact support.]`
 			);
 		});
 
@@ -195,7 +206,7 @@ describe("match-tag", () => {
 			beforeEach(() => {
 				writeWorkerSource();
 			});
-			it("catches worker not found from API and throws validation error", async ({
+			it("reports when the Worker is not found in the account", async ({
 				expect,
 			}) => {
 				vi.stubEnv("WRANGLER_CI_MATCH_TAG", "abc123");
@@ -204,7 +215,7 @@ describe("match-tag", () => {
 				await expect(
 					runWrangler("deploy ./index.js")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: The name in your wrangler.toml file (b-worker) must match the name of your Worker. Please update the name field in your wrangler.toml file.]`
+					`[Error: The Worker "b-worker" was not found in your account. Check that the name in your wrangler.toml file is correct and that the Worker exists in this account.]`
 				);
 			});
 
