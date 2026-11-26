@@ -11,7 +11,7 @@ import {
 	createInstance,
 	createNamespace,
 	DEFAULT_NAMESPACE,
-	listNamespaces,
+	listAllNamespaces,
 	listTokens,
 } from "./client";
 import type {
@@ -377,7 +377,7 @@ export const aiSearchCreateCommand = createCommand({
 			if (isNonInteractiveOrCI() || args.json) {
 				instanceNamespace = DEFAULT_NAMESPACE;
 			} else {
-				const namespaces = await listNamespaces(config);
+				const namespaces = await listAllNamespaces(config);
 				// The list endpoint does not return the "default" namespace, so
 				// surface it explicitly so users can target it from the picker.
 				const hasDefault = namespaces.some(

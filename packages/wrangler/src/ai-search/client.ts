@@ -1,4 +1,4 @@
-import { fetchListResult, fetchResult } from "../cfetch";
+import { fetchListResult, fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import type {
 	AiSearchInstance,
@@ -149,6 +149,23 @@ export async function listNamespaces(
 		baseNamespaceUrl(accountId),
 		{ method: "GET" },
 		queryParams
+	);
+}
+
+/**
+ * List every AI Search namespace on the account, following the API's
+ * pagination so that namespaces beyond the first page are included.
+ *
+ * @param config The Wrangler config used to resolve the account and credentials.
+ * @returns All namespaces on the account.
+ */
+export async function listAllNamespaces(
+	config: Config
+): Promise<AiSearchNamespace[]> {
+	const accountId = await requireAuth(config);
+	return await fetchPagedListResult<AiSearchNamespace>(
+		config,
+		baseNamespaceUrl(accountId)
 	);
 }
 
