@@ -1,6 +1,8 @@
 import path from "node:path";
+import { pickRemoteBindings } from "@cloudflare/remote-bindings";
 import {
 	DEFAULT_COMPAT_DATE,
+	getCloudflareComplianceRegion,
 	getRegistryPath,
 } from "@cloudflare/workers-utils";
 import {
@@ -25,7 +27,9 @@ import {
 } from "../../../dev/miniflare-options";
 import { logger } from "../../../logger";
 import { dedent } from "../../../utils/dedent";
-import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
+import { startRemoteProxySession } from "../../remoteBindings";
+import { getDefaultRemoteBindingsAuth } from "../../remoteBindings/auth";
+import { convertConfigBindingsToStartWorkerBindings } from "../../startDevWorker/binding-utils";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 import type { RemoteProxySession } from "../../remoteBindings";
@@ -118,7 +122,9 @@ export type GetPlatformProxyOptions = {
 	 */
 	persist?: boolean | { path: string };
 	/**
-	 * Whether remote bindings should be enabled or not (defaults to `true`)
+	 * Whether remote bindings should be enabled or not (defaults to `true`).
+	 * When enabled and configured, the remote session connects before this function
+	 * returns because a binding call can block the Node.js thread needed to connect.
 	 */
 	remoteBindings?: boolean;
 };
@@ -194,12 +200,16 @@ export async function getPlatformProxy<
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
 	if (config.configPath && options.remoteBindings !== false) {
-		remoteProxySession = (
-			(await maybeStartOrUpdateRemoteProxySession({
-				path: config.configPath,
-				environment: env,
-			})) ?? {}
-		).session;
+		const remoteBindings = pickRemoteBindings(
+			convertConfigBindingsToStartWorkerBindings(config) ?? {}
+		);
+		if (Object.keys(remoteBindings).length > 0) {
+			remoteProxySession = await startRemoteProxySession(remoteBindings, {
+				workerName: config.name ?? "worker",
+				complianceRegion: getCloudflareComplianceRegion(config),
+				auth: getDefaultRemoteBindingsAuth(config.account_id).hook,
+			});
+		}
 	}
 
 	const miniflareOptions = await getMiniflareOptionsFromConfig({

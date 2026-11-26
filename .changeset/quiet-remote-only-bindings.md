@@ -4,8 +4,8 @@
 "@cloudflare/vitest-plugin": patch
 ---
 
-Defer remote-only binding login until the binding is called
+Defer remote binding login until the binding is called
 
-When a project's only remote resources are bindings without a local simulator, such as Workers AI or Vectorize, local development now starts without logging in. The first binding call establishes the remote connection and starts login if needed. Calls wait for login and continue once it succeeds, while unrelated requests keep working. Failed login attempts fail the waiting calls without stopping the development server. Background refresh does not start login for an unused binding.
+Remote proxy sessions authenticate lazily by default in Wrangler, the Cloudflare Vite plugin, and the Vitest plugin. This applies to all remote bindings, including KV and D1 with `remote: true`. The first remote binding call establishes the connection and starts login if needed. Calls wait for login and continue once it succeeds, while unrelated requests keep working. Failed login attempts fail the waiting calls without stopping a running development server. Background refresh does not start login for an unused binding. A binding that the runtime accesses during initialization, such as Hyperdrive, can still trigger login at startup.
 
-This applies to Wrangler, the Cloudflare Vite plugin, and the Vitest plugin. Explicitly remote bindings with local simulators, such as KV or D1 with `remote: true`, still require authentication during startup.
+Wrangler's `getPlatformProxy()` authenticates and connects before returning so synchronous calls to remote bindings such as K2 cannot block the Node.js thread needed to establish the connection.

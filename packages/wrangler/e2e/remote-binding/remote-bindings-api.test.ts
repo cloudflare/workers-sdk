@@ -186,7 +186,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
 				);
 
-				const response = await timedDispatchFetch(mf);
+				const response = await timedDispatchFetch(mf, 15_000);
 				const responseText = await response?.text();
 
 				expect(responseText).toEqual(
@@ -196,49 +196,17 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await mf.dispose();
 				await proxySessionData.session.dispose();
 			});
-
-			test("user provided incorrect auth data", async ({ expect }) => {
-				let error: unknown;
-				try {
-					await maybeStartOrUpdateRemoteProxySession(
-						{
-							bindings: {
-								MY_SERVICE: {
-									type: "service",
-									service: remoteWorkerName,
-									remote: true,
-								},
-							},
-						},
-						undefined,
-						{
-							accountId: CLOUDFLARE_ACCOUNT_ID,
-							apiToken: {
-								apiToken: "This is an incorrect API TOKEN!",
-							},
-						}
-					);
-				} catch (e) {
-					error = e;
-				}
-				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
-					`
-					"Error: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
-					It looks like you are authenticating via a custom API token (\`CLOUDFLARE_API_TOKEN\`) set in an environment variable.
-					The token may be invalid or lack the required permissions for this operation.
-					To fix this, verify that your token is valid and has the correct permissions.
-					You can also run \`wrangler whoami\` to check your current authentication status."
-				`
-				);
-			});
 		});
 	}
 );
 
-async function timedDispatchFetch(mf: MiniflareType): Promise<Response | null> {
+async function timedDispatchFetch(
+	mf: MiniflareType,
+	timeout = 5_000
+): Promise<Response | null> {
 	try {
 		return await mf.dispatchFetch("http://localhost/", {
-			signal: AbortSignal.timeout(5000),
+			signal: AbortSignal.timeout(timeout),
 		});
 	} catch {
 		return null;

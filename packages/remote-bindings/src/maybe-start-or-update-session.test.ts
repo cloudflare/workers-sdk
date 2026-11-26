@@ -41,32 +41,26 @@ function createTestSession() {
 }
 
 describe("maybeStartOrUpdateRemoteProxySession", () => {
-	it.for<{ bindings: Record<string, Binding>; lazy: boolean }>([
-		{ bindings: { AI: { type: "ai" } }, lazy: true },
-		{ bindings: { AI: { type: "ai", remote: true } }, lazy: true },
+	it.for<Record<string, Binding>>([
+		{ AI: { type: "ai" } },
+		{ AI: { type: "ai", remote: true } },
 		{
-			bindings: {
-				VECTORS: { type: "vectorize", index_name: "search", remote: true },
-			},
-			lazy: true,
+			VECTORS: { type: "vectorize", index_name: "search", remote: true },
 		},
 		{
-			bindings: {
-				AI: { type: "ai" },
-				ORDERS: { type: "k2", stream: "orders" },
-			},
-			lazy: true,
+			AI: { type: "ai" },
+			ORDERS: { type: "k2", stream: "orders" },
 		},
 		{
-			bindings: {
-				AI: { type: "ai" },
-				KV: { type: "kv_namespace", id: "kv", remote: true },
-			},
-			lazy: false,
+			AI: { type: "ai" },
+			KV: { type: "kv_namespace", id: "kv", remote: true },
 		},
+		{ DB: { type: "d1", database_id: "db", remote: true } },
+		{ KV: { type: "kv_namespace", id: "kv", remote: true } },
+		{ ORDERS: { type: "k2", stream: "orders" } },
 	])(
-		"defers the connection only for remote-only resources (%j)",
-		async ({ bindings, lazy }, { expect }) => {
+		"defers the connection for all remote bindings (%j)",
+		async (bindings, { expect }) => {
 			const startSession = vi
 				.fn<typeof startRemoteProxySession>()
 				.mockResolvedValue(createTestSession());
@@ -79,12 +73,12 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			);
 			expect(startSession).toHaveBeenCalledWith(
 				bindings,
-				expect.objectContaining({ lazy, auth: testAuth })
+				expect.objectContaining({ lazy: true, auth: testAuth })
 			);
 		}
 	);
 
-	it("restarts when adding a local-capable remote binding requires an eager connection", async ({
+	it("keeps the lazy session when switching from AI to remote KV", async ({
 		expect,
 	}) => {
 		const startSession = vi
@@ -101,27 +95,50 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			context,
 			startSession
 		);
-		const removed = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: {} },
+		const bindings: Record<string, Binding> = {
+			KV: { type: "kv_namespace", id: "kv", remote: true },
+		};
+		const next = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings },
 			first,
 			testAuth,
 			context,
 			startSession
 		);
-		expect(removed?.session).toBe(first?.session);
+		expect(first?.session.updateBindings).toHaveBeenCalledWith(bindings);
+		expect(first?.session.dispose).not.toHaveBeenCalled();
+		expect(next?.session).toBe(first?.session);
+		expect(next?.lazy).toBe(true);
+		expect(startSession).toHaveBeenCalledOnce();
+	});
+
+	it("replaces an existing eager session with a lazy session", async ({
+		expect,
+	}) => {
+		const existing = createTestSession();
+		const startSession = vi
+			.fn<typeof startRemoteProxySession>()
+			.mockResolvedValue(createTestSession());
+		const bindings: Record<string, Binding> = {
+			KV: { type: "kv_namespace", id: "kv", remote: true },
+		};
 		const next = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: { KV: { type: "kv_namespace", id: "kv", remote: true } } },
-			removed,
+			{ bindings },
+			{
+				session: existing,
+				remoteBindings: bindings,
+				auth: testAuth,
+				lazy: false,
+			},
 			testAuth,
-			context,
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() },
 			startSession
 		);
-		expect(first?.session.dispose).toHaveBeenCalledOnce();
-		expect(next?.session).not.toBe(first?.session);
-		expect(startSession).toHaveBeenCalledTimes(2);
-		expect(startSession).toHaveBeenLastCalledWith(
-			expect.anything(),
-			expect.objectContaining({ lazy: false })
+		expect(existing.dispose).toHaveBeenCalledOnce();
+		expect(next?.session).not.toBe(existing);
+		expect(startSession).toHaveBeenCalledWith(
+			bindings,
+			expect.objectContaining({ lazy: true })
 		);
 	});
 	it.for([undefined, true])(
@@ -222,6 +239,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				},
 			},
 			auth: testAuth,
+			lazy: true,
 		};
 
 		const result = await maybeStartOrUpdateRemoteProxySession(

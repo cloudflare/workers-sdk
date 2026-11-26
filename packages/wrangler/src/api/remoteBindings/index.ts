@@ -29,6 +29,10 @@ type WranglerWorkerConfigObject = WorkerConfigObject & {
 	profileDir?: string;
 };
 
+/**
+ * Starts or updates a remote proxy session for a Wrangler config file or Worker config.
+ * New sessions defer authentication and connection until the first remote binding call.
+ */
 export function maybeStartOrUpdateRemoteProxySession(
 	wranglerOrWorkerConfigObject:
 		| WranglerConfigObject
