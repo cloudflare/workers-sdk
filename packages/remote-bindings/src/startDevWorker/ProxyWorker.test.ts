@@ -159,6 +159,39 @@ it("refreshes an aging preview on the next binding request without forwarding to
 	expect(await (await pending).text()).toBe("new-preview");
 });
 
+it("recovers from a failed on-demand preview refresh on the next binding request", async ({
+	expect,
+}) => {
+	const requestConnection = vi.fn();
+	const previewRequests = vi.fn();
+	const { proxyWorker, play, controller } = await startProxy(
+		(request, response) => {
+			const token = request.headers["cf-workers-preview-token"];
+			previewRequests(token);
+			response.end(token);
+		},
+		requestConnection
+	);
+	await play("old-preview", Date.now() - 1);
+	expect(requestConnection).not.toHaveBeenCalled();
+
+	const pending = proxyWorker.dispatchFetch("http://localhost/");
+	await vi.waitFor(() => expect(requestConnection).toHaveBeenCalledOnce());
+	controller.connectionFailed("Preview refresh failed");
+	const failed = await pending;
+	expect(failed.status).toBe(503);
+	expect(await failed.text()).toBe("Preview refresh failed");
+	expect(previewRequests).not.toHaveBeenCalled();
+
+	const retry = proxyWorker.dispatchFetch("http://localhost/");
+	await vi.waitFor(() => expect(requestConnection).toHaveBeenCalledTimes(2));
+	await play("new-preview", Date.now() + 60_000);
+	const recovered = await retry;
+	expect(recovered.status).toBe(200);
+	expect(await recovered.text()).toBe("new-preview");
+	expect(previewRequests.mock.calls).toEqual([["new-preview"]]);
+});
+
 it("queues concurrent binding requests behind one login and forwards them after it succeeds", async ({
 	expect,
 }) => {
