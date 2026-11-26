@@ -177,7 +177,7 @@ app.use("/api/*", async (c, next) => {
 				"Access-Control-Allow-Origin": origin ?? "*",
 				"Access-Control-Allow-Methods":
 					"GET, POST, PUT, PATCH, DELETE, OPTIONS",
-				"Access-Control-Allow-Headers": `Content-Type, cf-metadata-only, cf-r2-custom-metadata, ${EXPLORER_REFRESH_HEADER}`,
+				"Access-Control-Allow-Headers": `Content-Type, cf-metadata-only, cf-r2-custom-metadata, If-None-Match, If-Modified-Since, ${EXPLORER_REFRESH_HEADER}`,
 				"Access-Control-Max-Age": "86400",
 			},
 		});
@@ -360,6 +360,8 @@ app.get(
 app.get("/api/r2/buckets/:bucket_name/objects/:object_key", (c) =>
 	getR2Object(c, c.req.param("bucket_name"), c.req.param("object_key"), {
 		"cf-metadata-only": c.req.header("cf-metadata-only"),
+		"if-none-match": c.req.header("if-none-match"),
+		"if-modified-since": c.req.header("if-modified-since"),
 	})
 );
 

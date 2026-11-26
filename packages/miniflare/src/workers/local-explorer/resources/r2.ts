@@ -246,11 +246,42 @@ type GetObjectHeaders = NonNullable<
 	z.output<typeof zR2BucketGetObjectData>["headers"]
 >;
 
+function getDownloadConditions(
+	headers: GetObjectHeaders
+): z.input<typeof R2GetRequestSchema>["onlyIf"] {
+	const ifNoneMatch = headers["if-none-match"]?.trim();
+	const etags = Array.from(
+		ifNoneMatch?.matchAll(/(?:^|,)\s*(W\/)?"([^"]*)"\s*(?=,|$)/g) ?? [],
+		([, weak, value]) => ({
+			type: weak === undefined ? ("strong" as const) : ("weak" as const),
+			value,
+		})
+	);
+	// Local Explorer also returns unquoted R2 ETags.
+	if (
+		ifNoneMatch !== undefined &&
+		/^[a-f0-9]{32}(?:-\d+)?$/.test(ifNoneMatch)
+	) {
+		etags.push({ type: "strong", value: ifNoneMatch });
+	}
+	const modifiedSince = Date.parse(headers["if-modified-since"] ?? "");
+	return {
+		etagDoesNotMatch:
+			ifNoneMatch === "*"
+				? [{ type: "wildcard" }]
+				: etags.length > 0
+					? etags
+					: undefined,
+		uploadedAfter: Number.isFinite(modifiedSince) ? modifiedSince : undefined,
+		secondsGranularity: true,
+	};
+}
+
 /**
  * Get an R2 object (content or metadata only).
  *
  * If the `cf-metadata-only` header is set to "true", only metadata is returned.
- * Otherwise, the full object content is returned.
+ * Downloads honor If-None-Match and If-Modified-Since.
  *
  * @see https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/objects/methods/get/
  */
@@ -264,8 +295,12 @@ export async function getR2Object(
 	const response = await sendR2GetRequest(c, bucket_name, {
 		method: metadataOnly ? "head" : "get",
 		object: object_key,
+		onlyIf: metadataOnly ? undefined : getDownloadConditions(headers),
 	});
-	if (!response.ok) {
+	// The backend attaches metadata to a failed read condition. Both download
+	// validators map to 304 at the HTTP endpoint.
+	const notModified = response.status === 412 && !metadataOnly;
+	if (!response.ok && !notModified) {
 		return toR2ErrorResponse(response);
 	}
 	const { metadata: object, body } =
@@ -276,12 +311,17 @@ export async function getR2Object(
 	}
 
 	const responseHeaders = new Headers();
+	responseHeaders.set("ETag", object.etag);
+	responseHeaders.set("Last-Modified", new Date(object.uploaded).toUTCString());
+	if (notModified) {
+		await body.cancel();
+		return new Response(null, { status: 304, headers: responseHeaders });
+	}
+
 	if (object.httpFields?.contentType !== undefined) {
 		responseHeaders.set("Content-Type", object.httpFields.contentType);
 	}
 	responseHeaders.set("Content-Length", String(object.size));
-	responseHeaders.set("ETag", object.etag);
-	responseHeaders.set("Last-Modified", new Date(object.uploaded).toUTCString());
 	for (const [key, value] of Object.entries(
 		decodeCustomMetadata(object.customFields) ?? {}
 	)) {

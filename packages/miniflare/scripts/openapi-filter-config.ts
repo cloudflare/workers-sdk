@@ -477,6 +477,19 @@ const config = {
 							description:
 								"Set to 'true' to return only metadata (HEAD-like behavior)",
 						},
+						{
+							in: "header",
+							name: "if-none-match",
+							schema: { type: "string" },
+							description: "Return 304 if the object matches an ETag.",
+						},
+						{
+							in: "header",
+							name: "if-modified-since",
+							schema: { type: "string" },
+							description:
+								"Return 304 if the object has not changed since this HTTP date.",
+						},
 					],
 					responses: {
 						"200": {

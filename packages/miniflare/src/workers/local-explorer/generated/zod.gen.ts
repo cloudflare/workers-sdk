@@ -1675,6 +1675,8 @@ export const zR2BucketGetObjectData = z.object({
 	headers: z
 		.object({
 			"cf-metadata-only": z.string().optional(),
+			"if-none-match": z.string().optional(),
+			"if-modified-since": z.string().optional(),
 		})
 		.optional(),
 });

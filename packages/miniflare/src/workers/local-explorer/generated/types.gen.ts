@@ -2855,6 +2855,14 @@ export type R2BucketGetObjectData = {
 		 * Set to 'true' to return only metadata (HEAD-like behavior)
 		 */
 		"cf-metadata-only"?: string;
+		/**
+		 * Return 304 if the object matches an ETag.
+		 */
+		"if-none-match"?: string;
+		/**
+		 * Return 304 if the object has not changed since this HTTP date.
+		 */
+		"if-modified-since"?: string;
 	};
 	path: {
 		bucket_name: string;
