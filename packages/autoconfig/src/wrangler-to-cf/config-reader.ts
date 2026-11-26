@@ -18,7 +18,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function readWranglerConfig(configPath: string): RawConfig {
+export function readWranglerConfig(configPath: string): RawConfig;
+export function readWranglerConfig(
+	configPath: string | undefined
+): RawConfig | undefined;
+export function readWranglerConfig(
+	configPath: string | undefined
+): RawConfig | undefined {
+	if (configPath === undefined) {
+		return undefined;
+	}
 	if (
 		!configPath.endsWith(".toml") &&
 		!configPath.endsWith(".json") &&

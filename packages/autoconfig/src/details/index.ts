@@ -195,6 +195,7 @@ export async function getDetailsForAutoConfig({
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
 	const { logger } = context;
+
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
 	const hasCloudflareConfig =
@@ -224,10 +225,7 @@ export async function getDetailsForAutoConfig({
 				: findWranglerConfigFile(projectPath)
 			: undefined;
 
-	const wranglerRawConfig =
-		wranglerConfigFile === undefined
-			? undefined
-			: readWranglerConfig(wranglerConfigFile);
+	const wranglerRawConfig = readWranglerConfig(wranglerConfigFile);
 
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, {
