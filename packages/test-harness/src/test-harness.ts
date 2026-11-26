@@ -917,7 +917,24 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					const session = await resolveSession();
 					const miniflare = await getRuntimeMiniflare(session);
 					const workerName = resolveWorkerName(session, name);
-					const { projectDir } = getResolvedWorker(session, workerName);
+					const { projectDir, options: workerOptions } = getResolvedWorker(
+						session,
+						workerName
+					);
+					// Miniflare sends a binding to the remote database when it's remote
+					// and the Worker has a remote session, as after `envOverrides`
+					const binding = workerOptions.config.env?.[bindingName];
+					if (
+						binding?.type === "d1" &&
+						binding.dev?.remote &&
+						workerOptions.dev?.remoteProxyConnectionString !== undefined
+					) {
+						throw new Error(
+							`applyD1Migrations() won't migrate "${bindingName}", because it's a remote D1 database. ` +
+								`To test against a local database, replace it in \`envOverrides\`, such as \`${bindingName}: bindings.d1()\`. ` +
+								"To migrate the remote database, run `cf d1 migrations apply <database-id>`."
+						);
+					}
 
 					debugLog(`d1 migrations - ${bindingName} - started`, workerName);
 

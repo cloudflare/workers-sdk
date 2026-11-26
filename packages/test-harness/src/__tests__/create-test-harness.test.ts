@@ -947,6 +947,51 @@ describe("createTestHarness", () => {
 		);
 	});
 
+	it("won't migrate a remote D1 database, but migrates a local one in its place", async ({
+		expect,
+	}) => {
+		vi.mocked(maybeStartOrUpdateRemoteProxySession).mockResolvedValue({
+			session: {
+				remoteProxyConnectionString: new URL("http://127.0.0.1:1"),
+				dispose: vi.fn(),
+			},
+		} as unknown as Awaited<
+			ReturnType<typeof maybeStartOrUpdateRemoteProxySession>
+		>);
+		await writeBuild({
+			projectDir: "app",
+			workers: {
+				default: {
+					config: {
+						name: "app",
+						env: {
+							DATABASE: { type: "d1", id: "live", dev: { remote: true } },
+							ARCHIVE: { type: "d1", id: "archive", dev: { remote: true } },
+						},
+					},
+					script: `export default { fetch() { return new Response("ok"); } };`,
+				},
+			},
+		});
+		await seed({
+			"app/migrations/0001_notes.sql":
+				"CREATE TABLE notes (id INTEGER PRIMARY KEY);",
+		});
+		const harness = createTestHarness({
+			workers: [
+				{ projectDir: "app", envOverrides: { ARCHIVE: bindings.d1() } },
+			],
+		});
+		onTestFinished(harness.close);
+		await harness.listen();
+
+		const worker = harness.getWorker();
+		await expect(worker.applyD1Migrations("DATABASE")).rejects.toThrow(
+			`applyD1Migrations() won't migrate "DATABASE", because it's a remote D1 database.`
+		);
+		await worker.applyD1Migrations("ARCHIVE");
+	});
+
 	it("supports binding overrides for first-party bindings", async ({
 		expect,
 	}) => {
