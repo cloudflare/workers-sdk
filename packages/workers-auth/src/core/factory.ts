@@ -218,6 +218,8 @@ export function createCloudflareAuth(
 
 	const preferences = createPreferences(descriptor.getConfigPath);
 	const persistAccountSelection = descriptor.persistAccountSelection ?? false;
+	const preferConfiguredAccountId =
+		descriptor.preferConfiguredAccountId ?? false;
 
 	// The config cache is generic file-backed storage owned by
 	// `@cloudflare/workers-utils`; build our own instance bound to the injected
@@ -561,17 +563,32 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 			return temporaryAccount.account.id;
 		}
 
-		if (config.account_id) {
-			return validateAccountId(
-				config.account_id,
-				`set in your ${descriptor.getConfigFileLabel()} file`
+		if (preferConfiguredAccountId) {
+			// The variable is validated, so it is read only when no account is
+			// configured. Otherwise an invalid value would fail commands that use
+			// their configured account.
+			return (
+				getConfiguredAccountId(config) ??
+				getAccountIdFromEnv() ??
+				resolveAccountSelection()?.id
 			);
 		}
-		const envAccountId = getAccountIdFromEnv();
-		if (envAccountId) {
-			return envAccountId;
-		}
-		return resolveAccountSelection()?.id;
+		return (
+			getAccountIdFromEnv() ??
+			getConfiguredAccountId(config) ??
+			resolveAccountSelection()?.id
+		);
+	}
+
+	function getConfiguredAccountId(config: {
+		account_id?: string;
+	}): string | undefined {
+		return config.account_id
+			? validateAccountId(
+					config.account_id,
+					`set in your ${descriptor.getConfigFileLabel()} file`
+				)
+			: undefined;
 	}
 
 	async function selectAccountId(config: RequireAuthConfig): Promise<string> {
@@ -624,8 +641,6 @@ ${accounts
 	async function getOrSelectAccountId(
 		config: RequireAuthConfig
 	): Promise<string> {
-		// TODO: v5 we should prioritise the env var instead of the config value here,
-		// for consistency with other env vars.
 		const activeAccountId = getActiveAccountId(config);
 		if (activeAccountId) {
 			return activeAccountId;

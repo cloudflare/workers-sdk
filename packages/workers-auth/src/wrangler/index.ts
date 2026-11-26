@@ -89,6 +89,9 @@ export const WRANGLER_CLI: CliDescriptor = {
 	fileFormat: "toml",
 	// Preserve Wrangler's cross-invocation account selection.
 	persistAccountSelection: true,
+	// Preserve Wrangler's account order, where a configured `account_id`
+	// overrides `CLOUDFLARE_ACCOUNT_ID`.
+	preferConfiguredAccountId: true,
 	accountCachePrefix: "wrangler-account",
 	getConfigFileLabel: () => configFileName(undefined),
 	// A getter so any reassignment of the live `DefaultScopeKeys` binding is

@@ -104,7 +104,10 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   credential storage, config cache (`@cloudflare/workers-utils`'
   `createConfigCache`), account selection (`fetchInternalBase` with the token
   the flow already holds), login / logout / refresh, and `requireAuth`. Imports
-  only `@cloudflare/workers-utils`.
+  only `@cloudflare/workers-utils`. The active account is the temporary
+  account, then `CLOUDFLARE_ACCOUNT_ID` and the configured `account_id`, then
+  the retained selection. The environment variable comes first unless the
+  descriptor sets `preferConfiguredAccountId`, as Wrangler's does.
 - `types.ts` — `AuthContext` (the injected primitives: `logger`, optional
   `temporaryAccountLogger` for temporary-account notices, `userAgent`, interactive
   `prompt` / `select`, `isNoDefaultValueProvidedError`) and
@@ -114,7 +117,8 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `keyringServiceName`,
   `clientId`, `consent`, `redirectUri`, `useDeviceFlowByDefault`,
   `getConfigPath`, `fileFormat`,
-  `persistAccountSelection`, `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
+  `persistAccountSelection`, `preferConfiguredAccountId`, `accountCachePrefix`,
+  `cacheNamespace`, `getConfigFileLabel`,
   `getDefaultScopeKeys`, …).
 - `file-storage.ts` (`createFileStorage(format, getPath)`), `auth-config-file.ts`
   (`createAuthConfigFileHelpers({getConfigPath, format})`), `preferences.ts`
