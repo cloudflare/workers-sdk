@@ -1,10 +1,8 @@
 import { fork } from "node:child_process";
-import { once } from "node:events";
 import path from "node:path";
 import {
 	pickRemoteBindings,
 	shouldStartRemoteProxySessionLazily,
-	startRemoteProxySession,
 } from "@cloudflare/remote-bindings";
 import {
 	getCloudflareComplianceRegion,
@@ -13,40 +11,16 @@ import {
 import { logger } from "../../../logger";
 import { getBasePath } from "../../../paths";
 import { isCfAuthActive } from "../../../user";
-import { getDefaultRemoteBindingsAuth } from "../../remoteBindings/auth";
 import { convertConfigBindingsToStartWorkerBindings } from "../../startDevWorker/binding-utils";
-import type {
-	RemoteProxySession,
-	StartRemoteProxySessionOptions,
-} from "@cloudflare/remote-bindings";
-import type { Binding } from "@cloudflare/workers-utils";
+import { startSession } from "./remote-session-shared";
+import type { SessionConfig, StartupMessage } from "./remote-session-shared";
+import type { RemoteProxySession } from "@cloudflare/remote-bindings";
 import type { Config } from "@cloudflare/workers-utils/config";
-
-export const PLATFORM_PROXY_REMOTE_SESSION_ARG =
-	"--internal-platform-proxy-remote-session";
 
 type PlatformProxyRemoteSession = Pick<
 	RemoteProxySession,
 	"remoteProxyConnectionString" | "dispose"
 >;
-
-type SessionConfig = Pick<
-	StartRemoteProxySessionOptions,
-	"workerName" | "complianceRegion" | "cliDisplayName"
-> & {
-	bindings: Record<string, Binding>;
-	accountId?: string;
-};
-
-type StartupMessage =
-	| { type: "ready"; url: string }
-	| {
-			type: "error";
-			message: string;
-			stack?: string;
-			userError: boolean;
-			telemetryMessage?: string;
-	  };
 
 /**
  * Start the configured remote bindings, if any. The caller owns disposal.
@@ -77,25 +51,16 @@ export async function startPlatformProxyRemoteSession(
 	return startBackgroundSession(sessionConfig);
 }
 
-function startSession(
-	{ bindings, accountId, ...options }: SessionConfig,
-	lazy: boolean
-) {
-	return startRemoteProxySession(bindings, {
-		...options,
-		lazy,
-		auth: getDefaultRemoteBindingsAuth(accountId).hook,
-		logger,
-	});
-}
-
 /** Keep the whole lazy session independent of synchronous binding calls, including terminal I/O for OAuth. */
 async function startBackgroundSession(
 	config: SessionConfig
 ): Promise<PlatformProxyRemoteSession> {
 	const child = fork(
-		path.join(getBasePath(), "wrangler-dist", "cli.js"),
-		[PLATFORM_PROXY_REMOTE_SESSION_ARG],
+		path.join(
+			getBasePath(),
+			"wrangler-dist",
+			"platform-proxy-remote-session.js"
+		),
 		{
 			execArgv: process.execArgv.filter((arg) =>
 				/^--(?:no-)?use-(?:(?:bundled|openssl|system)-ca|env-proxy)(?:=|$)/.test(
@@ -155,56 +120,5 @@ async function startBackgroundSession(
 	} catch (error) {
 		await dispose();
 		throw error;
-	}
-}
-
-async function sendStartupMessage(message: StartupMessage) {
-	const send = process.send?.bind(process);
-	if (send && process.connected) {
-		await new Promise<void>((resolve, reject) => {
-			send(message, (error: Error | null) =>
-				error ? reject(error) : resolve()
-			);
-		});
-	}
-}
-
-/** Serve a single lazy session in the forked CLI until its parent disconnects. */
-export async function runPlatformProxyRemoteSession(): Promise<void> {
-	const disconnected = once(process, "disconnect").then(() => undefined);
-	const config: SessionConfig | undefined = await Promise.race([
-		once(process, "message").then(([message]) => message),
-		disconnected,
-	]);
-	if (!config || !process.connected) {
-		return;
-	}
-
-	let session: RemoteProxySession | undefined;
-	try {
-		try {
-			session = await startSession(config, true);
-		} catch (error) {
-			await sendStartupMessage({
-				type: "error",
-				message: error instanceof Error ? error.message : String(error),
-				stack: error instanceof Error ? error.stack : undefined,
-				userError: error instanceof UserError,
-				telemetryMessage:
-					error instanceof UserError ? error.telemetryMessage : undefined,
-			});
-			await disconnected;
-			return;
-		}
-		await sendStartupMessage({
-			type: "ready",
-			url: session.remoteProxyConnectionString.href,
-		});
-		await disconnected;
-	} finally {
-		if (process.connected) {
-			process.disconnect?.();
-		}
-		await session?.dispose();
 	}
 }
