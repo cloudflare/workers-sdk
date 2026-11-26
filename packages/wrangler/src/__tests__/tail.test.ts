@@ -1107,9 +1107,6 @@ describe("tail", () => {
 			expect,
 		}) => {
 			api = mockWebsocketAPIs(expect);
-			// The reconnect loop creates a fresh tail per attempt, so the
-			// create/delete mocks need to fire more than once.
-			mockReusableWebsocketAPIs(expect);
 
 			// Snapshot signal listener counts so we can verify the give-up
 			// path removes the SIGINT/SIGTERM handlers it registered
@@ -1169,6 +1166,11 @@ describe("tail", () => {
 			expect(std.warn).toContain("Reconnecting (attempt 1 of 5)");
 			expect(std.warn).toContain("Reconnecting (attempt 5 of 5)");
 
+			// Every attempt reconnected to the same tail rather than creating
+			// a new one, and the tail is deleted once we give up.
+			expect(api.requests.creation.length).toStrictEqual(1);
+			expect(api.requests.deletion.count).toStrictEqual(1);
+
 			vi.useRealTimers();
 
 			// Give-up path must remove its SIGINT/SIGTERM listeners on the
@@ -1188,7 +1190,6 @@ describe("tail", () => {
 			expect,
 		}) => {
 			api = mockWebsocketAPIs(expect);
-			mockReusableWebsocketAPIs(expect);
 
 			const sigintBefore = process.listenerCount("SIGINT");
 			const sigtermBefore = process.listenerCount("SIGTERM");
@@ -1224,29 +1225,13 @@ describe("tail", () => {
 			expect,
 		}) => {
 			api = mockWebsocketAPIs(expect);
-			mockReusableWebsocketAPIs(expect);
 
 			const { tailPromise } = await startTail(
 				"tail test-worker --format=pretty"
 			);
 			await waitForPrettyConnected(expect);
 
-			// Simulate a transient network drop on the current WebSocket by
-			// dispatching a close event with an abnormal code directly on the
-			// client. The server-side mock is left intact so the subsequent
-			// reconnect attempt can succeed.
-			const clients = (
-				api.ws as unknown as {
-					server: { clients(): MockWebSocket[] };
-				}
-			).server.clients();
-			const firstClient = clients[clients.length - 1];
-			firstClient.dispatchEvent({
-				type: "close",
-				code: 1006,
-				reason: "transient drop",
-				wasClean: false,
-			} as unknown as Event);
+			dropLatestConnection(api);
 
 			// Wait for the reconnect to succeed (up to ~5s including the 1s
 			// backoff before the first reconnect attempt).
@@ -1259,6 +1244,115 @@ describe("tail", () => {
 
 			expect(std.warn).toContain("Reconnecting (attempt 1 of 5)");
 
+			// The reconnect rejoined the existing tail: no new tail was
+			// created and the original one was not deleted.
+			expect(api.requests.creation.length).toStrictEqual(1);
+			expect(api.requests.deletion.count).toStrictEqual(0);
+
+			await api.closeHelper();
+			await tailPromise;
+
+			expect(api.requests.deletion.count).toStrictEqual(1);
+		});
+
+		it("creates a new tail when the server rejects reconnecting to the current one", async ({
+			expect,
+		}) => {
+			api = mockWebsocketAPIs(expect);
+			// The default create-tail mock only serves one request.
+			const extraCreation = mockCreateTailRequest(
+				expect,
+				"ws://localhost:1234"
+			);
+
+			const { tailPromise } = await startTail(
+				"tail test-worker --format=pretty"
+			);
+			await waitForPrettyConnected(expect);
+
+			// Reject the upgrade of the next connection, as the tail backend
+			// does once it no longer recognises a tail. The rejection is
+			// queued as a microtask so that it lands after the handler has
+			// finished attaching its listeners, like a real HTTP response.
+			const originalOn = MockWebSocket.prototype.on;
+			let rejectNextUpgrade = true;
+			const onSpy = vi
+				.spyOn(MockWebSocket.prototype, "on")
+				.mockImplementation(function (
+					this: MockWebSocket,
+					event: string | symbol,
+					listener: (...args: unknown[]) => void
+				) {
+					originalOn.call(this, event, listener);
+					if (event === "unexpected-response" && rejectNextUpgrade) {
+						rejectNextUpgrade = false;
+						queueMicrotask(() => this.rejectUpgrade(404));
+					}
+					return this;
+				});
+
+			try {
+				dropLatestConnection(api);
+
+				await vi.waitFor(
+					() => {
+						expect(std.out).toContain("Reconnected to test-worker");
+					},
+					{ timeout: 5000 }
+				);
+			} finally {
+				onSpy.mockRestore();
+			}
+
+			// The rejected tail was deleted and replaced within the same
+			// reconnect attempt.
+			expect(api.requests.creation.length + extraCreation.length).toStrictEqual(
+				2
+			);
+			expect(api.requests.deletion.count).toStrictEqual(1);
+			expect(std.warn).toContain("Reconnecting (attempt 1 of 5)");
+			expect(std.warn).not.toContain("Reconnecting (attempt 2 of 5)");
+
+			await api.closeHelper();
+			await tailPromise;
+
+			expect(api.requests.deletion.count).toStrictEqual(2);
+		});
+
+		it("creates a new tail when the current one has expired by the time it reconnects", async ({
+			expect,
+		}) => {
+			api = mockWebsocketAPIs(expect);
+			// Registered after `mockWebsocketAPIs` so that it takes priority
+			// and serves the first tail creation.
+			const expiredCreation = mockCreateTailRequest(
+				expect,
+				"ws://localhost:1234",
+				undefined,
+				undefined,
+				new Date(2000, 1)
+			);
+
+			const { tailPromise } = await startTail(
+				"tail test-worker --format=pretty"
+			);
+			await waitForPrettyConnected(expect);
+			expect(expiredCreation.length).toStrictEqual(1);
+			expect(api.requests.creation.length).toStrictEqual(0);
+
+			dropLatestConnection(api);
+
+			await vi.waitFor(
+				() => {
+					expect(std.out).toContain("Reconnected to test-worker");
+				},
+				{ timeout: 5000 }
+			);
+
+			// The expired tail was deleted and a new one created.
+			expect(api.requests.creation.length).toStrictEqual(1);
+			expect(api.requests.deletion.count).toStrictEqual(1);
+
 			await api.closeHelper();
 			await tailPromise;
 		});
@@ -1267,7 +1361,6 @@ describe("tail", () => {
 			expect,
 		}) => {
 			api = mockWebsocketAPIs(expect);
-			mockReusableWebsocketAPIs(expect);
 
 			// Suppress the pong for the very first ping only, so the first
 			// connection's keep-alive times out (exercising the
@@ -1323,6 +1416,8 @@ describe("tail", () => {
 			);
 			expect(std.warn).toContain("Reconnecting (attempt 1 of 5)");
 			expect(std.out).toContain("Reconnected to test-worker");
+			expect(api.requests.creation.length).toStrictEqual(1);
+			expect(api.requests.deletion.count).toStrictEqual(0);
 
 			vi.useRealTimers();
 
@@ -1545,13 +1640,17 @@ type RequestCounter = {
  * Mock out the API hit during Tail creation
  *
  * @param websocketURL a fake URL for wrangler to connect a websocket to
- * @returns a `RequestCounter` for counting how many times the API is hit
+ * @param env the environment name, if any
+ * @param expectedScriptName the Worker name the request should be for
+ * @param expiration when the created tail expires
+ * @returns the bodies of the requests that hit the API
  */
 function mockCreateTailRequest(
 	expect: ExpectStatic,
 	websocketURL: string,
 	env?: string,
-	expectedScriptName = env ? `test-worker-${env}` : "test-worker"
+	expectedScriptName = env ? `test-worker-${env}` : "test-worker",
+	expiration: Date = mockTailExpiration
 ): RequestInit[] {
 	const requests: RequestInit[] = [];
 	msw.use(
@@ -1569,7 +1668,7 @@ function mockCreateTailRequest(
 					createFetchResult({
 						url: websocketURL,
 						id: "tail-id",
-						expires_at: mockTailExpiration,
+						expires_at: expiration,
 					})
 				);
 			},
@@ -1640,6 +1739,29 @@ function mockDeleteTailRequest(
 let mockWebSockets: MockWebSocketServer[] = [];
 
 /**
+ * Simulate a transient network drop on the most recent connection to the mock
+ * websocket server by dispatching an abnormal close event directly on the
+ * client. The server-side mock is left intact so that a subsequent reconnect
+ * attempt can succeed.
+ *
+ * @param api the mocked API whose latest connection should be dropped
+ */
+function dropLatestConnection(api: MockAPI): void {
+	const clients = (
+		api.ws as unknown as {
+			server: { clients(): MockWebSocket[] };
+		}
+	).server.clients();
+	const latestClient = clients[clients.length - 1];
+	latestClient.dispatchEvent({
+		type: "close",
+		code: 1006,
+		reason: "transient drop",
+		wasClean: false,
+	} as unknown as Event);
+}
+
+/**
  * All-in-one convenience method to mock the appropriate API calls before
  * each test, and clean up afterwards.
  *
@@ -1702,24 +1824,6 @@ function mockWebsocketAPIs(
 	mockWebSockets.push(api.ws);
 
 	return api;
-}
-
-/**
- * Register additional create-tail mocks beyond the initial one set up by
- * {@link mockWebsocketAPIs}. The default MSW handler is `{ once: true }`, so
- * the reconnect path (which calls `createTail` again for each attempt)
- * would otherwise fail on the second tail creation.
- *
- * Call this in disconnect/reconnect tests so the handler can make
- * subsequent create-tail HTTP calls successfully.
- */
-function mockReusableWebsocketAPIs(
-	expect: ExpectStatic,
-	count: number = 5
-): void {
-	for (let i = 0; i < count; i++) {
-		mockCreateTailRequest(expect, "ws://localhost:1234");
-	}
 }
 
 /**
