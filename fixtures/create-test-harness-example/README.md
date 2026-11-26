@@ -1,8 +1,8 @@
-# Integration testing Workers with `createTestHarness()`
+# Integration testing Workers with `createTestServer()`
 
-This fixture is the complete runnable example linked from the `createTestHarness()` docs. It shows how to test a realistic multi-Worker app's production build output from different test runners.
+This fixture is the complete runnable example linked from the `createTestServer()` docs. It shows how to test a realistic multi-Worker app's production build output from different test runners.
 
-For the testing patterns demonstrated here, refer to the [`createTestHarness()` guide](https://developers.cloudflare.com/workers/testing/test-harness/).
+For the testing patterns demonstrated here, refer to the [`createTestServer()` guide](https://developers.cloudflare.com/workers/testing/test-harness/).
 
 ## Example app
 
@@ -60,9 +60,8 @@ pnpm --filter @fixture/create-test-harness-example test:playwright
 
 ## Related docs
 
-- [Write a basic integration test with `createTestHarness()`](https://developers.cloudflare.com/workers/testing/test-harness/get-started/)
+- [Write a basic integration test with `createTestServer()`](https://developers.cloudflare.com/workers/testing/test-harness/get-started/)
 - [Configure the test harness](https://developers.cloudflare.com/workers/testing/test-harness/configure/)
 - [Prepare test state](https://developers.cloudflare.com/workers/testing/test-harness/prepare-test-state/)
 - [Interact with Workers](https://developers.cloudflare.com/workers/testing/test-harness/interact-with-workers/)
 - [Integrations](https://developers.cloudflare.com/workers/testing/test-harness/integrations/)
-- [`createTestHarness()` API reference](https://developers.cloudflare.com/workers/wrangler/api/#createtestharness)

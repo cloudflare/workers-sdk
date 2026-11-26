@@ -1,8 +1,8 @@
-import { createTestHarness } from "@cloudflare/test-harness";
+import { createTestServer } from "@cloudflare/test-server";
 import { test as base, expect } from "@playwright/test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import type { TestHarness } from "@cloudflare/test-harness";
+import type { TestServer } from "@cloudflare/test-server";
 
 type TestFixtures = {
 	reset: void;
@@ -10,7 +10,7 @@ type TestFixtures = {
 
 type WorkerFixtures = {
 	network: ReturnType<typeof setupServer>;
-	server: TestHarness;
+	server: TestServer;
 };
 
 const test = base.extend<TestFixtures, WorkerFixtures>({
@@ -28,7 +28,7 @@ const test = base.extend<TestFixtures, WorkerFixtures>({
 
 	server: [
 		async ({}, use) => {
-			const server = createTestHarness({
+			const server = createTestServer({
 				workers: [
 					// Runs the Build Output in each project directory
 					{ projectDir: "./workers/web" },
@@ -67,7 +67,7 @@ const test = base.extend<TestFixtures, WorkerFixtures>({
 	],
 });
 
-test.describe("createTestHarness: Playwright setup", () => {
+test.describe("createTestServer: Playwright setup", () => {
 	test("renders a user profile", async ({ page, network }) => {
 		network.use(
 			http.get("http://identity.example.com/profile/:id", ({ params }) => {

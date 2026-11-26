@@ -1,4 +1,4 @@
-import { createTestHarness } from "@cloudflare/test-harness";
+import { createTestServer } from "@cloudflare/test-server";
 import { bindings } from "cf/config";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -12,7 +12,7 @@ import {
 } from "vitest";
 
 // Point each worker to the project containing its build output.
-const server = createTestHarness({
+const server = createTestServer({
 	workers: [
 		{
 			projectDir: "./workers/web",
@@ -38,11 +38,11 @@ const mockBrowserWorker =
 		"mock-browser"
 	);
 
-// Workers started by createTestHarness route outbound fetches to globalThis.fetch().
+// Workers started by createTestServer route outbound fetches to globalThis.fetch().
 // You can use libraries like MSW to intercept those requests.
 const network = setupServer();
 
-describe("createTestHarness: Vitest setup", () => {
+describe("createTestServer: Vitest setup", () => {
 	beforeAll(async () => {
 		network.listen({ onUnhandledRequest: "error" });
 		await server.listen();

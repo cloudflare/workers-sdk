@@ -301,9 +301,9 @@ importers:
 
   fixtures/create-test-harness-example:
     devDependencies:
-      '@cloudflare/test-harness':
+      '@cloudflare/test-server':
         specifier: workspace:*
-        version: link:../../packages/test-harness
+        version: link:../../packages/test-server
       '@cloudflare/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-cloudflare

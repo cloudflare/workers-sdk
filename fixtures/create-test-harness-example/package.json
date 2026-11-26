@@ -1,7 +1,7 @@
 {
 	"name": "@fixture/create-test-harness-example",
 	"private": true,
-	"description": "Integration tests with the createTestHarness() API",
+	"description": "Integration tests with the createTestServer() API",
 	"type": "module",
 	"scripts": {
 		"check:type": "tsc",
@@ -15,7 +15,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/test-harness": "workspace:*",
+		"@cloudflare/test-server": "workspace:*",
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
