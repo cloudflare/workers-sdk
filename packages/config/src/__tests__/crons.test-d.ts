@@ -1,6 +1,7 @@
 import { defineConfig, defineWorker } from "../definition";
 import { triggers } from "../triggers";
 import type { InferCrons, UnwrapConfig } from "../inference";
+import type { ScheduledTrigger } from "../triggers";
 
 type Equal<T, U> =
 	(<V>() => V extends T ? 1 : 2) extends <V>() => V extends U ? 1 : 2
@@ -72,6 +73,43 @@ export type BranchedCronsTest = Assert<
 	Equal<ConfigCrons<typeof branchedConfig>, "0 0 * * *" | "*/10 * * * *">
 >;
 
+declare const previewTriggers: {
+	triggers?: ScheduledTrigger<"0 1 * * *">[];
+};
+const optionalTriggersConfig = defineConfig((ctx) =>
+	ctx.isPreview
+		? {
+				worker: {
+					name: "preview-worker",
+					compatibilityDate: "2026-11-25",
+					...previewTriggers,
+				},
+			}
+		: {
+				worker: {
+					name: "production-worker",
+					compatibilityDate: "2026-11-25",
+					triggers: [triggers.scheduled({ schedule: "0 2 * * *" })],
+				},
+			}
+);
+export type OptionalTriggersCronsTest = Assert<
+	Equal<ConfigCrons<typeof optionalTriggersConfig>, "0 1 * * *" | "0 2 * * *">
+>;
+
+const maybeUndefinedTriggersConfig = defineConfig((ctx) => ({
+	worker: {
+		name: "maybe-undefined-worker",
+		compatibilityDate: "2026-11-25",
+		triggers: ctx.isPreview
+			? undefined
+			: [triggers.scheduled({ schedule: "0 3 * * *" })],
+	},
+}));
+export type MaybeUndefinedTriggersCronsTest = Assert<
+	Equal<ConfigCrons<typeof maybeUndefinedTriggersConfig>, "0 3 * * *">
+>;
+
 const asyncWorkerConfig = defineConfig({
 	worker: defineWorker(async () => ({
 		name: "async-worker",
@@ -96,6 +134,18 @@ const dynamicConfig = defineConfig({
 });
 export type DynamicCronsTest = Assert<
 	Equal<ConfigCrons<typeof dynamicConfig>, string>
+>;
+
+declare const minute: number;
+const templateConfig = defineConfig({
+	worker: {
+		name: "template-worker",
+		compatibilityDate: "2026-11-25",
+		triggers: [triggers.scheduled({ schedule: `${minute} * * * *` })],
+	},
+});
+export type TemplateCronsTest = Assert<
+	Equal<ConfigCrons<typeof templateConfig>, `${number} * * * *`>
 >;
 
 const noScheduledConfig = defineConfig({
