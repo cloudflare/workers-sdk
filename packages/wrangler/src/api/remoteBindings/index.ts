@@ -31,7 +31,7 @@ type WranglerWorkerConfigObject = WorkerConfigObject & {
 
 /**
  * Starts or updates a remote proxy session for a Wrangler config file or Worker config.
- * @param eagerAuth - Set to true to authenticate and connect during startup.
+ * @param eagerAuth - Set to true to authenticate and connect during startup instead of on the first remote binding call.
  */
 export function maybeStartOrUpdateRemoteProxySession(
 	wranglerOrWorkerConfigObject:

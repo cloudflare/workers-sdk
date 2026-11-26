@@ -66,6 +66,15 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				AI: { type: "ai" },
 				KV: { type: "kv_namespace", id: "kv", remote: true },
 			},
+			lazy: true,
+		},
+		{
+			bindings: { DB: { type: "d1", database_id: "db", remote: true } },
+			lazy: true,
+		},
+		{
+			bindings: { KV: { type: "kv_namespace", id: "kv", remote: true } },
+			eagerAuth: true,
 			lazy: false,
 		},
 		{
@@ -79,7 +88,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			lazy: false,
 		},
 	])(
-		"defers the connection only for remote-only resources without eagerAuth (%j)",
+		"defers the connection for all remote bindings unless eagerAuth is true (%j)",
 		async ({ bindings, eagerAuth, lazy }, { expect }) => {
 			const startSession = vi
 				.fn<typeof startRemoteProxySession>()
@@ -98,7 +107,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		}
 	);
 
-	it("restarts when adding a local-capable remote binding requires an eager connection", async ({
+	it("keeps the lazy session when switching from AI to remote KV", async ({
 		expect,
 	}) => {
 		const startSession = vi
@@ -115,29 +124,59 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			context,
 			startSession
 		);
-		const removed = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: {} },
+		const bindings: Record<string, Binding> = {
+			KV: { type: "kv_namespace", id: "kv", remote: true },
+		};
+		const next = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings },
 			first,
 			testAuth,
 			context,
 			startSession
 		);
-		expect(removed?.session).toBe(first?.session);
-		const next = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: { KV: { type: "kv_namespace", id: "kv", remote: true } } },
-			removed,
-			testAuth,
-			context,
-			startSession
-		);
-		expect(first?.session.dispose).toHaveBeenCalledOnce();
-		expect(next?.session).not.toBe(first?.session);
-		expect(startSession).toHaveBeenCalledTimes(2);
-		expect(startSession).toHaveBeenLastCalledWith(
-			expect.anything(),
-			expect.objectContaining({ lazy: false })
-		);
+		expect(first?.session.updateBindings).toHaveBeenCalledWith(bindings);
+		expect(first?.session.dispose).not.toHaveBeenCalled();
+		expect(next?.session).toBe(first?.session);
+		expect(next?.lazy).toBe(true);
+		expect(startSession).toHaveBeenCalledOnce();
 	});
+
+	it.for([false, true])(
+		"restarts the session when eagerAuth changes to %s",
+		async (eagerAuth, { expect }) => {
+			const startSession = vi.fn<typeof startRemoteProxySession>(async () =>
+				createTestSession()
+			);
+			const bindings: Record<string, Binding> = {
+				KV: { type: "kv_namespace", id: "kv", remote: true },
+			};
+			const context: RemoteBindingsContext = {
+				cliDisplayName: "Wrangler",
+				logger: createTestLogger(),
+			};
+			const first = await maybeStartOrUpdateRemoteProxySession(
+				{ bindings },
+				undefined,
+				testAuth,
+				{ ...context, eagerAuth: !eagerAuth },
+				startSession
+			);
+			const next = await maybeStartOrUpdateRemoteProxySession(
+				{ bindings },
+				first,
+				testAuth,
+				{ ...context, eagerAuth },
+				startSession
+			);
+			expect(first?.session.dispose).toHaveBeenCalledOnce();
+			expect(next?.session).not.toBe(first?.session);
+			expect(startSession).toHaveBeenCalledTimes(2);
+			expect(startSession).toHaveBeenLastCalledWith(
+				bindings,
+				expect.objectContaining({ lazy: !eagerAuth })
+			);
+		}
+	);
 	it.for([undefined, true])(
 		"selects K2 bindings for remote development with remote=%s",
 		(remote, { expect }) => {
@@ -236,6 +275,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				},
 			},
 			auth: testAuth,
+			lazy: true,
 		};
 
 		const result = await maybeStartOrUpdateRemoteProxySession(

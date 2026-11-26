@@ -186,7 +186,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
 				);
 
-				const response = await timedDispatchFetch(mf);
+				const response = await timedDispatchFetch(mf, 15_000);
 				const responseText = await response?.text();
 
 				expect(responseText).toEqual(
@@ -197,7 +197,9 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await proxySessionData.session.dispose();
 			});
 
-			test("user provided incorrect auth data", async ({ expect }) => {
+			test("rejects incorrect auth at startup with eagerAuth", async ({
+				expect,
+			}) => {
 				let error: unknown;
 				try {
 					await maybeStartOrUpdateRemoteProxySession(
@@ -216,7 +218,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 							apiToken: {
 								apiToken: "This is an incorrect API TOKEN!",
 							},
-						}
+						},
+						true
 					);
 				} catch (e) {
 					error = e;
@@ -235,10 +238,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	}
 );
 
-async function timedDispatchFetch(mf: MiniflareType): Promise<Response | null> {
+async function timedDispatchFetch(
+	mf: MiniflareType,
+	timeout = 5_000
+): Promise<Response | null> {
 	try {
 		return await mf.dispatchFetch("http://localhost/", {
-			signal: AbortSignal.timeout(5000),
+			signal: AbortSignal.timeout(timeout),
 		});
 	} catch {
 		return null;

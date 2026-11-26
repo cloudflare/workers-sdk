@@ -56,9 +56,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID || !E2E_ACCESS_WORKER_PREFIX)(
 				},
 			});
 
-			// AI is a remote-only binding, so the remote session (and its Access
-			// probe) is only established on the first binding call. The request
-			// itself fails once Access is detected, so its response is ignored.
+			// The lazy remote session doesn't probe Access until the first binding call.
+			// The request fails once Access is detected, so its response is ignored.
 			const { url } = await worker.waitForReady();
 			await fetchText(url, 30_000);
 

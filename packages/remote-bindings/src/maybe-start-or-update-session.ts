@@ -1,8 +1,5 @@
 import assert from "node:assert";
-import {
-	getBindingLocalSupport,
-	resolveBindingRemote,
-} from "@cloudflare/workers-utils/config";
+import { resolveBindingRemote } from "@cloudflare/workers-utils/config";
 import { getRemoteBindings } from "./config-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { ConfigBindings } from "./config-bindings";
@@ -100,11 +97,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	) {
 		return null;
 	}
-	const lazy =
-		!context.eagerAuth &&
-		(Object.keys(remoteBindings).length === 0
-			? (preExistingRemoteProxySessionData?.lazy ?? false)
-			: Object.values(remoteBindings).every(isRemoteOnlyBinding));
+	const lazy = !context.eagerAuth;
 	const authSameAsBefore =
 		(key !== undefined ||
 		preExistingRemoteProxySessionData?.authKey !== undefined
@@ -161,14 +154,6 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		authKey: key,
 		lazy,
 	};
-}
-
-function isRemoteOnlyBinding(binding: Binding): boolean {
-	const support = getBindingLocalSupport(binding.type);
-	return (
-		support === "remote" ||
-		support === "DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
-	);
 }
 
 function deepStrictEqual(source: unknown, target: unknown): boolean {
