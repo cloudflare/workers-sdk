@@ -11,12 +11,12 @@ import { getCloudflareApiBaseUrl } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
 import { fetch } from "undici";
 import { describe, it, onTestFinished, vi } from "vitest";
-import { CERT, KEY } from "../../miniflare/src/http/cert";
 import { quote } from "../src/utils/shell-quote";
 import {
 	CLOUDFLARE_ACCOUNT_ID,
 	E2E_ACCOUNT_WORKERS_DEV_DOMAIN,
 } from "./helpers/account-id";
+import { generateRootCaCert } from "./helpers/cert";
 import {
 	importWrangler,
 	WranglerE2ETestHelper,
@@ -65,9 +65,10 @@ describe("K2 producer configuration", () => {
 		expect,
 	}) => {
 		const helper = new WranglerE2ETestHelper();
+		const { certificate, privateKey } = generateRootCaCert("127.0.0.1");
 		await seedProducer(helper, streamId);
 		await helper.seed({
-			"localhost-ca.pem": CERT,
+			"localhost-ca.pem": certificate,
 			"platform-proxy.mjs": `
 				import assert from "node:assert/strict";
 				import { getPlatformProxy } from ${JSON.stringify(WRANGLER_IMPORT.href)};
@@ -84,7 +85,7 @@ describe("K2 producer configuration", () => {
 		});
 		const requests: string[] = [];
 		const server = createHttpsServer(
-			{ cert: CERT, key: KEY },
+			{ cert: certificate, key: privateKey },
 			(request, response) => {
 				requests.push(
 					new URL(request.url ?? "/", "https://localhost").pathname

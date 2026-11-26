@@ -22,6 +22,8 @@ type PlatformProxyRemoteSession = Pick<
 	"remoteProxyConnectionString" | "dispose"
 >;
 
+const SHUTDOWN_GRACE_MS = 5_000;
+
 /**
  * Start the configured remote bindings, if any. The caller owns disposal.
  * A lazy session inherits the environment at proxy creation, but only resolves
@@ -71,14 +73,23 @@ async function startBackgroundSession(
 			stdio: ["inherit", "inherit", "inherit", "ipc"],
 		}
 	);
+	let ready = false;
+	let disposePromise: Promise<void> | undefined;
 	const startup = Promise.withResolvers<StartupMessage>();
 	const exited = new Promise<void>((resolve) => {
 		child.once("exit", (code, signal) => {
-			startup.reject(
-				new Error(
-					`The getPlatformProxy remote session exited before it was ready (${signal ?? code}).`
-				)
-			);
+			const status = signal ?? `exit code ${code}`;
+			if (!ready) {
+				startup.reject(
+					new Error(
+						`The getPlatformProxy remote session exited before it was ready (${status}).`
+					)
+				);
+			} else if (!disposePromise) {
+				logger.warn(
+					`The getPlatformProxy remote session exited unexpectedly (${status}).`
+				);
+			}
 			resolve();
 		});
 		child.on("error", (error) => {
@@ -88,12 +99,23 @@ async function startBackgroundSession(
 			}
 		});
 	});
-	child.once("message", startup.resolve);
-	const dispose = async () => {
-		if (child.connected) {
-			child.disconnect();
+	child.once("message", (message: StartupMessage) => {
+		ready = message.type === "ready";
+		startup.resolve(message);
+	});
+	const dispose = () => {
+		if (!disposePromise) {
+			const timeout = setTimeout(
+				() => child.kill("SIGKILL"),
+				SHUTDOWN_GRACE_MS
+			);
+			timeout.unref();
+			disposePromise = exited.finally(() => clearTimeout(timeout));
+			if (child.connected) {
+				child.disconnect();
+			}
 		}
-		await exited;
+		return disposePromise;
 	};
 	try {
 		child.send(config, (error) => {

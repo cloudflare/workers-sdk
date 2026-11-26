@@ -2,6 +2,7 @@ import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import { logger } from "../logger";
 import { noProxy, proxy } from "./constants";
 
+/** Replace the process-wide Undici dispatcher when HTTP proxy environment variables are set. */
 export function configureHttpProxy(): void {
 	if (proxy) {
 		setGlobalDispatcher(

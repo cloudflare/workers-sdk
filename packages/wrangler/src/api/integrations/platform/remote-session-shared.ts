@@ -22,6 +22,13 @@ export type StartupMessage =
 			telemetryMessage?: string;
 	  };
 
+/**
+ * Start a remote bindings session using Wrangler's default authentication.
+ *
+ * @param config - Bindings and account settings for the session.
+ * @param lazy - Resolve credentials on the first binding request instead of at startup.
+ * @returns The session. The caller must dispose it when no longer needed.
+ */
 export function startSession(
 	{ bindings, accountId, ...options }: SessionConfig,
 	lazy: boolean
