@@ -1,6 +1,6 @@
 ---
-"@cloudflare/containers-shared": patch
-"wrangler": patch
+"@cloudflare/containers-shared": minor
+"wrangler": minor
 ---
 
 Accept `linux/arm64` images in `wrangler containers push` and `wrangler containers build`
