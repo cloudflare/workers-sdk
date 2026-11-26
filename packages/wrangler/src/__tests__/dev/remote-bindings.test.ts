@@ -817,7 +817,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		await wranglerStopped;
 	});
 
-	it("can disable lazy authentication with a Worker config object", async ({
+	it("can opt into eager authentication with a Worker config object", async ({
 		expect,
 	}) => {
 		const { maybeStartOrUpdateRemoteProxySession } =
@@ -832,7 +832,7 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 			},
 			undefined,
 			undefined,
-			false
+			true
 		);
 		expect(sessionOptions?.lazy).toBe(false);
 	});

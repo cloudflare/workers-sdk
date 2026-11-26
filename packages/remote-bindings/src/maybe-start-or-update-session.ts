@@ -73,8 +73,8 @@ export type RemoteProxySessionData = {
 export type RemoteBindingsContext = {
 	cliDisplayName: RemoteBindingsCliDisplayName;
 	logger: RemoteBindingsLogger;
-	/** Set to false when the consumer cannot connect on the first binding call. */
-	allowLazy?: boolean;
+	/** Authenticate and connect during startup instead of deferring to the first binding call. */
+	eagerAuth?: boolean;
 };
 
 /** Potentially starts or updates a remote proxy session. */
@@ -101,7 +101,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		return null;
 	}
 	const lazy =
-		context.allowLazy !== false &&
+		!context.eagerAuth &&
 		(Object.keys(remoteBindings).length === 0
 			? (preExistingRemoteProxySessionData?.lazy ?? false)
 			: Object.values(remoteBindings).every(isRemoteOnlyBinding));

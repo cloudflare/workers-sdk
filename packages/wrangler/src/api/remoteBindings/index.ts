@@ -31,7 +31,7 @@ type WranglerWorkerConfigObject = WorkerConfigObject & {
 
 /**
  * Starts or updates a remote proxy session for a Wrangler config file or Worker config.
- * @param allowLazy - Set to false to establish the remote connection during startup.
+ * @param eagerAuth - Set to true to authenticate and connect during startup.
  */
 export function maybeStartOrUpdateRemoteProxySession(
 	wranglerOrWorkerConfigObject:
@@ -39,7 +39,7 @@ export function maybeStartOrUpdateRemoteProxySession(
 		| WranglerWorkerConfigObject,
 	preExistingRemoteProxySessionData?: RemoteProxySessionData | null,
 	auth?: AsyncHook<CfAccount>,
-	allowLazy?: boolean
+	eagerAuth?: boolean
 ) {
 	if ("path" in wranglerOrWorkerConfigObject) {
 		const config = readConfig({
@@ -60,7 +60,7 @@ export function maybeStartOrUpdateRemoteProxySession(
 		workerConfigObject,
 		preExistingRemoteProxySessionData,
 		auth ?? getDefaultRemoteBindingsAuth(account_id, profileDir),
-		{ cliDisplayName: isCfAuthActive() ? "cf" : "Wrangler", logger, allowLazy },
+		{ cliDisplayName: isCfAuthActive() ? "cf" : "Wrangler", logger, eagerAuth },
 		startRemoteProxySession
 	);
 }

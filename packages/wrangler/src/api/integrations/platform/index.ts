@@ -200,7 +200,7 @@ export async function getPlatformProxy<
 			{ path: config.configPath, environment: env },
 			undefined,
 			undefined,
-			false
+			true
 		);
 		remoteProxySession = sessionData?.session;
 	}

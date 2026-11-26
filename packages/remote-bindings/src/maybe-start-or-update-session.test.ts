@@ -43,7 +43,7 @@ function createTestSession() {
 describe("maybeStartOrUpdateRemoteProxySession", () => {
 	it.for<{
 		bindings: Record<string, Binding>;
-		allowLazy?: boolean;
+		eagerAuth?: boolean;
 		lazy: boolean;
 	}>([
 		{ bindings: { AI: { type: "ai" } }, lazy: true },
@@ -70,12 +70,17 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		},
 		{
 			bindings: { ORDERS: { type: "k2", stream: "orders" } },
-			allowLazy: false,
+			eagerAuth: false,
+			lazy: true,
+		},
+		{
+			bindings: { ORDERS: { type: "k2", stream: "orders" } },
+			eagerAuth: true,
 			lazy: false,
 		},
 	])(
-		"defers the connection only for remote-only resources when allowed (%j)",
-		async ({ bindings, allowLazy, lazy }, { expect }) => {
+		"defers the connection only for remote-only resources without eagerAuth (%j)",
+		async ({ bindings, eagerAuth, lazy }, { expect }) => {
 			const startSession = vi
 				.fn<typeof startRemoteProxySession>()
 				.mockResolvedValue(createTestSession());
@@ -83,7 +88,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				{ bindings },
 				undefined,
 				testAuth,
-				{ cliDisplayName: "Wrangler", logger: createTestLogger(), allowLazy },
+				{ cliDisplayName: "Wrangler", logger: createTestLogger(), eagerAuth },
 				startSession
 			);
 			expect(startSession).toHaveBeenCalledWith(
