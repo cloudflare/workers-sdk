@@ -20,8 +20,6 @@ export type { StartRemoteProxySessionOptions } from "./start-remote-proxy-sessio
 type WranglerConfigObject = {
 	path: string;
 	environment?: string;
-	/** Set to false to establish the remote connection during startup. */
-	allowLazy?: boolean;
 };
 
 type WranglerWorkerConfigObject = WorkerConfigObject & {
@@ -31,17 +29,18 @@ type WranglerWorkerConfigObject = WorkerConfigObject & {
 	profileDir?: string;
 };
 
+/**
+ * Starts or updates a remote proxy session for a Wrangler config file or Worker config.
+ * @param allowLazy - Set to false to establish the remote connection during startup.
+ */
 export function maybeStartOrUpdateRemoteProxySession(
 	wranglerOrWorkerConfigObject:
 		| WranglerConfigObject
 		| WranglerWorkerConfigObject,
 	preExistingRemoteProxySessionData?: RemoteProxySessionData | null,
-	auth?: AsyncHook<CfAccount>
+	auth?: AsyncHook<CfAccount>,
+	allowLazy?: boolean
 ) {
-	const allowLazy =
-		"path" in wranglerOrWorkerConfigObject
-			? wranglerOrWorkerConfigObject.allowLazy
-			: undefined;
 	if ("path" in wranglerOrWorkerConfigObject) {
 		const config = readConfig({
 			config: wranglerOrWorkerConfigObject.path,

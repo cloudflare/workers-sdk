@@ -817,6 +817,26 @@ describe("dev with remote bindings", { concurrent: false, retry: 2 }, () => {
 		await wranglerStopped;
 	});
 
+	it("can disable lazy authentication with a Worker config object", async ({
+		expect,
+	}) => {
+		const { maybeStartOrUpdateRemoteProxySession } =
+			await import("../../api/remoteBindings");
+
+		await maybeStartOrUpdateRemoteProxySession(
+			{
+				name: "worker",
+				bindings: {
+					ORDERS: { type: "k2", stream: "0123456789abcdef0123456789abcdef" },
+				},
+			},
+			undefined,
+			undefined,
+			false
+		);
+		expect(sessionOptions?.lazy).toBe(false);
+	});
+
 	it("should not recreate the remote proxy session on reload when auth has not changed", async () => {
 		const { maybeStartOrUpdateRemoteProxySession } =
 			await import("../../api/remoteBindings");
