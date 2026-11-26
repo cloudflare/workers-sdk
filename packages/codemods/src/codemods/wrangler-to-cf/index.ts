@@ -1,6 +1,6 @@
 import path from "node:path";
+import { ensureCleanGitWorktree } from "@cloudflare/cli-shared-helpers/git";
 import { fileExists } from "../../files";
-import { ensureCleanGitWorktree } from "../../git";
 import { convertWranglerConfig } from "./config-converter";
 import { findSecretFiles, readWranglerConfig } from "./config-reader";
 import {
