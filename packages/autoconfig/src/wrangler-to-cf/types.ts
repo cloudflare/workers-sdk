@@ -3,9 +3,15 @@ export type MigrationBundler = "vite" | "wrangler";
 export interface WranglerToCfMigrationOptions {
 	bundler?: MigrationBundler;
 	dryRun?: boolean;
-	force?: boolean;
 	/** Whether to install cf and install or upgrade Vite plugin and Wrangler dependencies when needed. Required dependency changes become blocking follow-ups when false. */
 	installDependencies?: boolean;
+	/** The Worker settings of the framework set up for cf, which the migrated config also gets */
+	frameworkSettings?: Record<string, unknown>;
+	/**
+	 * The directory the framework builds its static assets into. A Wrangler assets directory
+	 * matching it is dropped without a follow-up, because the framework's build covers it.
+	 */
+	frameworkAssetsDirectory?: string;
 }
 
 export interface MigrationFollowUp {

@@ -11,7 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { satisfies, subset, valid, validRange } from "semver";
 import { glob } from "tinyglobby";
-import { fileExists } from "../../files";
+import { fileExists } from "./file-exists";
 import { getWranglerUpgradeSpec, isVersionSupported } from "./wrangler-version";
 import type { MigrationBundler } from "./types";
 import type { PackageManager } from "@cloudflare/workers-utils";

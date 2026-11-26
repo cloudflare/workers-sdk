@@ -1,13 +1,34 @@
 import path from "node:path";
+import { getDetailsForAutoConfig, runAutoConfig } from "@cloudflare/autoconfig";
 import { fileExists, filterByFileRestrictions } from "../../files";
-import { migrateWranglerToCf } from ".";
 import type { Codemod, CodemodContext } from "../../types";
+import type { AutoConfigContext } from "@cloudflare/autoconfig";
 
 const DEFAULT_CONFIG_FILES = [
 	"wrangler.json",
 	"wrangler.jsonc",
 	"wrangler.toml",
 ] as const;
+
+/** Runs autoconfig without asking, since running the codemod is the request. */
+const autoConfigContext: AutoConfigContext = {
+	logger: {
+		log: console.log,
+		info: console.log,
+		warn: console.warn,
+		debug: () => {},
+		error: console.error,
+	},
+	dialogs: {
+		confirm: async (_text, options) => options?.defaultValue ?? true,
+		prompt: async (_text, options) => options?.defaultValue ?? "",
+		select: async (_text, options) =>
+			options.choices[options.defaultOption ?? 0]?.value ?? "",
+	},
+	runCommand: () => {
+		throw new Error("The wrangler-to-cf codemod doesn't build the project.");
+	},
+};
 
 async function getConfigPath(context: CodemodContext): Promise<string> {
 	if (context.configPath) {
@@ -45,7 +66,7 @@ async function getConfigPath(context: CodemodContext): Promise<string> {
 export const wranglerToCfCodemod: Codemod = {
 	name: "wrangler-to-cf",
 	aliases: ["wrangler to cf"],
-	description: `Migrate a Wrangler configuration to the cf configuration format`,
+	description: `Migrate a Wrangler project to cf, including its configuration and framework`,
 	managesGitWorktreeSafety: true,
 	run: async (context) => {
 		const configPath = await getConfigPath(context);
@@ -63,16 +84,34 @@ export const wranglerToCfCodemod: Codemod = {
 			};
 		}
 
-		const result = await migrateWranglerToCf(includedConfigPath, {
-			bundler: context.bundler,
-			dryRun: context.dryRun,
-			force: context.force,
-			installDependencies: context.installDependencies,
+		const details = await getDetailsForAutoConfig({
+			projectPath: context.cwd,
+			wranglerConfigPath: includedConfigPath,
+			target: "cf",
+			context: autoConfigContext,
 		});
+		if (details.configured) {
+			throw new Error(
+				`Cannot migrate because ${path.join(context.cwd, "cloudflare.config.ts")} already exists. Inspect and finish the existing migration; it will not be overwritten. Automated agents should read its TODOs and ask the user about unresolved choices.`
+			);
+		}
+		const { wranglerMigration } = await runAutoConfig(details, {
+			target: "cf",
+			context: autoConfigContext,
+			dryRun: context.dryRun,
+			skipConfirmations: true,
+			runBuild: false,
+			bundler: context.bundler,
+			requireCleanGitWorktree: !context.force,
+			enableTargetCliInstallation: context.installDependencies,
+		});
+		if (!wranglerMigration) {
+			throw new Error("Autoconfig did not migrate the Wrangler config.");
+		}
 
 		return {
-			...result,
-			changedFiles: result.changedFiles.map((filePath) =>
+			...wranglerMigration,
+			changedFiles: wranglerMigration.changedFiles.map((filePath) =>
 				path
 					.relative(
 						context.cwd,

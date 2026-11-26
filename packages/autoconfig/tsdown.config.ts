@@ -3,7 +3,11 @@ import { EXTERNAL_DEPENDENCIES } from "./scripts/deps.ts";
 
 export default defineConfig([
 	{
-		entry: ["src/index.ts"],
+		entry: {
+			index: "src/index.ts",
+			// The in-memory converter, without the rest of autoconfig
+			"wrangler-to-cf": "src/wrangler-to-cf/convert.ts",
+		},
 		platform: "node",
 		outputOptions: { keepNames: true },
 		inputOptions: { resolve: { mainFields: ["module", "main"] } },

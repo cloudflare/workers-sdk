@@ -408,6 +408,7 @@ function convertBranch(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	bundler: MigrationBundler,
+	frameworkAssetsDirectory: string | undefined,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): ConvertedBranch {
@@ -415,6 +416,7 @@ function convertBranch(
 		source,
 		sourcePrefix,
 		bundler,
+		frameworkAssetsDirectory,
 		imports,
 		followUps
 	);
@@ -455,6 +457,7 @@ function convertBranch(
 			previewSource,
 			previewPath,
 			bundler,
+			frameworkAssetsDirectory,
 			imports,
 			followUps
 		),
@@ -486,7 +489,8 @@ function convertToolingBranch(
 export function convertWranglerConfig(
 	rawConfig: RawConfig,
 	bundler: MigrationBundler,
-	secretFiles: string[]
+	secretFiles: string[],
+	frameworkAssetsDirectory?: string
 ): ConvertedWranglerConfig {
 	const source = rawConfig as UnknownRecord;
 	const imports = new Set<string>();
@@ -593,7 +597,14 @@ export function convertWranglerConfig(
 	}
 
 	const baseSource = createBranchSource(source, {});
-	const base = convertBranch(baseSource, "", bundler, imports, followUps);
+	const base = convertBranch(
+		baseSource,
+		"",
+		bundler,
+		frameworkAssetsDirectory,
+		imports,
+		followUps
+	);
 	const toolingBase = isWranglerBundle
 		? convertToolingBranch(baseSource)
 		: undefined;
@@ -612,6 +623,7 @@ export function convertWranglerConfig(
 				environmentSource,
 				`env.${name}`,
 				bundler,
+				frameworkAssetsDirectory,
 				imports,
 				followUps
 			)

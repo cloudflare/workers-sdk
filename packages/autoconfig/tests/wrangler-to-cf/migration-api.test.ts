@@ -11,11 +11,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { afterEach, describe, it, vi } from "vitest";
-import { migrateWranglerToCf } from "../../src";
+import { migrateWranglerToCf } from "../../src/wrangler-to-cf";
 import {
 	rewriteMigrationOutput,
 	writeMigrationOutputs,
-} from "../../src/codemods/wrangler-to-cf/file-writer";
+} from "../../src/wrangler-to-cf/file-writer";
 
 const temporaryDirectories: string[] = [];
 
@@ -23,20 +23,17 @@ vi.mock("@cloudflare/cli-shared-helpers/packages", () => ({
 	installPackages: vi.fn(),
 }));
 
-vi.mock(
-	"../../src/codemods/wrangler-to-cf/file-writer",
-	async (importOriginal) => {
-		const original =
-			await importOriginal<
-				typeof import("../../src/codemods/wrangler-to-cf/file-writer")
-			>();
-		return {
-			...original,
-			rewriteMigrationOutput: vi.fn(original.rewriteMigrationOutput),
-			writeMigrationOutputs: vi.fn(original.writeMigrationOutputs),
-		};
-	}
-);
+vi.mock("../../src/wrangler-to-cf/file-writer", async (importOriginal) => {
+	const original =
+		await importOriginal<
+			typeof import("../../src/wrangler-to-cf/file-writer")
+		>();
+	return {
+		...original,
+		rewriteMigrationOutput: vi.fn(original.rewriteMigrationOutput),
+		writeMigrationOutputs: vi.fn(original.writeMigrationOutputs),
+	};
+});
 
 async function createProject(files: Record<string, string>): Promise<string> {
 	const directory = await mkdtemp(path.join(tmpdir(), "wrangler-to-cf-"));
@@ -1833,6 +1830,69 @@ describe("migrateWranglerToCf", () => {
 		).rejects.toMatchObject({ code: "ENOENT" });
 	});
 
+	it("adds the framework's Worker settings to the migrated config", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({ devDependencies: { cf: "1.0.0" } }),
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				compatibility_flags: ["nodejs_compat"],
+				kv_namespaces: [{ binding: "KV", id: "kv-id" }],
+				name: "example-worker",
+			}),
+		});
+
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+			frameworkSettings: {
+				entrypoint: "@astrojs/cloudflare/entrypoints/server",
+				compatibilityFlags: ["global_fetch_strictly_public"],
+				env: { ASSETS: { type: "assets" } },
+			},
+		});
+
+		const cloudflareConfig = await readFile(
+			path.join(cwd, "cloudflare.config.ts"),
+			"utf8"
+		);
+		expect(cloudflareConfig).toContain(
+			'entrypoint: "@astrojs/cloudflare/entrypoints/server"'
+		);
+		expect(cloudflareConfig).toMatch(
+			/"nodejs_compat",\s*"global_fetch_strictly_public"/
+		);
+		expect(cloudflareConfig).toContain("KV: bindings.kv(");
+		expect(cloudflareConfig).toContain('type: "assets"');
+	});
+
+	it("keeps the follow-up for an assets directory the framework doesn't build", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"package.json": JSON.stringify({
+				devDependencies: {
+					"@cloudflare/vite-plugin": "^2.0.0-rc.0",
+					cf: "1.0.0",
+				},
+			}),
+			"wrangler.json": JSON.stringify({
+				assets: { directory: "./static-downloads" },
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+
+		const result = await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
+			frameworkAssetsDirectory: "dist",
+		});
+
+		expect(result).toMatchObject({
+			followUps: [expect.objectContaining({ code: "vite-assets-directory" })],
+			status: "needs-intervention",
+		});
+	});
+
 	it("never overwrites existing output", async ({ expect }) => {
 		const existing = "export default {};\n";
 		const cwd = await createProject({
@@ -1844,7 +1904,7 @@ describe("migrateWranglerToCf", () => {
 		});
 
 		await expect(
-			migrateWranglerToCf(path.join(cwd, "wrangler.json"), { force: true })
+			migrateWranglerToCf(path.join(cwd, "wrangler.json"))
 		).rejects.toThrow("already exists");
 		expect(await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")).toBe(
 			existing

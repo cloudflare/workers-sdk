@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, relative, resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -32,6 +32,7 @@ import {
 import {
 	isFrameworkSupported,
 	isKnownFramework,
+	requiresFrameworkSetup,
 	type PackageJsonScriptsOverrides,
 	validateFrameworkTargetSupport,
 } from "./frameworks";
@@ -62,7 +63,9 @@ import type { RawConfig } from "@cloudflare/workers-utils/config";
 /**
  * Runs the full autoconfig flow: displays detected settings, confirms with the user,
  * validates the framework version, runs framework configuration, writes configuration,
- * updates package.json scripts, and optionally runs the build command.
+ * updates package.json scripts, and optionally runs the build command. For a Wrangler project, the
+ * Worker configuration is its migrated Wrangler config, and its framework is only set up when
+ * autoconfig can set it up for cf.
  *
  * @param autoConfigDetails - The detected project details from `getDetailsForAutoConfig()`.
  * @param autoConfigOptions - Options controlling dry-run, confirmations, build, and context.
@@ -98,9 +101,36 @@ export async function runAutoConfig(
 
 	autoConfigDetails = updatedAutoConfigDetails;
 	assertNonConfigured(autoConfigDetails);
-	validateFrameworkTargetSupport(autoConfigDetails.framework, target);
 
-	if (isKnownFramework(autoConfigDetails.framework.id, target)) {
+	const { framework, outputDir, projectPath, wranglerConfigPath } =
+		autoConfigDetails;
+	// Framework setup works on the project root, so it only follows a migration of the root's Wrangler config
+	const cfFramework =
+		wranglerConfigPath !== undefined &&
+		requiresFrameworkSetup(framework.id) &&
+		dirname(wranglerConfigPath) === resolve(projectPath);
+	const bundler =
+		autoConfigOptions.bundler ??
+		(cfFramework ||
+		autoConfigDetails.packageJson?.dependencies?.["@cloudflare/vite-plugin"] !==
+			undefined ||
+		autoConfigDetails.packageJson?.devDependencies?.[
+			"@cloudflare/vite-plugin"
+		] !== undefined
+			? "vite"
+			: "wrangler");
+	// A Wrangler config provides the Worker config, so the framework is only set up when autoconfig can set it up for cf
+	const setUpFramework =
+		wranglerConfigPath === undefined || (cfFramework && bundler === "vite");
+
+	// A Wrangler config provides the Worker config of a framework that autoconfig doesn't set up
+	if (wranglerConfigPath === undefined) {
+		validateFrameworkTargetSupport(framework, target);
+	}
+	if (
+		wranglerConfigPath === undefined &&
+		isKnownFramework(autoConfigDetails.framework.id, target)
+	) {
 		const frameworkIsSupported = isFrameworkSupported(
 			autoConfigDetails.framework.id,
 			target
@@ -115,11 +145,6 @@ export async function runAutoConfig(
 		}
 	}
 
-	assert(
-		autoConfigDetails.outputDir,
-		"The Output Directory is unexpectedly missing"
-	);
-
 	const compatibilityDate = DEFAULT_COMPAT_DATE;
 
 	const defaultWorkerConfig: WorkerConfig = {
@@ -133,33 +158,53 @@ export async function runAutoConfig(
 	const { packageManager } = autoConfigDetails;
 	const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
 
-	const frameworkPackageInfo = getFrameworkPackageInfo(
-		autoConfigDetails.framework.id,
-		target
-	);
+	/**
+	 * Runs the framework's setup, or returns no settings when the framework isn't set up.
+	 *
+	 * @param dryRunSetup Whether to only report the settings, without changing anything
+	 * @returns The framework's configuration results
+	 */
+	const configureFramework = async (
+		dryRunSetup: boolean
+	): Promise<ConfigurationResults> => {
+		if (!setUpFramework) {
+			return { workerConfig: {} };
+		}
+		assert(outputDir, "The Output Directory is unexpectedly missing");
+		return framework.configure({
+			target,
+			outputDir,
+			projectPath,
+			workerName: autoConfigDetails.workerName,
+			isWorkspaceRoot,
+			dryRun: dryRunSetup,
+			packageManager,
+			context,
+		});
+	};
+
+	const frameworkPackageInfo = setUpFramework
+		? getFrameworkPackageInfo(framework.id, target)
+		: undefined;
 	if (frameworkPackageInfo) {
-		autoConfigDetails.framework.validateFrameworkVersion(
-			autoConfigDetails.projectPath,
+		framework.validateFrameworkVersion(
+			projectPath,
 			frameworkPackageInfo,
 			context
 		);
 	}
 
-	const dryRunConfigurationResults =
-		await autoConfigDetails.framework.configure({
-			target,
-			outputDir: autoConfigDetails.outputDir,
-			projectPath: autoConfigDetails.projectPath,
-			workerName: autoConfigDetails.workerName,
-			isWorkspaceRoot,
-			dryRun: true,
-			packageManager,
-			context,
-		});
+	const dryRunConfigurationResults = await configureFramework(true);
 	const dryRunWorkerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
 		dryRunConfigurationResults.workerConfig
 	);
+	const migrationOptions = {
+		bundler,
+		installDependencies: enableTargetCliInstallation,
+		// The framework's build covers the assets it builds
+		frameworkAssetsDirectory: setUpFramework ? outputDir : undefined,
+	};
 	if (
 		target === "cf" &&
 		dryRunConfigurationResults.buildTool === "wrangler" &&
@@ -190,7 +235,7 @@ export async function runAutoConfig(
 	}
 
 	const autoConfigSummary = await buildOperationsSummary(
-		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
+		autoConfigDetails,
 		dryRunWorkerConfig,
 		dryRunConfigurationResults,
 		{
@@ -220,6 +265,18 @@ export async function runAutoConfig(
 	}
 
 	if (dryRun) {
+		if (wranglerConfigPath !== undefined) {
+			const { migrateWranglerToCf } = await import("./wrangler-to-cf");
+			autoConfigSummary.wranglerMigration = await migrateWranglerToCf(
+				wranglerConfigPath,
+				{
+					...migrationOptions,
+					dryRun: true,
+					frameworkSettings:
+						dryRunConfigurationResults.workerConfig ?? undefined,
+				}
+			);
+		}
 		logger.log(`✋  ${"Autoconfig process run in dry-run mode, exiting now."}`);
 		logger.log("");
 
@@ -229,6 +286,13 @@ export async function runAutoConfig(
 	logger.debug(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
+
+	if (autoConfigOptions.requireCleanGitWorktree) {
+		// Loaded on use, so that importing autoconfig doesn't load the Git helper
+		const { ensureCleanGitWorktree } =
+			await import("@cloudflare/cli-shared-helpers/git");
+		await ensureCleanGitWorktree(projectPath, false);
+	}
 
 	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
 		if (target === "cf") {
@@ -254,16 +318,7 @@ export async function runAutoConfig(
 		await installWrangler(packageManager.type, isWorkspaceRoot);
 	}
 
-	const configurationResults = await autoConfigDetails.framework.configure({
-		target,
-		outputDir: autoConfigDetails.outputDir,
-		projectPath: autoConfigDetails.projectPath,
-		workerName: autoConfigDetails.workerName,
-		isWorkspaceRoot,
-		dryRun: false,
-		packageManager,
-		context,
-	});
+	const configurationResults = await configureFramework(false);
 	const workerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
 		configurationResults.workerConfig
@@ -307,7 +362,23 @@ export async function runAutoConfig(
 	}
 
 	if (target === "cf") {
-		if (workerConfig !== null) {
+		if (wranglerConfigPath !== undefined) {
+			if (setUpFramework) {
+				// Framework setup can scaffold its own cloudflare.config.ts, as `astro add` does.
+				// Detection found none before setup, so the migrated one, which also gets the
+				// framework's settings, replaces it.
+				await rm(resolve(projectPath, "cloudflare.config.ts"), { force: true });
+			}
+			// Loaded on use, so that importing autoconfig doesn't load the migration
+			const { migrateWranglerToCf } = await import("./wrangler-to-cf");
+			autoConfigSummary.wranglerMigration = await migrateWranglerToCf(
+				wranglerConfigPath,
+				{
+					...migrationOptions,
+					frameworkSettings: configurationResults.workerConfig ?? undefined,
+				}
+			);
+		} else if (workerConfig !== null) {
 			await saveCloudflareConfig(autoConfigDetails.projectPath, workerConfig);
 		}
 		// Only projects with Worker code (an entrypoint) use the types that `cf-typegen` generates
@@ -597,9 +668,7 @@ function indentFileContent(content: string): string {
  * @returns A summary object describing all planned operations.
  */
 export async function buildOperationsSummary(
-	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject & {
-		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
-	},
+	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject,
 	workerConfig: WorkerConfig | null,
 	configurationResults: ConfigurationResults,
 	projectCommands: {
@@ -716,7 +785,12 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	if (target === "cf" && workerConfig) {
+	if (target === "cf" && autoConfigDetails.wranglerConfigPath !== undefined) {
+		logger.log(
+			`📄 Migrate ${relative(autoConfigDetails.projectPath, autoConfigDetails.wranglerConfigPath)} to cloudflare.config.ts`
+		);
+		logger.log("");
+	} else if (target === "cf" && workerConfig) {
 		logger.log("📄 Create cloudflare.config.ts:");
 		logger.log(indentFileContent(renderCloudflareConfig(workerConfig)));
 		logger.log("");

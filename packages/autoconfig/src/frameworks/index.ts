@@ -64,6 +64,27 @@ export function isFrameworkSupported(
 }
 
 /**
+ * Checks whether autoconfig sets up a framework for cf when migrating a Wrangler project.
+ * Static projects, and frameworks that autoconfig cannot set up for cf, only get their
+ * Worker config migrated. So do Next.js projects: `vinext init` refuses projects that
+ * still have a Wrangler configuration.
+ *
+ * @param frameworkId The id of the framework
+ * @returns Whether a Wrangler project gets its framework set up for cf
+ */
+export function requiresFrameworkSetup(frameworkId: string): boolean {
+	const frameworkInfo = getAllFrameworksInfos("cf").find(
+		({ id }) => id === frameworkId
+	);
+	return (
+		frameworkInfo?.supported === true &&
+		frameworkInfo.supportsCf &&
+		frameworkInfo.id !== staticFramework.id &&
+		frameworkInfo.id !== "next"
+	);
+}
+
+/**
  * Validates that a framework supports the requested autoconfig target.
  *
  * @param framework - The detected framework.

@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
-import { convertBindings } from "../src/codemods/wrangler-to-cf/bindings";
-import type { MigrationFollowUp } from "../src/codemods/wrangler-to-cf/types";
+import { convertBindings } from "../../src/wrangler-to-cf/bindings";
+import type { MigrationFollowUp } from "../../src/wrangler-to-cf/types";
 
 describe("Wrangler binding conversion", () => {
 	it("converts supported bindings and reports manual work", ({ expect }) => {

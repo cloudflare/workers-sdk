@@ -1,8 +1,5 @@
-import { convertWranglerConfig as convert } from "./codemods/wrangler-to-cf/config-converter";
-import type {
-	ConvertedWranglerConfig,
-	MigrationBundler,
-} from "./codemods/wrangler-to-cf/types";
+import { convertWranglerConfig as convert } from "./config-converter";
+import type { ConvertedWranglerConfig, MigrationBundler } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 export type {
@@ -15,7 +12,7 @@ export type {
 	OutputObject,
 	OutputProperty,
 	OutputValue,
-} from "./codemods/wrangler-to-cf/types";
+} from "./types";
 
 /**
  * Converts a parsed Wrangler configuration to the new cf configuration in memory.

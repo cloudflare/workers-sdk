@@ -19,7 +19,7 @@ Run a codemod by name:
 Options:
   --cwd <path>     Project directory (default: current directory)
   --config <path>  Exact Wrangler config path (wrangler-to-cf only)
-  --bundler <name> Bundler to migrate to: vite or wrangler (default: vite)
+  --bundler <name> Bundler to migrate to: vite or wrangler (default: from the project)
   --files <glob>   Restrict files considered; may be repeated
   --dry-run        List changes without writing files
   --force          Run even if the Git worktree is not clean

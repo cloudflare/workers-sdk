@@ -1,18 +1,18 @@
 import path from "node:path";
-import { ensureCleanGitWorktree } from "@cloudflare/cli-shared-helpers/git";
-import { fileExists } from "../../files";
 import { convertWranglerConfig } from "./config-converter";
 import { findSecretFiles, readWranglerConfig } from "./config-reader";
 import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "./config-renderer";
+import { fileExists } from "./file-exists";
 import {
 	cleanupMigrationOutputs,
 	rewriteMigrationOutput,
 	writeMigrationOutputs,
 } from "./file-writer";
 import { createFollowUp } from "./follow-ups";
+import { addFrameworkSettings } from "./framework-settings";
 import {
 	DependencyInstallError,
 	installProjectDependencies,
@@ -59,7 +59,7 @@ function formatDependencies(packages: string[]): string {
  * Migrates one exact Wrangler configuration file to the new cf configuration.
  *
  * @param configPath Path to a Wrangler JSON, JSONC, or TOML configuration file.
- * @param options Optional bundler selection and write-safety controls.
+ * @param options Optional bundler selection, framework settings and dependency controls.
  *
  * @returns Generated file paths and any follow-up work left for the caller.
  */
@@ -70,8 +70,9 @@ export async function migrateWranglerToCf(
 	const {
 		bundler = "vite",
 		dryRun = false,
-		force = false,
 		installDependencies = true,
+		frameworkSettings,
+		frameworkAssetsDirectory,
 	} = options;
 	if (bundler !== "vite" && bundler !== "wrangler") {
 		throw new Error(
@@ -87,9 +88,6 @@ export async function migrateWranglerToCf(
 	);
 
 	await assertTargetsDoNotExist([cloudflareConfigPath]);
-	if (!dryRun) {
-		await ensureCleanGitWorktree(projectDirectory, force);
-	}
 
 	const [rawConfig, secretFiles] = await Promise.all([
 		readWranglerConfig(absoluteConfigPath),
@@ -98,8 +96,12 @@ export async function migrateWranglerToCf(
 	const convertedConfig = convertWranglerConfig(
 		rawConfig,
 		bundler,
-		secretFiles
+		secretFiles,
+		frameworkAssetsDirectory
 	);
+	if (frameworkSettings) {
+		addFrameworkSettings(convertedConfig, frameworkSettings);
+	}
 	const wranglerConfig = renderWranglerConfig(convertedConfig);
 	const [cfDepPlan, wranglerDepPlan, vitePluginDepPlan] = await Promise.all([
 		planCfDependencyInstallation(projectDirectory),

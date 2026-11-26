@@ -32,7 +32,6 @@ import type { PackageJSON } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils/config";
 
 const CLOUDFLARE_CONFIG_FILE = "cloudflare.config.ts";
-
 /**
  * Asserts that the current project being targeted for autoconfig is not already configured.
  *
@@ -138,6 +137,7 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
+	wranglerConfigPath,
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
@@ -146,6 +146,12 @@ export async function getDetailsForAutoConfig({
 	projectPath?: string;
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
+	/**
+	 * For the cf target, the Wrangler config file that setup migrates to `cloudflare.config.ts`.
+	 * Ignored when `cloudflare.config.ts` already exists. Relative paths are resolved against
+	 * `projectPath`.
+	 */
+	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
@@ -183,6 +189,12 @@ export async function getDetailsForAutoConfig({
 			packageManager: NpmPackageManager,
 		};
 	}
+
+	// An existing cloudflare.config.ts takes precedence, so a migrated project isn't migrated again
+	const wranglerConfigFile =
+		target === "cf" && !hasCloudflareConfig && wranglerConfigPath !== undefined
+			? resolve(projectPath, wranglerConfigPath)
+			: undefined;
 
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
@@ -295,7 +307,8 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	if (!outputDir) {
+	// A Wrangler config can serve a Worker without any static assets
+	if (!outputDir && wranglerConfigFile === undefined) {
 		const errorMessage =
 			framework.id === "static" || framework.id === "cloudflare-pages"
 				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
@@ -313,6 +326,7 @@ export async function getDetailsForAutoConfig({
 		outputDir,
 		configured: false,
 		isWorkspaceRoot,
+		wranglerConfigPath: wranglerConfigFile,
 	};
 }
 

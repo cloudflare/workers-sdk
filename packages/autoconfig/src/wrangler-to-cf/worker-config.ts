@@ -1,3 +1,4 @@
+import path from "node:path";
 import { convertBindings } from "./bindings";
 import {
 	addProperty,
@@ -91,6 +92,7 @@ export function convertWorkerConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	bundler: MigrationBundler,
+	frameworkAssetsDirectory: string | undefined,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): OutputObject {
@@ -195,7 +197,17 @@ export function convertWorkerConfig(
 		if (runtimeAssets.properties.length > 0) {
 			properties.push({ key: "assets", value: runtimeAssets });
 		}
-		if (bundler === "vite" && hasOwn(assets, "directory")) {
+		if (
+			bundler === "vite" &&
+			hasOwn(assets, "directory") &&
+			!(
+				frameworkAssetsDirectory !== undefined &&
+				typeof assets.directory === "string" &&
+				// The framework builds its static assets into this directory, so its setup covers them
+				path.resolve(assets.directory) ===
+					path.resolve(frameworkAssetsDirectory)
+			)
+		) {
 			report(
 				createFollowUp(
 					"vite-assets-directory",
@@ -390,6 +402,7 @@ export function convertRootConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	bundler: MigrationBundler,
+	frameworkAssetsDirectory: string | undefined,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): OutputObject {
@@ -410,6 +423,7 @@ export function convertRootConfig(
 			source,
 			sourcePrefix,
 			bundler,
+			frameworkAssetsDirectory,
 			imports,
 			followUps
 		),
