@@ -22,11 +22,11 @@ const VINEXT_CONFIGURATION_DESCRIPTION =
 export class NextJs extends Framework {
 	async configure(
 		options: ConfigurationOptions
-	): Promise<ConfigurationResults> {
+	): Promise<ConfigurationResults | null> {
 		// `vinext init` refuses projects that still have a Wrangler configuration, and both tools
 		// install packages, so such a project only keeps its own Worker config for now
 		if (options.existingWorkerConfig || options.installDependencies === false) {
-			return { workerConfig: {}, skipped: true };
+			return null;
 		}
 		// The summary displays this description after the dry run, so it names the tool that will run
 		if (this.shouldUseVinext(options.target)) {
@@ -69,7 +69,7 @@ async function configureWithVinext({
 	projectPath,
 	workerName,
 	packageManager,
-}: ConfigurationOptions): Promise<ConfigurationResults> {
+}: ConfigurationOptions): Promise<ConfigurationResults | null> {
 	const { npx, dlx } = packageManager;
 
 	if (!dryRun) {
@@ -113,7 +113,7 @@ async function configureWithOpenNext({
 	dryRun,
 	projectPath,
 	packageManager,
-}: ConfigurationOptions): Promise<ConfigurationResults> {
+}: ConfigurationOptions): Promise<ConfigurationResults | null> {
 	const { npx, dlx } = packageManager;
 
 	if (!dryRun) {

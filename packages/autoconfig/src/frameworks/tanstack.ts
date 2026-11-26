@@ -20,10 +20,10 @@ export class TanstackStart extends Framework {
 		target,
 		existingWorkerConfig,
 		installDependencies,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
 		// Setup installs the Vite plugin
 		if (installDependencies === false) {
-			return { workerConfig: {}, skipped: true };
+			return null;
 		}
 		if (!dryRun) {
 			await installCloudflareVitePlugin({

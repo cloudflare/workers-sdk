@@ -1,7 +1,7 @@
 import { describe, it } from "vitest";
 import {
 	getFrameworkClassInstance,
-	getFrameworkSupportError,
+	validateFrameworkTargetSupport,
 } from "../../src/frameworks";
 
 const WRANGLER_ONLY_FRAMEWORKS = [
@@ -20,7 +20,7 @@ describe("cf framework configuration support", () => {
 		(id, { expect }) => {
 			const framework = getFrameworkClassInstance(id, "cf");
 
-			expect(getFrameworkSupportError(framework, "cf")?.message).toBe(
+			expect(() => validateFrameworkTargetSupport(framework, "cf")).toThrow(
 				`cf does not support ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`
 			);
 		}
@@ -31,7 +31,9 @@ describe("cf framework configuration support", () => {
 		(id, { expect }) => {
 			const framework = getFrameworkClassInstance(id, "wrangler");
 
-			expect(getFrameworkSupportError(framework, "wrangler")).toBeUndefined();
+			expect(() =>
+				validateFrameworkTargetSupport(framework, "wrangler")
+			).not.toThrow();
 		}
 	);
 
@@ -46,6 +48,6 @@ describe("cf framework configuration support", () => {
 	] as const)("allows %s projects when targeting cf", (id, { expect }) => {
 		const framework = getFrameworkClassInstance(id, "cf");
 
-		expect(getFrameworkSupportError(framework, "cf")).toBeUndefined();
+		expect(() => validateFrameworkTargetSupport(framework, "cf")).not.toThrow();
 	});
 });

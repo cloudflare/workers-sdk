@@ -9,6 +9,7 @@ import {
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
+import { validateFrameworkTargetSupport } from ".";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -18,7 +19,16 @@ export class Analog extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		target,
+		existingWorkerConfig,
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
+		// cf can't set up this framework yet: a project with its own Worker config keeps it as is
+		if (target === "cf") {
+			if (existingWorkerConfig) {
+				return null;
+			}
+			validateFrameworkTargetSupport(this, target);
+		}
 		if (!dryRun) {
 			await updateViteConfig(projectPath);
 		}

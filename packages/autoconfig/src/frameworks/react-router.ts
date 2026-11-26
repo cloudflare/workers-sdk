@@ -488,10 +488,10 @@ export class ReactRouter extends Framework {
 		target,
 		existingWorkerConfig,
 		installDependencies,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
 		// Setup installs the Vite plugin and isbot
 		if (installDependencies === false) {
-			return { workerConfig: {}, skipped: true };
+			return null;
 		}
 		const useMiddlewarePattern = hasV8MiddlewareFlag(
 			projectPath,

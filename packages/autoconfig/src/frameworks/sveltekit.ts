@@ -3,6 +3,7 @@ import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { Framework } from "./framework-class";
+import { validateFrameworkTargetSupport } from ".";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -13,7 +14,16 @@ export class SvelteKit extends Framework {
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		target,
+		existingWorkerConfig,
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
+		// cf can't set up this framework yet: a project with its own Worker config keeps it as is
+		if (target === "cf") {
+			if (existingWorkerConfig) {
+				return null;
+			}
+			validateFrameworkTargetSupport(this, target);
+		}
 		const { dlx } = packageManager;
 		if (!dryRun) {
 			await runCommand(

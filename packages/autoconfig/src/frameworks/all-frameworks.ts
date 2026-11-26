@@ -325,9 +325,12 @@ export function getFrameworkPackageInfo(
 			frameworkId
 		)}`
 	);
-	assert(
-		targetedFramework.supported,
-		`Framework unexpectedly not supported ${JSON.stringify(frameworkId)}`
-	);
+	// A framework that can't be set up for the target has no version to check
+	if (
+		!targetedFramework.supported ||
+		(target === "cf" && !targetedFramework.supportsCf)
+	) {
+		return undefined;
+	}
 	return targetedFramework.frameworkPackageInfo;
 }

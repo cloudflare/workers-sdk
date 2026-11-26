@@ -10,6 +10,7 @@ import * as recast from "recast";
 import * as typescriptParser from "recast/parsers/typescript";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
+import { validateFrameworkTargetSupport } from ".";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -21,7 +22,16 @@ export class Qwik extends Framework {
 		projectPath,
 		dryRun,
 		packageManager,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		target,
+		existingWorkerConfig,
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
+		// cf can't set up this framework yet: a project with its own Worker config keeps it as is
+		if (target === "cf") {
+			if (existingWorkerConfig) {
+				return null;
+			}
+			validateFrameworkTargetSupport(this, target);
+		}
 		if (!dryRun) {
 			// Add the workers integration
 			const cmd = [

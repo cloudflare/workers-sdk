@@ -38,10 +38,10 @@ export class Astro extends Framework {
 		context,
 		existingWorkerConfig,
 		installDependencies,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
 		// `astro add` installs the Cloudflare adapter
 		if (installDependencies === false) {
-			return { workerConfig: {}, skipped: true };
+			return null;
 		}
 		const astroVersion = this.frameworkVersion;
 

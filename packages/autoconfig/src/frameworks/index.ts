@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { FatalError } from "@cloudflare/workers-utils";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getAllFrameworksInfos, staticFramework } from "./all-frameworks";
 import { NoOpFramework } from "./no-op";
@@ -65,37 +64,31 @@ export function isFrameworkSupported(
 }
 
 /**
- * Explains why autoconfig can't set up a framework for the requested target, if it can't.
+ * Validates that a framework supports the requested autoconfig target.
  *
  * @param framework - The detected framework.
  * @param target - The requested autoconfig target.
- * @returns The error to report, or `undefined` when autoconfig can set up the framework.
+ * @throws {AutoConfigFrameworkConfigurationError} If a Wrangler-only framework is targeted by `cf`.
  */
-export function getFrameworkSupportError(
+export function validateFrameworkTargetSupport(
 	framework: Framework,
 	target: AutoConfigTarget
-): Error | undefined {
+): void {
+	if (target !== "cf") {
+		return;
+	}
+
 	const frameworkInfo = getAllFrameworksInfos(target).find(
 		({ id }) => id === framework.id
 	);
-	if (frameworkInfo === undefined) {
-		return undefined;
+	if (frameworkInfo?.supported !== true || frameworkInfo.supportsCf) {
+		return;
 	}
-	if (!frameworkInfo.supported) {
-		return new FatalError(
-			framework.id === "cloudflare-pages"
-				? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
-				: `The detected framework ("${framework.name}") cannot be automatically configured.`,
-			{ telemetryMessage: "autoconfig run framework unsupported" }
-		);
-	}
-	if (target === "cf" && !frameworkInfo.supportsCf) {
-		return new AutoConfigFrameworkConfigurationError(
-			`cf does not support ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
-			{ telemetryMessage: "autoconfig framework unsupported for cf" }
-		);
-	}
-	return undefined;
+
+	throw new AutoConfigFrameworkConfigurationError(
+		`cf does not support ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
+		{ telemetryMessage: "autoconfig framework unsupported for cf" }
+	);
 }
 
 export type FrameworkInfo = {

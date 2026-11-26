@@ -8,6 +8,7 @@ import { parseJSONC } from "@cloudflare/workers-utils";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
+import { validateFrameworkTargetSupport } from ".";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -21,7 +22,16 @@ export class Angular extends Framework {
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		target,
+		existingWorkerConfig,
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
+		// cf can't set up this framework yet: a project with its own Worker config keeps it as is
+		if (target === "cf") {
+			if (existingWorkerConfig) {
+				return null;
+			}
+			validateFrameworkTargetSupport(this, target);
+		}
 		const angularJson = parseJSONC(
 			await readFile(resolve("angular.json"), "utf8")
 		) as AngularJson;

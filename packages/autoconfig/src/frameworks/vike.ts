@@ -8,6 +8,7 @@ import * as recast from "recast";
 import { Framework } from "./framework-class";
 import { isPackageInstalled } from "./utils/packages";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import { validateFrameworkTargetSupport } from ".";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -27,7 +28,16 @@ export class Vike extends Framework {
 		dryRun,
 		packageManager,
 		isWorkspaceRoot,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		target,
+		existingWorkerConfig,
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
+		// cf can't set up this framework yet: a project with its own Worker config keeps it as is
+		if (target === "cf") {
+			if (existingWorkerConfig) {
+				return null;
+			}
+			validateFrameworkTargetSupport(this, target);
+		}
 		const vikeServerIsInstalled = isPackageInstalled(
 			"vike-server",
 			projectPath

@@ -37,11 +37,11 @@ export class SolidStart extends Framework {
 		context,
 		existingWorkerConfig,
 		installDependencies,
-	}: ConfigurationOptions): Promise<ConfigurationResults> {
+	}: ConfigurationOptions): Promise<ConfigurationResults | null> {
 		if (target === "cf") {
 			// Setup installs the Vite plugin
 			if (installDependencies === false) {
-				return { workerConfig: {}, skipped: true };
+				return null;
 			}
 			// SolidStart 2 runs on Vite environments, so its `ssr` environment can run on the
 			// Cloudflare Vite plugin instead of Nitro, as SolidStart's deployment guide describes

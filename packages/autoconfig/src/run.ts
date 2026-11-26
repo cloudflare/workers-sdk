@@ -30,10 +30,6 @@ import {
 	getDetailsForAutoConfig,
 } from "./details";
 import { AutoConfigDetectionError } from "./errors";
-import {
-	getFrameworkSupportError,
-	type PackageJsonScriptsOverrides,
-} from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./frameworks/utils/vite-plugin-version";
@@ -44,6 +40,7 @@ import {
 } from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
+import type { PackageJsonScriptsOverrides } from "./frameworks";
 import type {
 	BuildConfig,
 	ConfigurationResults,
@@ -109,29 +106,6 @@ export async function runAutoConfig(
 		wranglerConfigPath === undefined
 			? undefined
 			: { entrypoint: autoConfigDetails.wranglerConfig?.main };
-	const frameworkSupportError = getFrameworkSupportError(framework, target);
-	// A project with its own Worker config is still set up without a framework that autoconfig
-	// can't set up. Pages projects aren't supported either way.
-	if (
-		frameworkSupportError &&
-		(existingWorkerConfig === undefined || framework.id === "cloudflare-pages")
-	) {
-		throw frameworkSupportError;
-	}
-	if (target === "wrangler") {
-		assert(outputDir, "The Output Directory is unexpectedly missing");
-	} else if (!outputDir && existingWorkerConfig === undefined) {
-		throw new AutoConfigDetectionError(
-			framework.id === "static"
-				? `Couldn't tell what to deploy in ${projectPath}: it has no supported framework, no Wrangler config and no index.html (in the folder or a folder directly inside it). Check that you're in the project's folder, or add a cloudflare.config.ts that describes your Worker.`
-				: `Couldn't find where ${framework.name} writes its build output in ${projectPath}.`,
-			{
-				telemetryMessage: "autoconfig run output directory missing",
-				frameworkId: framework.id,
-				configured: false,
-			}
-		);
-	}
 
 	const compatibilityDate = DEFAULT_COMPAT_DATE;
 
@@ -154,27 +128,24 @@ export async function runAutoConfig(
 	 */
 	const configureFramework = async (
 		dryRunSetup: boolean
-	): Promise<ConfigurationResults> =>
-		frameworkSupportError
-			? { workerConfig: {}, skipped: true }
-			: framework.configure({
-					target,
-					outputDir,
-					projectPath,
-					workerName: autoConfigDetails.workerName,
-					isWorkspaceRoot,
-					dryRun: dryRunSetup,
-					packageManager,
-					context,
-					existingWorkerConfig,
-					installDependencies,
-				});
+	): Promise<ConfigurationResults | null> =>
+		framework.configure({
+			target,
+			outputDir,
+			projectPath,
+			workerName: autoConfigDetails.workerName,
+			isWorkspaceRoot,
+			dryRun: dryRunSetup,
+			packageManager,
+			context,
+			existingWorkerConfig,
+			installDependencies,
+		});
 
 	// Frameworks only set up when they can install packages, so only then does their installed version matter
-	const frameworkPackageInfo =
-		frameworkSupportError === undefined && installDependencies
-			? getFrameworkPackageInfo(framework.id, target)
-			: undefined;
+	const frameworkPackageInfo = installDependencies
+		? getFrameworkPackageInfo(framework.id, target)
+		: undefined;
 	if (frameworkPackageInfo) {
 		framework.validateFrameworkVersion(
 			projectPath,
@@ -183,7 +154,25 @@ export async function runAutoConfig(
 		);
 	}
 
-	const dryRunConfigurationResults = await configureFramework(true);
+	// `null` means the framework's setup does nothing for this project
+	const dryRunFrameworkResults = await configureFramework(true);
+	const dryRunConfigurationResults = dryRunFrameworkResults ?? {
+		workerConfig: {},
+	};
+	if (target === "wrangler") {
+		assert(outputDir, "The Output Directory is unexpectedly missing");
+	} else if (!outputDir && existingWorkerConfig === undefined) {
+		throw new AutoConfigDetectionError(
+			framework.id === "static"
+				? `Couldn't tell what to deploy in ${projectPath}: it has no supported framework, no Wrangler config and no index.html (in the folder or a folder directly inside it). Check that you're in the project's folder, or add a cloudflare.config.ts that describes your Worker.`
+				: `Couldn't find where ${framework.name} writes its build output in ${projectPath}.`,
+			{
+				telemetryMessage: "autoconfig run output directory missing",
+				frameworkId: framework.id,
+				configured: false,
+			}
+		);
+	}
 	const dryRunWorkerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
 		dryRunConfigurationResults.workerConfig
@@ -219,9 +208,8 @@ export async function runAutoConfig(
 		// Detection already read the Wrangler config
 		wranglerConfig: autoConfigDetails.wranglerConfig,
 		// The framework's build covers the assets it builds
-		frameworkAssetsDirectory: dryRunConfigurationResults.skipped
-			? undefined
-			: outputDir,
+		frameworkAssetsDirectory:
+			dryRunFrameworkResults === null ? undefined : outputDir,
 	} as const;
 	if (
 		target === "cf" &&
@@ -255,7 +243,7 @@ export async function runAutoConfig(
 	const autoConfigSummary = await buildOperationsSummary(
 		autoConfigDetails,
 		dryRunWorkerConfig,
-		dryRunConfigurationResults,
+		dryRunFrameworkResults,
 		{
 			build: buildCommand,
 			deploy:
@@ -330,7 +318,9 @@ export async function runAutoConfig(
 		await installWrangler(packageManager.type, isWorkspaceRoot);
 	}
 
-	const configurationResults = await configureFramework(false);
+	const configurationResults = (await configureFramework(false)) ?? {
+		workerConfig: {},
+	};
 	const workerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
 		configurationResults.workerConfig
@@ -665,7 +655,7 @@ function indentFileContent(content: string): string {
  *
  * @param autoConfigDetails - The detected project details.
  * @param workerConfig - The resolved Worker configuration.
- * @param configurationResults - The framework configuration results.
+ * @param frameworkResults - The framework configuration results, or `null` when its setup does nothing.
  * @param projectCommands - The build, deploy, and version commands for the project.
  * @param enableTargetCliInstallation - Whether to install the selected target CLI package.
  * @param target - The configuration target.
@@ -676,7 +666,7 @@ function indentFileContent(content: string): string {
 export async function buildOperationsSummary(
 	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject,
 	workerConfig: WorkerConfig | null,
-	configurationResults: ConfigurationResults,
+	frameworkResults: ConfigurationResults | null,
 	projectCommands: {
 		build?: string;
 		deploy: string;
@@ -688,6 +678,7 @@ export async function buildOperationsSummary(
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
 	const { logger } = context;
+	const configurationResults = frameworkResults ?? { workerConfig: {} };
 	logger.log("");
 	const wranglerConfig =
 		target === "wrangler"
@@ -833,7 +824,7 @@ export async function buildOperationsSummary(
 
 	if (
 		autoConfigDetails.framework &&
-		!configurationResults.skipped &&
+		frameworkResults !== null &&
 		!(autoConfigDetails.framework instanceof Static) &&
 		!autoConfigDetails.framework.isConfigured(autoConfigDetails.projectPath, {
 			target,
