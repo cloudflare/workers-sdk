@@ -225,16 +225,6 @@ export async function getDetailsForAutoConfig({
 				? resolve(projectPath, wranglerConfigPath)
 				: findWranglerConfigFile(projectPath)
 			: undefined;
-	// The migrated config keeps the Wrangler config's relative paths, so both are in the project folder
-	if (
-		wranglerConfigFile !== undefined &&
-		dirname(wranglerConfigFile) !== resolve(projectPath)
-	) {
-		throw new UserError(
-			`Migrating a Wrangler config from outside the project folder isn't supported yet: ${wranglerConfigFile} is in ${dirname(wranglerConfigFile)}, but cloudflare.config.ts goes in ${resolve(projectPath)}. Move the Wrangler config into the project folder, or use ${dirname(wranglerConfigFile)} as the project.`,
-			{ telemetryMessage: "autoconfig details wrangler config outside project" }
-		);
-	}
 
 	const wranglerRawConfig =
 		wranglerConfigFile === undefined

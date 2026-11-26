@@ -141,25 +141,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 	});
 
-	it("should refuse a given Wrangler config outside the project folder", async ({
-		expect,
-	}) => {
-		await seed({
-			"package.json": JSON.stringify({ name: "my-worker" }),
-			"config/wrangler.jsonc": JSON.stringify({ name: "my-worker" }),
-		});
-
-		// The migrated config keeps the Wrangler config's relative paths
-		await expect(
-			details.getDetailsForAutoConfig({
-				wranglerConfigPath: "config/wrangler.jsonc",
-				context,
-			})
-		).rejects.toThrow(
-			"Migrating a Wrangler config from outside the project folder isn't supported yet"
-		);
-	});
-
 	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
 		expect,
 	}) => {
