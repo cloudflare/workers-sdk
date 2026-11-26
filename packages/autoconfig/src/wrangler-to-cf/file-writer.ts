@@ -41,7 +41,7 @@ export async function rewriteMigrationOutput(
 }
 
 /**
- * Writes generated migration files and removes files created by this invocation
+ * Writes generated migration files and removes the files this invocation wrote
  * if a later write fails.
  *
  * @param outputs Absolute file paths mapped to their generated contents.
@@ -53,7 +53,7 @@ export async function writeMigrationOutputs(
 
 	try {
 		for (const [filePath, contents] of outputs) {
-			const file = await open(filePath, "wx");
+			const file = await open(filePath, "w");
 			createdFiles.push(filePath);
 			try {
 				await file.writeFile(contents);

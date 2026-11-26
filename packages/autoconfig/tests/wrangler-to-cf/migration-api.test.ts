@@ -1896,21 +1896,21 @@ describe("migrateWranglerToCf", () => {
 		});
 	});
 
-	it("never overwrites existing output", async ({ expect }) => {
-		const existing = "export default {};\n";
+	it("replaces a cloudflare.config.ts that framework setup wrote", async ({
+		expect,
+	}) => {
 		const cwd = await createProject({
-			"cloudflare.config.ts": existing,
+			"cloudflare.config.ts": "export default {};\n",
 			"wrangler.json": JSON.stringify({
 				compatibility_date: "2026-09-23",
 				name: "example-worker",
 			}),
 		});
 
-		await expect(
-			migrateWranglerToCf(path.join(cwd, "wrangler.json"))
-		).rejects.toThrow("already exists");
-		expect(await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")).toBe(
-			existing
-		);
+		await migrateWranglerToCf(path.join(cwd, "wrangler.json"));
+
+		expect(
+			await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")
+		).toContain('name: "example-worker"');
 	});
 });

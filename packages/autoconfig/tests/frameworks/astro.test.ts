@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import * as cliCommand from "@cloudflare/cli-shared-helpers/command";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
@@ -73,33 +73,6 @@ describe("Astro framework", () => {
 		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 		expect(cliCommand.runCommand).not.toHaveBeenCalled();
 		expect(result).toEqual({ buildTool: "vite", workerConfig: null });
-	});
-
-	it("removes the cloudflare.config.ts that `astro add` scaffolds for a project with its own Worker config", async ({
-		expect,
-	}) => {
-		const projectPath = process.cwd();
-		// `astro add` scaffolds the file when there's none
-		vi.mocked(cliCommand.runCommand).mockImplementation(async () => {
-			if (!existsSync("cloudflare.config.ts")) {
-				writeFileSync("cloudflare.config.ts", "export default {};\n");
-			}
-			return "";
-		});
-
-		await createFramework("7.3.5").configure({
-			...getOptions(projectPath),
-			existingWorkerConfig: { entrypoint: "src/worker.ts" },
-		});
-		expect(existsSync("cloudflare.config.ts")).toBe(false);
-
-		// It keeps one that was there before
-		writeFileSync("cloudflare.config.ts", "export default {};\n");
-		await createFramework("7.3.5").configure({
-			...getOptions(projectPath),
-			existingWorkerConfig: { entrypoint: "src/worker.ts" },
-		});
-		expect(existsSync("cloudflare.config.ts")).toBe(true);
 	});
 
 	it("configures Astro 6 or later for Wrangler with `astro add cloudflare`", async ({

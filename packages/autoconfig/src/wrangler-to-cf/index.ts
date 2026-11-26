@@ -5,7 +5,6 @@ import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "./config-renderer";
-import { fileExists } from "./file-exists";
 import {
 	cleanupMigrationOutputs,
 	rewriteMigrationOutput,
@@ -34,18 +33,6 @@ export type {
 	WranglerToCfMigrationOptions,
 	WranglerToCfMigrationResult,
 } from "./types";
-
-async function assertTargetsDoNotExist(filePaths: string[]): Promise<void> {
-	const targetsExist = await Promise.all(filePaths.map(fileExists));
-	const existingTarget = filePaths.find((_, index) => targetsExist[index]);
-	if (existingTarget === undefined) {
-		return;
-	}
-
-	throw new Error(
-		`Cannot migrate because ${existingTarget} already exists. Inspect and finish the existing migration; it will not be overwritten. Automated agents should read its TODOs and ask the user about unresolved choices.`
-	);
-}
 
 function formatDependencies(packages: string[]): string {
 	const formatted = packages.map((packageName) => `\`${packageName}\``);
@@ -86,8 +73,6 @@ export async function migrateWranglerToCf(
 		projectDirectory,
 		"cloudflare.config.ts"
 	);
-
-	await assertTargetsDoNotExist([cloudflareConfigPath]);
 
 	const [rawConfig, secretFiles] = await Promise.all([
 		options.wranglerConfig ?? readWranglerConfig(absoluteConfigPath),
@@ -227,8 +212,6 @@ export async function migrateWranglerToCf(
 		cfDepPlan.action !== "already-installed" ||
 		wranglerDepPlan.action !== "none" ||
 		vitePluginDepPlan.action !== "none";
-
-	await assertTargetsDoNotExist(Array.from(outputs.keys()));
 
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
