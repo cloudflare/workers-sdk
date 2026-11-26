@@ -176,6 +176,7 @@ describe("ProxyClient", () => {
 								increment(counter) { return counter.increment(); }
 								text(response) { return response.text(); }
 								colo(request) { return request.cf?.colo; }
+								cache(request) { return request.cache; }
 							}
 						`),
 					},
@@ -194,6 +195,7 @@ describe("ProxyClient", () => {
 				increment(counter: { increment(): Promise<number> }): Promise<number>;
 				text(response: Response | Blob | object): Promise<string>;
 				colo(request: Request): Promise<string>;
+				cache(request: globalThis.Request): Promise<string>;
 			};
 		}>();
 		// Service bindings aren't functions, like in `workerd`, and are reused
@@ -201,6 +203,7 @@ describe("ProxyClient", () => {
 		expect((await mf.getBindings()).BINDING).toBe(BINDING);
 		expect("property" in BINDING).toBe(true);
 		expect(`${BINDING}`).toBe("[object Object]");
+		expect((BINDING as Partial<Disposable>)[Symbol.dispose]).toBeUndefined();
 		expect(await BINDING.property).toBe("value");
 		expect(await BINDING.getCounter().increment()).toBe(1);
 		expect(await BINDING.callback((value) => value.toUpperCase())).toBe(
@@ -221,6 +224,8 @@ describe("ProxyClient", () => {
 			keepalive: true,
 		});
 		expect(await BINDING.text(keepalive)).toBe("body");
+		const noStore = new globalThis.Request("http://x", { cache: "no-store" });
+		expect(await BINDING.cache(noStore)).toBe("no-store");
 		expect(
 			await BINDING.colo(new Request("http://x", { cf: { colo: "LHR" } }))
 		).toBe("LHR");
@@ -275,9 +280,9 @@ describe("ProxyClient", () => {
 
 		const { BINDING } = await mf.getBindings<{
 			BINDING: {
-				size(value: Uint8Array | number[]): Promise<number>;
+				size(value: Uint8Array | number[] | Blob): Promise<number>;
 				streamSize(stream: ReadableStream, ...rest: unknown[]): Promise<number>;
-				bodySize(response: Response): Promise<number>;
+				bodySize(body: Response | globalThis.Request): Promise<number>;
 				callback(fn: () => string): Promise<number>;
 			};
 		}>();
@@ -299,6 +304,14 @@ describe("ProxyClient", () => {
 		// Including bodies, which Node.js reads in one chunk here
 		const body = new Uint8Array(streamSize);
 		expect(await BINDING.bodySize(new Response(body))).toBe(streamSize);
+		const request = new globalThis.Request("http://x", {
+			method: "POST",
+			body,
+		});
+		expect(await BINDING.bodySize(request)).toBe(streamSize);
+		// Like in `workerd`, blobs count towards the limit
+		const blob = new Blob([new Uint8Array(25 * 1024 * 1024)]);
+		expect(() => BINDING.size(blob)).toThrow(RangeError);
 		// Rejected calls don't lock stream arguments, so they can be retried
 		const retried = new Blob(["abc"]).stream();
 		expect(() =>

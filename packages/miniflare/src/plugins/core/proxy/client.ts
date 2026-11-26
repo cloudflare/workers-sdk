@@ -72,6 +72,15 @@ function isNativeTarget(value: unknown): value is NativeTarget {
 	return typeof value === "object" && value !== null && kAddress in value;
 }
 
+// Service bindings and Durable Object stubs, which `workerd` doesn't make
+// callable or disposable, unlike other Workers RPC stubs
+function isServiceTarget(target: NativeTarget | undefined): boolean {
+	const name = target?.[kName];
+	return (
+		name === "Fetcher" || (name !== undefined && isDurableObjectStub(name))
+	);
+}
+
 // Workers RPC proxies that aren't functions (e.g. for service bindings)
 function isRpcProxyObject(value: unknown): boolean {
 	return (
@@ -186,8 +195,8 @@ function restoreErrorName(error: unknown) {
  * Converts `Headers`, `Request`s and `Response`s to Node's globals, the only
  * ones Cap'n Web can serialise (e.g. from Miniflare's `undici` classes).
  * Bodies are replaced, as Node.js may read them in chunks too large to send.
- * `Request`s keep the fields the rest of the proxy sends, as Node.js rejects
- * stream bodies for others (e.g. `keepalive`, "no-cors" `mode`).
+ * `Request`s keep the fields `workerd` keeps over Workers RPC. Others (e.g.
+ * `keepalive`, `mode`) are dropped, as Node.js rejects some with stream bodies.
  *
  * @param value Argument about to be sent over Cap'n Web
  * @param encodeBody Encodes a body like a stream argument
@@ -210,6 +219,7 @@ function toGlobalHTTPObject(
 			headers: [...value.headers.entries()],
 			body: (value.body && encodeBody(value.body)) as globalThis.ReadableStream,
 			redirect: value.redirect as globalThis.RequestInit["redirect"],
+			cache: value.cache,
 			duplex: value.body === null ? undefined : "half",
 		} as globalThis.RequestInit);
 	} else if (isResponseLike(value)) {
@@ -550,13 +560,10 @@ class ProxyClientBridge {
 	 */
 	createRpcProxy(ref: RpcStubRef, options: RpcProxyOptions = {}): object {
 		const handler = new RpcProxyHandler(this, ref, options);
-		// Cap'n Web stubs are callable, so this must be too, apart from service
-		// bindings and Durable Object stubs, which aren't functions in `workerd`
-		const name = options.target?.[kName];
-		const isService =
-			name === "Fetcher" || (name !== undefined && isDurableObjectStub(name));
+		// Cap'n Web stubs are callable, so this must be too, apart from services
+		const callable = !isServiceTarget(options.target);
 		// `util.inspect()` inspects the target directly, rather than the `Proxy`
-		const proxyTarget = Object.assign(isService ? {} : () => {}, {
+		const proxyTarget = Object.assign(callable ? () => {} : {}, {
 			[util.inspect.custom]: handler.inspect,
 		});
 		const proxy = new Proxy(proxyTarget, handler);
@@ -634,7 +641,8 @@ class ProxyClientBridge {
 		}
 		if (value instanceof ReadableStream) {
 			// Piping a locked stream would fail after the call is sent, leaving the
-			// Worker reading a stream that never ends
+			// Worker reading a stream that never ends. Cap'n Web does the same
+			// (https://github.com/cloudflare/capnweb/issues/295).
 			if (value.locked) {
 				throw new TypeError("Cannot send a locked ReadableStream");
 			}
@@ -642,14 +650,15 @@ class ProxyClientBridge {
 			state.streams.push([value, splitter]);
 			return splitter.readable;
 		}
-		// Cap'n Web only accepts exact `Blob`s, but Node.js sometimes returns
-		// subclasses (e.g. from `Blob#slice()` in Node.js 22)
-		if (
-			value instanceof Blob &&
-			!(value instanceof File) &&
-			Object.getPrototypeOf(value) !== Blob.prototype
-		) {
-			return new Blob([value], { type: value.type });
+		if (value instanceof Blob && !(value instanceof File)) {
+			// `workerd` counts blobs towards the limit too. Cap'n Web streams them,
+			// but Node.js reads them in one chunk.
+			state.inlineSize += Math.ceil(value.size / 3) * 4;
+			// Cap'n Web only accepts exact `Blob`s, but Node.js sometimes returns
+			// subclasses (e.g. from `Blob#slice()` in Node.js 22)
+			return Object.getPrototypeOf(value) === Blob.prototype
+				? value
+				: new Blob([value], { type: value.type });
 		}
 		const globalHTTPObject = toGlobalHTTPObject(value, (body) =>
 			this.#encode(body, state)
@@ -838,7 +847,9 @@ class RpcProxyHandler implements ProxyHandler<object> {
 		}
 		if (key === Symbol.dispose) {
 			// Only stubs, and promises for call results, are disposable
-			return this.#raw[Symbol.dispose];
+			return isServiceTarget(this.options.target)
+				? undefined
+				: this.#raw[Symbol.dispose];
 		}
 		// Ignore all other symbol properties, or `then()`s of stubs, which
 		// shouldn't be thenable
