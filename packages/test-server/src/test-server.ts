@@ -5,7 +5,7 @@ import { applyD1Migrations } from "@cloudflare/workers-utils/apply-d1-migrations
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { CorePaths, Headers, Miniflare, Request } from "miniflare";
 import {
-	createHarnessContext,
+	createServerContext,
 	disposeRemoteProxySessions,
 	resolveWorkerInputs,
 } from "./runtime";
@@ -42,14 +42,14 @@ import type {
 	WorkerOptions,
 } from "miniflare";
 
-export type TestHarnessOptions = {
+export type TestServerOptions = {
 	/**
 	 * Base directory that relative `projectDir` paths resolve from.
 	 * Defaults to `process.cwd()`.
 	 */
 	root?: string | undefined;
 	/**
-	 * Workers to run in this harness. The first worker is the primary worker.
+	 * Workers to run in this server. The first worker is the primary worker.
 	 */
 	workers: WorkerInput[];
 };
@@ -200,7 +200,7 @@ export type WorkerHandle<
 	 * @example
 	 * ```ts
 	 * type Env = { GREETING: string; STORE: KVNamespace };
-	 * const env = await harness.getWorker().getEnv<Env>();
+	 * const env = await server.getWorker().getEnv<Env>();
 	 * await env.STORE.put("key", env.GREETING);
 	 * ```
 	 */
@@ -307,20 +307,20 @@ export type WorkerHandle<
 	 * ```ts
 	 * type ApiWorker = { getMessage(): string };
 	 *
-	 * const api = await harness.getWorker("api-worker").getExport<ApiWorker>();
+	 * const api = await server.getWorker("api-worker").getExport<ApiWorker>();
 	 * api.getMessage();
 	 * ```
 	 */
 	getExport<Export = Module["default"]>(): Promise<WorkerExport<Export>>;
 };
 
-export type TestHarness = {
+export type TestServer = {
 	/**
 	 * Starts the server and returns its current URL.
 	 * Calling this more than once returns the same running session until the
-	 * harness is closed or reset.
+	 * server is closed or reset.
 	 *
-	 * If no options were passed to `createTestHarness()`, call `update(options)`
+	 * If no options were passed to `createTestServer()`, call `update(options)`
 	 * before starting the server.
 	 */
 	listen(): Promise<{
@@ -333,11 +333,11 @@ export type TestHarness = {
 	 * are also accepted, and can be used to control the hostname seen by the Worker.
 	 * - Requests are matched against each Worker's configured routes and dispatched to
 	 * the first matching Worker, or to the primary Worker if no routes match.
-	 * - To dispatch directly to a specific Worker, use `harness.getWorker(name).fetch()`.
+	 * - To dispatch directly to a specific Worker, use `server.getWorker(name).fetch()`.
 	 *
 	 * @example
 	 * ```ts
-	 * const harness = createTestHarness({
+	 * const server = createTestServer({
 	 *   workers: [
 	 *     { projectDir: "./dashboard" }, // No route pattern
 	 *     { projectDir: "./api" }, // Route pattern: "example.com/api/*"
@@ -345,13 +345,13 @@ export type TestHarness = {
 	 *   ]
 	 * });
 	 *
-	 * await harness.fetch("/users");
+	 * await server.fetch("/users");
 	 * // Dispatches a request to the dashboard Worker (the first Worker) with URL "http://localhost:{port}/users"
 	 *
-	 * await harness.fetch("http://admin.example.com/accounts");
+	 * await server.fetch("http://admin.example.com/accounts");
 	 * // Dispatches a request to the admin Worker with URL "http://admin.example.com/accounts"
 	 *
-	 * await harness.fetch("http://example.com/api/data");
+	 * await server.fetch("http://example.com/api/data");
 	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
 	 * ```
 	 */
@@ -359,7 +359,7 @@ export type TestHarness = {
 	/**
 	 * Returns a handle for dispatching events directly to a Worker.
 	 * When no name is provided, this returns the primary Worker, which is the first
-	 * Worker in the harness's `workers` options.
+	 * Worker in the server's `workers` options.
 	 *
 	 * Type the handle with the Worker's config module, from which its `Env` and
 	 * module are inferred as `cf workers types` does. Without one, bindings and
@@ -368,7 +368,7 @@ export type TestHarness = {
 	 *
 	 * @example
 	 * ```ts
-	 * const api = harness.getWorker<typeof import("../api/cloudflare.config")>("api");
+	 * const api = server.getWorker<typeof import("../api/cloudflare.config")>("api");
 	 * ```
 	 */
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- An untyped handle has any binding and export
@@ -385,31 +385,31 @@ export type TestHarness = {
 	 */
 	clearLogs(): void;
 	/**
-	 * Prints a diagnostic timeline for this test harness.
+	 * Prints a diagnostic timeline for this test server.
 	 *
 	 * Use this to trace the sequence of server events and Workers runtime logs
-	 * leading up to a test failure. Call `harness.debug()` from your test runner's
+	 * leading up to a test failure. Call `server.debug()` from your test runner's
 	 * failure or cleanup hook when the current test has failed.
 	 */
 	debug(): void;
 	/**
-	 * Updates the harness's options and reloads the running Workers.
+	 * Updates the server's options and reloads the running Workers.
 	 *
-	 * If the harness has not started yet, this configures the options that will
+	 * If the server has not started yet, this configures the options that will
 	 * be used by `listen()`.
 	 */
 	update(
 		options:
-			| TestHarnessOptions
-			| ((currentOptions: TestHarnessOptions) => TestHarnessOptions)
+			| TestServerOptions
+			| ((currentOptions: TestServerOptions) => TestServerOptions)
 	): Promise<void>;
 	/**
-	 * Restores the harness to the options used when the current session first
+	 * Restores the server to the options used when the current session first
 	 * started. Storage is recreated, and the server URL may change after reset.
 	 */
 	reset(): Promise<void>;
 	/**
-	 * Stops the harness and releases all runtime resources.
+	 * Stops the server and releases all runtime resources.
 	 */
 	close(): Promise<void>;
 };
@@ -418,7 +418,7 @@ export type WorkerInput =
 	| {
 			/**
 			 * The project directory containing the build's `.cloudflare/output`.
-			 * Relative paths resolve from the harness's `root`.
+			 * Relative paths resolve from the server's `root`.
 			 */
 			projectDir: string | URL;
 			/**
@@ -430,7 +430,7 @@ export type WorkerInput =
 			 * Test-only bindings that replace the Worker's bindings of the same
 			 * name, such as `bindings.text("test")` for a secret, or
 			 * `bindings.worker({ worker: "mock-ai" })` for a Worker in this test
-			 * harness. Each name must be a binding the Worker declares. A var or
+			 * server. Each name must be a binding the Worker declares. A var or
 			 * secret takes `bindings.text()` or `bindings.json()`, a Durable Object
 			 * takes another Durable Object, and any other binding takes one of its
 			 * own type, or `bindings.worker()` to mock it.
@@ -443,7 +443,7 @@ export type WorkerInput =
 			 * binding in `envOverrides`. Miniflare runs it as given: each module's
 			 * code is in `manifest`, and bindings take the values to use, such as
 			 * `{ type: "text", value }` rather than a secret. D1 migrations are
-			 * read from the harness's `root`.
+			 * read from the server's `root`.
 			 */
 			miniflareConfig: WorkerOptions["config"];
 	  };
@@ -465,23 +465,23 @@ type DebugLog = {
 };
 
 /**
- * Creates a test harness that runs Workers from their projects' Build Output.
+ * Creates a local test server for running Workers.
  *
- * The harness can run one or more Workers, behind one local server.
+ * The server can run one or more Workers from their projects' Build Output.
  *
  * @example
  * ```ts
- * const harness = createTestHarness({
+ * const server = createTestServer({
  *   workers: [{ projectDir: "./" }],
  * });
- * await harness.listen();
- * const response = await harness.fetch("/api/users");
- * await harness.close();
+ * await server.listen();
+ * const response = await server.fetch("/api/users");
+ * await server.close();
  * ```
  */
-export function createTestHarness(options?: TestHarnessOptions): TestHarness {
+export function createTestServer(options?: TestServerOptions): TestServer {
 	let initialOptions = options;
-	const ctx = createHarnessContext();
+	const ctx = createServerContext();
 	let currentOptions = options;
 	let serverSession: ServerSession | undefined;
 	let startPromise: Promise<ServerSession> | undefined;
@@ -559,7 +559,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 	}
 
 	async function createSession(
-		serverOptions: TestHarnessOptions
+		serverOptions: TestServerOptions
 	): Promise<ServerSession> {
 		const session: ServerSession = { workers: [] };
 		try {
@@ -578,7 +578,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 	async function updateConfig(
 		session: ServerSession,
-		serverOptions: TestHarnessOptions
+		serverOptions: TestServerOptions
 	) {
 		const miniflare = await getRuntimeMiniflare(session);
 		const previousWorkers = session.workers;
@@ -609,7 +609,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 		assert(
 			serverSession,
-			"Test harness has not been started. Start it with harness.listen() before calling this method."
+			"Test server has not been started. Start it with server.listen() before calling this method."
 		);
 
 		return serverSession;
@@ -623,7 +623,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			const primaryWorkerName = session.workers[0]?.options.config.name;
 			assert(
 				primaryWorkerName,
-				"Primary Worker name is not available. Add a Worker `name` or call harness.getWorker(name)."
+				"Primary Worker name is not available. Add a Worker `name` or call server.getWorker(name)."
 			);
 			return primaryWorkerName;
 		}
@@ -684,7 +684,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		if (!startPromise) {
 			if (currentOptions === undefined) {
 				throw new Error(
-					"Test harness options have not been configured. Pass options to createTestHarness() or call harness.update(options) before harness.listen()."
+					"Test server options have not been configured. Pass options to createTestServer() or call server.update(options) before server.listen()."
 				);
 			}
 
@@ -1031,12 +1031,12 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 			console.log(message);
 		},
 		async update(updateInput) {
-			let nextOptions: TestHarnessOptions;
+			let nextOptions: TestServerOptions;
 
 			if (typeof updateInput === "function") {
 				assert(
 					currentOptions,
-					"Cannot update test harness options with a function before options have been configured. Pass options to createTestHarness() or call harness.update(options) first."
+					"Cannot update test server options with a function before options have been configured. Pass options to createTestServer() or call server.update(options) first."
 				);
 				nextOptions = updateInput(currentOptions);
 			} else {
@@ -1068,7 +1068,7 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 
 			assert(
 				initialOptions,
-				"Test harness has not been started. Start it with harness.listen() before calling this method."
+				"Test server has not been started. Start it with server.listen() before calling this method."
 			);
 
 			await teardownSession(session);

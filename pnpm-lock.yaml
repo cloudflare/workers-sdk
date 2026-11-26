@@ -2929,7 +2929,7 @@ importers:
 
   packages/solarflare-theme: {}
 
-  packages/test-harness:
+  packages/test-server:
     dependencies:
       '@cloudflare/build-output-utils':
         specifier: workspace:*

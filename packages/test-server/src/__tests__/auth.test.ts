@@ -2,7 +2,7 @@ import assert from "node:assert";
 import { createCfAuth } from "@cloudflare/workers-auth/cf";
 import { describe, it, vi } from "vitest";
 import { getRemoteBindingsAuth } from "../auth";
-import { createHarnessContext } from "../runtime";
+import { createServerContext } from "../runtime";
 
 const mocks = vi.hoisted(() => ({
 	cfAuth: {
@@ -19,10 +19,10 @@ vi.mock("@cloudflare/workers-auth/cf", () => ({
 }));
 
 describe("getRemoteBindingsAuth", () => {
-	it("authenticates with the project's cf profile, once per harness", async ({
+	it("authenticates with the project's cf profile, once per server", async ({
 		expect,
 	}) => {
-		const ctx = createHarnessContext();
+		const ctx = createServerContext();
 		const auth = getRemoteBindingsAuth(ctx, "/project", "account-id");
 		assert(typeof auth.hook === "function");
 
@@ -36,7 +36,7 @@ describe("getRemoteBindingsAuth", () => {
 			account_id: "account-id",
 		});
 
-		// The harness's other Workers share the profile's auth
+		// The server's other Workers share the profile's auth
 		const otherAuth = getRemoteBindingsAuth(ctx, "/other", undefined);
 		assert(typeof otherAuth.hook === "function");
 		await otherAuth.hook();
@@ -48,7 +48,7 @@ describe("getRemoteBindingsAuth", () => {
 		expect,
 	}) => {
 		const key = (accountId: string) =>
-			getRemoteBindingsAuth(createHarnessContext(), "/project", accountId).key;
+			getRemoteBindingsAuth(createServerContext(), "/project", accountId).key;
 
 		expect(key("account-id")).toBe(key("account-id"));
 		expect(key("other-account")).not.toBe(key("account-id"));

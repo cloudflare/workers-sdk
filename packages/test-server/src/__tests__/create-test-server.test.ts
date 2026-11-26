@@ -28,7 +28,7 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
-import { createTestHarness } from "../index";
+import { createTestServer } from "../index";
 import type {
 	WriteContainerConfigOptions,
 	WriteWorkerConfigOptions,
@@ -118,7 +118,7 @@ function singleModuleManifest(contents: string) {
 	} as const;
 }
 
-describe("createTestHarness", () => {
+describe("createTestServer", () => {
 	const logs = mockConsoleMethods();
 	runInTempDir();
 	beforeEach(() => {
@@ -152,7 +152,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ projectDir: "." }] });
+		const server = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 		onTestFailed(server.debug);
 
@@ -189,11 +189,11 @@ describe("createTestHarness", () => {
 				},
 			},
 		});
-		const harness = createTestHarness({ workers: [{ projectDir: "app" }] });
-		onTestFinished(harness.close);
+		const server = createTestServer({ workers: [{ projectDir: "app" }] });
+		onTestFinished(server.close);
 
-		await harness.listen();
-		expect(await (await harness.fetch("/")).text()).toBe("<h1>Hello</h1>");
+		await server.listen();
+		expect(await (await server.fetch("/")).text()).toBe("<h1>Hello</h1>");
 	});
 
 	it.skipIf(!canRunContainers)(
@@ -201,7 +201,7 @@ describe("createTestHarness", () => {
 		{ timeout: 180_000 },
 		async ({ expect }) => {
 			// Stands in for the image a build tool builds for the Build Output
-			const image = "test-harness-container:test";
+			const image = "test-server-container:test";
 			await seed({
 				"image/Dockerfile": [
 					"FROM node:22-alpine",
@@ -269,14 +269,14 @@ describe("createTestHarness", () => {
 					},
 				},
 			});
-			const harness = createTestHarness({ workers: [{ projectDir: "." }] });
-			onTestFinished(harness.close);
+			const server = createTestServer({ workers: [{ projectDir: "." }] });
+			onTestFinished(server.close);
 
-			await harness.listen();
+			await server.listen();
 			// The container takes a moment to start listening
 			await vi.waitFor(
 				async () => {
-					expect(await (await harness.fetch("/")).text()).toBe(
+					expect(await (await server.fetch("/")).text()).toBe(
 						"Hello from the container"
 					);
 				},
@@ -315,7 +315,7 @@ describe("createTestHarness", () => {
 			"app/.dev.vars.production": "TOKEN=production\nAPI_KEY=production",
 			"app/.dev.vars.staging": "TOKEN=staging",
 		});
-		const harness = createTestHarness({
+		const server = createTestServer({
 			workers: [
 				{
 					projectDir: "app",
@@ -327,10 +327,10 @@ describe("createTestHarness", () => {
 				},
 			],
 		});
-		onTestFinished(harness.close);
+		onTestFinished(server.close);
 
-		await harness.listen();
-		expect(await (await harness.fetch("/")).json()).toEqual({
+		await server.listen();
+		expect(await (await server.fetch("/")).json()).toEqual({
 			TOKEN: "staging",
 			API_KEY: "from-test",
 			GREETING: "Hi",
@@ -363,11 +363,11 @@ describe("createTestHarness", () => {
 			"app/.dev.vars.production": "TOKEN=production",
 			"app/.dev.vars": "TOKEN=default",
 		});
-		const harness = createTestHarness({ workers: [{ projectDir: "app" }] });
-		onTestFinished(harness.close);
+		const server = createTestServer({ workers: [{ projectDir: "app" }] });
+		onTestFinished(server.close);
 
-		await harness.listen();
-		expect(await (await harness.fetch("/")).text()).toBe("default");
+		await server.listen();
+		expect(await (await server.fetch("/")).text()).toBe("default");
 	});
 
 	it("runs Workers from several builds, each with its project's secrets, picking non-default ones by name", async ({
@@ -413,7 +413,7 @@ describe("createTestHarness", () => {
 		});
 
 		// A project resolves from `root`, or is a `file:` URL
-		const harness = createTestHarness({
+		const server = createTestServer({
 			root: "apps",
 			workers: [
 				{ projectDir: "frontend" },
@@ -421,16 +421,16 @@ describe("createTestHarness", () => {
 				{ projectDir: "backend", name: "Admin" },
 			],
 		});
-		onTestFinished(harness.close);
-		await harness.listen();
-		expect(await (await harness.fetch("/")).text()).toBe(
+		onTestFinished(server.close);
+		await server.listen();
+		expect(await (await server.fetch("/")).text()).toBe(
 			"frontend from-frontend -> api from-backend"
 		);
-		expect(await (await harness.getWorker("Admin").fetch("/")).text()).toBe(
+		expect(await (await server.getWorker("Admin").fetch("/")).text()).toBe(
 			"admin"
 		);
 
-		const missing = createTestHarness({
+		const missing = createTestServer({
 			workers: [{ projectDir: "./apps/backend", name: "missing" }],
 		});
 		onTestFinished(missing.close);
@@ -468,7 +468,7 @@ describe("createTestHarness", () => {
 				},
 			},
 		});
-		const harness = createTestHarness({
+		const server = createTestServer({
 			workers: [
 				{
 					projectDir: "app",
@@ -478,7 +478,7 @@ describe("createTestHarness", () => {
 			],
 		});
 
-		await harness.listen();
+		await server.listen();
 		// `envOverrides` replaces bindings before the session starts, so a
 		// replaced remote binding never reaches it
 		expect(maybeStartOrUpdateRemoteProxySession).toHaveBeenCalledWith(
@@ -493,7 +493,7 @@ describe("createTestHarness", () => {
 		);
 		// update() updates the Worker's session rather than starting another,
 		// even when another Worker now comes first
-		await harness.update((options) => ({
+		await server.update((options) => ({
 			...options,
 			workers: [
 				{
@@ -515,7 +515,7 @@ describe("createTestHarness", () => {
 		expect(session.dispose).not.toHaveBeenCalled();
 		// Replacing the Worker with an inline one of the same name disposes its
 		// session, as removing it does
-		await harness.update((options) => ({
+		await server.update((options) => ({
 			...options,
 			workers: [
 				...options.workers.slice(0, 1),
@@ -529,7 +529,7 @@ describe("createTestHarness", () => {
 			],
 		}));
 		expect(session.dispose).toHaveBeenCalledTimes(1);
-		await harness.close();
+		await server.close();
 	});
 
 	it("disposes the remote sessions when the runtime fails to start", async ({
@@ -550,10 +550,10 @@ describe("createTestHarness", () => {
 				},
 			},
 		});
-		const harness = createTestHarness({ workers: [{ projectDir: "app" }] });
-		onTestFinished(harness.close);
+		const server = createTestServer({ workers: [{ projectDir: "app" }] });
+		onTestFinished(server.close);
 
-		await expect(harness.listen()).rejects.toThrow();
+		await expect(server.listen()).rejects.toThrow();
 		expect(session.dispose).toHaveBeenCalled();
 
 		// Or when a later Worker can't be resolved
@@ -567,7 +567,7 @@ describe("createTestHarness", () => {
 				},
 			},
 		});
-		const unresolved = createTestHarness({
+		const unresolved = createTestServer({
 			workers: [{ projectDir: "working" }, { projectDir: "missing" }],
 		});
 		onTestFinished(unresolved.close);
@@ -595,7 +595,7 @@ describe("createTestHarness", () => {
 		await seed({
 			[path.join(getWorkerBundleDir("unreadable"), "other.js")]: "",
 		});
-		const unreadable = createTestHarness({
+		const unreadable = createTestServer({
 			workers: [{ projectDir: "unreadable" }],
 		});
 		onTestFinished(unreadable.close);
@@ -631,14 +631,14 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness();
+		const server = createTestServer();
 		onTestFinished(server.close);
 
 		await expect(server.listen()).rejects.toThrow(
-			"Test harness options have not been configured."
+			"Test server options have not been configured."
 		);
 		await expect(server.reset()).rejects.toThrow(
-			"Test harness has not been started. Start it with harness.listen() before calling this method."
+			"Test server has not been started. Start it with server.listen() before calling this method."
 		);
 
 		await server.update({ workers: [{ projectDir: "." }] });
@@ -709,7 +709,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ projectDir: "." }] });
+		const server = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 		onTestFailed(server.debug);
 
@@ -804,7 +804,7 @@ describe("createTestHarness", () => {
 				'`envOverrides` can\'t replace binding "OBJECT" of type "durable-object" with one of type "worker". Use another Durable Object binding.',
 			],
 		] as const) {
-			const server = createTestHarness({
+			const server = createTestServer({
 				workers: [{ projectDir: ".", envOverrides }],
 			});
 			onTestFinished(server.close);
@@ -855,7 +855,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ projectDir: "." }] });
+		const server = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -919,7 +919,7 @@ describe("createTestHarness", () => {
 				"INSERT INTO settings (key, value) VALUES ('greeting', 'Hello D1');",
 		});
 
-		const server = createTestHarness({ workers: [{ projectDir: "app" }] });
+		const server = createTestServer({ workers: [{ projectDir: "app" }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -977,15 +977,15 @@ describe("createTestHarness", () => {
 			"app/migrations/0001_notes.sql":
 				"CREATE TABLE notes (id INTEGER PRIMARY KEY);",
 		});
-		const harness = createTestHarness({
+		const server = createTestServer({
 			workers: [
 				{ projectDir: "app", envOverrides: { ARCHIVE: bindings.d1() } },
 			],
 		});
-		onTestFinished(harness.close);
-		await harness.listen();
+		onTestFinished(server.close);
+		await server.listen();
 
-		const worker = harness.getWorker();
+		const worker = server.getWorker();
 		await expect(worker.applyD1Migrations("DATABASE")).rejects.toThrow(
 			`applyD1Migrations() won't migrate "DATABASE", because it's a remote D1 database.`
 		);
@@ -1013,7 +1013,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({
+		const server = createTestServer({
 			workers: [
 				{
 					projectDir: ".",
@@ -1094,7 +1094,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ projectDir: "." }] });
+		const server = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1173,7 +1173,7 @@ describe("createTestHarness", () => {
 			};
 		`);
 
-		const server = createTestHarness({
+		const server = createTestServer({
 			workers: [
 				{ projectDir: "." },
 				{
@@ -1242,7 +1242,7 @@ describe("createTestHarness", () => {
 	});
 
 	it("updates the number of workers", async ({ expect }) => {
-		const server = createTestHarness({
+		const server = createTestServer({
 			workers: [
 				{
 					miniflareConfig: {
@@ -1325,7 +1325,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({
+		const server = createTestServer({
 			workers: [
 				{ projectDir: "." },
 				{ projectDir: ".", name: "auxiliary-worker" },
@@ -1396,7 +1396,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ projectDir: "." }] });
+		const server = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1432,7 +1432,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const firstServer = createTestHarness({ workers: [{ projectDir: "." }] });
+		const firstServer = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(firstServer.close);
 
 		await firstServer.listen();
@@ -1445,7 +1445,7 @@ describe("createTestHarness", () => {
 
 		await firstServer.close();
 
-		const secondServer = createTestHarness({ workers: [{ projectDir: "." }] });
+		const secondServer = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(secondServer.close);
 
 		await secondServer.listen();
@@ -1476,7 +1476,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ projectDir: "." }] });
+		const server = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 
 		await server.listen();
@@ -1546,7 +1546,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({ workers: [{ projectDir: "." }] });
+		const server = createTestServer({ workers: [{ projectDir: "." }] });
 		onTestFinished(server.close);
 		await server.listen();
 		const worker = server.getWorker();
@@ -1708,7 +1708,7 @@ describe("createTestHarness", () => {
 			},
 		});
 
-		const server = createTestHarness({
+		const server = createTestServer({
 			workers: [
 				{ projectDir: "." },
 				{ projectDir: ".", name: "auxiliary-worker" },

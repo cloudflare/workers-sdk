@@ -5,7 +5,7 @@ import {
 } from "@cloudflare/workers-auth/cf";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
 import { version as packageVersion } from "../package.json";
-import type { HarnessContext } from "./runtime";
+import type { ServerContext } from "./runtime";
 import type { RemoteBindingsAuth } from "@cloudflare/remote-bindings";
 import type { AuthContext, CloudflareAuth } from "@cloudflare/workers-auth/cf";
 import type { Logger } from "@cloudflare/workers-utils";
@@ -22,7 +22,7 @@ class AccountSelectionUnavailable extends Error {
 function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 	const context = {
 		logger,
-		userAgent: `test-harness/${packageVersion}`,
+		userAgent: `test-server/${packageVersion}`,
 		async prompt(question: string) {
 			if (isNonInteractiveOrCI()) {
 				throw new AccountSelectionUnavailable();
@@ -73,14 +73,14 @@ function createAuthForProfile(profile: string, logger: Logger): CloudflareAuth {
 /**
  * Get the cf credentials for a Build Output remote bindings session.
  *
- * @param ctx The harness's context, whose Workers share each profile's auth.
+ * @param ctx The server's context, whose Workers share each profile's auth.
  * @param profileDir Directory used to resolve the cf auth profile.
  * @param accountId The configured account ID, if any.
  * @returns A hook resolving the account ID and API token, with a key
  * identifying those credentials.
  */
 export function getRemoteBindingsAuth(
-	ctx: HarnessContext,
+	ctx: ServerContext,
 	profileDir: string,
 	accountId: string | undefined
 ): RemoteBindingsAuth {

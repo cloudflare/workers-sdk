@@ -14,7 +14,7 @@ import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { resolveLocalBindings } from "miniflare";
 import { getRemoteBindingsAuth } from "./auth";
-import type { TestHarnessOptions, WorkerInput } from "./test-harness";
+import type { TestServerOptions, WorkerInput } from "./test-server";
 import type {
 	BuildOutput,
 	BuildOutputWorker,
@@ -27,11 +27,11 @@ import type {
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
 import type { WorkerOptions } from "miniflare";
 
-/** What a test harness keeps for as long as it exists */
-export type HarnessContext = {
+/** What a test server keeps for as long as it exists */
+export type ServerContext = {
 	/** Logs to the console, for remote bindings and Container image pulls */
 	logger: RemoteBindingsLogger;
-	/** Each cf auth profile's auth, which the harness's Workers share */
+	/** Each cf auth profile's auth, which the server's Workers share */
 	authByProfile: Map<string, CloudflareAuth>;
 	/**
 	 * The Container image preparations done, so `reset()` and `update()` don't
@@ -41,9 +41,9 @@ export type HarnessContext = {
 };
 
 /**
- * @returns The context of a new test harness
+ * @returns The context of a new test server
  */
-export function createHarnessContext(): HarnessContext {
+export function createServerContext(): ServerContext {
 	return {
 		logger: {
 			loggerLevel: "log",
@@ -66,7 +66,7 @@ export function createHarnessContext(): HarnessContext {
 export type ResolvedWorker = {
 	/**
 	 * The project directory containing the Worker's Build Output, or the
-	 * harness's `root` for an inline Worker
+	 * server's `root` for an inline Worker
 	 */
 	projectDir: string;
 	/** The Worker's Miniflare options */
@@ -79,7 +79,7 @@ export type ResolvedWorker = {
  * Resolves Workers from their projects' Build Output, as `vite preview` runs
  * a build.
  *
- * @param ctx The harness's state
+ * @param ctx The server's state
  * @param options The Workers to run, primary Worker first, and the directory
  * that relative `projectDir` paths resolve from
  * @param previousWorkers The Workers these replace. A Worker updates the
@@ -88,12 +88,12 @@ export type ResolvedWorker = {
  * @returns The resolved Workers
  */
 export async function resolveWorkerInputs(
-	ctx: HarnessContext,
-	{ root = process.cwd(), workers: inputs }: TestHarnessOptions,
+	ctx: ServerContext,
+	{ root = process.cwd(), workers: inputs }: TestServerOptions,
 	previousWorkers: ResolvedWorker[] = []
 ): Promise<ResolvedWorker[]> {
 	if (inputs.length === 0) {
-		throw new Error("Test harness requires at least one worker.");
+		throw new Error("Test server requires at least one worker.");
 	}
 
 	const previousSessions = new Map(
@@ -134,7 +134,7 @@ export async function disposeRemoteProxySessions(
  * Resolves one Worker in a project's Build Output for Miniflare. A test-only
  * Worker is already Miniflare config, so Miniflare runs it as given.
  *
- * @param ctx The harness's state
+ * @param ctx The server's state
  * @param root The directory that a relative `projectDir` path resolves from
  * @param input The Worker to run, and its test values
  * @param previousSessions The remote sessions of the Workers these replace,
@@ -142,7 +142,7 @@ export async function disposeRemoteProxySessions(
  * @returns The Worker's Miniflare options and remote bindings session
  */
 async function resolveWorker(
-	ctx: HarnessContext,
+	ctx: ServerContext,
 	root: string,
 	input: WorkerInput,
 	previousSessions: Map<string, RemoteProxySessionData | null>
@@ -334,14 +334,14 @@ async function getManifest(
  * Plans a Worker's Containers as `vite preview` does, and pulls the images
  * the build didn't build locally.
  *
- * @param ctx The harness's state
+ * @param ctx The server's state
  * @param containers The Containers in the Worker's Build Output
  * @param exports The Worker's exports
  * @param settings The build's account and compliance region
  * @returns The local runtime options of each Container-backed export
  */
 async function prepareContainers(
-	ctx: HarnessContext,
+	ctx: ServerContext,
 	containers: BuildOutput["containers"],
 	exports: BuildOutputWorker["config"]["exports"],
 	settings: NonNullable<BuildOutput["rootConfig"]["settings"]>
