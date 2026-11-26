@@ -53,7 +53,7 @@ function findWranglerConfigFile(projectPath: string): string | undefined {
 	).filter((configPath) => existsSync(configPath));
 	if (configPaths.length > 1) {
 		throw new UserError(
-			`Found more than one Wrangler config in ${projectPath} (${configPaths.map((configPath) => basename(configPath)).join(", ")}). Remove the ones the project doesn't use, so that autoconfig knows which one to migrate.`,
+			`Found more than one Wrangler config in ${projectPath} (${configPaths.map((configPath) => basename(configPath)).join(", ")}). Keep only the one this project uses, then try again.`,
 			{ telemetryMessage: "autoconfig details multiple wrangler configs" }
 		);
 	}
