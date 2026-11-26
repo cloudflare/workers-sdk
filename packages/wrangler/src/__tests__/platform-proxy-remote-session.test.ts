@@ -1,7 +1,8 @@
 import { fork } from "node:child_process";
 import { EventEmitter } from "node:events";
 import { UserError } from "@cloudflare/workers-utils";
-import { afterEach, describe, it, vi } from "vitest";
+import treeKill from "tree-kill";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { startPlatformProxyRemoteSession } from "../api/integrations/platform/remote-session";
 import { readConfig } from "../config";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -11,6 +12,7 @@ vi.mock(import("node:child_process"), async (importOriginal) => ({
 	...(await importOriginal()),
 	fork: vi.fn(),
 }));
+vi.mock(import("tree-kill"), () => ({ default: vi.fn() }));
 
 const config = {
 	...readConfig({}),
@@ -20,6 +22,7 @@ const sessionUrl = "http://127.0.0.1:1234/";
 
 function mockChild() {
 	const child = Object.assign(new EventEmitter(), {
+		pid: 12345,
 		connected: true,
 		disconnect: vi.fn(() => {
 			child.connected = false;
@@ -38,7 +41,12 @@ function mockChild() {
 describe("getPlatformProxy remote session IPC", () => {
 	const std = mockConsoleMethods();
 
+	beforeEach(() => {
+		vi.stubEnv("WRANGLER_LOG", "warn");
+	});
+
 	afterEach(() => {
+		vi.mocked(treeKill).mockReset();
 		vi.useRealTimers();
 		vi.unstubAllEnvs();
 	});
@@ -71,6 +79,7 @@ describe("getPlatformProxy remote session IPC", () => {
 		expect(child.disconnect).toHaveBeenCalledOnce();
 		exit(0, null);
 		await disposal;
+		expect(treeKill).not.toHaveBeenCalled();
 		expect(child.kill).not.toHaveBeenCalled();
 		expect(std.warn).toBe("");
 	});
@@ -121,24 +130,32 @@ describe("getPlatformProxy remote session IPC", () => {
 		expect(child.disconnect).not.toHaveBeenCalled();
 	});
 
-	it("terminates a child that does not exit after disconnecting", async ({
+	it("terminates the process tree when graceful shutdown stalls", async ({
 		expect,
 	}) => {
 		vi.useFakeTimers();
 		const { child, exit } = mockChild();
-		child.kill.mockImplementation(() => {
-			exit(null, "SIGKILL");
-			return true;
-		});
 		const startup = startPlatformProxyRemoteSession(config);
 		child.emit("message", { type: "ready", url: sessionUrl });
 		const session = await startup;
 		const disposal = session?.dispose();
 		expect(child.disconnect).toHaveBeenCalledOnce();
-		expect(child.kill).not.toHaveBeenCalled();
+		expect(treeKill).not.toHaveBeenCalled();
 		await vi.runAllTimersAsync();
-		expect(child.kill).toHaveBeenCalledExactlyOnceWith("SIGKILL");
+		expect(treeKill).toHaveBeenCalledExactlyOnceWith(
+			child.pid,
+			"SIGKILL",
+			expect.any(Function)
+		);
+		const completeTreeKill = vi.mocked(treeKill).mock.calls[0][2];
+		exit(null, "SIGKILL");
+		const disposed = vi.fn();
+		void disposal?.then(disposed);
+		await vi.advanceTimersByTimeAsync(0);
+		expect(disposed).not.toHaveBeenCalled();
+		completeTreeKill?.();
 		await disposal;
+		expect(child.kill).not.toHaveBeenCalled();
 		expect(std.warn).toBe("");
 	});
 });

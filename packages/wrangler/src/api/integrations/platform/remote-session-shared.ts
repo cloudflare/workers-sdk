@@ -1,4 +1,7 @@
-import { startRemoteProxySession } from "@cloudflare/remote-bindings";
+import {
+	shouldStartRemoteProxySessionLazily,
+	startRemoteProxySession,
+} from "@cloudflare/remote-bindings";
 import { logger } from "../../../logger";
 import { getDefaultRemoteBindingsAuth } from "../../remoteBindings/auth";
 import type { StartRemoteProxySessionOptions } from "@cloudflare/remote-bindings";
@@ -23,7 +26,7 @@ export type StartupMessage =
 	  };
 
 /**
- * Start a remote bindings session that resolves Wrangler credentials on first use.
+ * Start a remote bindings session that defers Wrangler auth when possible.
  *
  * @param config - Bindings and account settings for the session.
  * @returns The session. The caller must dispose it when no longer needed.
@@ -35,7 +38,7 @@ export function startSession({
 }: SessionConfig) {
 	return startRemoteProxySession(bindings, {
 		...options,
-		lazy: true,
+		lazy: shouldStartRemoteProxySessionLazily(bindings),
 		auth: getDefaultRemoteBindingsAuth(accountId).hook,
 		logger,
 	});

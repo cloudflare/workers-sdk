@@ -50,6 +50,10 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		{ KV: { type: "kv_namespace", id: "kv", remote: true } },
 		{
 			ORDERS: { type: "k2", stream: "orders" },
+			DB: { type: "hyperdrive", id: "db", remote: false },
+		},
+		{
+			ORDERS: { type: "k2", stream: "orders" },
 			KV: { type: "kv_namespace", id: "kv", remote: true },
 		},
 	])(
@@ -66,11 +70,64 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				startSession
 			);
 			expect(startSession).toHaveBeenCalledWith(
-				bindings,
+				pickRemoteBindings(bindings),
 				expect.objectContaining({ lazy: true, auth: testAuth })
 			);
 		}
 	);
+
+	it("switches to eager auth when remote Hyperdrive is added and back when removed", async ({
+		expect,
+	}) => {
+		const startSession = vi.fn<typeof startRemoteProxySession>(async () =>
+			createTestSession()
+		);
+		const context: RemoteBindingsContext = {
+			cliDisplayName: "Wrangler",
+			logger: createTestLogger(),
+		};
+		const bindings = {
+			KV: { type: "kv_namespace", id: "kv", remote: true },
+		} satisfies Record<string, Binding>;
+		const withHyperdrive = {
+			...bindings,
+			DB: { type: "hyperdrive", id: "db", remote: true },
+		} satisfies Record<string, Binding>;
+		const first = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings },
+			undefined,
+			testAuth,
+			context,
+			startSession
+		);
+		const eager = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings: withHyperdrive },
+			first,
+			testAuth,
+			context,
+			startSession
+		);
+		await maybeStartOrUpdateRemoteProxySession(
+			{ bindings },
+			eager,
+			testAuth,
+			context,
+			startSession
+		);
+		expect(first?.session.dispose).toHaveBeenCalledOnce();
+		expect(eager?.session.dispose).toHaveBeenCalledOnce();
+		expect(startSession).toHaveBeenCalledTimes(3);
+		expect(startSession).toHaveBeenNthCalledWith(
+			2,
+			withHyperdrive,
+			expect.objectContaining({ lazy: false })
+		);
+		expect(startSession).toHaveBeenNthCalledWith(
+			3,
+			bindings,
+			expect.objectContaining({ lazy: true })
+		);
+	});
 
 	it("reuses a session when replacing a remote-only binding with a local-capable remote binding", async ({
 		expect,

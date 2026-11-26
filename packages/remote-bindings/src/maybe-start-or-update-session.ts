@@ -27,6 +27,15 @@ export function pickRemoteBindings(
 	);
 }
 
+/** Remote Hyperdrive needs a connected session to set up its local TCP bridge. */
+export function shouldStartRemoteProxySessionLazily(
+	remoteBindings: Record<string, Binding>
+): boolean {
+	return !Object.values(remoteBindings).some(
+		(binding) => binding.type === "hyperdrive"
+	);
+}
+
 export type WorkerConfigObject = {
 	/** The name of the worker. */
 	name?: string;
@@ -70,7 +79,7 @@ export type RemoteBindingsContext = {
 	logger: RemoteBindingsLogger;
 };
 
-/** Starts or updates a remote proxy session that connects on the first binding call. */
+/** Starts or updates a remote proxy session, deferring connection when possible. */
 export async function maybeStartOrUpdateRemoteProxySession(
 	workerConfigObject: WorkerConfigObject,
 	preExistingRemoteProxySessionData: RemoteProxySessionData | null | undefined,
@@ -98,16 +107,20 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		preExistingRemoteProxySessionData?.authKey !== undefined
 			? key === preExistingRemoteProxySessionData?.authKey
 			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth);
+	const lazy = shouldStartRemoteProxySessionLazily(remoteBindings);
+	const wasLazy = shouldStartRemoteProxySessionLazily(
+		preExistingRemoteProxySessionData?.remoteBindings ?? {}
+	);
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
-	if (!remoteProxySession || !authSameAsBefore) {
+	if (!remoteProxySession || !authSameAsBefore || lazy !== wasLazy) {
 		await remoteProxySession?.dispose();
 		remoteProxySession = await startSession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
 			auth: hook,
-			lazy: true,
+			lazy,
 			logger: context.logger,
 		});
 	} else if (

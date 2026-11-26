@@ -5,6 +5,7 @@ import {
 	getCloudflareComplianceRegion,
 	UserError,
 } from "@cloudflare/workers-utils";
+import treeKill from "tree-kill";
 import { logger } from "../../../logger";
 import { getBasePath } from "../../../paths";
 import { isCfAuthActive } from "../../../user";
@@ -23,8 +24,8 @@ const SHUTDOWN_GRACE_MS = 5_000;
 
 /**
  * Start the configured remote bindings, if any. The caller owns disposal.
- * A lazy session inherits the environment at proxy creation, but only resolves
- * credentials on the first binding call.
+ * A Node.js session inherits the environment at proxy creation. If it is lazy,
+ * it only resolves credentials on the first binding call.
  */
 export async function startPlatformProxyRemoteSession(
 	config: Config
@@ -49,7 +50,7 @@ export async function startPlatformProxyRemoteSession(
 	return startBackgroundSession(sessionConfig);
 }
 
-/** Keep the whole lazy session independent of synchronous binding calls, including terminal I/O for OAuth. */
+/** Keep the remote session independent of synchronous binding calls, including terminal I/O for OAuth. */
 async function startBackgroundSession(
 	config: SessionConfig
 ): Promise<PlatformProxyRemoteSession> {
@@ -70,10 +71,12 @@ async function startBackgroundSession(
 		}
 	);
 	let ready = false;
+	let hasExited = false;
 	let disposePromise: Promise<void> | undefined;
 	const startup = Promise.withResolvers<StartupMessage>();
 	const exited = new Promise<void>((resolve) => {
 		child.once("exit", (code, signal) => {
+			hasExited = true;
 			const status = signal ?? `exit code ${code}`;
 			if (!ready) {
 				startup.reject(
@@ -91,6 +94,7 @@ async function startBackgroundSession(
 		child.on("error", (error) => {
 			startup.reject(error);
 			if (child.pid === undefined) {
+				hasExited = true;
 				resolve();
 			}
 		});
@@ -101,12 +105,29 @@ async function startBackgroundSession(
 	});
 	const dispose = () => {
 		if (!disposePromise) {
-			const timeout = setTimeout(
-				() => child.kill("SIGKILL"),
-				SHUTDOWN_GRACE_MS
-			);
+			let forcedShutdown: Promise<void> | undefined;
+			const timeout = setTimeout(() => {
+				const pid = child.pid;
+				if (pid === undefined || hasExited) {
+					return;
+				}
+				forcedShutdown = new Promise<void>((resolve) => {
+					treeKill(pid, "SIGKILL", (error) => {
+						if (error && !hasExited) {
+							logger.warn(
+								`Could not terminate the remote session process tree: ${error.message}`
+							);
+							child.kill("SIGKILL");
+						}
+						resolve();
+					});
+				});
+			}, SHUTDOWN_GRACE_MS);
 			timeout.unref();
-			disposePromise = exited.finally(() => clearTimeout(timeout));
+			disposePromise = exited.then(() => {
+				clearTimeout(timeout);
+				return forcedShutdown;
+			});
 			if (child.connected) {
 				child.disconnect();
 			}

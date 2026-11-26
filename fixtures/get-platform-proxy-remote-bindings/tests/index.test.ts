@@ -1,5 +1,7 @@
 import { execSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	afterAll,
 	assert,
@@ -213,43 +215,6 @@ if (auth) {
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
 			});
 
-			test("usage with a wrangler config file with an invalid account id", async ({
-				expect,
-			}) => {
-				mkdirSync("./.tmp/config-with-invalid-account-id", { recursive: true });
-
-				writeFileSync(
-					"./.tmp/config-with-invalid-account-id/wrangler.json",
-					JSON.stringify(
-						{
-							name: "get-platform-proxy-fixture-test",
-							account_id: "NOT a valid account id",
-							compatibility_date: "2025-06-01",
-							services: [
-								{
-									binding: "MY_WORKER",
-									service: remoteWorkerName,
-									remote: true,
-								},
-							],
-						},
-						undefined,
-						2
-					),
-					"utf8"
-				);
-
-				await expect(
-					getPlatformProxy<{
-						MY_WORKER: Fetcher;
-					}>({
-						configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
-					})
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. Error reloading remote server: Invalid account ID "NOT a valid account id" set in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
-				);
-			});
-
 			test("usage with a wrangler config file with a valid account id", async ({
 				expect,
 				onTestFinished,
@@ -295,6 +260,69 @@ if (auth) {
 } else {
 	test.skip("getPlatformProxy - remote bindings (no auth credentials)");
 }
+
+test.for(["service", "hyperdrive"] as const)(
+	"getPlatformProxy validates the configured account ID for remote %s",
+	async (binding, { expect }) => {
+		const directory = mkdtempSync(
+			join(tmpdir(), "platform-proxy-invalid-account-")
+		);
+		const configPath = join(directory, "wrangler.json");
+		try {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "not-used-for-an-invalid-account");
+			writeFileSync(
+				configPath,
+				JSON.stringify({
+					name: "get-platform-proxy-fixture-test",
+					account_id: "NOT a valid account id",
+					compatibility_date: "2025-06-01",
+					...(binding === "service"
+						? {
+								services: [
+									{
+										binding: "MY_WORKER",
+										service: remoteWorkerName,
+										remote: true,
+									},
+								],
+							}
+						: {
+								hyperdrive: [
+									{ binding: "DB", id: "a".repeat(32), remote: true },
+								],
+							}),
+				})
+			);
+			const proxy = getPlatformProxy<{ MY_WORKER: Fetcher }>({
+				configPath,
+				persist: false,
+			});
+			const accountError =
+				'Invalid account ID "NOT a valid account id" set in your Wrangler configuration file.';
+			try {
+				if (binding === "hyperdrive") {
+					await expect(proxy).rejects.toThrow(accountError);
+					return;
+				}
+				const response = await (
+					await proxy
+				).env.MY_WORKER.fetch("http://example.com", {
+					signal: AbortSignal.timeout(5_000),
+				});
+				expect(response.status).toBe(503);
+				expect(await response.text()).toContain(accountError);
+			} finally {
+				await proxy.then(
+					({ dispose }) => dispose(),
+					() => {}
+				);
+			}
+		} finally {
+			vi.unstubAllEnvs();
+			rmSync(directory, { recursive: true, force: true });
+		}
+	}
+);
 
 /**
  * Polls a remote Worker until it responds with the expected status text.

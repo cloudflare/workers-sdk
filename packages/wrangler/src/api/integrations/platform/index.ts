@@ -118,7 +118,7 @@ export type GetPlatformProxyOptions = {
 	persist?: boolean | { path: string };
 	/**
 	 * Whether remote bindings should be enabled or not (defaults to `true`).
-	 * Lazily connected bindings on Node.js inherit environment variables when
+	 * Remote bindings on Node.js inherit environment variables when
 	 * the proxy is created. Set any auth environment variables before calling
 	 * `getPlatformProxy()`, or create a new proxy after changing them.
 	 */

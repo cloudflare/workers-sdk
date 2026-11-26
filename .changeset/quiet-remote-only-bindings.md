@@ -9,3 +9,5 @@ Defer remote binding login until a binding is called
 Local development now starts without logging in, even when a project uses remote bindings. This includes bindings that always run remotely, such as Workers AI and Vectorize, and bindings configured with `remote: true`, such as KV and D1. The first remote binding call establishes the connection and starts login if needed. Calls wait for login and continue once it succeeds, while unrelated requests keep working. Failed login attempts fail the waiting calls without stopping the development server. Background refresh does not start login for an unused binding.
 
 This applies to Wrangler, the Cloudflare Vite plugin, and the Vitest plugin.
+
+Projects with remote Hyperdrive still connect during startup because Miniflare needs database credentials to set up the local bridge.
