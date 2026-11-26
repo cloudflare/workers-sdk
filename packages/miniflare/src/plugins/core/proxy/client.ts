@@ -72,6 +72,15 @@ function isNativeTarget(value: unknown): value is NativeTarget {
 	return typeof value === "object" && value !== null && kAddress in value;
 }
 
+// Workers RPC proxies that aren't functions (e.g. for service bindings)
+function isRpcProxyObject(value: unknown): boolean {
+	return (
+		typeof value === "object" &&
+		value !== null &&
+		(value as { [kRaw]?: unknown })[kRaw] !== undefined
+	);
+}
+
 // Special targets for objects automatically added to the `ProxyServer` "heap"
 const TARGET_GLOBAL: NativeTarget = {
 	[kAddress]: ProxyAddresses.GLOBAL,
@@ -177,6 +186,8 @@ function restoreErrorName(error: unknown) {
  * Converts `Headers`, `Request`s and `Response`s to Node's globals, the only
  * ones Cap'n Web can serialise (e.g. from Miniflare's `undici` classes).
  * Bodies are replaced, as Node.js may read them in chunks too large to send.
+ * Node's own `Request`s are sent as they are, as replacing their body throws
+ * for `keepalive` or "no-cors" requests.
  *
  * @param value Argument about to be sent over Cap'n Web
  * @param encodeBody Encodes a body like a stream argument
@@ -193,20 +204,16 @@ function toGlobalHTTPObject(
 			: new globalThis.Headers([...value.entries()]);
 	}
 	let result: globalThis.Request | globalThis.Response;
-	if (isRequestLike(value)) {
-		const init = {
+	if (value instanceof globalThis.Request) {
+		return value;
+	} else if (isRequestLike(value)) {
+		result = new globalThis.Request(value.url, {
+			method: value.method,
+			headers: [...value.headers.entries()],
 			body: (value.body && encodeBody(value.body)) as globalThis.ReadableStream,
+			redirect: value.redirect as globalThis.RequestInit["redirect"],
 			duplex: value.body === null ? undefined : "half",
-		} as globalThis.RequestInit;
-		result =
-			value instanceof globalThis.Request
-				? new globalThis.Request(value, init)
-				: new globalThis.Request(value.url, {
-						...init,
-						method: value.method,
-						headers: [...value.headers.entries()],
-						redirect: value.redirect as globalThis.RequestInit["redirect"],
-					});
+		} as globalThis.RequestInit);
 	} else if (isResponseLike(value)) {
 		result = new globalThis.Response(
 			(value.body && encodeBody(value.body)) as globalThis.ReadableStream,
@@ -1158,6 +1165,9 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 			// objects on multiple access (e.g. reusing `env["...<bucket>"]` proxy if
 			// `getR2Bucket(<bucket>)` is called on the same bucket multiple times).
 			isNativeTarget(result) ||
+			// Same for Workers RPC proxies, which get a new stub if their session
+			// closes (e.g. service bindings)
+			isRpcProxyObject(result) ||
 			// Once a `ReadableStream` sent across proxy, we won't be able to read it
 			// again in the server, so reuse the same stream for future accesses
 			// (e.g. accessing `R2ObjectBody#body` multiple times)

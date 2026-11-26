@@ -196,8 +196,9 @@ describe("ProxyClient", () => {
 				colo(request: Request): Promise<string>;
 			};
 		}>();
-		// Service bindings aren't functions, like in `workerd`
+		// Service bindings aren't functions, like in `workerd`, and are reused
 		expect(typeof BINDING).toBe("object");
+		expect((await mf.getBindings()).BINDING).toBe(BINDING);
 		expect("property" in BINDING).toBe(true);
 		expect(`${BINDING}`).toBe("[object Object]");
 		expect(await BINDING.property).toBe("value");
@@ -212,6 +213,12 @@ describe("ProxyClient", () => {
 		expect(await counter.increment()).toBe(2);
 		// Miniflare's `Request`, `Response` and `Headers` can be sent
 		expect(await BINDING.text(new Response("body"))).toBe("body");
+		const keepalive = new globalThis.Request("http://x", {
+			method: "POST",
+			body: "body",
+			keepalive: true,
+		});
+		expect(await BINDING.text(keepalive)).toBe("body");
 		expect(
 			await BINDING.colo(new Request("http://x", { cf: { colo: "LHR" } }))
 		).toBe("LHR");
