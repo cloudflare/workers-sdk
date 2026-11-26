@@ -214,12 +214,24 @@ function toGlobalHTTPObject(
 	}
 	let result: globalThis.Request | globalThis.Response;
 	if (isRequestLike(value)) {
+		// Throw like `workerd` does for these, as Cap'n Web would end the session
+		// failing to rebuild the request there
+		const { cache, redirect } = value as { cache?: string; redirect: string };
+		const supported = [undefined, "default", "no-store", "no-cache"];
+		if (!supported.includes(cache)) {
+			throw new TypeError(`Unsupported cache mode: ${cache}`);
+		}
+		if (redirect !== "follow" && redirect !== "manual") {
+			throw new TypeError(
+				`Invalid redirect value, must be one of "follow" or "manual"`
+			);
+		}
 		result = new globalThis.Request(value.url, {
 			method: value.method,
 			headers: [...value.headers.entries()],
 			body: (value.body && encodeBody(value.body)) as globalThis.ReadableStream,
-			redirect: value.redirect as globalThis.RequestInit["redirect"],
-			cache: value.cache,
+			redirect,
+			cache: cache === "default" ? undefined : cache,
 			duplex: value.body === null ? undefined : "half",
 		} as globalThis.RequestInit);
 	} else if (isResponseLike(value)) {
@@ -651,14 +663,17 @@ class ProxyClientBridge {
 			return splitter.readable;
 		}
 		if (value instanceof Blob && !(value instanceof File)) {
-			// `workerd` counts blobs towards the limit too. Cap'n Web streams them,
-			// but Node.js reads them in one chunk.
-			state.inlineSize += Math.ceil(value.size / 3) * 4;
+			// `workerd` counts blobs towards the limit too
+			state.inlineSize += value.size;
 			// Cap'n Web only accepts exact `Blob`s, but Node.js sometimes returns
-			// subclasses (e.g. from `Blob#slice()` in Node.js 22)
-			return Object.getPrototypeOf(value) === Blob.prototype
-				? value
-				: new Blob([value], { type: value.type });
+			// subclasses (e.g. from `Blob#slice()` in Node.js 22). It sends them as
+			// streams, which Node.js reads in one chunk, so split those too.
+			const blob = new Blob([value], { type: value.type });
+			const stream = () =>
+				(Blob.prototype.stream.call(blob) as ReadableStream).pipeThrough(
+					createChunkSplitter()
+				);
+			return Object.defineProperty(blob, "stream", { value: stream });
 		}
 		const globalHTTPObject = toGlobalHTTPObject(value, (body) =>
 			this.#encode(body, state)

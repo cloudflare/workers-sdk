@@ -162,7 +162,8 @@ describe("ProxyClient", () => {
 				{
 					config: {
 						name: "binding",
-						compatibilityDate: "2025-05-01",
+						// For `cache: "no-cache"`
+						compatibilityDate: "2025-08-07",
 						manifest: singleModuleManifest(`
 							import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
 							class Counter extends RpcTarget {
@@ -226,6 +227,8 @@ describe("ProxyClient", () => {
 		expect(await BINDING.text(keepalive)).toBe("body");
 		const noStore = new globalThis.Request("http://x", { cache: "no-store" });
 		expect(await BINDING.cache(noStore)).toBe("no-store");
+		const noCache = new globalThis.Request("http://x", { cache: "no-cache" });
+		expect(await BINDING.cache(noCache)).toBe("no-cache");
 		expect(
 			await BINDING.colo(new Request("http://x", { cf: { colo: "LHR" } }))
 		).toBe("LHR");
@@ -237,6 +240,10 @@ describe("ProxyClient", () => {
 		expect(() => BINDING.text(caches)).toThrow(
 			'Could not serialize object of type "CacheStorage"'
 		);
+		const reload = new globalThis.Request("http://x", { cache: "reload" });
+		expect(() => BINDING.cache(reload)).toThrow("Unsupported cache mode");
+		const redirect = new globalThis.Request("http://x", { redirect: "error" });
+		expect(() => BINDING.cache(redirect)).toThrow("Invalid redirect value");
 		const cyclic: Record<string, unknown> = {};
 		cyclic.self = cyclic;
 		expect(() => BINDING.text(cyclic)).toThrow(
@@ -264,7 +271,7 @@ describe("ProxyClient", () => {
 						manifest: singleModuleManifest(`
 							import { WorkerEntrypoint } from "cloudflare:workers";
 							export default class extends WorkerEntrypoint {
-								size(value) { return value.length; }
+								size(value) { return value.length ?? value.size; }
 								async streamSize(stream) {
 									return (await new Response(stream).arrayBuffer()).byteLength;
 								}
@@ -309,9 +316,12 @@ describe("ProxyClient", () => {
 			body,
 		});
 		expect(await BINDING.bodySize(request)).toBe(streamSize);
-		// Like in `workerd`, blobs count towards the limit
-		const blob = new Blob([new Uint8Array(25 * 1024 * 1024)]);
-		expect(() => BINDING.size(blob)).toThrow(RangeError);
+		// Like in `workerd`, blobs count towards the limit, but their chunks are
+		// split too
+		const blob = new Blob([new Uint8Array(streamSize)]);
+		expect(await BINDING.size(blob)).toBe(streamSize);
+		const largeBlob = new Blob([new Uint8Array(33 * 1024 * 1024)]);
+		expect(() => BINDING.size(largeBlob)).toThrow(RangeError);
 		// Rejected calls don't lock stream arguments, so they can be retried
 		const retried = new Blob(["abc"]).stream();
 		expect(() =>
