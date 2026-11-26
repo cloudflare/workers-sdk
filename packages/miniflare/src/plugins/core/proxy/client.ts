@@ -186,8 +186,8 @@ function restoreErrorName(error: unknown) {
  * Converts `Headers`, `Request`s and `Response`s to Node's globals, the only
  * ones Cap'n Web can serialise (e.g. from Miniflare's `undici` classes).
  * Bodies are replaced, as Node.js may read them in chunks too large to send.
- * Node's own `Request`s are sent as they are, as replacing their body throws
- * for `keepalive` or "no-cors" requests.
+ * `Request`s keep the fields the rest of the proxy sends, as Node.js rejects
+ * stream bodies for others (e.g. `keepalive`, "no-cors" `mode`).
  *
  * @param value Argument about to be sent over Cap'n Web
  * @param encodeBody Encodes a body like a stream argument
@@ -204,9 +204,7 @@ function toGlobalHTTPObject(
 			: new globalThis.Headers([...value.entries()]);
 	}
 	let result: globalThis.Request | globalThis.Response;
-	if (value instanceof globalThis.Request) {
-		return value;
-	} else if (isRequestLike(value)) {
+	if (isRequestLike(value)) {
 		result = new globalThis.Request(value.url, {
 			method: value.method,
 			headers: [...value.headers.entries()],

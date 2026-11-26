@@ -213,7 +213,9 @@ describe("ProxyClient", () => {
 		expect(await counter.increment()).toBe(2);
 		// Miniflare's `Request`, `Response` and `Headers` can be sent
 		expect(await BINDING.text(new Response("body"))).toBe("body");
-		const keepalive = new globalThis.Request("http://x", {
+		// So can Node's, including subclasses Cap'n Web can't serialise itself
+		class AppRequest extends globalThis.Request {}
+		const keepalive = new AppRequest("http://x", {
 			method: "POST",
 			body: "body",
 			keepalive: true,
