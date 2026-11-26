@@ -1,5 +1,11 @@
 import assert from "node:assert";
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	readdirSync,
+	readFileSync,
+	realpathSync,
+	writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
@@ -574,7 +580,8 @@ export class BundlerController extends Controller {
 
 		if (config.dev.watch !== false && config.assets?.directory) {
 			const assetsDir = path.resolve(config.assets.directory);
-			const ignoreAsset = await createAssetsWatchMatcher(assetsDir);
+			const { ignoreAsset, getAssetMetadataFilename } =
+				await createAssetsWatchMatcher(assetsDir);
 			if (!isCurrent()) {
 				return;
 			}
@@ -726,31 +733,50 @@ export class BundlerController extends Controller {
 	}
 }
 
-/** Recognize root asset metadata even if the watcher reports a different casing. */
-function getAssetMetadataFilename(relativePath: string) {
-	const filename = relativePath.toLowerCase();
-	return filename === CF_ASSETS_IGNORE_FILENAME ||
-		filename === HEADERS_FILENAME ||
-		filename === REDIRECTS_FILENAME
-		? filename
-		: undefined;
-}
-
 /**
  * Match the asset scanner's ignore rules without filtering out metadata that
  * needs to trigger reloads. Let the asset scanner report unreadable ignore
  * files so the watcher stays up and detects when the file is fixed.
  */
-async function createAssetsWatchMatcher(
-	assetsDir: string
-): Promise<MatchFunction> {
+async function createAssetsWatchMatcher(assetsDir: string) {
 	const ignore = await createAssetsIgnoreFunction(assetsDir).catch(
 		() => undefined
 	);
-	return (filePath, stats) => {
-		if (!ignore) {
-			return false;
+	const metadataAliases = new Set<string>();
+
+	/**
+	 * Match differently cased entries only when the loaders' lowercase lookup
+	 * reaches them, not when two distinct files coexist. Remember matches so
+	 * the watcher also reports their removal after the path stops resolving.
+	 */
+	function getAssetMetadataFilename(relativePath: string) {
+		const filename = relativePath.toLowerCase();
+		if (
+			filename !== CF_ASSETS_IGNORE_FILENAME &&
+			filename !== HEADERS_FILENAME &&
+			filename !== REDIRECTS_FILENAME
+		) {
+			return undefined;
 		}
+		if (relativePath === filename || metadataAliases.has(relativePath)) {
+			return filename;
+		}
+		if (!existsSync(path.join(assetsDir, filename))) {
+			return undefined;
+		}
+		try {
+			const entries = readdirSync(assetsDir);
+			if (!entries.includes(relativePath) || entries.includes(filename)) {
+				return undefined;
+			}
+		} catch {
+			return undefined;
+		}
+		metadataAliases.add(relativePath);
+		return filename;
+	}
+
+	const ignoreAsset: MatchFunction = (filePath, stats) => {
 		const relativePath = path
 			.relative(assetsDir, filePath)
 			.split(path.sep)
@@ -760,7 +786,8 @@ async function createAssetsWatchMatcher(
 			relativePath === ".." ||
 			relativePath.startsWith("../") ||
 			path.isAbsolute(relativePath) ||
-			getAssetMetadataFilename(relativePath) !== undefined
+			getAssetMetadataFilename(relativePath) !== undefined ||
+			!ignore
 		) {
 			return false;
 		}
@@ -774,6 +801,7 @@ async function createAssetsWatchMatcher(
 			stats.isDirectory() ? `${relativePath}/` : relativePath
 		);
 	};
+	return { ignoreAsset, getAssetMetadataFilename };
 }
 
 /**

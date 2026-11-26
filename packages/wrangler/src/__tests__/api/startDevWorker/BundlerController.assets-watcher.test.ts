@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
-import { rename, stat } from "node:fs/promises";
+import { rename, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
@@ -323,12 +323,6 @@ describe("BundlerController — assets watcher", () => {
 				false
 			);
 		}
-		for (const metadataPath of [".ASSETSIGNORE", "_HEADERS", "_REDIRECTS"]) {
-			expect(
-				await watchers.ignoresAsset(0, metadataPath, false),
-				metadataPath
-			).toBe(false);
-		}
 		expect(await watchers.ignoresAsset(0, "node_modules", false)).toBe(true);
 		expect(await watchers.ignoresAsset(0, "private", false)).toBe(false);
 
@@ -337,12 +331,45 @@ describe("BundlerController — assets watcher", () => {
 			".assetsignore":
 				"node_modules\n/.cloudflare/\n!/node_modules/\n!/.cloudflare/\n",
 		});
-		firstWatcher.emit("all", "change", path.resolve(".ASSETSIGNORE"));
+		firstWatcher.emit("all", "change", path.resolve(".assetsignore"));
 		await ignoreReload;
 		await watchers.at(1);
 		expect(firstWatcher.close).toHaveBeenCalled();
 		expect(await watchers.ignoresAsset(1, ".cloudflare")).toBe(false);
 		expect(await watchers.ignoresAsset(1, "node_modules")).toBe(false);
+	});
+
+	test("only watches differently cased metadata if the lowercase lookup finds it", async ({
+		expect,
+	}) => {
+		const watchers = mockWatchers(expect);
+		const metadataPaths = [
+			"assets/.ASSETSIGNORE",
+			"assets/_HEADERS",
+			"assets/_REDIRECTS",
+		];
+		await seed(
+			Object.fromEntries(metadataPaths.map((filePath) => [filePath, ""]))
+		);
+		const caseInsensitive = existsSync("assets/.assetsignore");
+		if (!caseInsensitive) {
+			await seed(
+				Object.fromEntries(
+					metadataPaths.map((filePath) => [filePath.toLowerCase(), ""])
+				)
+			);
+		}
+
+		controller.onConfigUpdate({ type: "configUpdate", config: assetsConfig() });
+		await watchers.at(0);
+		for (const metadataPath of metadataPaths) {
+			expect(await watchers.ignoresAsset(0, metadataPath), metadataPath).toBe(
+				!caseInsensitive
+			);
+			expect(await watchers.ignoresAsset(0, metadataPath.toLowerCase())).toBe(
+				false
+			);
+		}
 	});
 
 	test("reloads when a file changes in a newly unignored directory", async ({
@@ -391,6 +418,11 @@ describe("BundlerController — assets watcher", () => {
 		const assetReload = bus.waitFor("bundleComplete");
 		await seed({ "assets/drafts/index.html": "Published" });
 		await assetReload;
+
+		const ignoreRemovalReload = bus.waitFor("bundleComplete");
+		await unlink(ignoreFile);
+		await ignoreRemovalReload;
+		await expect.poll(() => readyWatchers.length).toBe(3);
 	});
 
 	test("ignores a persist directory inside the assets tree", async ({
