@@ -365,8 +365,7 @@ export async function runAutoConfig(
 		if (wranglerConfigPath !== undefined) {
 			if (setUpFramework) {
 				// Framework setup can scaffold its own cloudflare.config.ts, as `astro add` does.
-				// Detection found none before setup, so the migrated one, which also gets the
-				// framework's settings, replaces it.
+				// Detection found none before setup, so the migrated one replaces it.
 				await rm(resolve(projectPath, "cloudflare.config.ts"), { force: true });
 			}
 			// Loaded on use, so that importing autoconfig doesn't load the migration

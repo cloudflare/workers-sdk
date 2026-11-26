@@ -1830,7 +1830,7 @@ describe("migrateWranglerToCf", () => {
 		).rejects.toMatchObject({ code: "ENOENT" });
 	});
 
-	it("adds the framework's Worker settings to the migrated config", async ({
+	it("keeps the Wrangler config's settings and adds the framework's missing ones", async ({
 		expect,
 	}) => {
 		const cwd = await createProject({
@@ -1839,6 +1839,7 @@ describe("migrateWranglerToCf", () => {
 				compatibility_date: "2026-09-23",
 				compatibility_flags: ["nodejs_compat"],
 				kv_namespaces: [{ binding: "KV", id: "kv-id" }],
+				main: "src/index.ts",
 				name: "example-worker",
 			}),
 		});
@@ -1856,12 +1857,8 @@ describe("migrateWranglerToCf", () => {
 			path.join(cwd, "cloudflare.config.ts"),
 			"utf8"
 		);
-		expect(cloudflareConfig).toContain(
-			'entrypoint: "@astrojs/cloudflare/entrypoints/server"'
-		);
-		expect(cloudflareConfig).toMatch(
-			/"nodejs_compat",\s*"global_fetch_strictly_public"/
-		);
+		expect(cloudflareConfig).toContain('entrypoint: "src/index.ts"');
+		expect(cloudflareConfig).not.toContain("global_fetch_strictly_public");
 		expect(cloudflareConfig).toContain("KV: bindings.kv(");
 		expect(cloudflareConfig).toContain('type: "assets"');
 	});

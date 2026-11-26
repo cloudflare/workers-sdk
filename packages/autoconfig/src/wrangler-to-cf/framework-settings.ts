@@ -5,10 +5,9 @@ import type {
 } from "./types";
 
 /**
- * Adds a framework's Worker settings to every Worker that a converted Wrangler config renders,
- * one per environment and preview, so that the migrated config also runs the framework.
- * The framework's values replace migrated ones, objects are merged and arrays are extended,
- * which keeps the migrated bindings and compatibility flags.
+ * Adds the framework's Worker settings that a converted Wrangler config doesn't set, to every
+ * Worker it renders, one per environment and preview. A Wrangler project is already set up for
+ * its framework, so its own values, such as its entrypoint, flags and bindings, are kept.
  *
  * @param converted The converted Wrangler config
  * @param settings The framework's Worker settings
@@ -30,10 +29,10 @@ export function addFrameworkSettings(
 }
 
 /**
- * Merges settings into a rendered object.
+ * Adds the settings that a rendered object doesn't set.
  *
  * @param object The object to update
- * @param settings The settings to merge into it
+ * @param settings The settings to add where missing
  */
 function mergeSettings(
 	object: OutputObject,
@@ -48,16 +47,6 @@ function mergeSettings(
 			object.properties.push({ key, value: toOutputValue(value) });
 		} else if (isOutputObject(property.value) && isRecord(value)) {
 			mergeSettings(property.value, value);
-		} else if (Array.isArray(property.value) && Array.isArray(value)) {
-			const existingValues = property.value;
-			property.value = [
-				...existingValues,
-				...value
-					.filter((item) => !existingValues.includes(item as OutputValue))
-					.map(toOutputValue),
-			];
-		} else {
-			property.value = toOutputValue(value);
 		}
 	}
 }

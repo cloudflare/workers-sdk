@@ -905,7 +905,8 @@ describe("runAutoConfig()", () => {
 
 			const cloudflareConfig = readFileSync("cloudflare.config.ts", "utf8");
 			expect(cloudflareConfig).toContain("bindings.kv");
-			expect(cloudflareConfig).toContain('entrypoint: "src/app.ts"');
+			// The Wrangler config's entrypoint wins over the framework's
+			expect(cloudflareConfig).toContain('entrypoint: "src/index.ts"');
 		});
 
 		it("previews the migration in a dry run without changing files", async ({
