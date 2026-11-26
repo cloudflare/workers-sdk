@@ -346,7 +346,7 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	// A Wrangler config can serve a Worker without any static assets
+	// Setup needs the project's output directory, unless a Wrangler config already describes its Worker
 	if (!outputDir && wranglerConfigFile === undefined) {
 		const errorMessage =
 			framework.id === "static" || framework.id === "cloudflare-pages"
