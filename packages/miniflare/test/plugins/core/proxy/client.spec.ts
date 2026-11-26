@@ -267,6 +267,10 @@ describe("ProxyClient", () => {
 			BINDING.streamSize(retried, new Array(5_000_000).fill(123456))
 		).toThrow(RangeError);
 		expect(await BINDING.streamSize(retried)).toBe(3);
+		// Locked streams are rejected, rather than sent without data
+		const locked = new Blob(["abc"]).stream();
+		locked.getReader();
+		expect(() => BINDING.streamSize(locked)).toThrow(TypeError);
 	});
 
 	test("rejects pending Workers RPC results once poisoned", async ({

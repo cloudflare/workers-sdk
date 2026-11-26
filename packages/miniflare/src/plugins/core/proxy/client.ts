@@ -630,6 +630,11 @@ class ProxyClientBridge {
 			return value;
 		}
 		if (value instanceof ReadableStream) {
+			// Piping a locked stream would fail after the call is sent, leaving the
+			// Worker reading a stream that never ends
+			if (value.locked) {
+				throw new TypeError("Cannot send a locked ReadableStream");
+			}
 			const splitter = createChunkSplitter();
 			state.streams.push([value, splitter]);
 			return splitter.readable;
