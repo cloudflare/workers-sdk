@@ -487,7 +487,20 @@ parameter in module format Workers.
   `writeDataPoint()` calls are discarded. If `remoteProxyConnectionString` is
   set, they are written to the remote dataset instead.
 
-#### Sending Email, Vectorize and Workers for Platforms
+#### Sending Email
+
+- `email?: { send_email?: { name: string; destination_address?: string; allowed_destination_addresses?: string[]; allowed_sender_addresses?: string[]; remoteProxyConnectionString?: RemoteProxyConnectionString }[] }`
+
+  Array of Email Sending bindings, each injected into this Worker under its
+  `name`. `destination_address` and `allowed_destination_addresses` are mutually
+  exclusive. Locally, `send()` calls are simulated rather than delivered: the
+  sender and recipients are checked against the configured restrictions, the
+  message is logged and written to a file in the temporary directory, and
+  `send()` resolves with a generated message ID. If
+  `remoteProxyConnectionString` is set, messages are sent through the remote
+  binding instead.
+
+#### Vectorize and Workers for Platforms
 
 _Not yet supported_
 
