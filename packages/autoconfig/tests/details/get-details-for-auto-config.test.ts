@@ -118,6 +118,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({
 			configured: false,
 			wranglerConfigPath: join(process.cwd(), "wrangler.jsonc"),
+			wranglerConfig: { name: "my-worker" },
 			workerName: "my-worker",
 		});
 

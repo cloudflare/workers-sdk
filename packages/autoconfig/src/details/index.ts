@@ -279,7 +279,7 @@ export async function getDetailsForAutoConfig({
 
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, {
-			// The caller's parsed config, or the one setup migrates
+			// Wrangler's parsed config, or the one setup migrates
 			wranglerConfig: wranglerConfig ?? wranglerRawConfig,
 			target,
 		});
@@ -416,6 +416,7 @@ export async function getDetailsForAutoConfig({
 		configured: false,
 		isWorkspaceRoot,
 		wranglerConfigPath: wranglerConfigFile,
+		wranglerConfig: wranglerRawConfig,
 	};
 }
 

@@ -20,7 +20,7 @@ import { staticFramework } from "../frameworks/all-frameworks";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { TelemetryMessage } from "@cloudflare/workers-utils";
-import type { Config, RawConfig } from "@cloudflare/workers-utils/config";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { Settings } from "@netlify/build-info";
 
 /**
@@ -54,8 +54,8 @@ export async function detectFramework(
 		wranglerConfig,
 		target = "cf",
 	}: {
-		/** The project's Wrangler config, parsed or as written, if it has one. */
-		wranglerConfig?: Config | RawConfig;
+		/** The project's Wrangler config, if it has one. Wrangler's parsed config is one too. */
+		wranglerConfig?: RawConfig;
 		target?: AutoConfigTarget;
 	} = {}
 ): Promise<{
@@ -325,7 +325,7 @@ export type DetectedFramework = {
 async function isPagesProject(
 	projectPath: string,
 	context: AutoConfigContext,
-	wranglerConfig: Config | RawConfig | undefined,
+	wranglerConfig: RawConfig | undefined,
 	detectedFramework?: DetectedFramework | undefined
 ): Promise<boolean> {
 	if (wranglerConfig?.pages_build_output_dir) {

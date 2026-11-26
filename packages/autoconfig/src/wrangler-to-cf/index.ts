@@ -90,7 +90,7 @@ export async function migrateWranglerToCf(
 	await assertTargetsDoNotExist([cloudflareConfigPath]);
 
 	const [rawConfig, secretFiles] = await Promise.all([
-		readWranglerConfig(absoluteConfigPath),
+		options.wranglerConfig ?? readWranglerConfig(absoluteConfigPath),
 		findSecretFiles(projectDirectory),
 	]);
 	const convertedConfig = convertWranglerConfig(

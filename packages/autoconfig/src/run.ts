@@ -42,7 +42,6 @@ import {
 	saveCloudflareTypesTsconfigUpdate,
 } from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
-import { readWranglerConfig } from "./wrangler-to-cf/config-reader";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
 	BuildConfig,
@@ -108,7 +107,7 @@ export async function runAutoConfig(
 	const existingWorkerConfig: Partial<WorkerConfig> | undefined =
 		wranglerConfigPath === undefined
 			? undefined
-			: { entrypoint: readWranglerConfig(wranglerConfigPath).main };
+			: { entrypoint: autoConfigDetails.wranglerConfig?.main };
 	const frameworkSupportError = getFrameworkSupportError(framework, target);
 	// A project with its own Worker config is still set up without a framework that autoconfig
 	// can't set up. Pages projects aren't supported either way.
@@ -205,6 +204,8 @@ export async function runAutoConfig(
 				? "vite"
 				: "wrangler"),
 		installDependencies,
+		// Detection already read the Wrangler config
+		wranglerConfig: autoConfigDetails.wranglerConfig,
 		// The framework's build covers the assets it builds
 		frameworkAssetsDirectory: dryRunConfigurationResults.skipped
 			? undefined

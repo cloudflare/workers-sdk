@@ -1,3 +1,5 @@
+import type { RawConfig } from "@cloudflare/workers-utils/config";
+
 export type MigrationBundler = "vite" | "wrangler";
 
 export interface WranglerToCfMigrationOptions {
@@ -13,6 +15,8 @@ export interface WranglerToCfMigrationOptions {
 	 * framework's build covers it.
 	 */
 	frameworkAssetsDirectory?: string;
+	/** The Wrangler config's contents, when the caller has already read them */
+	wranglerConfig?: RawConfig;
 }
 
 export interface MigrationFollowUp {
