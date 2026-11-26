@@ -881,6 +881,13 @@ describe("runAutoConfig()", () => {
 			initialInstall: "missing-vp",
 		},
 		{
+			scenario:
+				"Vite+ from the workspace, with vp and its core already installed",
+			workspaceRunner: "vite-plus",
+			installCf: false,
+			initialInstall: "installed-vp",
+		},
+		{
 			scenario: "an enclosing workspace that excludes the app",
 			workspaceRunner: undefined,
 			installCf: false,
@@ -893,7 +900,12 @@ describe("runAutoConfig()", () => {
 			const runnerVersion = vitePlus ? "0.2.2" : "7.1.12";
 			const rootManifest = JSON.stringify({
 				name: "workspace",
-				devDependencies: { [workspaceRunner ?? "vite"]: runnerVersion },
+				devDependencies: {
+					[workspaceRunner ?? "vite"]: runnerVersion,
+					...(vitePlus && {
+						vite: `npm:@voidzero-dev/vite-plus-core@${runnerVersion}`,
+					}),
+				},
 			});
 			const projectPath = join(process.cwd(), "apps/site");
 			const manifestPath = join(projectPath, "package.json");
@@ -901,8 +913,25 @@ describe("runAutoConfig()", () => {
 			const vpManifest = JSON.stringify({
 				name: "vite-plus",
 				version: runnerVersion,
-				bin: { vp: "cli.mjs" },
+				bin: { vp: "bin/vp" },
 			});
+			const runnerModules = `${workspaceRunner ? "" : "apps/site/"}node_modules`;
+			const runnerFiles = {
+				[`${runnerModules}/vite/package.json`]: JSON.stringify({
+					name: vitePlus ? "@voidzero-dev/vite-plus-core" : "vite",
+					version: workspaceRunner ? runnerVersion : "8.1.0",
+					...(vitePlus
+						? { bundledVersions: { vite: "8.1.2" } }
+						: { bin: { vite: "cli.js" } }),
+				}),
+				...(vitePlus
+					? {
+							"node_modules/vite-plus/package.json": vpManifest,
+							"node_modules/vite-plus/bin/vp": "",
+						}
+					: { [`${runnerModules}/vite/cli.js`]: "" }),
+			};
+			const installRunner = initialInstall !== "installed-vp";
 			await seed({
 				"package.json": rootManifest,
 				"pnpm-workspace.yaml": `packages: ['${workspaceRunner ? "apps" : "packages"}/*']\n`,
@@ -912,7 +941,9 @@ describe("runAutoConfig()", () => {
 				"apps/site/index.html": "<h1>Hello World</h1>",
 				"apps/site/vite.config.ts":
 					'import { defineConfig } from "vite"; export default defineConfig({ plugins: [] });',
-				...(initialInstall !== "empty" && {
+				...(initialInstall === "installed-vp" && runnerFiles),
+				...((initialInstall === "plain-vite" ||
+					initialInstall === "missing-vp") && {
 					"apps/site/node_modules/vite/package.json": JSON.stringify({
 						name: "vite",
 						version: "8.0.0",
@@ -930,23 +961,9 @@ describe("runAutoConfig()", () => {
 			if (installCf) {
 				install.mockResolvedValueOnce();
 			}
-			const runnerManifest = JSON.stringify({
-				name: vitePlus ? "@voidzero-dev/vite-plus-core" : "vite",
-				version: workspaceRunner ? runnerVersion : "8.1.0",
-				bin: { vite: "cli.js" },
-				...(vitePlus && { bundledVersions: { vite: "8.1.2" } }),
-			});
-			const runnerModules = `${workspaceRunner ? "" : "apps/site/"}node_modules`;
-			install.mockImplementationOnce(() =>
-				seed({
-					[`${runnerModules}/vite/package.json`]: runnerManifest,
-					[`${runnerModules}/vite/cli.js`]: "",
-					...(vitePlus && {
-						"node_modules/vite-plus/package.json": vpManifest,
-						"node_modules/vite-plus/cli.mjs": "",
-					}),
-				})
-			);
+			if (installRunner) {
+				install.mockImplementationOnce(() => seed(runnerFiles));
+			}
 			vi.mocked(context.dialogs.select).mockResolvedValue("vite");
 			vi.mocked(context.dialogs.prompt)
 				.mockResolvedValueOnce("site")
@@ -963,11 +980,12 @@ describe("runAutoConfig()", () => {
 				dev: true,
 				isWorkspaceRoot: false,
 			};
+			const runnerInstall = workspaceRunner
+				? ["pnpm", [], { cwd: process.cwd() }]
+				: [details.packageManager.type, ["vite@^8.0.0"], appInstall];
 			expect(install.mock.calls).toEqual([
 				...(installCf ? [["pnpm", ["cf@latest"], appInstall]] : []),
-				workspaceRunner
-					? ["pnpm", [], { cwd: process.cwd() }]
-					: [details.packageManager.type, ["vite@^8.0.0"], appInstall],
+				...(installRunner ? [runnerInstall] : []),
 				[
 					details.packageManager.type,
 					["@cloudflare/vite-plugin@^2.0.0-rc.0"],
