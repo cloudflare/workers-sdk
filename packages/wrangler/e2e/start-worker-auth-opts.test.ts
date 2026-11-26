@@ -14,9 +14,8 @@ import type { ExpectStatic } from "vitest";
 
 const { unstable_startWorker: startWorker } = await importWrangler();
 
-// AI is a remote-only binding, so its remote session only connects on the first
-// binding call. A failed authentication fails that call and is logged as this
-// warning, rather than emitted as an error on the worker.
+// The remote session connects on the first binding call. An authentication
+// failure fails that call and logs this warning instead of emitting a worker error.
 const AUTH_WARNING =
 	"Could not connect remote bindings: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.";
 

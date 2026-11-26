@@ -60,85 +60,105 @@ async function seedProducer(
 	return name;
 }
 
-describe("K2 producer configuration", () => {
-	it("finishes the first lazy getPlatformProxy() call when authentication fails", async ({
-		expect,
-	}) => {
-		const helper = new WranglerE2ETestHelper();
-		const { certificate, privateKey } = generateRootCaCert("127.0.0.1");
-		await seedProducer(helper, streamId);
-		await helper.seed({
-			"localhost-ca.pem": certificate,
-			"platform-proxy.mjs": `
+describe("getPlatformProxy() lazy authentication", () => {
+	it.for([
+		{
+			name: "K2",
+			bindings: { k2: [{ binding: "ORDERS", stream: streamId }] },
+			bindingCall: "proxy.env.ORDERS.send([{ content: new ArrayBuffer(1) }])",
+		},
+		{
+			name: "KV with remote: true",
+			bindings: {
+				kv_namespaces: [{ binding: "KV", id: "a".repeat(32), remote: true }],
+			},
+			bindingCall: 'proxy.env.KV.get("key")',
+		},
+	])(
+		"finishes the first $name call when authentication fails",
+		async ({ bindings, bindingCall }, { expect }) => {
+			const helper = new WranglerE2ETestHelper();
+			const { certificate, privateKey } = generateRootCaCert("127.0.0.1");
+			await helper.seed({
+				"wrangler.json": JSON.stringify({
+					name: "platform-proxy-test",
+					compatibility_date: "2025-04-28",
+					...bindings,
+				}),
+				"localhost-ca.pem": certificate,
+				"platform-proxy.mjs": `
 				import assert from "node:assert/strict";
 				import { getPlatformProxy } from ${JSON.stringify(WRANGLER_IMPORT.href)};
 
 				const proxy = await getPlatformProxy({ persist: false });
 				try {
 					await assert.rejects(async () => {
-						await proxy.env.ORDERS.send([{ content: new ArrayBuffer(1) }]);
+						await ${bindingCall};
 					});
 				} finally {
 					await proxy.dispose();
 				}
 			`,
-		});
-		const requests: string[] = [];
-		const server = createHttpsServer(
-			{ cert: certificate, key: privateKey },
-			(request, response) => {
-				requests.push(
-					new URL(request.url ?? "/", "https://localhost").pathname
-				);
-				response.setHeader("Content-Type", "application/json");
-				response.end(JSON.stringify({ success: true, result: [] }));
-			}
-		);
-		server.listen(0, "127.0.0.1");
-		await once(server, "listening");
-		helper.onTeardown(
-			() =>
-				new Promise<void>((resolve, reject) =>
-					server.close((error) => (error ? reject(error) : resolve()))
-				)
-		);
-		const address = server.address();
-		assert(address && typeof address !== "string");
-		const { stderr } = await promisify(execFile)(
-			process.execPath,
-			["--no-use-bundled-ca=true", "--use-openssl-ca", "platform-proxy.mjs"],
-			{
-				cwd: helper.tmpPath,
-				timeout: 15_000,
-				killSignal: "SIGKILL",
-				env: {
-					...process.env,
-					HOME: helper.tmpPath,
-					USERPROFILE: helper.tmpPath,
-					XDG_CONFIG_HOME: helper.tmpPath,
-					NODE_OPTIONS: "--use-bundled-ca",
-					NODE_EXTRA_CA_CERTS: "",
-					NODE_TLS_REJECT_UNAUTHORIZED: "1",
-					NO_PROXY: "127.0.0.1",
-					no_proxy: "127.0.0.1",
-					SSL_CERT_FILE: path.join(helper.tmpPath, "localhost-ca.pem"),
-					CLOUDFLARE_ACCOUNT_ID: "",
-					CF_ACCOUNT_ID: "",
-					CLOUDFLARE_API_KEY: "",
-					CF_API_KEY: "",
-					CLOUDFLARE_API_TOKEN: "k2-test-token",
-					CLOUDFLARE_API_BASE_URL: `https://127.0.0.1:${address.port}/client/v4`,
-					WRANGLER_LOG: "warn",
-				},
-			}
-		);
-		expect(requests.sort()).toEqual([
-			"/client/v4/accounts",
-			"/client/v4/memberships",
-		]);
-		expect(stderr).toContain("Failed to automatically retrieve account IDs");
-	});
+			});
+			const requests: string[] = [];
+			const server = createHttpsServer(
+				{ cert: certificate, key: privateKey },
+				(request, response) => {
+					requests.push(
+						new URL(request.url ?? "/", "https://localhost").pathname
+					);
+					response.setHeader("Content-Type", "application/json");
+					response.end(JSON.stringify({ success: true, result: [] }));
+				}
+			);
+			server.listen(0, "127.0.0.1");
+			await once(server, "listening");
+			helper.onTeardown(
+				() =>
+					new Promise<void>((resolve, reject) =>
+						server.close((error) => (error ? reject(error) : resolve()))
+					)
+			);
+			const address = server.address();
+			assert(address && typeof address !== "string");
+			const { stderr } = await promisify(execFile)(
+				process.execPath,
+				["--no-use-bundled-ca=true", "--use-openssl-ca", "platform-proxy.mjs"],
+				{
+					cwd: helper.tmpPath,
+					timeout: 15_000,
+					killSignal: "SIGKILL",
+					env: {
+						...process.env,
+						HOME: helper.tmpPath,
+						USERPROFILE: helper.tmpPath,
+						XDG_CONFIG_HOME: helper.tmpPath,
+						NODE_OPTIONS: "--use-bundled-ca",
+						NODE_EXTRA_CA_CERTS: "",
+						NODE_TLS_REJECT_UNAUTHORIZED: "1",
+						NO_PROXY: "127.0.0.1",
+						no_proxy: "127.0.0.1",
+						SSL_CERT_FILE: path.join(helper.tmpPath, "localhost-ca.pem"),
+						CLOUDFLARE_ACCOUNT_ID: "",
+						CF_ACCOUNT_ID: "",
+						CLOUDFLARE_API_KEY: "",
+						CF_API_KEY: "",
+						CLOUDFLARE_API_TOKEN: "k2-test-token",
+						CLOUDFLARE_API_BASE_URL: `https://127.0.0.1:${address.port}/client/v4`,
+						WRANGLER_LOG: "warn",
+					},
+				}
+			);
+			expect(requests.sort()).toEqual([
+				"/client/v4/accounts",
+				"/client/v4/memberships",
+			]);
+			expect(stderr).toContain("Failed to automatically retrieve account IDs");
+		}
+	);
+});
 
+describe("K2 producer configuration", () => {
 	it("creates, gets, lists and deletes streams through the built CLI and an isolated API server", async ({
 		expect,
 	}) => {

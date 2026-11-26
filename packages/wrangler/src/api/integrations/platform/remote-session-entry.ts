@@ -32,7 +32,7 @@ async function runPlatformProxyRemoteSession(): Promise<void> {
 	let session: RemoteProxySession | undefined;
 	try {
 		try {
-			session = await startSession(config, true);
+			session = await startSession(config);
 		} catch (error) {
 			await sendStartupMessage({
 				type: "error",

@@ -1,8 +1,5 @@
 import assert from "node:assert";
-import {
-	getBindingLocalSupport,
-	resolveBindingRemote,
-} from "@cloudflare/workers-utils/config";
+import { resolveBindingRemote } from "@cloudflare/workers-utils/config";
 import { getRemoteBindings } from "./config-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { ConfigBindings } from "./config-bindings";
@@ -66,8 +63,6 @@ export type RemoteProxySessionData = {
 	remoteBindings: Record<string, Binding>;
 	auth?: AsyncHook<CfAccount>;
 	authKey?: string;
-	/** Whether this session establishes its remote connection on the first call. */
-	lazy?: boolean;
 };
 
 export type RemoteBindingsContext = {
@@ -75,7 +70,7 @@ export type RemoteBindingsContext = {
 	logger: RemoteBindingsLogger;
 };
 
-/** Potentially starts or updates a remote proxy session. */
+/** Starts or updates a remote proxy session that connects on the first binding call. */
 export async function maybeStartOrUpdateRemoteProxySession(
 	workerConfigObject: WorkerConfigObject,
 	preExistingRemoteProxySessionData: RemoteProxySessionData | null | undefined,
@@ -98,79 +93,39 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	) {
 		return null;
 	}
-	const lazy =
-		Object.keys(remoteBindings).length === 0
-			? (preExistingRemoteProxySessionData?.lazy ?? false)
-			: shouldStartRemoteProxySessionLazily(remoteBindings);
 	const authSameAsBefore =
-		(key !== undefined ||
+		key !== undefined ||
 		preExistingRemoteProxySessionData?.authKey !== undefined
 			? key === preExistingRemoteProxySessionData?.authKey
-			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth)) &&
-		lazy === (preExistingRemoteProxySessionData?.lazy ?? false);
+			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth);
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
-	if (!authSameAsBefore) {
-		if (preExistingRemoteProxySessionData?.session) {
-			await preExistingRemoteProxySessionData.session.dispose();
-		}
-
+	if (!remoteProxySession || !authSameAsBefore) {
+		await remoteProxySession?.dispose();
 		remoteProxySession = await startSession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
 			auth: hook,
-			lazy,
+			lazy: true,
 			logger: context.logger,
 		});
-	} else {
-		const remoteBindingsAreSameAsBefore = deepStrictEqual(
+	} else if (
+		!deepStrictEqual(
 			remoteBindings,
 			preExistingRemoteProxySessionData?.remoteBindings
-		);
-
-		if (!remoteBindingsAreSameAsBefore) {
-			if (!remoteProxySession) {
-				if (Object.keys(remoteBindings).length > 0) {
-					remoteProxySession = await startSession(remoteBindings, {
-						workerName: workerConfigObject.name,
-						complianceRegion: workerConfigObject.complianceRegion,
-						cliDisplayName: context.cliDisplayName,
-						auth: hook,
-						lazy,
-						logger: context.logger,
-					});
-				}
-			} else {
-				await remoteProxySession.updateBindings(remoteBindings);
-			}
-		}
+		)
+	) {
+		await remoteProxySession.updateBindings(remoteBindings);
 	}
 
-	await remoteProxySession?.ready;
-	if (!remoteProxySession) {
-		return null;
-	}
+	await remoteProxySession.ready;
 	return {
 		session: remoteProxySession,
 		remoteBindings,
 		auth: hook,
 		authKey: key,
-		lazy,
 	};
-}
-
-/** Decide when to connect to a nonempty set of bindings selected by {@link pickRemoteBindings}. */
-export function shouldStartRemoteProxySessionLazily(
-	remoteBindings: Record<string, Binding>
-): boolean {
-	return Object.values(remoteBindings).every((binding) => {
-		const support = getBindingLocalSupport(binding.type);
-		return (
-			support === "remote" ||
-			support === "DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
-		);
-	});
 }
 
 function deepStrictEqual(source: unknown, target: unknown): boolean {

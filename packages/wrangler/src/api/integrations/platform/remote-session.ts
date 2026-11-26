@@ -1,9 +1,6 @@
 import { fork } from "node:child_process";
 import path from "node:path";
-import {
-	pickRemoteBindings,
-	shouldStartRemoteProxySessionLazily,
-} from "@cloudflare/remote-bindings";
+import { pickRemoteBindings } from "@cloudflare/remote-bindings";
 import {
 	getCloudflareComplianceRegion,
 	UserError,
@@ -46,9 +43,8 @@ export async function startPlatformProxyRemoteSession(
 		complianceRegion: getCloudflareComplianceRegion(config),
 		cliDisplayName: isCfAuthActive() ? "cf" : "Wrangler",
 	};
-	const lazy = shouldStartRemoteProxySessionLazily(bindings);
-	if (!lazy || process.versions.bun) {
-		return startSession(sessionConfig, lazy);
+	if (process.versions.bun) {
+		return startSession(sessionConfig);
 	}
 	return startBackgroundSession(sessionConfig);
 }

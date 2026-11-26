@@ -23,19 +23,19 @@ export type StartupMessage =
 	  };
 
 /**
- * Start a remote bindings session using Wrangler's default authentication.
+ * Start a remote bindings session that resolves Wrangler credentials on first use.
  *
  * @param config - Bindings and account settings for the session.
- * @param lazy - Resolve credentials on the first binding request instead of at startup.
  * @returns The session. The caller must dispose it when no longer needed.
  */
-export function startSession(
-	{ bindings, accountId, ...options }: SessionConfig,
-	lazy: boolean
-) {
+export function startSession({
+	bindings,
+	accountId,
+	...options
+}: SessionConfig) {
 	return startRemoteProxySession(bindings, {
 		...options,
-		lazy,
+		lazy: true,
 		auth: getDefaultRemoteBindingsAuth(accountId).hook,
 		logger,
 	});
