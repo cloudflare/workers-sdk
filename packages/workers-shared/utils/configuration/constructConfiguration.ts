@@ -145,23 +145,35 @@ export function constructHeaders({
 	for (const rule of headers.rules) {
 		// The same path may start more than one block. Rules are keyed by path,
 		// so merge such blocks into one rule rather than letting the last block
-		// replace the earlier ones, combining a repeated header name as a single
-		// block does.
+		// replace the earlier ones. A block's unsets still cancel what earlier
+		// blocks for the path set, since the runtime applies a rule's unsets
+		// before its sets.
 		const configuredRule: MetadataHeaders[string] = rules[rule.path] ?? {};
+		const set = { ...configuredRule.set };
 
-		if (Object.keys(rule.headers).length) {
-			const set = { ...configuredRule.set };
-			for (const [name, value] of Object.entries(rule.headers)) {
-				const existingValue = set[name];
-				set[name] = existingValue ? `${existingValue}, ${value}` : value;
-			}
-			configuredRule.set = set;
-		}
 		if (rule.unsetHeaders.length) {
+			// Header names are lowercased when parsed, but unset names keep
+			// their case, so compare them case-insensitively.
+			for (const name of rule.unsetHeaders) {
+				delete set[name.toLowerCase()];
+			}
 			configuredRule.unset = [
 				...(configuredRule.unset ?? []),
 				...rule.unsetHeaders,
 			];
+		}
+
+		// A header name repeated across blocks is combined, as it is within a
+		// single block.
+		for (const [name, value] of Object.entries(rule.headers)) {
+			const existingValue = set[name];
+			set[name] = existingValue ? `${existingValue}, ${value}` : value;
+		}
+
+		if (Object.keys(set).length) {
+			configuredRule.set = set;
+		} else {
+			delete configuredRule.set;
 		}
 
 		rules[rule.path] = configuredRule;
