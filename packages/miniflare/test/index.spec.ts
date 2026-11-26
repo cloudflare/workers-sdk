@@ -4746,6 +4746,47 @@ test("Miniflare: dispatchFetch() can override cf", async ({ expect }) => {
 	expect(cfJson.myFakeField).toEqual("test2");
 });
 
+test("Miniflare: dispatchFetch() forwards request headers as sent", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
+			fetch(request) {
+				const names = ["accept", "accept-language", "sec-fetch-mode", "user-agent"];
+				return Response.json(Object.fromEntries(names.map((name) => [name, request.headers.get(name)])));
+			}
+		}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	// `undici.fetch()` would otherwise add `Accept: */*`, `Accept-Language: *`,
+	// `Sec-Fetch-Mode: cors` and its own `User-Agent`
+	let res = await mf.dispatchFetch("http://localhost/");
+	expect(await res.json()).toEqual({
+		accept: null,
+		"accept-language": null,
+		"sec-fetch-mode": null,
+		"user-agent": null,
+	});
+
+	const headers = {
+		accept: "text/html",
+		"accept-language": "en-GB",
+		"sec-fetch-mode": "navigate",
+		"user-agent": "Test",
+	};
+	res = await mf.dispatchFetch("http://localhost/", { headers });
+	expect(await res.json()).toEqual(headers);
+});
+
 test("Miniflare: CF-Connecting-IP is injected", async ({ expect }) => {
 	const mf = new Miniflare({
 		cf: {

@@ -12,6 +12,17 @@ import type { UndiciHeaders } from "undici/types/dispatcher";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
 
+// `undici.fetch()` adds these request headers when they are absent and always
+// overwrites `Sec-Fetch-Mode` with the request's mode, as the Fetch spec
+// requires of a client. `Accept-Encoding` is also added, but the entry worker
+// normalises it for every request.
+const fetchDefaultedHeaders = [
+	"accept",
+	"accept-language",
+	"sec-fetch-mode",
+	"user-agent",
+];
+
 export async function fetch(
 	input: RequestInfo,
 	init?: RequestInit | Request
@@ -188,13 +199,18 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 	 * @param userRuntimeOrigin 	Origin to treat as runtime request
 	 * 														(initial URL passed by user to `dispatchFetch()`)
 	 * @param cfBlob							`request.cf` blob override for runtime requests
+	 * @param requestHeaders			Headers of the request passed to `dispatchFetch()`.
+	 * 														Runtime requests carry these values for the headers
+	 * 														`undici.fetch()` adds or overwrites, so the Worker
+	 * 														receives them as the caller sent them.
 	 */
 	constructor(
 		private readonly globalDispatcher: undici.Dispatcher,
 		private readonly runtimeDispatcher: undici.Dispatcher,
 		private readonly actualRuntimeOrigin: string,
 		private readonly userRuntimeOrigin: string,
-		cfBlob?: IncomingRequestCfProperties
+		cfBlob?: IncomingRequestCfProperties,
+		private readonly requestHeaders?: undici.Headers
 	) {
 		super();
 		if (cfBlob !== undefined) {
@@ -249,6 +265,16 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			}
 
 			const headers = convertUndiciHeadersToStandard(options.headers ?? {});
+			if (this.requestHeaders !== undefined) {
+				for (const name of fetchDefaultedHeaders) {
+					const value = this.requestHeaders.get(name);
+					if (value === null) {
+						headers.delete(name);
+					} else {
+						headers.set(name, value);
+					}
+				}
+			}
 
 			this.addHeaders(headers, path);
 

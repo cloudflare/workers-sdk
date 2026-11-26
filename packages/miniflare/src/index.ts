@@ -3260,7 +3260,8 @@ export class Miniflare {
 			this.#runtimeDispatcher,
 			actualRuntimeOrigin,
 			userRuntimeOrigin,
-			cfBlob
+			cfBlob,
+			forward.headers
 		);
 
 		// Pass `forward` as the input, not `init`, so its body keeps a known length.

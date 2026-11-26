@@ -128,12 +128,6 @@ function getUserRequest(
 	// https://developers.cloudflare.com/fundamentals/reference/http-request-headers/#accept-encoding
 	request.headers.set("Accept-Encoding", "br, gzip");
 
-	const secFetchMode = request.headers.get(CoreHeaders.SEC_FETCH_MODE);
-	if (secFetchMode) {
-		request.headers.set("Sec-Fetch-Mode", secFetchMode);
-	}
-	request.headers.delete(CoreHeaders.SEC_FETCH_MODE);
-
 	if (rewriteHeadersFromOriginalUrl) {
 		request.headers.set("Host", url.host);
 	}
