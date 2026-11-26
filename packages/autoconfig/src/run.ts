@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
@@ -27,8 +28,8 @@ import {
 	displayAutoConfigDetails,
 	getProjectCommand,
 	getDetailsForAutoConfig,
-	getMissingOutputDirError,
 } from "./details";
+import { AutoConfigDetectionError } from "./errors";
 import {
 	getFrameworkSupportError,
 	type PackageJsonScriptsOverrides,
@@ -117,9 +118,19 @@ export async function runAutoConfig(
 	) {
 		throw frameworkSupportError;
 	}
-	// A project with its own Worker config doesn't need an output directory to be set up
-	if (!outputDir && existingWorkerConfig === undefined) {
-		throw getMissingOutputDirError(framework, projectPath, target);
+	if (target === "wrangler") {
+		assert(outputDir, "The Output Directory is unexpectedly missing");
+	} else if (!outputDir && existingWorkerConfig === undefined) {
+		throw new AutoConfigDetectionError(
+			framework.id === "static"
+				? `Couldn't tell what to deploy in ${projectPath}: it has no supported framework, no Wrangler config and no index.html (in the folder or a folder directly inside it). Check that you're in the project's folder, or add a cloudflare.config.ts that describes your Worker.`
+				: `Couldn't find where ${framework.name} writes its build output in ${projectPath}.`,
+			{
+				telemetryMessage: "autoconfig run output directory missing",
+				frameworkId: framework.id,
+				configured: false,
+			}
+		);
 	}
 
 	const compatibilityDate = DEFAULT_COMPAT_DATE;

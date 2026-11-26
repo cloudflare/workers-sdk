@@ -995,7 +995,7 @@ describe("autoconfig (deploy)", () => {
 					{ target: "wrangler", context }
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
+				`[AssertionError: The Output Directory is unexpectedly missing]`
 			);
 		});
 
