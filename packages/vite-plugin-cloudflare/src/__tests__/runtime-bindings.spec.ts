@@ -24,12 +24,27 @@ describe("local runtime bindings through Vite", () => {
 				stream: { binding: "STREAM" },
 				r2_buckets: [{ binding: "BUCKET", bucket_name: "runtime-bucket" }],
 				kv_namespaces: [{ binding: "KV", id: "runtime-kv" }],
+				realtimekit: [
+					{
+						binding: "RTK",
+						app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+						remote: true,
+					},
+				],
 			}),
 			"index.js": `
 				import { EmailMessage } from "cloudflare:email";
 				export default {
 					async fetch(request, env) {
 						switch (new URL(request.url).pathname) {
+							case "/realtimekit": {
+								try {
+									await env.RTK.createMeeting({ title: "Standup" });
+									return new Response("Unexpected local RealtimeKit simulator");
+								} catch (error) {
+									return Response.json(error.message);
+								}
+							}
 							case "/email-string":
 							case "/email-stream": {
 								const body = ${JSON.stringify(EMAIL_BODY)};
@@ -72,6 +87,7 @@ describe("local runtime bindings through Vite", () => {
 	});
 
 	test.for([
+		{ path: "/realtimekit", result: "Binding RTK needs to be run remotely" },
 		{ path: "/email-string", result: EMAIL_BODY },
 		{ path: "/email-stream", result: EMAIL_BODY },
 		{
@@ -91,7 +107,7 @@ describe("local runtime bindings through Vite", () => {
 				missing: null,
 			},
 		},
-	])(
+	] as const)(
 		"serves $path with the released runtime behavior",
 		async ({ path, result }, { expect, onTestFinished }) => {
 			const server = await createServer({
@@ -114,9 +130,14 @@ describe("local runtime bindings through Vite", () => {
 			const response = await fetch(new URL(path, url));
 			expect(response.status, await response.clone().text()).toBe(200);
 			expect(await response.json()).toEqual(
-				path === "/stream"
-					? { ...result, missing: expect.stringContaining("Caption not found") }
-					: result
+				path === "/realtimekit"
+					? expect.stringContaining("Binding RTK needs to be run remotely")
+					: path === "/stream"
+						? {
+								...result,
+								missing: expect.stringContaining("Caption not found"),
+							}
+						: result
 			);
 		}
 	);
