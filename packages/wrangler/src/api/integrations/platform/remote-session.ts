@@ -10,7 +10,6 @@ import { logger } from "../../../logger";
 import { getBasePath } from "../../../paths";
 import { isCfAuthActive } from "../../../user";
 import { convertConfigBindingsToStartWorkerBindings } from "../../startDevWorker/binding-utils";
-import { startSession } from "./remote-session-shared";
 import type { SessionConfig, StartupMessage } from "./remote-session-shared";
 import type { RemoteProxySession } from "@cloudflare/remote-bindings";
 import type { Config } from "@cloudflare/workers-utils/config";
@@ -44,9 +43,6 @@ export async function startPlatformProxyRemoteSession(
 		complianceRegion: getCloudflareComplianceRegion(config),
 		cliDisplayName: isCfAuthActive() ? "cf" : "Wrangler",
 	};
-	if (process.versions.bun) {
-		return startSession(sessionConfig);
-	}
 	return startBackgroundSession(sessionConfig);
 }
 
