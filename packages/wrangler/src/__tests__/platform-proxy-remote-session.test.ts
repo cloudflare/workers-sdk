@@ -4,7 +4,7 @@ import { UserError } from "@cloudflare/workers-utils";
 import { afterEach, describe, it, vi } from "vitest";
 import { startPlatformProxyRemoteSession } from "../api/integrations/platform/remote-session";
 import { readConfig } from "../config";
-import { logger } from "../logger";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import type { ChildProcess } from "node:child_process";
 
 vi.mock(import("node:child_process"), async (importOriginal) => ({
@@ -36,8 +36,9 @@ function mockChild() {
 }
 
 describe("getPlatformProxy remote session IPC", () => {
+	const std = mockConsoleMethods();
+
 	afterEach(() => {
-		vi.restoreAllMocks();
 		vi.useRealTimers();
 		vi.unstubAllEnvs();
 	});
@@ -46,7 +47,6 @@ describe("getPlatformProxy remote session IPC", () => {
 		expect,
 	}) => {
 		const { child, exit } = mockChild();
-		const warn = vi.spyOn(logger, "warn");
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "initial-token");
 		const startup = startPlatformProxyRemoteSession(config);
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "changed-token");
@@ -72,7 +72,7 @@ describe("getPlatformProxy remote session IPC", () => {
 		exit(0, null);
 		await disposal;
 		expect(child.kill).not.toHaveBeenCalled();
-		expect(warn).not.toHaveBeenCalled();
+		expect(std.warn).toBe("");
 	});
 
 	it("reconstructs a UserError with its telemetry message and stack", async ({
@@ -110,12 +110,11 @@ describe("getPlatformProxy remote session IPC", () => {
 
 	it("warns when a ready child exits unexpectedly", async ({ expect }) => {
 		const { child, exit } = mockChild();
-		const warn = vi.spyOn(logger, "warn").mockImplementation(() => {});
 		const startup = startPlatformProxyRemoteSession(config);
 		child.emit("message", { type: "ready", url: sessionUrl });
 		const session = await startup;
 		exit(null, "SIGTERM");
-		expect(warn).toHaveBeenCalledWith(
+		expect(std.warn).toContain(
 			"The getPlatformProxy remote session exited unexpectedly (SIGTERM)."
 		);
 		await session?.dispose();
@@ -140,5 +139,6 @@ describe("getPlatformProxy remote session IPC", () => {
 		await vi.runAllTimersAsync();
 		expect(child.kill).toHaveBeenCalledExactlyOnceWith("SIGKILL");
 		await disposal;
+		expect(std.warn).toBe("");
 	});
 });
