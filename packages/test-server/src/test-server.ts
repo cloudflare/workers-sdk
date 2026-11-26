@@ -233,6 +233,9 @@ export type WorkerHandle<
 	): Promise<void>;
 	/**
 	 * Applies D1 migration files that have not already run to a D1 binding on this Worker.
+	 * The database must be local: for a remote one, this throws rather than
+	 * migrate the deployed database. Replace it with a local database in
+	 * `envOverrides`, such as `DATABASE: bindings.d1()`.
 	 *
 	 * @example
 	 * ```ts
