@@ -114,12 +114,10 @@ export type AutoConfigSummary = {
 	buildConfig?: BuildConfig;
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
-	/** The output directory (absent for a Wrangler project without static assets) */
 	outputDir?: string;
 	frameworkId?: string;
 	buildCommand?: string;
 	deployCommand?: string;
 	versionCommand?: string;
-	/** The result of migrating a Wrangler project */
 	wranglerMigration?: WranglerToCfMigrationResult;
 };
