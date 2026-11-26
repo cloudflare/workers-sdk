@@ -184,6 +184,14 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 				type: "module",
 			};
 		}
+		// `cloudflare:workers/<name>` resolves to `cloudflare:workers`, but import
+		// analysis only skips builtins by specifier, so it is requested as an id
+		if (id === "/@id/cloudflare:workers") {
+			return {
+				externalize: "cloudflare:workers",
+				type: "builtin",
+			};
+		}
 		return super.fetchModule(id, importer, options);
 	}
 }

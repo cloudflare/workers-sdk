@@ -11,6 +11,7 @@ import {
 	nodeJsCompatPlugin,
 	nodeJsCompatWarningsPlugin,
 } from "./plugins/nodejs-compat";
+import { perWorkerModulesPlugin } from "./plugins/per-worker-modules";
 import { rscPlugin } from "./plugins/rsc";
 import {
 	agentHintPlugin,
@@ -126,6 +127,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
+		perWorkerModulesPlugin(ctx),
 		buildOutputPlugin(ctx),
 		wasmHelperPlugin(ctx),
 		additionalModulesPlugin(ctx),
