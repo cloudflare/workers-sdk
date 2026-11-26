@@ -429,8 +429,6 @@ describe("writeAssets", () => {
 		fs.writeFileSync(path.join(root, "docs/guide/index.html"), "included");
 		fs.writeFileSync(path.join(root, "docs/guide/notes.txt"), "ignored");
 		fs.writeFileSync(path.join(root, "notes.txt"), "ignored");
-		fs.symlinkSync("not-generated.txt", path.join(root, "docs/guide/link.txt"));
-		fs.symlinkSync("not-generated.txt", path.join(root, "link.txt"));
 
 		await writeAssets({ root, sourceDirectory: root });
 
@@ -439,15 +437,14 @@ describe("writeAssets", () => {
 			"index.html",
 		]);
 		expect(fs.existsSync(path.join(assetsDir, "notes.txt"))).toBe(false);
-		expect(fs.readdirSync(assetsDir)).not.toContain("link.txt");
 	});
 
 	it.for([
 		{ asset: "index.html", type: "file", rules: "*\n!*.html\n" },
 		{ asset: "docs", type: "dir", rules: "*\n!/docs/\n!/docs/**\n" },
-		{ asset: "docs/guide", type: "dir", rules: "*\n!*/\n!/docs/guide/\n" },
+		{ asset: "docs/guide/link.txt", type: "file", rules: "*\n!*/\n!*.html\n" },
 	] as const)(
-		"reports a missing target for an included asset symlink ($asset)",
+		"reports a missing target for a broken asset symlink ($asset)",
 		async ({ asset, type, rules }, { expect }) => {
 			const root = process.cwd();
 			const source = path.join(root, asset);
@@ -463,6 +460,18 @@ describe("writeAssets", () => {
 			});
 		}
 	);
+
+	it("skips a broken symlink excluded as both a file and a directory", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.writeFileSync(path.join(root, ".assetsignore"), "/link\n");
+		fs.symlinkSync("not-generated", path.join(root, "link"), "file");
+
+		await writeAssets({ root, sourceDirectory: root });
+
+		expect(fs.readdirSync(getWorkerAssetsDir(root))).not.toContain("link");
+	});
 
 	it("preserves files already generated in the build output", async ({
 		expect,

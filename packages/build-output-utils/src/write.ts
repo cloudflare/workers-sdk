@@ -8,7 +8,6 @@ import {
 import {
 	createAssetsIgnoreFunction,
 	InvalidAssetsIgnoreError,
-	thrownIsDoesNotExistError,
 } from "@cloudflare/workers-shared/utils/helpers";
 import { removeDir, UserError } from "@cloudflare/workers-utils";
 import {
@@ -48,6 +47,8 @@ export interface WriteAssetsOptions {
  * Copy static assets into the Build Output Specification tree.
  *
  * Symlinks are dereferenced so the output remains portable and self-contained.
+ * Broken symlinks are not supported unless excluded by `.assetsignore` as both
+ * a file and a directory.
  * Files excluded by `.assetsignore` are not copied, but the ignore file and
  * other asset metadata are kept for the tools that read the output.
  *
@@ -60,17 +61,16 @@ export async function writeAssets({
 	sourceDirectory,
 }: WriteAssetsOptions): Promise<void> {
 	const assetsDir = getWorkerAssetsDir(root);
-	const { assetsIgnoreFunction, hasExplicitDirectoryException } =
-		await createAssetsIgnoreFunction(sourceDirectory).catch(
-			(error: unknown) => {
-				if (error instanceof InvalidAssetsIgnoreError) {
-					throw new UserError(error.message, {
-						telemetryMessage: "assets ignore invalid encoding",
-					});
-				}
-				throw error;
-			}
-		);
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(
+		sourceDirectory
+	).catch((error: unknown) => {
+		if (error instanceof InvalidAssetsIgnoreError) {
+			throw new UserError(error.message, {
+				telemetryMessage: "assets ignore invalid encoding",
+			});
+		}
+		throw error;
+	});
 	const copyOptions = {
 		recursive: true,
 		force: false,
@@ -95,19 +95,8 @@ export async function writeAssets({
 			if (ignoredAsFile === ignoredAsDirectory) {
 				return !ignoredAsFile;
 			}
-			try {
-				const stats = await fsp.stat(source);
-				return !(stats.isDirectory() ? ignoredAsDirectory : ignoredAsFile);
-			} catch (error) {
-				if (
-					ignoredAsFile &&
-					thrownIsDoesNotExistError(error) &&
-					!hasExplicitDirectoryException(relative)
-				) {
-					return false;
-				}
-				throw error;
-			}
+			const stats = await fsp.stat(source);
+			return !(stats.isDirectory() ? ignoredAsDirectory : ignoredAsFile);
 		},
 	};
 	await fsp.mkdir(assetsDir, { recursive: true });
