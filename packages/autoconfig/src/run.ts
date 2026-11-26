@@ -189,7 +189,7 @@ export async function runAutoConfig(
 		const bundlerName = (bundler: "vite" | "wrangler") =>
 			bundler === "vite" ? "Vite" : "Wrangler";
 		throw new FatalError(
-			`The ${bundlerName(autoConfigOptions.bundler)} bundler isn't supported for ${framework.name} projects. Use ${bundlerName(frameworkBundler)}, the default, instead.`,
+			`The ${bundlerName(autoConfigOptions.bundler)} bundler isn't supported for ${framework.name} projects. Use ${bundlerName(frameworkBundler)} instead.`,
 			{ telemetryMessage: "autoconfig run bundler conflict" }
 		);
 	}

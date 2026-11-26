@@ -917,7 +917,7 @@ describe("runAutoConfig()", () => {
 			await seed(viteSpa);
 
 			await expect(setUp({ bundler: "wrangler" })).rejects.toThrow(
-				"The Wrangler bundler isn't supported for Vite projects. Use Vite, the default, instead."
+				"The Wrangler bundler isn't supported for Vite projects. Use Vite instead."
 			);
 			expect(existsSync("cloudflare.config.ts")).toBe(false);
 		});
