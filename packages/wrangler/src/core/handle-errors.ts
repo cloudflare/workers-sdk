@@ -271,6 +271,15 @@ function isContainersAuthenticationError(e: unknown): e is UserError {
 const AUTHENTICATION_ERROR_CODES = [9106, 10000];
 
 /**
+ * The Cloudflare API also rejects credentials with
+ * "Unable to authenticate request [code: 10001]". Several APIs use 10001 for
+ * unrelated failures too, such as internal server errors, so it only indicates
+ * an authentication problem when it comes with this message.
+ */
+const UNABLE_TO_AUTHENTICATE_CODE = 10001;
+const UNABLE_TO_AUTHENTICATE_MESSAGE = "Unable to authenticate request";
+
+/**
  * Checks whether `e` is a standard Cloudflare API authentication error.
  *
  * @param e - the error to inspect
@@ -281,7 +290,17 @@ export function isAuthenticationError(e: unknown): e is ParseError {
 		return false;
 	}
 	const code = (e as { code?: number }).code;
-	return code !== undefined && AUTHENTICATION_ERROR_CODES.includes(code);
+	if (code === undefined) {
+		return false;
+	}
+	if (AUTHENTICATION_ERROR_CODES.includes(code)) {
+		return true;
+	}
+	// The first note is the first API error, rendered as "<message> [code: <code>]".
+	return (
+		code === UNABLE_TO_AUTHENTICATE_CODE &&
+		e.notes[0]?.text.startsWith(UNABLE_TO_AUTHENTICATE_MESSAGE) === true
+	);
 }
 
 /**
