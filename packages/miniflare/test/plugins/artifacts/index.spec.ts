@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { once } from "node:events";
 import {
 	chmod,
 	mkdir,
@@ -9,6 +10,7 @@ import {
 	stat,
 	writeFile,
 } from "node:fs/promises";
+import net from "node:net";
 import path from "node:path";
 import { Readable, Writable } from "node:stream";
 import { pipeline } from "node:stream/promises";
@@ -532,6 +534,103 @@ exec '${gitPath.trim().replaceAll("'", "'\\''")}' "$@"
 	12_000
 );
 
+test("artifacts: the Git port is held from the moment it is chosen and forwarded to workerd", async ({
+	expect,
+}) => {
+	// Stands in for workerd's Git socket: echoes what it receives.
+	const runtime = net.createServer((socket) => socket.pipe(socket));
+	runtime.listen(0, "127.0.0.1");
+	await once(runtime, "listening");
+	const runtimePort = (runtime.address() as net.AddressInfo).port;
+	const controller = new ArtifactsController();
+	try {
+		controller.beginUpdate();
+		const backend = await controller.get(path.join(await useTmp(), "repos"), {
+			socketName: "git",
+		});
+		// Nothing else can take the port before workerd starts.
+		const squatter = net.createServer();
+		const outcome = await new Promise<string | undefined>((resolve) => {
+			squatter.once("error", (error: NodeJS.ErrnoException) =>
+				resolve(error.code)
+			);
+			squatter.once("listening", () => squatter.close(() => resolve("bound")));
+			squatter.listen({
+				host: "127.0.0.1",
+				port: backend.port,
+				exclusive: true,
+			});
+		});
+		expect(outcome).toBe("EADDRINUSE");
+
+		await controller.commitUpdate(new Map([["git", runtimePort]]));
+		expect(await echo(backend.port)).toEqual({
+			connected: true,
+			received: "ping",
+		});
+
+		// Once workerd stops, its port may belong to anyone: the listener still
+		// accepts connections, but closes them instead of forwarding.
+		controller.detachRuntime();
+		expect(await echo(backend.port)).toEqual({
+			connected: true,
+			received: "",
+		});
+	} finally {
+		await controller.dispose();
+		runtime.close();
+	}
+});
+
+test("artifacts: a backend that fails to start releases its Git port", async ({
+	expect,
+}) => {
+	const root = await useTmp();
+	const portFile = path.join(root, "git-port");
+	const controller = new ArtifactsController(() => ({
+		info() {
+			throw new Error("log failed");
+		},
+		warn() {},
+	}));
+	try {
+		controller.beginUpdate();
+		await expect(
+			controller.get(path.join(root, "repos"), { namespace: "test", portFile })
+		).rejects.toThrow("log failed");
+		await controller.abortUpdate();
+		const port = Number.parseInt(await readFile(portFile, "utf8"), 10);
+		const server = net.createServer();
+		server.listen({ host: "127.0.0.1", port, exclusive: true });
+		await once(server, "listening");
+		await new Promise((resolve) => server.close(resolve));
+	} finally {
+		await controller.dispose();
+	}
+});
+
+test("artifacts: Git keeps its remote and keeps working across a reload", async ({
+	expect,
+}) => {
+	const mf = new Miniflare(options());
+	useDispose(mf);
+	const created = await rpc(mf, "create", ["repo"]);
+	const refs = async () => {
+		const response = await fetch(
+			`${created.remote}/info/refs?service=git-upload-pack`,
+			{ headers: { Authorization: `Bearer ${created.token}` } }
+		);
+		await response.body?.cancel();
+		return response.status;
+	};
+	expect(await refs()).toBe(200);
+
+	// The reload starts a new workerd, whose Git socket gets a new port.
+	await mf.setOptions(options());
+	expect((await rpc(mf, "info", [], "repo")).remote).toBe(created.remote);
+	expect(await refs()).toBe(200);
+});
+
 test("artifacts: sidecar startup failures reject without crashing Miniflare", async ({
 	expect,
 }) => {
@@ -568,6 +667,28 @@ test("artifacts: a stopped backend is replaced on the next config update", async
 		await controller.dispose();
 	}
 });
+
+/**
+ * Sends "ping" to `port`, and returns whether the connection opened and
+ * everything received back.
+ */
+async function echo(
+	port: number
+): Promise<{ connected: boolean; received: string }> {
+	const client = net.connect({ host: "127.0.0.1", port });
+	let connected = false;
+	client.once("connect", () => (connected = true));
+	client.end("ping");
+	const chunks: Buffer[] = [];
+	try {
+		for await (const chunk of client) {
+			chunks.push(chunk as Buffer);
+		}
+	} catch {
+		// The relay resets connections it refuses to forward.
+	}
+	return { connected, received: Buffer.concat(chunks).toString() };
+}
 
 function withRemoteProxy(base: MiniflareOptions): MiniflareOptions {
 	return {

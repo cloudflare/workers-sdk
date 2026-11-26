@@ -47,9 +47,13 @@ Workers Vitest enables, even when the caller catches it.
 `getServices()` creates the binding Worker, namespace Durable Object, persistent
 metadata disk, internal Git backend service, and Git socket. The controller
 reuses a sidecar per Git storage path and closes it when Miniflare is disposed.
-It records the Git socket's port in `git-port` next to the namespace's storage
-and reuses it on the next start while it is free, so clones keep their
-`origin`.
+Git clients don't connect to workerd directly: the controller listens on the
+namespace's Git port (`git-relay.ts`) and forwards each connection to the Git
+socket, which workerd binds to a port of its own choosing. Choosing a free port
+for workerd to bind later would let another process take it first. The
+controller records the Git port in `git-port` next to the namespace's storage
+and listens on it again on the next start while it is free, so clones keep
+their `origin`.
 The socket used by Git clients and the sidecar's private HTTP listener are
 **different endpoints**. If the sidecar exits after startup, the controller
 forgets its endpoint and warns; an explicit Miniflare configuration reload

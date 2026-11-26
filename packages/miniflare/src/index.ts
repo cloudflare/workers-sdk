@@ -2635,6 +2635,8 @@ export class Miniflare {
 		);
 		// A crash destroys the proxy server heap just like a config update.
 		this.#proxyClient?.poisonProxies();
+		// The crashed workerd released its Git sockets' ports.
+		this.#artifactsController.detachRuntime();
 		// The runtime behind this candidate is gone. Withdraw before restarting so
 		// peers can take ownership if recovery stalls; successful assembly registers
 		// this instance again with its new debug-port address.
@@ -2792,6 +2794,7 @@ export class Miniflare {
 		if (containerSession.ended !== undefined) {
 			// Names include the session, so the ended session's resources can be
 			// removed while the next workerd starts.
+			this.#artifactsController.detachRuntime();
 			await runtime.dispose();
 			this.#endContainerSession(containerSession.ended);
 		}
@@ -2816,13 +2819,18 @@ export class Miniflare {
 			this.#sharedOpts.unsafeEnableSharedStorage
 				? this.#sharedOpts.resourcePersistencePath
 				: undefined,
-			() =>
-				runtime.updateConfig(
+			() => {
+				// The new workerd's Git sockets get new ports, and the old ones are
+				// released as it stops. Detach only once the old one is sure to stop:
+				// every other path that stops workerd detaches before it, too.
+				this.#artifactsController.detachRuntime();
+				return runtime.updateConfig(
 					configBuffer,
 					runtimeOpts,
 					this.#workerOpts.map((w) => w.config.name),
 					this.#disposeController.signal
-				)
+				);
+			}
 		);
 		if (this.#disposeController.signal.aborted) {
 			return;
@@ -2842,7 +2850,7 @@ export class Miniflare {
 			}
 		}
 		this.#hyperdriveProxyController.commitUpdate(activeExternalAddresses);
-		await this.#artifactsController.commitUpdate();
+		await this.#artifactsController.commitUpdate(maybeSocketPorts);
 		// Note: `updateConfig()` doesn't resolve until ports for all required
 		// sockets have been recorded. At this point, `maybeSocketPorts` contains
 		// all of `requiredSockets` as keys.
@@ -3958,6 +3966,8 @@ export class Miniflare {
 		// cleanup so those hooks cannot delay or skip the termination request.
 		let runtimeDisposePromise: Promise<void>;
 		try {
+			// The Git listeners close only after other cleanup below.
+			this.#artifactsController.detachRuntime();
 			runtimeDisposePromise = Promise.resolve(this.#runtime?.dispose());
 		} catch (error) {
 			runtimeDisposePromise = Promise.reject(error);
