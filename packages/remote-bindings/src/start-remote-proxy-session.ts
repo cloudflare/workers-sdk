@@ -219,9 +219,13 @@ export async function startRemoteProxySession(
 	}
 	if (options.lazy) {
 		devEnv.on("error", (error: unknown) => {
-			options.logger.warn(
-				`Could not connect remote bindings: ${formatRemoteProxySessionError(error) ?? "unknown error"}`
-			);
+			// As at startup, show an authentication failure's actionable guidance
+			// rather than the innermost API error, which doesn't explain the fix.
+			const details =
+				findRemoteSessionAuthError(error)?.message ??
+				formatRemoteProxySessionError(error) ??
+				"unknown error";
+			options.logger.warn(`Could not connect remote bindings: ${details}`);
 			options.logger.debug(error);
 		});
 	}
