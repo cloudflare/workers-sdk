@@ -339,38 +339,52 @@ describe("BundlerController — assets watcher", () => {
 		expect(await watchers.ignoresAsset(1, "node_modules")).toBe(false);
 	});
 
-	test("only watches differently cased metadata if the lowercase lookup finds it", async ({
-		expect,
-	}) => {
-		const watchers = mockWatchers(expect);
-		const metadataPaths = [
-			"assets/.ASSETSIGNORE",
-			"assets/_HEADERS",
-			"assets/_REDIRECTS",
-		];
-		await seed(
-			Object.fromEntries(metadataPaths.map((filePath) => [filePath, ""]))
-		);
-		const caseInsensitive = existsSync("assets/.assetsignore");
-		if (!caseInsensitive) {
+	test.for([
+		{ name: "uppercase entries only", addLowercaseFiles: false },
+		{ name: "both spellings present", addLowercaseFiles: true },
+	])(
+		"only watches differently cased metadata if the lowercase lookup finds it ($name)",
+		async ({ addLowercaseFiles }, { expect, skip }) => {
+			const watchers = mockWatchers(expect);
+			const metadataPaths = [
+				"assets/.ASSETSIGNORE",
+				"assets/_HEADERS",
+				"assets/_REDIRECTS",
+			];
 			await seed(
-				Object.fromEntries(
-					metadataPaths.map((filePath) => [filePath.toLowerCase(), ""])
-				)
+				Object.fromEntries(metadataPaths.map((filePath) => [filePath, ""]))
 			);
-		}
+			const caseInsensitive = existsSync("assets/.assetsignore");
+			if (addLowercaseFiles) {
+				if (caseInsensitive) {
+					skip("Requires a case-sensitive filesystem");
+				}
+				await seed(
+					Object.fromEntries(
+						metadataPaths.map((filePath) => [filePath.toLowerCase(), ""])
+					)
+				);
+			}
 
-		controller.onConfigUpdate({ type: "configUpdate", config: assetsConfig() });
-		await watchers.at(0);
-		for (const metadataPath of metadataPaths) {
-			expect(await watchers.ignoresAsset(0, metadataPath), metadataPath).toBe(
-				!caseInsensitive
-			);
-			expect(await watchers.ignoresAsset(0, metadataPath.toLowerCase())).toBe(
-				false
-			);
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: assetsConfig(),
+			});
+			await watchers.at(0);
+			for (const metadataPath of metadataPaths) {
+				expect(await watchers.ignoresAsset(0, metadataPath), metadataPath).toBe(
+					!caseInsensitive
+				);
+				expect(
+					await watchers.ignoresAsset(
+						0,
+						metadataPath.toLowerCase(),
+						caseInsensitive || addLowercaseFiles
+					)
+				).toBe(false);
+			}
 		}
-	});
+	);
 
 	test("reloads when a file changes in a newly unignored directory", async ({
 		expect,
