@@ -54,7 +54,6 @@ export async function detectFramework(
 		wranglerConfig,
 		target = "cf",
 	}: {
-		/** The project's Wrangler config, if it has one. Wrangler's parsed config is one too. */
 		wranglerConfig?: RawConfig;
 		target?: AutoConfigTarget;
 	} = {}
