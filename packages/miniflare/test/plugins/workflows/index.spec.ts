@@ -399,6 +399,452 @@ test("supports object-form Workflow batches", async ({ expect }) => {
 	expect(result.counted[0].id).not.toBe(result.counted[1].id);
 });
 
+const CREATE_ERRORS_WORKFLOW_SCRIPT = () => `
+import { RpcTarget, WorkflowEntrypoint } from "cloudflare:workers";
+export class CreateErrorsWorkflow extends WorkflowEntrypoint {
+	async run() {
+		return "done";
+	}
+}
+class Target extends RpcTarget {}
+async function rejection(promise) {
+	try {
+		await promise;
+		return "resolved";
+	} catch (error) {
+		return { name: error.name, message: error.message };
+	}
+}
+async function waitForStatus(instance, status) {
+	let current;
+	for (let attempt = 0; attempt < 500; attempt++) {
+		current = (await instance.status()).status;
+		if (current === status || current === "errored" || current === "terminated") {
+			break;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+	return current;
+}
+export default {
+	async fetch(_request, env) {
+		const existing = await env.CREATE_ERRORS_WORKFLOW.create({ id: "existing" });
+
+		return Response.json({
+			existing: await waitForStatus(existing, "complete"),
+			noOptions: await waitForStatus(await env.CREATE_ERRORS_WORKFLOW.create(), "complete"),
+			nullOptions: await waitForStatus(
+				await env.CREATE_ERRORS_WORKFLOW.create(null),
+				"complete"
+			),
+			optionsBeforeId: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ id: "batch", locationHint: "invalid" })
+			),
+			optionsBeforeDuplicate: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ id: "existing", locationHint: "invalid" })
+			),
+			duplicate: await rejection(env.CREATE_ERRORS_WORKFLOW.create({ id: "existing" })),
+			invalidId: await rejection(env.CREATE_ERRORS_WORKFLOW.create({ id: "#invalid!" })),
+			reservedId: await rejection(env.CREATE_ERRORS_WORKFLOW.create({ id: "batch" })),
+			invalidOptions: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ locationHint: "invalid" })
+			),
+			functionParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ params: { fn: () => 1 } })
+			),
+			rpcTargetParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ params: { target: new Target() } })
+			),
+			streamParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ params: { stream: new ReadableStream() } })
+			),
+			idBeforeParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ id: "batch", params: { fn: () => 1 } })
+			),
+			duplicateBeforeParams: await rejection(
+				env.CREATE_ERRORS_WORKFLOW.create({ id: "existing", params: { fn: () => 1 } })
+			),
+			storableParams: await waitForStatus(
+				await env.CREATE_ERRORS_WORKFLOW.create({
+					params: {
+						map: new Map([[1, 2]]),
+						set: new Set([1]),
+						date: new Date(0),
+						bigint: 10n,
+						regexp: /x/g,
+						bytes: new Uint8Array([1, 2]),
+						buffer: new ArrayBuffer(4),
+						blob: new Blob(["x"]),
+						headers: new Headers({ a: "b" }),
+						request: new Request("https://example.com"),
+						error: new Error("x"),
+						sparse: [1, , 3],
+					},
+				}),
+				"complete"
+			),
+		});
+	},
+};`;
+
+test.for([
+	{ serialization: "legacy", compatibilityFlags: [] },
+	{
+		serialization: "enhanced",
+		compatibilityFlags: ["enhanced_error_serialization"],
+	},
+])(
+	"rejects Workflow create() calls with production's error codes ($serialization error serialization)",
+	async ({ compatibilityFlags }, { expect }) => {
+		const invalidLocationHintRejection = {
+			name: "Error",
+			message:
+				'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+		};
+		const unstorableParamsRejection = {
+			name: "Error",
+			message: "(body) Provided instance parameters are not serializable",
+		};
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			resourcePersistencePath: tmp,
+			workers: [
+				{
+					config: {
+						name: "create-errors-worker",
+						compatibilityDate: "2024-11-20",
+						compatibilityFlags,
+						manifest: singleModuleManifest(CREATE_ERRORS_WORKFLOW_SCRIPT()),
+						env: {
+							CREATE_ERRORS_WORKFLOW: {
+								type: "workflow",
+								name: "CREATE_ERRORS_WORKFLOW",
+								worker: "create-errors-worker",
+								exportName: "CreateErrorsWorkflow",
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost");
+
+		// Without enhanced error serialization, workerd prefixes the messages of
+		// error types other than Error with their name when they cross JSRPC.
+		expect(await response.json()).toEqual({
+			existing: "complete",
+			noOptions: "complete",
+			nullOptions: "complete",
+			// As in production, the options are checked before the id.
+			optionsBeforeId: invalidLocationHintRejection,
+			optionsBeforeDuplicate: invalidLocationHintRejection,
+			duplicate: {
+				name: "Error",
+				message:
+					'(instance.already_exists) Workflow instance with id "existing" already exists',
+			},
+			invalidId: {
+				name: "Error",
+				message: "(instance.invalid_id) Instance has invalid id",
+			},
+			reservedId: {
+				name: "Error",
+				message: "(instance.invalid_id) Instance has invalid id",
+			},
+			invalidOptions: {
+				name: "Error",
+				message:
+					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+			},
+			// JSRPC hands functions and RPC targets to the binding as stubs, and
+			// streams as streams. Durable Object storage can clone none of them.
+			functionParams: unstorableParamsRejection,
+			rpcTargetParams: unstorableParamsRejection,
+			streamParams: unstorableParamsRejection,
+			// As in production, the id and duplicate checks come first.
+			idBeforeParams: {
+				name: "Error",
+				message: "(instance.invalid_id) Instance has invalid id",
+			},
+			duplicateBeforeParams: {
+				name: "Error",
+				message:
+					'(instance.already_exists) Workflow instance with id "existing" already exists',
+			},
+			// Params that storage can clone still run, however unusual.
+			storableParams: "complete",
+		});
+	}
+);
+
+const CREATE_BATCH_ERRORS_WORKFLOW_SCRIPT = () => `
+import { RpcTarget, WorkflowEntrypoint } from "cloudflare:workers";
+export class CreateBatchErrorsWorkflow extends WorkflowEntrypoint {
+	async run() {
+		return "done";
+	}
+}
+class Target extends RpcTarget {}
+async function rejection(promise) {
+	try {
+		await promise;
+		return "resolved";
+	} catch (error) {
+		return { name: error.name, message: error.message };
+	}
+}
+async function waitForStatus(instance, status) {
+	let current;
+	for (let attempt = 0; attempt < 500; attempt++) {
+		current = (await instance.status()).status;
+		if (current === status || current === "errored" || current === "terminated") {
+			break;
+		}
+		await new Promise((resolve) => setTimeout(resolve, 10));
+	}
+	return current;
+}
+async function settle(result) {
+	return {
+		created: await Promise.all(
+			result.created.map((instance) => waitForStatus(instance, "complete"))
+		),
+		errors: result.errors,
+	};
+}
+export default {
+	async fetch(_request, env) {
+		const workflow = env.CREATE_BATCH_ERRORS_WORKFLOW;
+		await waitForStatus(await workflow.create({ id: "existing" }), "complete");
+		const fn = () => 1;
+
+		return Response.json({
+			emptyObject: await rejection(workflow.createBatch({})),
+			nullOptions: await rejection(workflow.createBatch(null)),
+			emptyInstances: await rejection(workflow.createBatch({ instances: [] })),
+			zeroCount: await rejection(workflow.createBatch({ count: 0 })),
+			tooManyCount: await rejection(workflow.createBatch({ count: 101 })),
+			invalidOptions: await rejection(
+				workflow.createBatch({ instances: [{ locationHint: "invalid" }] })
+			),
+			nullEntry: await rejection(workflow.createBatch({ instances: [null] })),
+			invalidId: await rejection(workflow.createBatch({ instances: [{ id: "-bad" }] })),
+			reservedId: await rejection(workflow.createBatch({ instances: [{ id: "batch" }] })),
+			optionsBeforeId: await rejection(
+				workflow.createBatch({
+					instances: [
+						{ id: "-bad" },
+						{ id: "options-first", retention: { successRetention: "nope" } },
+					],
+				})
+			),
+			optionsFirstEntry: await rejection(workflow.get("options-first")),
+			retention: await settle(
+				await workflow.createBatch({
+					instances: [0, -1, 0.5, "0 days", "-1 day", ""].map((successRetention) => ({
+						retention: { successRetention },
+					})),
+				})
+			),
+			countRetention: await settle(
+				await workflow.createBatch({ count: 1, retention: { successRetention: 0 } })
+			),
+			unstorableParams: await settle(
+				await workflow.createBatch({
+					instances: [
+						{ id: "unstorable", params: { fn } },
+						{ id: "plain" },
+						{ params: { target: new Target() } },
+						{ params: { stream: new ReadableStream() } },
+						{ id: "existing", params: { fn } },
+						{ id: "repeated" },
+						{ id: "repeated", params: { fn } },
+					],
+				})
+			),
+			unstorableEntry: await rejection(workflow.get("unstorable")),
+			unstorableCount: await settle(
+				await workflow.createBatch({ count: 2, params: { fn } })
+			),
+			arrayEmpty: await rejection(workflow.createBatch([])),
+			arrayTooMany: await rejection(
+				workflow.createBatch(Array.from({ length: 101 }, () => ({})))
+			),
+			arrayInvalidOptions: await rejection(
+				workflow.createBatch([{ locationHint: "invalid" }])
+			),
+			arrayNullEntry: await rejection(workflow.createBatch([null])),
+			arrayInvalidId: await rejection(workflow.createBatch([{ id: "-bad" }])),
+			arrayReservedId: await rejection(workflow.createBatch([{ id: "batch" }])),
+			arrayUnstorableParams: await Promise.all(
+				(
+					await workflow.createBatch([
+						{ id: "array-unstorable", params: { fn } },
+						{ id: "array-plain" },
+						{ id: "existing" },
+					])
+				).map(async (instance) => ({
+					id: instance.id,
+					status: await waitForStatus(instance, "complete"),
+				}))
+			),
+			arrayUnstorableEntry: await rejection(workflow.get("array-unstorable")),
+		});
+	},
+};`;
+
+test.for([
+	{ serialization: "legacy", compatibilityFlags: [] },
+	{
+		serialization: "enhanced",
+		compatibilityFlags: ["enhanced_error_serialization"],
+	},
+])(
+	"rejects Workflow createBatch() calls with production's error codes ($serialization error serialization)",
+	async ({ compatibilityFlags }, { expect }) => {
+		const invalidIdRejection = {
+			name: "Error",
+			message: "(instance.invalid_id) Instance ID is invalid",
+		};
+		const notFoundRejection = {
+			name: "Error",
+			message: expect.stringContaining("instance.not_found"),
+		};
+		const bodyError = { code: 10002, message: "workflows.api.error.body" };
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			resourcePersistencePath: tmp,
+			workers: [
+				{
+					config: {
+						name: "create-batch-errors-worker",
+						compatibilityDate: "2024-11-20",
+						compatibilityFlags,
+						manifest: singleModuleManifest(
+							CREATE_BATCH_ERRORS_WORKFLOW_SCRIPT()
+						),
+						env: {
+							CREATE_BATCH_ERRORS_WORKFLOW: {
+								type: "workflow",
+								name: "CREATE_BATCH_ERRORS_WORKFLOW",
+								worker: "create-batch-errors-worker",
+								exportName: "CreateBatchErrorsWorkflow",
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost");
+
+		expect(await response.json()).toEqual({
+			emptyObject: {
+				name: "Error",
+				message: "(body) Provided argument is invalid",
+			},
+			nullOptions: {
+				name: "Error",
+				message: "(body) Provided argument is invalid",
+			},
+			emptyInstances: {
+				name: "Error",
+				message: "(body) Batch size exceeds maximum allowed",
+			},
+			zeroCount: {
+				name: "Error",
+				message: "(body) count must be a positive integer",
+			},
+			tooManyCount: {
+				name: "Error",
+				message: "(body) batchCreate only supports 100 instances at a time",
+			},
+			invalidOptions: {
+				name: "Error",
+				message:
+					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+			},
+			nullEntry: {
+				name: "Error",
+				message: "(body) Invalid input: expected object, received null",
+			},
+			invalidId: invalidIdRejection,
+			reservedId: invalidIdRejection,
+			// As in production, every entry's options are checked before any id,
+			// and nothing is created.
+			optionsBeforeId: {
+				name: "Error",
+				message:
+					"(body) Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.",
+			},
+			optionsFirstEntry: notFoundRejection,
+			// As in production, durations do not have to be positive.
+			retention: { created: Array(6).fill("complete"), errors: [] },
+			countRetention: { created: ["complete"], errors: [] },
+			// JSRPC hands functions and RPC targets to the binding as stubs, and
+			// streams as streams. Durable Object storage can clone none of them, so
+			// as in production their entries fail on their own, with the ids they
+			// would have had.
+			unstorableParams: {
+				created: ["complete", "complete"],
+				errors: [
+					{ index: 0, id: "unstorable", ...bodyError },
+					{ index: 2, id: expect.any(String), ...bodyError },
+					{ index: 3, id: expect.any(String), ...bodyError },
+					// As in production, the id checks come first.
+					{
+						index: 4,
+						id: "existing",
+						code: 10405,
+						message: "workflows.api.error.instance.already_exists",
+					},
+					{
+						index: 6,
+						id: "repeated",
+						code: 10415,
+						message: "workflows.api.error.instance.duplicate_in_batch",
+					},
+				],
+			},
+			unstorableEntry: notFoundRejection,
+			unstorableCount: {
+				created: [],
+				errors: [
+					{ index: 0, id: expect.any(String), ...bodyError },
+					{ index: 1, id: expect.any(String), ...bodyError },
+				],
+			},
+			// The deprecated array form rejects with the object form's errors.
+			arrayEmpty: {
+				name: "Error",
+				message: "(body) Batch size exceeds maximum allowed",
+			},
+			arrayTooMany: {
+				name: "Error",
+				message: "(body) Batch size exceeds maximum allowed",
+			},
+			arrayInvalidOptions: {
+				name: "Error",
+				message:
+					'(body) Invalid option: expected one of "wnam"|"weur"|"enam"|"eeur"|"apac"|"apac-ne"|"apac-se"|"oc"|"sam"|"afr"|"me"',
+			},
+			arrayNullEntry: {
+				name: "Error",
+				message: "(body) Invalid input: expected object, received null",
+			},
+			arrayInvalidId: invalidIdRejection,
+			arrayReservedId: invalidIdRejection,
+			// As in production, the array form omits the entries that the object
+			// form reports as errors.
+			arrayUnstorableParams: [{ id: "array-plain", status: "complete" }],
+			arrayUnstorableEntry: notFoundRejection,
+		});
+	}
+);
+
 const LIFECYCLE_WORKFLOW_SCRIPT = () => `
 import { WorkflowEntrypoint } from "cloudflare:workers";
 export class LifecycleWorkflow extends WorkflowEntrypoint {

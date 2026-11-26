@@ -3,15 +3,16 @@ import { ms } from "itty-time";
 import { z } from "zod";
 import { InstanceEvent, instanceStatusName } from "./instance";
 import {
+	createBindingError,
 	duplicateInstanceError,
 	isUserTriggeredDelete,
 	isUserTriggeredPause,
 	isUserTriggeredRestart,
 	createWorkflowError,
 	isUserTriggeredTerminate,
-	WorkflowError,
 } from "./lib/errors";
 import {
+	isReservedWorkflowInstanceId,
 	isValidAddressableWorkflowInstanceId,
 	isValidWorkflowInstanceId,
 } from "./lib/validators";
@@ -364,33 +365,36 @@ export type WorkflowBatchCreateResult = {
 	}[];
 };
 
-// Numeric durations are whole milliseconds; both forms must be positive. A
-// single refinement keeps one error message for every invalid duration.
-const retentionDurationSchema = z.union([z.number(), z.string()]).refine(
+const RETENTION_DURATION_ERROR_MESSAGE =
+	"Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.";
+
+// The production binding accepts any finite number of milliseconds and any
+// string that itty-time parses to a finite number, so durations do not have
+// to be positive. z.number() already rejects NaN and infinite numbers.
+const createRetentionDurationSchema = z.union([z.number(), z.string()]).refine(
 	(value) => {
 		if (typeof value === "number") {
-			return Number.isInteger(value) && value > 0;
+			return true;
 		}
 		try {
-			const duration = ms(value);
-			return Number.isFinite(duration) && duration > 0;
+			return Number.isFinite(ms(value));
 		} catch {
 			return false;
 		}
 	},
-	{
-		message:
-			"Duration must be a number or a string in format '{{number}} {{unit}}' where unit is second(s), minute(s), etc.",
-	}
+	{ message: RETENTION_DURATION_ERROR_MESSAGE }
 );
 
-const workflowInstanceCreateOptionsSchema = z.object({
+// The options that create() and each createBatch() entry accept. The
+// production binding checks them with zod's rules and messages, so the
+// `(body)` errors below read the same.
+const createOptionsSchema = z.object({
 	id: z.string().optional(),
 	params: z.any().optional(),
 	retention: z
 		.object({
-			successRetention: retentionDurationSchema.optional(),
-			errorRetention: retentionDurationSchema.optional(),
+			successRetention: createRetentionDurationSchema.optional(),
+			errorRetention: createRetentionDurationSchema.optional(),
 		})
 		.optional(),
 	locationHint: z
@@ -410,6 +414,19 @@ const workflowInstanceCreateOptionsSchema = z.object({
 		.optional(),
 });
 
+function canStoreInstanceParams(params: unknown): boolean {
+	try {
+		structuredClone(params);
+		return true;
+	} catch (error) {
+		// As in production, only a DataCloneError means the params can't be stored.
+		if (error instanceof Error && error.name === "DataCloneError") {
+			return false;
+		}
+		throw error;
+	}
+}
+
 // this.env.WORKFLOW is WorkflowBinding
 export class WorkflowBinding extends WorkerEntrypoint<Env> {
 	constructor(ctx: ExecutionContext, env: Env) {
@@ -423,16 +440,30 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		return await stub.hasInstance();
 	}
 
-	public async create(options: WorkflowInstanceCreateOptions = {}): Promise<{
+	public async create(options?: WorkflowInstanceCreateOptions): Promise<{
 		id: string;
 	}> {
-		// Destructuring defaults apply only to absent fields: an explicit null
-		// id must reach the validation below rather than becoming a generated
-		// id.
-		const { id = crypto.randomUUID() } = options;
-		if (!isValidWorkflowInstanceId(id)) {
-			throw new WorkflowError("Workflow instance has invalid id");
+		// Like the production binding, treat a missing or null argument as no
+		// options, check the options before the id, and reject with plain Errors.
+		const createOptions = options ?? {};
+		const validation = createOptionsSchema.safeParse(createOptions);
+		if (!validation.success) {
+			throw createBindingError(
+				validation.error.issues.map((issue) => issue.message).join("; "),
+				"body"
+			);
 		}
+		if (
+			createOptions.id !== undefined &&
+			(!isValidWorkflowInstanceId(createOptions.id) ||
+				isReservedWorkflowInstanceId(createOptions.id))
+		) {
+			throw createBindingError(
+				"Instance has invalid id",
+				"instance.invalid_id"
+			);
+		}
+		const { id = crypto.randomUUID() } = createOptions;
 
 		// Deterministic (caller-provided) ids carry a documented uniqueness
 		// contract: creating an instance with an id that already exists throws
@@ -441,11 +472,26 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		// so duplicate creates racing ahead of that commit can all resolve
 		// successfully; the engine's init() guards make the extra dispatch a
 		// no-op, so the race cannot double-execute the workflow body.
-		if (options.id !== undefined && (await this.#instanceExists(id))) {
+		if (createOptions.id !== undefined && (await this.#instanceExists(id))) {
 			throw duplicateInstanceError(id);
 		}
 
-		return this.#createUnchecked(id, options);
+		// Like the production binding, run the instance with {} when the params
+		// are null.
+		const params = createOptions.params ?? {};
+
+		// The production engine stores params with the instance, after its
+		// duplicate check, and rejects params that storage cannot clone. The local
+		// engine stores them after create() has returned, so they would leave the
+		// instance queued forever.
+		if (!canStoreInstanceParams(params)) {
+			throw createBindingError(
+				"Provided instance parameters are not serializable",
+				"body"
+			);
+		}
+
+		return this.#createUnchecked(id, { ...createOptions, params });
 	}
 
 	// Creation body shared by create() and createBatch(), which perform their
@@ -593,20 +639,22 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			| WorkflowBatchCreateOptions
 	): Promise<{ id: string }[] | WorkflowBatchCreateResult> {
 		const isLegacyBatch = Array.isArray(options);
+		let isCountBatch = false;
 		let batch: WorkflowInstanceCreateOptions<unknown>[];
 		if (isLegacyBatch) {
 			batch = options;
 		} else if (options !== null && typeof options === "object") {
 			if ("count" in options && options.count !== undefined) {
 				if (!Number.isInteger(options.count) || options.count <= 0) {
-					throw createWorkflowError("count must be a positive integer", "body");
+					throw createBindingError("count must be a positive integer", "body");
 				}
 				if (options.count > 100) {
-					throw createWorkflowError(
+					throw createBindingError(
 						"batchCreate only supports 100 instances at a time",
 						"body"
 					);
 				}
+				isCountBatch = true;
 				batch = Array.from({ length: options.count }, () => ({
 					params: options.params,
 					retention: options.retention,
@@ -615,57 +663,34 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			} else if ("instances" in options && Array.isArray(options.instances)) {
 				batch = options.instances;
 			} else {
-				throw createWorkflowError("Provided argument is invalid", "body");
+				throw createBindingError("Provided argument is invalid", "body");
 			}
 		} else {
-			throw createWorkflowError("Provided argument is invalid", "body");
+			throw createBindingError("Provided argument is invalid", "body");
 		}
 
-		if (batch.length === 0) {
-			if (!isLegacyBatch) {
-				throw createWorkflowError("Batch size exceeds maximum allowed", "body");
-			}
-			throw new Error(
-				"WorkflowError: batchCreate should have at least 1 instance"
-			);
-		}
-		if (batch.length > 100) {
-			if (!isLegacyBatch) {
-				throw createWorkflowError("Batch size exceeds maximum allowed", "body");
-			}
-			throw new Error(
-				"WorkflowError: batchCreate only supports 100 instances at a time"
-			);
+		if (batch.length === 0 || batch.length > 100) {
+			throw createBindingError("Batch size exceeds maximum allowed", "body");
 		}
 
-		// Validate only object-form entries before probing ids, which persists storage;
-		// the deprecated array form retains create()'s option validation behavior.
+		// Like the production binding, check every entry's options before any
+		// id, and both before probing ids, which persists storage. The deprecated
+		// array form gets the same checks as the object form.
 		for (const instanceOptions of batch) {
-			if (!isLegacyBatch) {
-				const validation =
-					workflowInstanceCreateOptionsSchema.safeParse(instanceOptions);
-				if (!validation.success) {
-					throw createWorkflowError(
-						validation.error.issues.map((issue) => issue.message).join("; "),
-						"body"
-					);
-				}
+			const validation = createOptionsSchema.safeParse(instanceOptions);
+			if (!validation.success) {
+				throw createBindingError(
+					validation.error.issues.map((issue) => issue.message).join("; "),
+					"body"
+				);
 			}
-			// Reserved ids are only rejected by the object form; the deprecated
-			// array form keeps accepting every id that create() accepts.
+		}
+		for (const { id } of batch) {
 			if (
-				instanceOptions.id !== undefined &&
-				(!isValidWorkflowInstanceId(instanceOptions.id) ||
-					(!isLegacyBatch &&
-						(["batch", "terminate", "terminateAll"].includes(
-							instanceOptions.id
-						) ||
-							/^cf_[0-9a-f]{64}$/.test(instanceOptions.id))))
+				id !== undefined &&
+				(!isValidWorkflowInstanceId(id) || isReservedWorkflowInstanceId(id))
 			) {
-				if (isLegacyBatch) {
-					throw new WorkflowError("Workflow instance has invalid id");
-				}
-				throw createWorkflowError(
+				throw createBindingError(
 					"Instance ID is invalid",
 					"instance.invalid_id"
 				);
@@ -690,37 +715,53 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 			})
 		);
 
-		// Existing and repeated ids are excluded from the created instances. The
-		// legacy form omits them, while the object form reports their input indexes.
+		// The count form's entries share one params value, so it is checked once.
+		const countParamsStorable = isCountBatch
+			? canStoreInstanceParams(batch[0].params)
+			: undefined;
+
+		// Entries with existing or repeated ids, or with params that storage
+		// cannot clone, are not created. The object form reports their input
+		// indexes, while the deprecated array form omits them, as in production.
 		const result: WorkflowBatchCreateResult = { created: [], errors: [] };
 		const seenIds = new Set<string>();
 		for (const [index, instanceOptions] of batch.entries()) {
 			if (instanceOptions.id !== undefined) {
 				if (seenIds.has(instanceOptions.id)) {
-					if (!isLegacyBatch) {
-						result.errors.push({
-							index,
-							id: instanceOptions.id,
-							code: 10415,
-							message: "workflows.api.error.instance.duplicate_in_batch",
-						});
-					}
+					result.errors.push({
+						index,
+						id: instanceOptions.id,
+						code: 10415,
+						message: "workflows.api.error.instance.duplicate_in_batch",
+					});
 					continue;
 				}
 				seenIds.add(instanceOptions.id);
 				if (existing.has(instanceOptions.id)) {
-					if (!isLegacyBatch) {
-						result.errors.push({
-							index,
-							id: instanceOptions.id,
-							code: 10405,
-							message: "workflows.api.error.instance.already_exists",
-						});
-					}
+					result.errors.push({
+						index,
+						id: instanceOptions.id,
+						code: 10405,
+						message: "workflows.api.error.instance.already_exists",
+					});
 					continue;
 				}
 			}
 			const { id = crypto.randomUUID() } = instanceOptions;
+			// As in production, where the engine stores the params after its
+			// duplicate check, params that storage cannot clone fail only their own
+			// entry. The error carries the id that the instance would have had.
+			if (
+				!(countParamsStorable ?? canStoreInstanceParams(instanceOptions.params))
+			) {
+				result.errors.push({
+					index,
+					id,
+					code: 10002,
+					message: "workflows.api.error.body",
+				});
+				continue;
+			}
 			result.created.push(await this.#createUnchecked(id, instanceOptions));
 		}
 		return isLegacyBatch ? result.created : result;

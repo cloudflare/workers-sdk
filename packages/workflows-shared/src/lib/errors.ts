@@ -64,6 +64,10 @@ export function createWorkflowError(
 	return new WorkflowError(`(${errorCode}) ${message}`);
 }
 
+export function createBindingError(message: string, errorCode: string): Error {
+	return new Error(`(${errorCode}) ${message}`);
+}
+
 const ABORT_PREFIX = "Aborting engine:" as const;
 
 export const ABORT_REASONS = {
@@ -132,8 +136,8 @@ export function stepNotFoundError(name: string): WorkflowError {
 	);
 }
 
-export function duplicateInstanceError(id: string): WorkflowError {
-	return createWorkflowError(
+export function duplicateInstanceError(id: string): Error {
+	return createBindingError(
 		`Workflow instance with id "${id}" already exists`,
 		"instance.already_exists"
 	);
