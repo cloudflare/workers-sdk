@@ -268,6 +268,9 @@ describe("startRemoteProxySession lazy connection errors", () => {
 		expect(warn).not.toHaveBeenCalledWith(
 			expect.stringContaining(apiError.message)
 		);
+		expect(warn).toHaveBeenCalledWith(
+			expect.stringContaining("wrangler whoami")
+		);
 	});
 
 	it("warns with the event's reason and innermost message for other failures", async ({
