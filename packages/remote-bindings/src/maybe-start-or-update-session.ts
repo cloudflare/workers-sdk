@@ -27,15 +27,6 @@ export function pickRemoteBindings(
 	);
 }
 
-/** Remote Hyperdrive needs a connected session to set up its local TCP bridge. */
-export function shouldStartRemoteProxySessionLazily(
-	remoteBindings: Record<string, Binding>
-): boolean {
-	return !Object.values(remoteBindings).some(
-		(binding) => binding.type === "hyperdrive"
-	);
-}
-
 export type WorkerConfigObject = {
 	/** The name of the worker. */
 	name?: string;
@@ -107,20 +98,16 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		preExistingRemoteProxySessionData?.authKey !== undefined
 			? key === preExistingRemoteProxySessionData?.authKey
 			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth);
-	const lazy = shouldStartRemoteProxySessionLazily(remoteBindings);
-	const wasLazy = shouldStartRemoteProxySessionLazily(
-		preExistingRemoteProxySessionData?.remoteBindings ?? {}
-	);
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
-	if (!remoteProxySession || !authSameAsBefore || lazy !== wasLazy) {
+	if (!remoteProxySession || !authSameAsBefore) {
 		await remoteProxySession?.dispose();
 		remoteProxySession = await startSession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
 			auth: hook,
-			lazy,
+			lazy: true,
 			logger: context.logger,
 		});
 	} else if (

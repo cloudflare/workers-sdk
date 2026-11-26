@@ -10,4 +10,4 @@ Local development now starts without logging in, even when a project uses remote
 
 This applies to Wrangler, the Cloudflare Vite plugin, and the Vitest plugin.
 
-Projects with remote Hyperdrive still connect during startup because Miniflare needs database credentials to set up the local bridge.
+Remote Hyperdrive's first binding call happens during startup: Miniflare requests database credentials to set up the local bridge.

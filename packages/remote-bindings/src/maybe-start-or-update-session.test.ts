@@ -48,6 +48,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			VECTORS: { type: "vectorize", index_name: "search", remote: true },
 		},
 		{ KV: { type: "kv_namespace", id: "kv", remote: true } },
+		{ DB: { type: "hyperdrive", id: "db", remote: true } },
 		{
 			ORDERS: { type: "k2", stream: "orders" },
 			DB: { type: "hyperdrive", id: "db", remote: false },
@@ -76,7 +77,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		}
 	);
 
-	it("switches to eager auth when remote Hyperdrive is added and back when removed", async ({
+	it("reuses the lazy session when remote Hyperdrive is added or removed", async ({
 		expect,
 	}) => {
 		const startSession = vi.fn<typeof startRemoteProxySession>(async () =>
@@ -100,33 +101,29 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			context,
 			startSession
 		);
-		const eager = await maybeStartOrUpdateRemoteProxySession(
+		const added = await maybeStartOrUpdateRemoteProxySession(
 			{ bindings: withHyperdrive },
 			first,
 			testAuth,
 			context,
 			startSession
 		);
-		await maybeStartOrUpdateRemoteProxySession(
+		const removed = await maybeStartOrUpdateRemoteProxySession(
 			{ bindings },
-			eager,
+			added,
 			testAuth,
 			context,
 			startSession
 		);
-		expect(first?.session.dispose).toHaveBeenCalledOnce();
-		expect(eager?.session.dispose).toHaveBeenCalledOnce();
-		expect(startSession).toHaveBeenCalledTimes(3);
-		expect(startSession).toHaveBeenNthCalledWith(
-			2,
-			withHyperdrive,
-			expect.objectContaining({ lazy: false })
+		expect(added?.session).toBe(first?.session);
+		expect(removed?.session).toBe(first?.session);
+		expect(first?.session.dispose).not.toHaveBeenCalled();
+		expect(startSession).toHaveBeenCalledOnce();
+		expect(first?.session.updateBindings).toHaveBeenNthCalledWith(
+			1,
+			withHyperdrive
 		);
-		expect(startSession).toHaveBeenNthCalledWith(
-			3,
-			bindings,
-			expect.objectContaining({ lazy: true })
-		);
+		expect(first?.session.updateBindings).toHaveBeenNthCalledWith(2, bindings);
 	});
 
 	it("reuses a session when replacing a remote-only binding with a local-capable remote binding", async ({

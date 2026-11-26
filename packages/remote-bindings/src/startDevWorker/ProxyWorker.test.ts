@@ -1,5 +1,7 @@
 import { once } from "node:events";
 import { createServer } from "node:http";
+import { newWebSocketRpcSession } from "capnweb";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { it, onTestFinished, vi } from "vitest";
 import { WebSocketServer } from "ws";
 import { initLogger } from "../logger";
@@ -7,6 +9,7 @@ import { ProxyController } from "./ProxyController";
 import { createDeferred } from "./utils";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
+import type { RemoteProxyConnectionString } from "miniflare";
 import type {
 	IncomingMessage,
 	RequestListener,
@@ -71,7 +74,7 @@ async function startProxy(
 	);
 	onTestFinished(() => controller.teardown());
 	controller.start({ ...config, lazy });
-	const { proxyWorker } = await controller.ready.promise;
+	const { proxyWorker, url } = await controller.ready.promise;
 	controller.pause({ ...config, lazy });
 	await controller.runtimeMessageMutex.drained();
 
@@ -100,6 +103,7 @@ async function startProxy(
 	}
 	return {
 		proxyWorker,
+		url,
 		onError,
 		onPreviewTokenExpired,
 		play,
@@ -236,6 +240,62 @@ it("queues an RPC WebSocket upgrade until login succeeds", async ({
 	ws.send("rpc-message");
 	expect(await message).toBe("rpc-message");
 	ws.close();
+});
+
+it("connects a lazy session when Miniflare needs Hyperdrive credentials at startup", async ({
+	expect,
+}) => {
+	const credentials =
+		"postgres://remote-user:remote-password@hyperdrive.local:5432/remote-db";
+	const requestConnection = vi.fn();
+	const { play, preview, url } = await startProxy(
+		(_request, response) => response.end(),
+		requestConnection
+	);
+	const wsServer = new WebSocketServer({ noServer: true });
+	onTestFinished(() => {
+		for (const client of wsServer.clients) {
+			client.terminate();
+		}
+		wsServer.close();
+	});
+	preview.on("upgrade", (request, socket, head) => {
+		wsServer.handleUpgrade(request, socket, head, (websocket) => {
+			newWebSocketRpcSession(websocket as unknown as WebSocket, {
+				getConnectionString: () => credentials,
+			});
+		});
+	});
+	expect(requestConnection).not.toHaveBeenCalled();
+	const mf = new Miniflare(
+		convertV4MiniflareOptions({
+			workers: [
+				{
+					name: "worker",
+					compatibilityDate: "2026-01-01",
+					modules: true,
+					script: "export default {};",
+					hyperdrives: {
+						DB: {
+							id: "db",
+							remoteProxyConnectionString: url as RemoteProxyConnectionString,
+						},
+					},
+				},
+			],
+		})
+	);
+	onTestFinished(() => mf.dispose());
+	await vi.waitFor(() => expect(requestConnection).toHaveBeenCalledOnce());
+	await play("signed-in");
+	await mf.ready;
+	const { DB } = await mf.getBindings();
+	expect(DB).toMatchObject({
+		host: "127.0.0.1",
+		user: "remote-user",
+		password: "remote-password",
+		database: "remote-db",
+	});
 });
 
 it("fails remote binding requests whose connection to the current preview fails", async ({

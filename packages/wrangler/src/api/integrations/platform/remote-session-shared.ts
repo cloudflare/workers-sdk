@@ -1,7 +1,4 @@
-import {
-	shouldStartRemoteProxySessionLazily,
-	startRemoteProxySession,
-} from "@cloudflare/remote-bindings";
+import { startRemoteProxySession } from "@cloudflare/remote-bindings";
 import { logger } from "../../../logger";
 import { getDefaultRemoteBindingsAuth } from "../../remoteBindings/auth";
 import type { StartRemoteProxySessionOptions } from "@cloudflare/remote-bindings";
@@ -38,7 +35,7 @@ export function startSession({
 }: SessionConfig) {
 	return startRemoteProxySession(bindings, {
 		...options,
-		lazy: shouldStartRemoteProxySessionLazily(bindings),
+		lazy: true,
 		auth: getDefaultRemoteBindingsAuth(accountId).hook,
 		logger,
 	});

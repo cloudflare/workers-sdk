@@ -10,7 +10,8 @@ import type { Log } from "../../shared";
 import type { RpcStub } from "capnweb";
 
 const REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS = 3;
-const REMOTE_HYPERDRIVE_CONNECTION_TIMEOUT_MS = 10_000;
+const REMOTE_HYPERDRIVE_HANDSHAKE_TIMEOUT_MS = 150_000;
+const REMOTE_HYPERDRIVE_RPC_TIMEOUT_MS = 10_000;
 const REMOTE_HYPERDRIVE_RETRY_BACKOFF_MS = 500;
 
 export interface HyperdriveProxyConfig {
@@ -549,6 +550,7 @@ export class HyperdriveProxyController {
 		) {
 			signal.throwIfAborted();
 			const websocket = new WebSocket(wsHref, {
+				handshakeTimeout: REMOTE_HYPERDRIVE_HANDSHAKE_TIMEOUT_MS,
 				headers: process.env.CF_TRACE_ID
 					? { "cf-trace-id": process.env.CF_TRACE_ID }
 					: undefined,
@@ -561,10 +563,14 @@ export class HyperdriveProxyController {
 				websocket.terminate();
 			}
 			signal.addEventListener("abort", abortConnection, { once: true });
-			const timeout = setTimeout(
-				() => websocket.terminate(),
-				REMOTE_HYPERDRIVE_CONNECTION_TIMEOUT_MS
-			);
+			let timeout: NodeJS.Timeout | undefined;
+			function startRpcTimeout() {
+				timeout = setTimeout(
+					() => websocket.terminate(),
+					REMOTE_HYPERDRIVE_RPC_TIMEOUT_MS
+				);
+			}
+			websocket.once("open", startRpcTimeout);
 			try {
 				const connectionString = await stub.getConnectionString();
 				signal.throwIfAborted();
@@ -577,6 +583,7 @@ export class HyperdriveProxyController {
 				signal.throwIfAborted();
 			} finally {
 				clearTimeout(timeout);
+				websocket.off("open", startRpcTimeout);
 				signal.removeEventListener("abort", abortConnection);
 			}
 			if (attempt < REMOTE_HYPERDRIVE_CONNECTION_ATTEMPTS) {

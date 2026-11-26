@@ -1,7 +1,6 @@
 export {
 	maybeStartOrUpdateRemoteProxySession,
 	pickRemoteBindings,
-	shouldStartRemoteProxySessionLazily,
 } from "./maybe-start-or-update-session";
 export type {
 	RemoteBindingsAuth,
