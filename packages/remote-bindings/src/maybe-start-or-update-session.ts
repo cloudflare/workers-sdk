@@ -107,7 +107,6 @@ export async function maybeStartOrUpdateRemoteProxySession(
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
 			auth: hook,
-			lazy: true,
 			logger: context.logger,
 		});
 	} else if (

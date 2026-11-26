@@ -23,8 +23,8 @@ const SHUTDOWN_GRACE_MS = 5_000;
 
 /**
  * Start the configured remote bindings, if any. The caller owns disposal.
- * A Node.js session inherits the environment at proxy creation. If it is lazy,
- * it only resolves credentials on the first binding call.
+ * A Node.js session inherits the environment at proxy creation and resolves
+ * credentials on the first binding call.
  */
 export async function startPlatformProxyRemoteSession(
 	config: Config

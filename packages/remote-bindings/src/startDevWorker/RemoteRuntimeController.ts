@@ -17,11 +17,7 @@ import {
 	handlePreviewSessionUploadError,
 } from "../utils/remote";
 import { castErrorCause } from "./events";
-import {
-	PREVIEW_TOKEN_REFRESH_INTERVAL,
-	PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL,
-	unwrapHook,
-} from "./utils";
+import { PREVIEW_TOKEN_REFRESH_INTERVAL, unwrapHook } from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -53,9 +49,6 @@ export class RemoteRuntimeController {
 	#latestBundle?: Bundle;
 	#latestProxyData?: ProxyData;
 
-	// Timer for proactive token refresh before the 1-hour expiry
-	#refreshTimer?: ReturnType<typeof setTimeout>;
-	#sessionCreatedAt?: number;
 	#tearingDown = false;
 
 	constructor(
@@ -71,7 +64,7 @@ export class RemoteRuntimeController {
 		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
-			const session = await retryOnAPIFailure(
+			return await retryOnAPIFailure(
 				() =>
 					createPreviewSession(
 						props.complianceConfig,
@@ -85,10 +78,6 @@ export class RemoteRuntimeController {
 				undefined,
 				this.#abortController.signal
 			);
-			if (session) {
-				this.#sessionCreatedAt = Date.now();
-			}
-			return session;
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
 				return; // ignore
@@ -256,9 +245,7 @@ export class RemoteRuntimeController {
 		}
 
 		const proxyData: ProxyData = {
-			...(config.lazy
-				? { refreshAt: Date.now() + PREVIEW_TOKEN_REFRESH_INTERVAL }
-				: {}),
+			refreshAt: Date.now() + PREVIEW_TOKEN_REFRESH_INTERVAL,
 			userWorkerUrl: {
 				protocol: "https:",
 				hostname: token.host,
@@ -280,35 +267,7 @@ export class RemoteRuntimeController {
 			proxyData,
 		});
 
-		this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_INTERVAL);
 		return true;
-	}
-
-	#scheduleRefresh(interval: number) {
-		clearTimeout(this.#refreshTimer);
-		// Lazy sessions refresh in response to binding calls, so an unused binding
-		// cannot trigger an interactive login from a background timer.
-		if (this.#latestConfig?.lazy) {
-			return;
-		}
-		const delay =
-			interval === PREVIEW_TOKEN_REFRESH_INTERVAL &&
-			this.#sessionCreatedAt !== undefined
-				? Math.max(
-						0,
-						PREVIEW_TOKEN_REFRESH_INTERVAL -
-							(Date.now() - this.#sessionCreatedAt)
-					)
-				: interval;
-		this.#refreshTimer = setTimeout(() => {
-			this.#refreshTimer = undefined;
-			if (this.#latestProxyData) {
-				this.onPreviewTokenExpired();
-			} else if (!this.#tearingDown) {
-				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
-			}
-		}, delay);
-		this.#refreshTimer.unref?.();
 	}
 
 	async #onBundleComplete({ config, bundle }: BundleCompleteEvent, id: number) {
@@ -327,16 +286,7 @@ export class RemoteRuntimeController {
 
 			this.#latestConfig = config;
 			this.#latestBundle = bundle;
-			if (config.lazy) {
-				// A demand-driven reconnect may follow a long idle period.
-				this.#session = undefined;
-			}
-
-			if (this.#session) {
-				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
-			}
-
-			this.#session ??= await this.#getPreviewSession(config, auth);
+			this.#session = await this.#getPreviewSession(config, auth);
 			await this.#updatePreviewToken(config, bundle, auth, id);
 		} catch (error) {
 			if (id !== this.#currentBundleId || this.#tearingDown) {
@@ -369,25 +319,19 @@ export class RemoteRuntimeController {
 			return;
 		}
 
-		// Capture the signal as well as the bundle ID so cancellation cannot
-		// schedule another refresh for a superseded preview.
 		const abortSignal = this.#abortController.signal;
-		// A newer bundle superseding this refresh, or this refresh's own
-		// signal having been aborted, means a rebuild is already handling
-		// things — that rebuild's own success path reschedules normally, so
-		// retrying a stale attempt here would revive outdated worker code.
-		const shouldRetry = () =>
+		const isCurrent = () =>
 			bundleId === this.#currentBundleId &&
 			!abortSignal.aborted &&
 			!this.#tearingDown;
 		try {
 			const auth = await unwrapHook(config.auth);
-			if (!shouldRetry()) {
+			if (!isCurrent()) {
 				return;
 			}
 
 			const session = await this.#getPreviewSession(config, auth);
-			if (!shouldRetry()) {
+			if (!isCurrent()) {
 				return;
 			}
 			this.#session = session;
@@ -401,15 +345,10 @@ export class RemoteRuntimeController {
 
 			if (refreshed) {
 				logger.log(chalk.green("✔ Preview token refreshed successfully"));
-			} else if (shouldRetry()) {
-				// `#updatePreviewToken` (via `#previewToken`) already reported a
-				// non-restart upload failure and returned `false` without
-				// throwing — that failure needs the same retry as a thrown one.
-				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
 			}
 		} catch (error) {
 			// A superseded lazy refresh must not fail calls waiting for the new bindings.
-			if (config.lazy && !shouldRetry()) {
+			if (!isCurrent()) {
 				return;
 			}
 			if (error instanceof Error && error.name == "AbortError") {
@@ -423,16 +362,6 @@ export class RemoteRuntimeController {
 				source: "RemoteRuntimeController",
 				data: undefined,
 			});
-
-			// A failed refresh must not give up the retry cycle for good: unlike
-			// a successful refresh (which reschedules itself via
-			// `#updatePreviewToken`), nothing else will trigger another attempt
-			// for a long-lived session that isn't otherwise reloading — so a
-			// transient failure (e.g. the machine is offline) would otherwise
-			// strand the session even after connectivity returns.
-			if (shouldRetry()) {
-				this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
-			}
 		}
 	}
 
@@ -447,15 +376,9 @@ export class RemoteRuntimeController {
 		// Abort any previous operations when a new bundle is started
 		this.#abortController.abort();
 		this.#abortController = new AbortController();
-		if (this.#latestConfig?.lazy) {
-			// Only a binding call using the updated DevEnv config may resume this session.
-			this.#latestConfig = undefined;
-			this.#latestBundle = undefined;
-			this.#latestProxyData = undefined;
-		}
-		if (!this.#refreshTimer && this.#latestProxyData && !this.#tearingDown) {
-			this.#scheduleRefresh(PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL);
-		}
+		this.#latestConfig = undefined;
+		this.#latestBundle = undefined;
+		this.#latestProxyData = undefined;
 	}
 	onBundleComplete(ev: BundleCompleteEvent) {
 		const id = ++this.#currentBundleId;
@@ -478,7 +401,6 @@ export class RemoteRuntimeController {
 		}
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
-		clearTimeout(this.#refreshTimer);
 		this.#abortController.abort();
 		// Suppress errors from terminating a WebSocket that hasn't connected yet
 		this.#activeTail?.removeAllListeners("error");

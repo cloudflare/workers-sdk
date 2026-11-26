@@ -11,3 +11,5 @@ Except for remote Hyperdrive, remote bindings no longer require login at local d
 This applies to Wrangler, the Cloudflare Vite plugin, and the Vitest plugin.
 
 Remote Hyperdrive's first binding call happens during startup: Miniflare requests database credentials to set up the local bridge. A definitive account or authentication rejection fails startup with the original diagnostic. Transient connection failures are retried and do not prevent other bindings from working.
+
+Wrangler's programmatic `startRemoteProxySession()` also defers authentication and remote preview setup until the first binding call. Remove the `lazy` option from calls to this API. Successful startup now signals local proxy readiness only; authentication and preview failures surface on binding calls. `updateBindings()` applies the new proxy configuration without waiting for the remote preview.

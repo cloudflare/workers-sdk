@@ -30,7 +30,7 @@ it("starts login on the first AI call and keeps unrelated requests available whi
 	};
 	const session = await startRemoteProxySession(
 		{ AI: { type: "ai" } },
-		{ lazy: true, auth, logger, cliDisplayName: "Wrangler" }
+		{ auth, logger, cliDisplayName: "Wrangler" }
 	);
 	onTestFinished(() => session.dispose());
 	const mf = new Miniflare(

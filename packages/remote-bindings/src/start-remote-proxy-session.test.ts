@@ -22,15 +22,11 @@ vi.mock("./startDevWorker/DevEnv", async () => {
 	const { EventEmitter } = await import("node:events");
 	class DevEnv extends EventEmitter {
 		proxy = {
-			localServerReady: {
-				// With an error configured, the error event settles startup instead.
+			ready: {
 				promise:
 					mockDevEnv.error === undefined
-						? Promise.resolve()
-						: new Promise<void>(() => {}),
-			},
-			ready: {
-				promise: Promise.resolve({ url: new URL("http://localhost:8787") }),
+						? Promise.resolve({ url: new URL("http://localhost:8787") })
+						: new Promise<never>(() => {}),
 			},
 			runtimeMessageMutex: { drained: async () => {} },
 		};
@@ -190,23 +186,6 @@ describe("startRemoteProxySession error handling", () => {
 		);
 	});
 
-	it("unwraps a UserError nested in an error event's cause", async ({
-		expect,
-	}) => {
-		const authError = new RemoteSessionAuthenticationError(
-			new Error("401"),
-			"Wrangler"
-		);
-		mockDevEnv.error = makeErrorEvent(authError);
-
-		const thrown = await startRemoteProxySession({}, createTestOptions()).catch(
-			(error: unknown) => error
-		);
-
-		expect(thrown).toBe(authError);
-		expect(thrown).toBeInstanceOf(UserError);
-	});
-
 	it("wraps a non-user error in a generic Error, preserving the message", async ({
 		expect,
 	}) => {
@@ -259,7 +238,7 @@ describe("startRemoteProxySession lazy connection errors", () => {
 	});
 
 	async function startLazySession() {
-		const options = { ...createTestOptions(), lazy: true };
+		const options = createTestOptions();
 		await startRemoteProxySession({ AI: { type: "ai" } }, options);
 		const devEnv = mockDevEnv.instance;
 		if (devEnv === undefined) {

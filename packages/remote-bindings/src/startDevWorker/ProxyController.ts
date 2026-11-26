@@ -24,12 +24,10 @@ import type {
 	SerializedError,
 } from "./events";
 import type { Bundle, StartDevWorkerOptions } from "./types";
-import type { LogOptions, V4MiniflareOptions } from "miniflare";
+import type { V4MiniflareOptions } from "miniflare";
 
 export class ProxyController {
 	public ready = createDeferred<ReadyEvent>();
-
-	public localServerReady = createDeferred<void>();
 
 	public proxyWorker?: Miniflare;
 
@@ -101,17 +99,13 @@ export class ProxyController {
 			verbose: logger.loggerLevel === "debug",
 
 			// log requests into the ProxyWorker (for local + remote mode)
-			log: new ProxyControllerLogger(
-				castLogLevel(logger.loggerLevel),
-				{
-					prefix:
-						// if debugging, log requests with specic ProxyWorker prefix
-						logger.loggerLevel === "debug"
-							? "remote-bindings-ProxyWorker"
-							: "remote-bindings",
-				},
-				this.localServerReady.promise
-			),
+			log: new ProxyControllerLogger(castLogLevel(logger.loggerLevel), {
+				prefix:
+					// if debugging, log requests with specic ProxyWorker prefix
+					logger.loggerLevel === "debug"
+						? "remote-bindings-ProxyWorker"
+						: "remote-bindings",
+			}),
 			handleStructuredLogs,
 		};
 
@@ -185,10 +179,7 @@ export class ProxyController {
 	pause(config: StartDevWorkerOptions) {
 		this.latestConfig = config;
 		this.latestProxyData = undefined;
-		void this.sendMessageToProxyWorker({
-			type: "pause",
-			lazy: config.lazy ?? false,
-		});
+		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	/** Fail queued binding requests without stopping the local development server. */
 	connectionFailed(message: string, definitive = false) {
@@ -200,8 +191,6 @@ export class ProxyController {
 		});
 	}
 	play(data: ReloadCompleteEvent) {
-		this.localServerReady.resolve();
-
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
 		this.latestProxyData = data.proxyData;
@@ -290,18 +279,6 @@ export class ProxyController {
 }
 
 class ProxyControllerLogger extends Log {
-	constructor(
-		level: LogLevel,
-		opts: LogOptions,
-		private localServerReady: Promise<void>
-	) {
-		super(level, opts);
-	}
-
-	override logReady(message: string): void {
-		this.localServerReady.then(() => super.logReady(message)).catch(() => {});
-	}
-
 	override log(message: string) {
 		// filter out request logs being handled by the ProxyWorker
 		// the requests log remaining are handled by the UserWorker

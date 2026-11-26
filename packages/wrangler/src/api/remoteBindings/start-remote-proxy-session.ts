@@ -20,6 +20,7 @@ export type StartRemoteProxySessionOptions = Omit<
 	auth?: AsyncHook<CfAccount>;
 };
 
+/** Start the local proxy. Remote authentication and preview setup wait for a binding call. */
 export function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options: StartRemoteProxySessionOptions = {}

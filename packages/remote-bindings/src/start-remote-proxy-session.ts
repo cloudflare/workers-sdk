@@ -1,7 +1,5 @@
 import { randomUUID } from "node:crypto";
-import events from "node:events";
 import { UserError } from "@cloudflare/workers-utils";
-import chalk from "chalk";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker";
 import { initLogger } from "./logger";
@@ -27,8 +25,6 @@ export type StartRemoteProxySessionOptions = {
 	workerName?: string;
 	/** Resolves the account ID and API token for the session. */
 	auth: AsyncHook<CfAccount>;
-	/** Defer authentication and the remote preview until the first binding call. */
-	lazy?: boolean;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 	/** Consumer name used in actionable error messages. */
@@ -73,11 +69,8 @@ function formatRemoteProxySessionError(error: unknown): string | undefined {
 }
 
 /**
- * Walk an error's cause chain (including through error events) for a
- * {@link RemoteSessionAuthenticationError}, mirroring the original Wrangler
- * `findRemoteSessionAuthError` walk. Only this specific user error is surfaced
- * verbatim from the chain — generic API errors (which also extend
- * {@link UserError} via {@link APIError}) fall through to the wrapping logic.
+ * Find actionable authentication guidance without replacing the message for
+ * unrelated API failures.
  */
 function findRemoteSessionAuthError(
 	error: unknown
@@ -120,9 +113,6 @@ export async function startRemoteProxySession(
 		);
 	}
 
-	if (!options.lazy) {
-		options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
-	}
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
 	const workerConfig = {
@@ -136,7 +126,6 @@ export async function startRemoteProxySession(
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
 		auth: options.auth,
-		lazy: options.lazy,
 		server: { port: 0, secure: false },
 	};
 
@@ -174,24 +163,15 @@ export async function startRemoteProxySession(
 	try {
 		const maybeError = await Promise.race([
 			maybeErrorPromise,
-			options.lazy
-				? devEnv.proxy.ready.promise.then(() => undefined)
-				: devEnv.proxy.localServerReady.promise,
+			devEnv.proxy.ready.promise.then(() => undefined),
 		]);
 
 		if (maybeError && maybeError.error) {
 			// A UserError emitted directly (e.g. the Miniflare user-error case that
-			// DevEnv re-emits), and a RemoteSessionAuthenticationError found in the
-			// error event's cause chain, are surfaced verbatim so callers can still
-			// branch on `instanceof UserError` and the user sees a single actionable
-			// message. Everything else — including generic API errors — falls through
-			// to the wrapping below.
+			// DevEnv re-emits) is surfaced verbatim so callers can branch on
+			// `instanceof UserError` and users see a single actionable message.
 			if (maybeError.error instanceof UserError) {
 				throw maybeError.error;
-			}
-			const authError = findRemoteSessionAuthError(maybeError.error);
-			if (authError) {
-				throw authError;
 			}
 			const details = formatRemoteProxySessionError(maybeError.error);
 			throw new Error(
@@ -214,41 +194,22 @@ export async function startRemoteProxySession(
 	} finally {
 		devEnv.removeListener("error", onStartupError);
 	}
-	if (options.lazy) {
-		devEnv.on("error", (error: unknown) => {
-			// As at startup, show an authentication failure's actionable guidance
-			// rather than the innermost API error, which doesn't explain the fix.
-			const details =
-				findRemoteSessionAuthError(error)?.message ??
-				formatRemoteProxySessionError(error) ??
-				"unknown error";
-			options.logger.warn(`Could not connect remote bindings: ${details}`);
-			options.logger.debug(error);
-		});
-	}
+	devEnv.on("error", (error: unknown) => {
+		const details =
+			findRemoteSessionAuthError(error)?.message ??
+			formatRemoteProxySessionError(error) ??
+			"unknown error";
+		options.logger.warn(`Could not connect remote bindings: ${details}`);
+		options.logger.debug(error);
+	});
 	let disposePromise: Promise<void> | undefined;
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
-		const reloadComplete = options.lazy
-			? undefined
-			: events.once(devEnv, "reloadComplete");
 		devEnv.update({
 			...workerConfig,
 			bindings: toRawBindings(newBindings),
 		});
-		try {
-			await reloadComplete;
-		} catch (errorOrEvent) {
-			throw errorOrEvent instanceof Error
-				? errorOrEvent
-				: new Error(
-						`RemoteProxySession.updateBindings failed during reload: ${
-							(errorOrEvent as { reason?: string })?.reason ?? "unknown"
-						}`,
-						{ cause: errorOrEvent }
-					);
-		}
 		await devEnv.proxy.runtimeMessageMutex.drained();
 	};
 
@@ -265,8 +226,10 @@ export async function startRemoteProxySession(
 }
 
 export type RemoteProxySession = {
+	/** Signals local proxy readiness, not remote authentication. */
 	ready: Promise<void>;
 	dispose(): Promise<void>;
+	/** Queues the new bindings without waiting for remote preview setup. */
 	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
 	remoteProxyConnectionString: RemoteProxyConnectionString;
 };
