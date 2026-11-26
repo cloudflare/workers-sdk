@@ -1,0 +1,10 @@
+[project]
+name = "<PROJECT_NAME>"
+version = "0.1.0"
+description = "A FastAPI application running on Cloudflare Workers"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = ["fastapi"]
+
+[dependency-groups]
+dev = ["workers-py", "workers-runtime-sdk"]

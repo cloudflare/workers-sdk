@@ -15,7 +15,7 @@ import {
 } from "../legacy-client";
 import { validateName } from "../validate";
 import type { BindingSource, HttpSource, Source } from "../legacy-client";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export async function listLegacyPipelines(
 	config: Config,
@@ -49,7 +49,7 @@ export async function getLegacyPipeline(
 			break;
 		case "pretty":
 			logger.warn(
-				"⚠️  This is a legacy pipeline. Consider creating a new pipeline by running 'wrangler pipelines setup'."
+				"⚠️  This is a legacy pipeline. Consider creating a new pipeline by running 'wrangler basin pipelines setup'."
 			);
 			logger.log(formatPipelinePretty(pipeline));
 			break;
@@ -145,7 +145,7 @@ export async function updateLegacyPipeline(
 	const pipelineConfig = await getPipeline(config, accountId, name);
 
 	logger.warn(
-		"⚠️  Updating legacy pipeline. Consider recreating with 'wrangler pipelines setup'."
+		"⚠️  Updating legacy pipeline. Consider recreating with 'wrangler basin pipelines setup'."
 	);
 
 	if (args.compression) {

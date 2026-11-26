@@ -102,7 +102,7 @@ export const workflowsInstancesDeleteCommand = createCommand({
 			if (ids.includes("latest")) {
 				const latestId = await getInstanceIdFromArgs(
 					accountId,
-					{ id: "latest", name: args.name },
+					{ id: "latest", name: args.name, json: args.json },
 					config
 				);
 				ids = ids.map((id) => (id === "latest" ? latestId : id));

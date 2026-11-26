@@ -43,30 +43,23 @@ jobs:
           node-version: 24.18.0
           disable-cache: "true"
 
+      # OIDC authentication for npm dist-tag requires npm >=11.21.0 (11.x).
+      - name: Install npm with trusted dist-tag support
+        run: |
+          pnpm add --global npm@11.21.2
+          pnpm bin --global >> "$GITHUB_PATH"
+
       - name: Check npm version
         run: node -r esbuild-register tools/deployments/check-npm-version.ts
 
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
 
-      - name: Build all packages
-        run: pnpm run build
-        env:
-          CI_OS: ${{ runner.os }}
-          SOURCEMAPS: "false"
-          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
-          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
-          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
-          NODE_ENV: "production"
-          # This is the "production" key for sparrow analytics.
-          # Include this here because this step will rebuild Wrangler and needs to have this available
-          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
-
       - name: Create Version PR or Publish to NPM
         id: changesets
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
         with:
-          version: node .github/changeset-version.js
+          version: node -r esbuild-register tools/deployments/changeset-version.ts
           # Replaces `changeset publish` with an orchestrator that publishes in
           # dependency-tier order and waits for each tier to become resolvable
           # on the registry before starting the next one. Packages pin their
@@ -74,9 +67,17 @@ jobs:
           # dependency has propagated produces an installable-but-broken
           # release. It still ends with `changeset tag`, so the `New tag:` lines
           # this action parses into `publishedPackages` are unchanged.
-          publish: node -r esbuild-register tools/deployments/publish-packages.ts
+          publish: node -r esbuild-register tools/deployments/publish-packages.ts --fetch-main
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+          CI_OS: ${{ runner.os }}
+          SOURCEMAPS: "false"
+          ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
+          ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
+          SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
+          # This is the "production" key for sparrow analytics.
+          # Include this here because this step will rebuild Wrangler and needs to have this available
+          SPARROW_SOURCE_KEY: "50598e014ed44c739ec8074fdc16057c"
           # Once every version in a tier reads back OK, wait this long before
           # starting the next tier. A successful read only proves this runner's
           # CDN edge is up to date, not everyone else's.
@@ -91,10 +92,7 @@ jobs:
       - name: Switch to Node 22 for non-npm package deployments
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          # Pinned to 22.23.1 (rather than floating `22`) until it's safe to
-          # float back: Node 22.23.0 regressed node-fetch@2 keep-alive responses
-          # with ERR_STREAM_PREMATURE_CLOSE (nodejs/node#63989, fixed in 22.23.1).
-          node-version: 22.23.1
+          node-version-file: package.json
 
       - name: Deploy non-NPM Packages
         id: deploy

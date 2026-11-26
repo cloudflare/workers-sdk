@@ -5,11 +5,17 @@
 		"build": {
 			"inputs": ["$TURBO_DEFAULT$", "!test/**"],
 			"outputs": ["dist/**", "worker-metafiles/**"],
-			"env": ["CI_OS", "SPARROW_SOURCE_KEY"]
+			"env": ["CI_OS", "SOURCEMAPS", "SPARROW_SOURCE_KEY"]
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
-			"env": ["MINIFLARE_WORKERD_PATH", "MINIFLARE_WORKERD_CONFIG_DEBUG"]
+			"inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/tools/test/vitest-shard.cjs"],
+			"env": [
+				"CI_TEST_SHARD",
+				"MINIFLARE_WORKERD_PATH",
+				"MINIFLARE_WORKERD_CONFIG_DEBUG",
+				"SOURCEMAPS"
+			]
 		}
 	}
 }

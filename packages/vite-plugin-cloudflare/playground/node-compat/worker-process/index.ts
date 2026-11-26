@@ -32,6 +32,7 @@ function testProcessBehaviour() {
 		assert(!("BAR" in process.env), "process.env.BAR is populated");
 
 		const fakeProcess1 = {} as typeof process;
+		// eslint-disable-next-line no-global-assign -- this test checks that reassigning the global `process` works
 		process = fakeProcess1;
 		assert(process === fakeProcess1, "process is not updated to fakeProcess");
 		assert(
@@ -85,6 +86,7 @@ function testProcessBehaviour() {
 			throw e;
 		}
 	} finally {
+		// eslint-disable-next-line no-global-assign -- this test checks that reassigning the global `process` works
 		process = originalProcess;
 	}
 

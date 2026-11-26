@@ -66,6 +66,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-vite",
 	displayName: "React",
 	platform: "pages",
+	languages: ["js", "ts"],
 	hidden: true,
 	path: "templates/react/pages",
 	copyFiles: { path: "./templates" },

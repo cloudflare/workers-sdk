@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it, vi } from "vitest";
+import { afterEach, describe, it, vi } from "vitest";
 import { runCfWranglerBuild } from "../../cf-wrangler/build";
 import { mockConsoleMethods } from "../helpers/mock-console";
 
@@ -13,8 +13,10 @@ vi.mock("@cloudflare/config", async (importOriginal) => {
 describe("cf-wrangler build", () => {
 	runInTempDir();
 	mockConsoleMethods();
+	afterEach(() => vi.unstubAllEnvs());
 
 	it("emits Preview Build Output", async ({ expect }) => {
+		vi.stubEnv("CLOUDFLARE_PREVIEW_BUILD", "true");
 		await seed({
 			"cloudflare.config.ts": `export default ({ isPreview }) => ({
 				worker: {
@@ -28,29 +30,29 @@ describe("cf-wrangler build", () => {
 			};`,
 		});
 
-		const exitCode = await runCfWranglerBuild({ preview: true });
+		const exitCode = await runCfWranglerBuild({});
 
 		expect(exitCode).toBe(0);
 		expect(
 			fs.existsSync(
-				path.resolve(".cloudflare/output/v0/workers/default/worker.config.json")
+				path.resolve(".cloudflare/output/v1/workers/default/worker.config.json")
 			)
 		).toBe(true);
 		expect(
 			fs.existsSync(
-				path.resolve(".cloudflare/output/v0/workers/default/bundle/index.js")
+				path.resolve(".cloudflare/output/v1/workers/default/bundle/index.js")
 			)
 		).toBe(true);
 		const worker = JSON.parse(
 			fs.readFileSync(
 				path.resolve(
-					".cloudflare/output/v0/workers/default/worker.config.json"
+					".cloudflare/output/v1/workers/default/worker.config.json"
 				),
 				"utf8"
 			)
 		);
 		const rootConfig = JSON.parse(
-			fs.readFileSync(path.resolve(".cloudflare/output/v0/config.json"), "utf8")
+			fs.readFileSync(path.resolve(".cloudflare/output/v1/config.json"), "utf8")
 		);
 
 		expect(worker).toMatchObject({ name: "preview-worker" });
@@ -78,7 +80,7 @@ describe("cf-wrangler build", () => {
 
 		const exitCode = await runCfWranglerBuild({});
 		const assetsDir = path.resolve(
-			".cloudflare/output/v0/workers/default/assets"
+			".cloudflare/output/v1/workers/default/assets"
 		);
 
 		expect(exitCode).toBe(0);

@@ -182,6 +182,7 @@ export async function listR2Buckets(c: AppContext) {
 		...wrapResponse({ buckets: allBuckets }),
 		result_info: {
 			count: allBuckets.length,
+			total_count: allBuckets.length,
 		},
 	});
 }
@@ -197,6 +198,7 @@ type ListObjectsQuery = NonNullable<
  * - `prefix`: Filter objects by prefix (e.g., "folder1/")
  * - `delimiter`: Use "/" for directory-style navigation
  * - `cursor`: Pagination cursor
+ * - `start_after`: Only return keys that sort after this key
  * - `per_page`: Max results per page (default 1000)
  *
  * @see https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/objects/methods/list/
@@ -209,6 +211,7 @@ export async function listR2Objects(
 	const prefix = query.prefix;
 	const delimiter = query.delimiter;
 	const cursor = query.cursor;
+	const startAfter = query.start_after;
 	const limit = query.per_page;
 
 	const response = await sendR2GetRequest(c, bucket_name, {
@@ -216,6 +219,7 @@ export async function listR2Objects(
 		prefix,
 		delimiter,
 		cursor,
+		startAfter,
 		limit,
 		// Matches workerd when the r2_list_honor_include compat flag is enabled
 		// and the caller does not specify an include list.
@@ -348,6 +352,26 @@ export async function putR2Object(
 }
 
 type DeleteObjectsBody = z.output<typeof zR2BucketDeleteObjectsData>["body"];
+
+/**
+ * Delete a single object, returning the object key in the API envelope.
+ *
+ * @see https://developers.cloudflare.com/api/resources/r2/subresources/buckets/subresources/objects/methods/delete/
+ */
+export async function deleteR2Object(
+	c: AppContext,
+	bucket_name: string,
+	object_key: string
+): Promise<Response> {
+	const response = await sendR2PutRequest(c, bucket_name, {
+		method: "delete",
+		objects: [object_key],
+	});
+	if (!response.ok) {
+		return toR2ErrorResponse(response);
+	}
+	return c.json(wrapResponse({ key: object_key }));
+}
 
 /**
  * Delete one or more objects from an R2 bucket.

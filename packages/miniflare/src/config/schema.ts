@@ -9,17 +9,21 @@ import {
 	DurableObjectExpectingTransferExportSchema,
 	DurableObjectRenamedExportSchema,
 	DurableObjectTransferredExportSchema,
+	ExperimentalSchema,
 	FlagshipBindingSchema,
 	HyperdriveBindingSchema,
 	KnownBindingSchema,
-	KVBindingSchema,
+	KvBindingSchema,
 	ModuleTypeSchema,
-	OutputWorkerSchema,
+	BuildOutputWorkerConfigSchema,
 	QueueBindingSchema,
 	R2BindingSchema,
 	UnsafeBindingSchema,
 	WorkerBindingSchema,
 	WorkerEntrypointExportSchema,
+	WorkflowBindingSchema,
+	WorkflowExportSchema,
+	ArtifactsEventSubscriptionSchema,
 	TailConsumerSchema,
 	validateSingletonBindings,
 } from "@cloudflare/config";
@@ -30,6 +34,7 @@ import {
 	HttpOptions_Style,
 	TlsOptions_Version,
 } from "../runtime/config/workerd";
+import { resolveDevRegistryPath } from "../shared/dev-registry";
 import { kCurrentWorker } from "./current-worker";
 import type { Request, Response } from "../http";
 import type {
@@ -179,8 +184,23 @@ const MiniflareBrowserBindingSchema = BrowserBindingSchema.extend({
 	headful: z.boolean().optional(),
 });
 
+/**
+ * Remote Hyperdrive bindings get their connection string from the proxy session.
+ */
 const MiniflareHyperdriveBindingSchema = HyperdriveBindingSchema.extend({
-	dev: z.strictObject({ connectionString: z.string() }),
+	dev: z.strictObject({
+		connectionString: z.string().optional(),
+		remote: z.boolean().optional(),
+	}),
+}).superRefine((value, ctx) => {
+	if (!value.dev.remote && value.dev.connectionString === undefined) {
+		ctx.addIssue({
+			code: "custom",
+			path: ["dev", "connectionString"],
+			message:
+				"A Hyperdrive binding requires a connection string unless it sets 'remote': true.",
+		});
+	}
 });
 
 /**
@@ -203,12 +223,15 @@ const HelloWorldBindingSchema = z.strictObject({
 	enable_timer: z.boolean().optional(),
 });
 
-const MiniflareWorkflowBindingSchema = z.strictObject({
-	type: z.literal("workflow"),
-	name: z.string(),
-	worker: z.string(),
-	exportName: z.string(),
-	limits: z.strictObject({ steps: z.number().optional() }).optional(),
+const MiniflareWorkflowBindingSchema = WorkflowBindingSchema.extend({
+	// Wrangler's legacy config puts Workflow settings on bindings. New config
+	// should declare them on exports instead.
+	unsafeConfig: z
+		.strictObject({
+			limits: z.strictObject({ steps: z.number().optional() }).optional(),
+			events: z.array(ArtifactsEventSubscriptionSchema).optional(),
+		})
+		.optional(),
 });
 
 // The miniflare-extended schemas below replace these base `@cloudflare/config`
@@ -218,6 +241,7 @@ const OVERRIDDEN_BASE_BINDING_SCHEMAS = [
 	BrowserBindingSchema,
 	WorkerBindingSchema,
 	HyperdriveBindingSchema,
+	WorkflowBindingSchema,
 ] as const;
 
 // `Array.prototype.filter` removes the overridden base schemas at runtime, but
@@ -245,7 +269,7 @@ const MiniflareKnownBindingSchema = z.discriminatedUnion("type", [
 	...PassthroughBindingSchemas,
 ]);
 
-const ParsedMiniflareKVBindingSchema = KVBindingSchema.omit({
+const ParsedMiniflareKvBindingSchema = KvBindingSchema.omit({
 	id: true,
 }).extend({
 	id: z.string(),
@@ -283,7 +307,7 @@ const ParsedMiniflareQueueBindingSchema = QueueBindingSchema.omit({
 });
 
 const OVERRIDDEN_PARSED_BINDING_SCHEMAS = [
-	KVBindingSchema,
+	KvBindingSchema,
 	D1BindingSchema,
 	FlagshipBindingSchema,
 	R2BindingSchema,
@@ -303,7 +327,7 @@ const ParsedPassthroughBindingSchemas =
 	>[];
 
 export const ParsedMiniflareKnownBindingSchema = z.discriminatedUnion("type", [
-	ParsedMiniflareKVBindingSchema,
+	ParsedMiniflareKvBindingSchema,
 	ParsedMiniflareD1BindingSchema,
 	ParsedMiniflareFlagshipBindingSchema,
 	ParsedMiniflareR2BindingSchema,
@@ -364,12 +388,6 @@ export const MiniflareDurableObjectExpectingTransferExportSchema =
 		container: DOContainerOptionsSchema.optional(),
 	});
 
-// const MiniflareWorkflowExportSchema = z.strictObject({
-// 	type: z.literal("workflow"),
-// 	name: z.string(),
-// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-// });
-
 // Compose the unions explicitly (rather than filtering `ExportSchema.options`)
 // so the inferred type is precise: the miniflare-extended "created" variant
 // replaces the plain one, and `Array.prototype.filter` can't narrow the element
@@ -378,7 +396,7 @@ const MiniflareLiveExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
 	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
-	// MiniflareWorkflowExportSchema,
+	WorkflowExportSchema,
 ]);
 const MiniflareAcceptedExportSchema = z.union([
 	MiniflareDurableObjectExportSchema,
@@ -387,7 +405,7 @@ const MiniflareAcceptedExportSchema = z.union([
 	DurableObjectTransferredExportSchema,
 	MiniflareDurableObjectExpectingTransferExportSchema,
 	WorkerEntrypointExportSchema,
-	// MiniflareWorkflowExportSchema,
+	WorkflowExportSchema,
 ]);
 
 const MiniflareExportsSchema = z
@@ -429,8 +447,16 @@ const MiniflareTailConsumerSchema = TailConsumerSchema.extend({
 	props: z.record(z.string(), z.unknown()).optional(),
 });
 
+/**
+ * Extends the config `experimental` table so streaming tail consumers accept
+ * the same miniflare-internal fields as regular tail consumers.
+ */
+const MiniflareExperimentalSchema = ExperimentalSchema.extend({
+	streamingTailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
+});
+
 // ---------------------------------------------------------------------------
-// Worker config schema (extends OutputWorkerSchema)
+// Worker config schema (extends BuildOutputWorkerConfigSchema)
 // ---------------------------------------------------------------------------
 
 /** A single parsed `config.env` binding (known, miniflare-extended, or unsafe). */
@@ -445,22 +471,25 @@ export function isMiniflareUnsafeBinding(
 	return binding.type.startsWith("unsafe:");
 }
 
-export const MiniflareWorkerConfigBaseSchema = OutputWorkerSchema.omit({
-	manifest: true,
-	env: true,
-	exports: true,
-	assets: true,
-	tailConsumers: true,
-}).extend({
-	manifest: MiniflareManifestSchema.optional(),
-	env: z
-		.record(z.string(), MiniflareBindingSchema)
-		.superRefine(validateSingletonBindings)
-		.optional(),
-	exports: MiniflareExportsSchema.optional(),
-	assets: MiniflareAssetsSchema.optional(),
-	tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
-});
+export const MiniflareWorkerConfigBaseSchema =
+	BuildOutputWorkerConfigSchema.omit({
+		manifest: true,
+		env: true,
+		exports: true,
+		assets: true,
+		tailConsumers: true,
+		experimental: true,
+	}).extend({
+		manifest: MiniflareManifestSchema.optional(),
+		env: z
+			.record(z.string(), MiniflareBindingSchema)
+			.superRefine(validateSingletonBindings)
+			.optional(),
+		exports: MiniflareExportsSchema.optional(),
+		assets: MiniflareAssetsSchema.optional(),
+		tailConsumers: z.array(MiniflareTailConsumerSchema).optional(),
+		experimental: MiniflareExperimentalSchema.optional(),
+	});
 
 export type ParsedMiniflareWorkerConfig = Omit<
 	z.output<typeof MiniflareWorkerConfigBaseSchema>,
@@ -616,13 +645,6 @@ export const DevConfigSchema = z.strictObject({
 	// Zone to use for the CF-Worker header in outbound fetches. If not
 	// specified, defaults to `${worker-name}.example.com`
 	zone: z.string().optional(),
-	/** Cloudflare Access authentication metadata exposed as `ctx.access` */
-	access: z
-		.strictObject({
-			aud: z.string(),
-			identity: z.record(z.string(), z.unknown()).optional(),
-		})
-		.optional(),
 });
 
 export type DevConfig = z.input<typeof DevConfigSchema>;
@@ -729,6 +751,9 @@ export const InstanceOptionsSchema = z.strictObject({
 
 	unsafeEnableSharedStorage: z.boolean().optional(),
 
+	/** Enable cross-process Worker discovery and shared storage coordination. */
+	enableDevRegistry: z.boolean().default(true),
+
 	containerEngine: z
 		.union([
 			z.string(),
@@ -752,7 +777,11 @@ export const InstanceOptionsSchema = z.strictObject({
 
 	// Internal
 	publicUrl: z.url().optional(),
-	/** Dev registry filesystem path; relative to cwd if not absolute. */
+	/**
+	 * Dev registry filesystem path; relative to cwd if not absolute. Overridden
+	 * by `CLOUDFLARE_DEV_REGISTRY_PATH`; defaults to Miniflare's global registry.
+	 * Use `enableDevRegistry: false` to disable the registry.
+	 */
 	unsafeDevRegistryPath: z.string().optional(),
 	unsafeHandleDevRegistryUpdate: z
 		.custom<(registry: WorkerRegistry) => void>()
@@ -770,6 +799,13 @@ export const InstanceOptionsSchema = z.strictObject({
 		.optional(),
 	unsafeTriggerHandlers: z.boolean().optional(),
 	unsafeRuntimeEnv: z.record(z.string(), z.string()).optional(),
+	/**
+	 * Additional trusted Host and Origin hostnames for /cdn-cgi/* requests.
+	 * A leading dot also allows subdomains (e.g. ".example.com" allows both
+	 * "example.com" and "app.example.com"). Localhost, routes, and upstream
+	 * hostnames remain allowed.
+	 */
+	unsafeCdnCgiAllowedHosts: z.array(z.string()).optional(),
 	unsafeLocalExplorer: z.boolean().optional(),
 	// Turn on local-dev observability: attach the trace collector to the
 	// user's worker(s) so it receives their tail events.
@@ -813,17 +849,20 @@ export const MiniflareOptionsSchema = InstanceOptionsSchema.extend({
 					"Shared storage requires `isolatedResourcePersistencePath` to be set to a per-project directory, for resources that cannot be shared.",
 			});
 		}
-		if (!options.unsafeDevRegistryPath?.trim()) {
+		if (!options.enableDevRegistry) {
 			ctx.addIssue({
 				code: "custom",
-				path: ["unsafeDevRegistryPath"],
+				path: ["enableDevRegistry"],
 				message:
-					"Shared storage requires `unsafeDevRegistryPath` to be set, as instances elect a storage owner through the dev registry.",
+					"Shared storage requires `enableDevRegistry` to be enabled, as instances elect a storage owner through the dev registry.",
 			});
 		}
 	})
 	.transform((options) => ({
 		...options,
+		unsafeDevRegistryPath: options.enableDevRegistry
+			? resolveDevRegistryPath(options.unsafeDevRegistryPath)
+			: undefined,
 		// Resolve the effective isolated root once, here, so that everything
 		// downstream reads a single field that is always the path to persist to.
 		// Without shared storage nothing is shared, so every resource is isolated

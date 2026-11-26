@@ -3,7 +3,8 @@ import {
 	isWorkerNotFoundError,
 	parseBulkInputToObject,
 } from "@cloudflare/deploy-helpers";
-import { APIError, configFileName, UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -13,9 +14,49 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
+/** Script-settings edit on an undeployed latest version (logpush / tail_consumers). */
+export const VERSION_SETTINGS_NOT_DEPLOYED_ERR_CODE = 10214;
+
+const VERSION_NOT_DEPLOYED_ERR_CODES = [
+	VERSION_NOT_DEPLOYED_ERR_CODE,
+	VERSION_SETTINGS_NOT_DEPLOYED_ERR_CODE,
+];
+
+/**
+ * The `wrangler secret` commands edit the currently deployed Worker. If the
+ * latest version isn't deployed, the API rejects the change with 10214/10215
+ * and a note about logpush/tail_consumers that doesn't mention secrets.
+ *
+ * @param e - Error thrown by the secrets API.
+ * @param versionsCommand - The `wrangler versions secret …` command that
+ *   updates secrets without deploying.
+ * @param telemetryMessage - Telemetry identifier for the rewritten error.
+ * @throws {UserError} When `e` is a version-not-deployed API error.
+ */
+function throwIfLatestVersionNotDeployed(
+	e: unknown,
+	versionsCommand: string,
+	telemetryMessage: string
+): void {
+	if (
+		e instanceof APIError &&
+		e.code !== undefined &&
+		VERSION_NOT_DEPLOYED_ERR_CODES.includes(e.code)
+	) {
+		throw new UserError(
+			"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.\n" +
+				"This limitation exists to prevent accidental deployment when using Worker versions and secrets together.\n" +
+				"To resolve this, you have two options:\n" +
+				`(1) use the \`${versionsCommand}\` instead, which allows you to update secrets without deploying; or\n` +
+				"(2) deploy the latest version first, then modify secrets.\n" +
+				"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.",
+			{ telemetryMessage }
+		);
+	}
+}
 
 type SecretBindingUpload = {
 	type: "secret_text";
@@ -154,19 +195,12 @@ export const secretPutCommand = createCommand({
 					}),
 				});
 			} catch (e) {
-				if (e instanceof APIError && e.code === VERSION_NOT_DEPLOYED_ERR_CODE) {
-					throw new UserError(
-						"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.\n" +
-							"This limitation exists to prevent accidental deployment when using Worker versions and secrets together.\n" +
-							"To resolve this, you have two options:\n" +
-							"(1) use the `wrangler versions secret put` instead, which allows you to update secrets without deploying; or\n" +
-							"(2) deploy the latest version first, then modify secrets.\n" +
-							"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.",
-						{ telemetryMessage: "secret put version not deployed" }
-					);
-				} else {
-					throw e;
-				}
+				throwIfLatestVersionNotDeployed(
+					e,
+					"wrangler versions secret put",
+					"secret put version not deployed"
+				);
+				throw e;
 			}
 		}
 
@@ -373,12 +407,21 @@ async function putBulkSecrets(
 			secrets[key] = null;
 		}
 	}
-	const resp = await fetchResult(config, url, {
-		method: "PATCH",
-		headers: { "Content-Type": "application/merge-patch+json" },
-		body: JSON.stringify({ secrets }),
-	});
-	return [resp, toCreate, toDelete];
+	try {
+		const resp = await fetchResult(config, url, {
+			method: "PATCH",
+			headers: { "Content-Type": "application/merge-patch+json" },
+			body: JSON.stringify({ secrets }),
+		});
+		return [resp, toCreate, toDelete];
+	} catch (e) {
+		throwIfLatestVersionNotDeployed(
+			e,
+			"wrangler versions secret bulk",
+			"secret bulk version not deployed"
+		);
+		throw e;
+	}
 }
 
 export const secretBulkCommand = createCommand({

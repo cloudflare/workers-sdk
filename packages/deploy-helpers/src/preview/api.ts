@@ -2,13 +2,15 @@ import { FormData } from "undici";
 import { fetchResult } from "../shared/context";
 import type {
 	CfWorkerInit,
-	CacheOptions,
 	CfPlacement,
 	CfUserLimits,
-	Config,
 	Json,
-	Observability,
 } from "@cloudflare/workers-utils";
+import type {
+	CacheOptions,
+	Config,
+	Observability,
+} from "@cloudflare/workers-utils/config";
 
 export interface Binding {
 	type: string;
@@ -54,6 +56,8 @@ export interface Binding {
 	service_id?: string;
 	tunnel_id?: string;
 	network_id?: string;
+	audience?: string;
+	alg?: string;
 	destination?: string;
 	staging?: boolean;
 	enable_timer?: boolean;
@@ -70,7 +74,6 @@ export interface PreviewResource {
 	name: string;
 	slug: string;
 	urls?: string[];
-	worker_name: string;
 	tags?: string[];
 	observability?: Observability;
 	logpush?: boolean;
@@ -117,6 +120,7 @@ export type CreatePreviewDeploymentRequestParams = {
 		config: {
 			html_handling?: string;
 			not_found_handling?: string;
+			base_path?: string;
 			run_worker_first?: string[] | boolean;
 		};
 	};

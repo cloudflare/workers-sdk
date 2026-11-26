@@ -5,7 +5,7 @@
 
 import "cloudflare/shims/web";
 import process from "node:process";
-import { FatalError } from "@cloudflare/workers-utils";
+import { FatalError, splitSqlQuery } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {
 	convertConfigBindingsToStartWorkerBindings,
@@ -116,37 +116,43 @@ export {
 } from "./cf-wrangler/args";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
-export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";
+/**
+ * Split an SQLQuery into an array of statements
+ */
+export function unstable_splitSqlQuery(sql: string): string[] {
+	// Wrapped, so the published types declare it rather than importing it from
+	// `@cloudflare/workers-utils`, which is bundled
+	return splitSqlQuery(sql);
+}
 
-// `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
-// `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
-// augmentations that pollute the `import`-site's typing environment.
-//
 export interface Unstable_ASSETSBindingsOptions {
 	log: Logger;
 	proxyPort?: number;
 	directory?: string;
 	signal?: AbortSignal;
 }
-export const unstable_generateASSETSBinding: (
-	opts: Unstable_ASSETSBindingsOptions
-) => (request: Request) => Promise<Response> =
-	/* eslint-disable-next-line @typescript-eslint/no-require-imports --
-	   We `require` instead of `import`ing here to avoid polluting the main
-	   `wrangler` TypeScript project with the `global` augmentations. This
-	   relies on the fact that `require` is untyped.
-	*/
-	require("./miniflare-cli/assets").default;
+async function generatePagesASSETSBinding(
+	options: Unstable_ASSETSBindingsOptions
+) {
+	const { generateASSETSBinding } =
+		await import("@cloudflare/dev-helpers/pages-assets");
+	return generateASSETSBinding(options);
+}
+
+export const unstable_generateASSETSBinding =
+	generatePagesASSETSBinding as unknown as (
+		opts: Unstable_ASSETSBindingsOptions
+	) => (request: Request) => Promise<Response>;
 
 export {
 	defaultWranglerConfig as unstable_defaultWranglerConfig,
 	experimental_readRawConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 // TODO: consider if we want to keep exporting `experimental_patchConfig` from wrangler.
 //       wouldn't it be better for consumers to depend and use it directly from
-//       @cloudflare/workers-utils instead?
-export { experimental_patchConfig } from "@cloudflare/workers-utils";
+//       @cloudflare/workers-utils/config instead?
+export { experimental_patchConfig } from "@cloudflare/workers-utils/config";
 
 export {
 	startRemoteProxySession,

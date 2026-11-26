@@ -13,7 +13,7 @@ describe("nodejs_compat warnings - Node.js built-ins imported directly", () => {
 		expect(await proc.exitCode).not.toBe(0);
 		const errorLogs = proc.stderr.replaceAll("\\", "/");
 		expect(errorLogs).toContain(
-			'Unexpected Node.js imports for environment "worker". Do you need to enable the "nodejs_compat" compatibility flag? Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.'
+			'Unexpected Node.js imports for environment "ssr". Do you need to enable the "nodejs_compat" compatibility flag? Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.'
 		);
 		expect(errorLogs).toContain('- "node:assert/strict" imported from');
 		expect(errorLogs).toContain('- "node:perf_hooks" imported from');
@@ -32,7 +32,7 @@ describe("nodejs_compat warnings - Node.js built-ins imported via dependency", (
 		expect(await proc.exitCode).not.toBe(0);
 		const errorLogs = proc.stderr.replaceAll("\\", "/");
 		expect(errorLogs).toContain(
-			'Unexpected Node.js imports for environment "worker". Do you need to enable the "nodejs_compat" compatibility flag? Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.'
+			'Unexpected Node.js imports for environment "ssr". Do you need to enable the "nodejs_compat" compatibility flag? Refer to https://developers.cloudflare.com/workers/runtime-apis/nodejs/ for more details.'
 		);
 		expect(errorLogs).toContain('- "node:fs" imported from');
 	});

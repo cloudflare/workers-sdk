@@ -1033,49 +1033,78 @@ describe("[Asset Worker] `handleRequest`", () => {
 			expect(response.status).toBe(200);
 		});
 
-		it("should prevent external redirects via double slash", async ({
-			expect,
-		}) => {
-			const configuration: AssetConfig = normalizeConfiguration({
-				html_handling: "none",
-				not_found_handling: "none",
-				redirects: {
-					version: 1,
-					staticRules: {},
-					rules: {
-						"/foo/*": {
-							status: 302,
-							to: "/:splat",
+		it.for(["http", "https"])(
+			"should preserve scheme-less redirect targets on %s requests",
+			async (protocol, { expect }) => {
+				const configuration = normalizeConfiguration({
+					redirects: {
+						version: 1,
+						staticRules: {},
+						rules: {
+							"/old/*": {
+								status: 302,
+								to: "//other.example/:splat?next=https://example.com/a//b#section//one",
+							},
 						},
 					},
-				},
-			});
-			const exists = vi.fn().mockReturnValue(null);
-			const getByETag = vi.fn().mockReturnValue({
-				readableStream: new ReadableStream(),
-				contentType: "text/html",
-			});
+				});
+				const response = await handleRequest(
+					new Request(`${protocol}://example.com/old//images/logo.png`),
+					// @ts-expect-error Empty config default to using mocked jaeger
+					mockEnv,
+					configuration,
+					vi.fn().mockReturnValue(null),
+					vi.fn(),
+					analytics
+				);
 
-			// Test the vulnerability: double slash should not create external redirect
-			const response = await handleRequest(
-				new Request("https://example.com/foo//google.com"),
-				// @ts-expect-error Empty config default to using mocked jaeger
-				mockEnv,
-				configuration,
-				exists,
-				getByETag,
-				analytics
-			);
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe(
+					`${protocol}://other.example//images/logo.png?next=https://example.com/a//b#section//one`
+				);
+			}
+		);
 
-			expect(response.status).toBe(302);
-			const location = response.headers.get("Location");
+		it.for(["/:splat", "///:splat", "//\\:splat"])(
+			"should prevent unintended external redirects for %s",
+			async (to, { expect }) => {
+				const configuration: AssetConfig = normalizeConfiguration({
+					html_handling: "none",
+					not_found_handling: "none",
+					redirects: {
+						version: 1,
+						staticRules: {},
+						rules: {
+							"/foo/*": {
+								status: 302,
+								to,
+							},
+						},
+					},
+				});
+				const exists = vi.fn().mockReturnValue(null);
+				const getByETag = vi.fn().mockReturnValue({
+					readableStream: new ReadableStream(),
+					contentType: "text/html",
+				});
 
-			// SECURITY: Location should be relative, not absolute
-			// The vulnerability would cause: location to be "https://google.com"
-			// The fix should make: location be ".//google.com" (relative)
-			expect(location).toBe("/google.com");
-			expect(location).not.toMatch(/^https?:\/\//);
-		});
+				const response = await handleRequest(
+					new Request("https://example.com/foo//google.com"),
+					// @ts-expect-error Empty config default to using mocked jaeger
+					mockEnv,
+					configuration,
+					exists,
+					getByETag,
+					analytics
+				);
+
+				expect(response.status).toBe(302);
+				const location = response.headers.get("Location");
+
+				expect(location).toBe("/google.com");
+				expect(location).not.toMatch(/^https?:\/\//);
+			}
+		);
 	});
 });
 

@@ -1,12 +1,16 @@
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import {
-	configFileName,
 	getCIOverrideName,
-	getDurableObjectExports,
 	getWorkersCIBranchName,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	getDurableObjectExports,
+	isLiveDurableObjectExport,
+} from "@cloudflare/workers-utils/config";
+import { gitCommandText, resolveGitBranchName } from "../shared/git-branch";
 import { shortHash, truncateWithSuffix } from "../shared/names";
 import type { Binding, EnvBindings, UpdatePreviewRequestParams } from "./api";
 import type {
@@ -14,9 +18,22 @@ import type {
 	PreviewsConfig,
 	RawConfig,
 	RawEnvironment,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 const MAX_CONTAINER_APP_NAME_LENGTH = 253;
+
+/**
+ * Run a Git command and return its trimmed stdout.
+ * Stderr is discarded so a missing HEAD or origin cannot print `fatal:`.
+ */
+function readGitStdout(command: string): string {
+	return gitCommandText(
+		execSync(command, {
+			encoding: "utf8",
+			stdio: ["ignore", "pipe", "ignore"],
+		})
+	).trim();
+}
 
 export function getBranchName(): string | undefined {
 	const workersCIBranch = getWorkersCIBranchName();
@@ -35,12 +52,7 @@ export function getBranchName(): string | undefined {
 		return gitlabBranch;
 	}
 
-	try {
-		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git rev-parse --abbrev-ref HEAD`).toString().trim();
-	} catch {
-		return undefined;
-	}
+	return resolveGitBranchName();
 }
 
 export function shouldUseCIMetadataFallback(): boolean {
@@ -50,7 +62,7 @@ export function shouldUseCIMetadataFallback(): boolean {
 export function getHeadCommitRef(): string | undefined {
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git rev-parse --short HEAD`).toString().trim();
+		return readGitStdout(`git rev-parse --short HEAD`);
 	} catch {
 		return undefined;
 	}
@@ -59,7 +71,7 @@ export function getHeadCommitRef(): string | undefined {
 export function getHeadCommitMessage(): string | undefined {
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
-		return execSync(`git log -1 --format=%B`).toString().trim();
+		return readGitStdout(`git log -1 --format=%B`);
 	} catch {
 		return undefined;
 	}
@@ -171,7 +183,7 @@ export function getRepositoryUrl(): string | undefined {
 	try {
 		execSync(`git rev-parse --is-inside-work-tree`, { stdio: "ignore" });
 		return normalizeRepositoryUrl(
-			execSync(`git config --get remote.origin.url`).toString()
+			readGitStdout(`git config --get remote.origin.url`)
 		);
 	} catch {
 		return undefined;
@@ -353,7 +365,8 @@ export function resolveWorkerName(
 	if (!workerName) {
 		throw new UserError(
 			`Required Worker name missing. Please specify the Worker name in your ${configFileName(
-				config.configPath
+				config.configPath,
+				config.userConfigPath
 			)} file, or pass it with --worker-name <worker-name>.`,
 			{ telemetryMessage: "preview command missing worker name" }
 		);
@@ -408,6 +421,8 @@ export function getBindingValue(binding: Binding): string {
 			return String(binding.certificate_id ?? "");
 		case "pipelines":
 			return String(binding.stream ?? binding.pipeline ?? "");
+		case "k2":
+			return String(binding.stream ?? "");
 		case "secrets_store_secret":
 			return binding.secret_name
 				? `${binding.store_id}/${binding.secret_name}`
@@ -415,11 +430,16 @@ export function getBindingValue(binding: Binding): string {
 		case "artifacts":
 			return String(binding.namespace ?? "");
 		case "flagship":
+		case "realtimekit":
 			return String(binding.app_id ?? "");
 		case "ratelimit":
 			return String(binding.namespace_id ?? "");
 		case "vpc_service":
 			return String(binding.service_id ?? "");
+		case "oidc_token":
+			return binding.alg
+				? `${binding.audience}, ${binding.alg}`
+				: String(binding.audience ?? "");
 		case "send_email":
 			return String(binding.destination_address ?? "");
 		default:
@@ -622,6 +642,10 @@ function extractBindings(
 		};
 	}
 
+	for (const { binding, stream } of previews?.k2 ?? []) {
+		env[binding] = { type: "k2", stream };
+	}
+
 	for (const secret of previews?.secrets_store_secrets ?? []) {
 		env[secret.binding] = {
 			type: "secrets_store_secret",
@@ -644,6 +668,13 @@ function extractBindings(
 		};
 	}
 
+	for (const realtimekit of previews?.realtimekit ?? []) {
+		env[realtimekit.binding] = {
+			type: "realtimekit",
+			app_id: realtimekit.app_id,
+		};
+	}
+
 	for (const ratelimit of previews?.ratelimits ?? []) {
 		env[ratelimit.name] = {
 			type: "ratelimit",
@@ -660,15 +691,27 @@ function extractBindings(
 		env[vpc.binding] = { type: "vpc_service", service_id: vpc.service_id };
 	}
 
+	for (const token of previews?.oidc_tokens ?? []) {
+		env[token.binding] = {
+			type: "oidc_token",
+			audience: token.audience,
+			...(token.alg !== undefined && { alg: token.alg }),
+		};
+	}
+
 	if (previews?.browser) {
 		env[previews.browser.binding] = { type: "browser" };
+	}
+
+	if (previews?.analytics) {
+		env[previews.analytics.binding] = { type: "analytics" };
 	}
 
 	if (previews?.ai) {
 		env[previews.ai.binding] = { type: "ai", staging: previews.ai.staging };
 	}
 
-	if (previews?.images) {
+	if (previews?.images?.binding) {
 		env[previews.images.binding] = { type: "images" };
 	}
 
@@ -735,11 +778,7 @@ function getDeclaredDOClassNames(config: Config): Set<string> {
 	for (const [className, entry] of Object.entries(
 		getDurableObjectExports(config.exports)
 	)) {
-		if (
-			entry.state === undefined ||
-			entry.state === "created" ||
-			entry.state === "expecting-transfer"
-		) {
+		if (isLiveDurableObjectExport(entry)) {
 			declared.add(className);
 		}
 	}
@@ -754,8 +793,9 @@ function getDeclaredDOClassNames(config: Config): Set<string> {
  *
  * A binding is not required. A Durable Object reached only through
  * `ctx.exports` is still implemented by this script, so its container belongs
- * to this preview. A class reachable only through a `script_name` binding is
- * implemented by another Worker, which owns its own container application.
+ * to this preview. An explicit `script_name` targets a deployed Worker, even
+ * when it names the preview's parent, so that binding alone does not give the
+ * preview ownership of the class or its container application.
  */
 export function getPreviewOwnedContainerClassNames(
 	config: Config,

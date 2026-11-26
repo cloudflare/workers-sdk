@@ -44,7 +44,7 @@ import type {
 	ImageRegistryAuth,
 	ImageRegistryPermissions,
 } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const providerSpecificCredentialFlags = [
 	{
@@ -801,6 +801,7 @@ export const containersRegistriesCredentialsCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {

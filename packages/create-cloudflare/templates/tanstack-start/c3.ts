@@ -28,7 +28,9 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "tanstack-start",
 	platform: "workers",
+	languages: ["ts"],
 	frameworkCli: "@tanstack/cli",
+	frameworkCliNodeVersion: "^20.17.0 || >=22.9.0",
 	displayName: "TanStack Start",
 	generate,
 	transformPackageJson: async () => ({

@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"strict": false,
 		"noImplicitAny": true,
 		"target": "ES2022",
 		"allowJs": false,

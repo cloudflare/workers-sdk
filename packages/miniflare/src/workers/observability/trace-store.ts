@@ -13,44 +13,9 @@
  * trace starts at zero.
  */
 import { DurableObject } from "cloudflare:workers";
+import type { LogInput, SpanClose, SpanInput } from "./trace-types";
 
-/** A span as written by the collector (attributes still a plain object). */
-export interface SpanInput {
-	traceId: string;
-	spanId: string;
-	parentId: string | null;
-	/** Owning worker (service) name, for multi-worker attribution/filtering. */
-	service: string | null;
-	name: string | null;
-	kind: string | null;
-	startMs: number;
-	/** Null while the span is still open (see `openSpan`/`closeSpan`). */
-	durationMs: number | null;
-	outcome: string | null;
-	error: string | null;
-	attributes: Record<string, unknown> | null;
-}
-
-/** Fields set when a span closes (`closeSpan`). */
-export interface SpanClose {
-	durationMs: number;
-	outcome: string | null;
-	error: string | null;
-	/** Final attributes merged in at close (e.g. status code, cpu/wall time). */
-	attributes: Record<string, unknown> | null;
-}
-
-/** A log record as written by the collector. `message` is already serialized to
- * a JSON string by the collector (so it survives the RPC hop unchanged). The
- * store assigns `seq` at insert time — see `persist`. */
-export interface LogInput {
-	traceId: string;
-	spanId: string | null;
-	tsMs: number;
-	level: string;
-	message: string;
-	operation: string | null;
-}
+export type { LogInput, SpanClose, SpanInput } from "./trace-types";
 
 const SCHEMA = [
 	`CREATE TABLE IF NOT EXISTS spans (
@@ -89,6 +54,14 @@ const SCHEMA = [
  * one response (there's no query-level timeout in the DO SQLite API to lean on).
  */
 const MAX_QUERY_ROWS = 10_000;
+// Pass each chunk through one JSON binding. Workerd's SQLite variable limit is
+// too low for useful multi-row VALUES statements (even 64 spans require 704
+// bindings), while json_each() is part of the supported SQLite JSON extension.
+const SQL_WRITE_CHUNK_ROWS = 256;
+
+interface SequencedLog extends LogInput {
+	seq: number;
+}
 
 export class TraceStore extends DurableObject {
 	private sql = this.ctx.storage.sql;
@@ -104,16 +77,32 @@ export class TraceStore extends DurableObject {
 
 	/** Persist one invocation's spans + logs. Called by the collector. */
 	persist(spans: SpanInput[], logs: LogInput[]): void {
-		for (const s of spans) {
-			// Upsert rather than INSERT OR REPLACE: a span is re-sent on every flush
-			// it's dirty for (open, attribute merges, close), and REPLACE deletes the
-			// row first, so `created_at` would be re-stamped with the latest flush.
-			// The trace list renders the root span's `created_at`, which would then
-			// show when the invocation finished rather than when it started.
-			this.sql.exec(
-				`INSERT INTO spans
+		this.ctx.storage.transactionSync(() => {
+			for (
+				let offset = 0;
+				offset < spans.length;
+				offset += SQL_WRITE_CHUNK_ROWS
+			) {
+				const chunk = spans.slice(offset, offset + SQL_WRITE_CHUNK_ROWS);
+				// Upsert rather than INSERT OR REPLACE so `created_at` remains the
+				// time the span first appeared, not the time of its latest update.
+				this.sql.exec(
+					`INSERT INTO spans
 					(trace_id, span_id, parent_id, service, name, kind, start_ms, duration_ms, outcome, error, attributes)
-					VALUES (?,?,?,?,?,?,?,?,?,?, jsonb(?))
+					SELECT
+						json_extract(value, '$.traceId'),
+						json_extract(value, '$.spanId'),
+						json_extract(value, '$.parentId'),
+						json_extract(value, '$.service'),
+						json_extract(value, '$.name'),
+						json_extract(value, '$.kind'),
+						json_extract(value, '$.startMs'),
+						json_extract(value, '$.durationMs'),
+						json_extract(value, '$.outcome'),
+						json_extract(value, '$.error'),
+						jsonb(json_extract(value, '$.attributes'))
+					FROM json_each(?)
+					WHERE true
 					ON CONFLICT (trace_id, span_id) DO UPDATE SET
 						parent_id = excluded.parent_id,
 						service = excluded.service,
@@ -124,50 +113,60 @@ export class TraceStore extends DurableObject {
 						outcome = excluded.outcome,
 						error = excluded.error,
 						attributes = excluded.attributes`,
-				s.traceId,
-				s.spanId,
-				s.parentId,
-				s.service,
-				s.name,
-				s.kind,
-				s.startMs,
-				s.durationMs == null ? null : Math.round(s.durationMs),
-				s.outcome,
-				s.error,
-				s.attributes ? JSON.stringify(s.attributes) : null
-			);
-		}
-		// Assign `seq` here rather than trusting the caller: the collector creates a
-		// fresh handler (and would restart any counter) per invocation, but
-		// sub-invocations of one distributed trace share a trace_id, so a
-		// caller-side counter would collide on (trace_id, seq). The DO is
-		// single-threaded, so reading MAX(seq) then inserting is race-free.
-		const nextSeq = new Map<string, number>();
-		for (const l of logs) {
-			let seq = nextSeq.get(l.traceId);
-			if (seq === undefined) {
-				const row = this.sql
-					.exec<{ next: number }>(
-						`SELECT COALESCE(MAX(seq), -1) + 1 AS next FROM logs WHERE trace_id = ?`,
-						l.traceId
+					JSON.stringify(
+						chunk.map((span) => ({
+							...span,
+							durationMs:
+								span.durationMs === null ? null : Math.round(span.durationMs),
+						}))
 					)
-					.one();
-				seq = Number(row.next);
+				);
 			}
-			this.sql.exec(
-				`INSERT INTO logs
+
+			// Sequence allocation and inserts share this transaction, so concurrent
+			// invocations for one distributed trace cannot collide.
+			const nextSeq = new Map<string, number>();
+			const sequencedLogs: SequencedLog[] = [];
+			for (const log of logs) {
+				let seq = nextSeq.get(log.traceId);
+				if (seq === undefined) {
+					const row = this.sql
+						.exec<{ next: number }>(
+							`SELECT COALESCE(MAX(seq), -1) + 1 AS next FROM logs WHERE trace_id = ?`,
+							log.traceId
+						)
+						.one();
+					seq = Number(row.next);
+				}
+				sequencedLogs.push({ ...log, seq });
+				nextSeq.set(log.traceId, seq + 1);
+			}
+
+			for (
+				let offset = 0;
+				offset < sequencedLogs.length;
+				offset += SQL_WRITE_CHUNK_ROWS
+			) {
+				const chunk = sequencedLogs.slice(
+					offset,
+					offset + SQL_WRITE_CHUNK_ROWS
+				);
+				this.sql.exec(
+					`INSERT INTO logs
 					(trace_id, span_id, seq, ts_ms, level, message, operation)
-					VALUES (?,?,?,?,?,?,?)`,
-				l.traceId,
-				l.spanId,
-				seq,
-				l.tsMs,
-				l.level,
-				l.message,
-				l.operation
-			);
-			nextSeq.set(l.traceId, seq + 1);
-		}
+					SELECT
+						json_extract(value, '$.traceId'),
+						json_extract(value, '$.spanId'),
+						json_extract(value, '$.seq'),
+						json_extract(value, '$.tsMs'),
+						json_extract(value, '$.level'),
+						json_extract(value, '$.message'),
+						json_extract(value, '$.operation')
+					FROM json_each(?)`,
+					JSON.stringify(chunk)
+				);
+			}
+		});
 	}
 
 	/**

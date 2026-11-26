@@ -3,6 +3,13 @@ import { toMatchImageSnapshot } from "jest-image-snapshot";
 import { Browser, chromium } from "playwright-chromium";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
+import type { MatchImageSnapshotOptions } from "jest-image-snapshot";
+
+declare module "vitest" {
+	interface Matchers<R> {
+		toMatchImageSnapshot(options?: MatchImageSnapshotOptions): R;
+	}
+}
 
 describe("Workers + Assets + SPA", () => {
 	let ip: string,

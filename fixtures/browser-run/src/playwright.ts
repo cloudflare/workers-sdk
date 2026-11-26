@@ -8,12 +8,11 @@ export default {
 		if (url) {
 			url = new URL(url).toString(); // normalize
 			switch (action) {
-				case "select": {
+				case "title": {
 					await using browser = await playwright.launch(env.MYBROWSER);
 					const page = await browser.newPage();
 					await page.goto(url);
-					const h1Text = await page.locator("h1").textContent();
-					return new Response(h1Text);
+					return new Response(await page.title());
 				}
 
 				case "alter": {
@@ -44,6 +43,9 @@ export default {
 						.then((sessions) =>
 							sessions.find((s) => s.sessionId === sessionId)
 						);
+					if (!sessionInfo) {
+						throw new Error(`Browser session ${sessionId} not found`);
+					}
 					return new Response(
 						sessionInfo.connectionId
 							? "Browser not disconnected"
@@ -52,12 +54,15 @@ export default {
 				}
 			}
 
-			let img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });
+			let img: ArrayBuffer | Uint8Array | null = await env.BROWSER_KV_DEMO.get(
+				url,
+				{ type: "arrayBuffer" }
+			);
 			if (img === null) {
 				await using browser = await playwright.launch(env.MYBROWSER);
 				const page = await browser.newPage();
 				await page.goto(url);
-				img = (await page.screenshot()) as Buffer;
+				img = await page.screenshot();
 				await env.BROWSER_KV_DEMO.put(url, img, {
 					expirationTtl: 60 * 60 * 24,
 				});

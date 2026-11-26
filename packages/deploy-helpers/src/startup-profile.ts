@@ -14,6 +14,7 @@ import type {
 	CfModuleType,
 	Json,
 	WorkerMetadataBinding,
+	WorkerUploadMetadataBinding,
 } from "@cloudflare/workers-utils";
 import type { Protocol } from "devtools-protocol";
 import type { V4ModuleDefinition, V4WorkerOptionsShape } from "miniflare";
@@ -21,6 +22,10 @@ import type { FormData, FormDataEntryValue } from "undici";
 import type { RawData } from "ws";
 
 const STARTUP_PROFILE_TIMEOUT_MS = 10_000;
+
+type StartupProfileBinding =
+	| WorkerUploadMetadataBinding
+	| WorkerMetadataBinding;
 
 const MODULE_TYPE_TO_MINIFLARE_TYPE: Record<
 	CfModuleType,
@@ -302,12 +307,14 @@ type MiniflareBindingOptions = Pick<
 	| "dispatchNamespaces"
 	| "email"
 	| "flagship"
+	| "realtimekit"
 	| "helloWorld"
 	| "images"
 	| "kvNamespaces"
 	| "media"
 	| "mtlsCertificates"
 	| "pipelines"
+	| "k2"
 	| "queueProducers"
 	| "r2Buckets"
 	| "ratelimits"
@@ -354,6 +361,7 @@ async function convertWorkerBundleBindings(
 		MiniflareBindingOption<"email">["send_email"]
 	> = [];
 	const flagship: MiniflareBindingOption<"flagship"> = {};
+	const realtimekit: MiniflareBindingOption<"realtimekit"> = {};
 	const helloWorld: MiniflareBindingOption<"helloWorld"> = {};
 	let images: MiniflareBindingOption<"images"> | undefined;
 	const kvNamespaces: Record<string, { id: string }> = {};
@@ -361,6 +369,7 @@ async function convertWorkerBundleBindings(
 	const mtlsCertificates: MiniflareBindingOption<"mtlsCertificates"> = {};
 	const pipelines: Record<string, { stream: string } | { pipeline: string }> =
 		{};
+	const k2: MiniflareBindingOption<"k2"> = {};
 	const queueProducers: Record<
 		string,
 		{ queueName: string; deliveryDelay?: number }
@@ -383,7 +392,7 @@ async function convertWorkerBundleBindings(
 			unsupportedBindings.push({ name: "<unknown>", type: "unknown" });
 			continue;
 		}
-		const binding = value as WorkerMetadataBinding;
+		const binding = value as StartupProfileBinding;
 		// Raw resource bindings expose a Fetcher instead of their product API.
 		if (isRawWorkerBinding(binding)) {
 			serviceBindings[binding.name] = createOfflineFetcherBinding();
@@ -413,7 +422,9 @@ async function convertWorkerBundleBindings(
 				kvNamespaces[binding.name] = { id: binding.namespace_id };
 				break;
 			case "d1":
-				d1Databases[binding.name] = { id: binding.id };
+				d1Databases[binding.name] = {
+					id: "database_id" in binding ? binding.database_id : binding.id,
+				};
 				break;
 			case "r2_bucket":
 				r2Buckets[binding.name] = { id: binding.bucket_name };
@@ -516,6 +527,9 @@ async function convertWorkerBundleBindings(
 					unsupportedBindings.push(binding);
 				}
 				break;
+			case "k2":
+				k2[binding.name] = { stream: binding.stream };
+				break;
 			case "secrets_store_secret":
 				secretsStoreSecrets[binding.name] = {
 					store_id: binding.store_id,
@@ -532,6 +546,9 @@ async function convertWorkerBundleBindings(
 				break;
 			case "flagship":
 				flagship[binding.name] = { app_id: binding.app_id };
+				break;
+			case "realtimekit":
+				realtimekit[binding.name] = { app_id: binding.app_id };
 				break;
 			case "ratelimit":
 				ratelimits[binding.name] = {
@@ -554,6 +571,10 @@ async function convertWorkerBundleBindings(
 			case "worker_loader":
 				workerLoaders[binding.name] = {};
 				break;
+			case "oidc_token":
+				// There is no local OIDC token signer.
+				unsupportedBindings.push(binding);
+				break;
 			case "inherit":
 				// Inheritance erases the original binding type from upload metadata.
 				unsupportedBindings.push(binding);
@@ -568,6 +589,10 @@ async function convertWorkerBundleBindings(
 				break;
 			case "logfwdr":
 				// Miniflare has no runtime binding option for log forwarders.
+				unsupportedBindings.push(binding);
+				break;
+			case "analytics":
+				// Analytics SQL bindings require a remote connection.
 				unsupportedBindings.push(binding);
 				break;
 			default: {
@@ -593,12 +618,14 @@ async function convertWorkerBundleBindings(
 			dispatchNamespaces,
 			email: { send_email: sendEmailBindings },
 			flagship,
+			realtimekit,
 			helloWorld,
 			images,
 			kvNamespaces,
 			media,
 			mtlsCertificates,
 			pipelines,
+			k2,
 			queueProducers,
 			r2Buckets,
 			ratelimits,
@@ -615,7 +642,7 @@ async function convertWorkerBundleBindings(
 	};
 }
 
-function isRawWorkerBinding(binding: WorkerMetadataBinding): boolean {
+function isRawWorkerBinding(binding: StartupProfileBinding): boolean {
 	switch (binding.type) {
 		case "browser":
 		case "ai":

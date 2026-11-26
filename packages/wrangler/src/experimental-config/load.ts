@@ -5,7 +5,11 @@ import {
 	loadAndParseConfig,
 	loadConfig,
 } from "@cloudflare/config";
-import { getCloudflareEnv, UserError } from "@cloudflare/workers-utils";
+import {
+	formatZodError,
+	getCloudflareEnv,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { convertToolingConfig } from "./convert";
 import {
 	WORKER_CONFIG_FIELD_HINTS,
@@ -15,10 +19,10 @@ import {
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
 import type {
-	ParsedInputConfig,
-	ParsedInputWorkerConfig,
+	ParsedCloudflareConfig,
+	ParsedWorkerConfig,
 } from "@cloudflare/config";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 export const CLOUDFLARE_CONFIG_FILENAME = "cloudflare.config.ts";
 export const WRANGLER_CONFIG_FILENAME = "wrangler.config.ts";
@@ -28,8 +32,8 @@ export interface NormalizedTypes {
 	includeRuntime: boolean;
 }
 
-export type ParsedProjectConfig = ParsedInputConfig & {
-	worker: ParsedInputWorkerConfig;
+export type ParsedProjectConfig = ParsedCloudflareConfig & {
+	worker: ParsedWorkerConfig;
 };
 
 export interface LoadNewConfigResult {
@@ -140,9 +144,8 @@ export async function loadNewConfig(options: {
 
 	// ── Normalised types ────────────────────────────────────────────────
 	const types: NormalizedTypes = {
-		generate: parsedWranglerConfig?.data.dev?.types?.generate ?? true,
-		includeRuntime:
-			parsedWranglerConfig?.data.dev?.types?.includeRuntime ?? true,
+		generate: parsedWranglerConfig?.data.types?.generate ?? true,
+		includeRuntime: parsedWranglerConfig?.data.types?.includeRuntime ?? true,
 	};
 
 	// ── Dependencies (union of both files) ──────────────────────────────
@@ -171,10 +174,10 @@ export async function loadNewConfig(options: {
  *
  * Worker fields cannot appear in tooling (rejected by `WranglerConfigSchema`).
  * Tooling fields cannot appear in worker (rejected by `@cloudflare/config`'s
- * `InputWorkerSchema.strictObject`). The only overlap is `assets`, where worker
- * carries `binding`/`html_handling`/`not_found_handling`/`run_worker_first`
- * and tooling carries `directory` (sourced from the flat top-level
- * `assetsDirectory` field on `wrangler.config.ts`).
+ * `WorkerConfigSchema.strictObject`). The only overlap is `assets`, where worker
+ * carries `binding`/`html_handling`/`not_found_handling`/`base_path`/
+ * `run_worker_first` and tooling carries `directory` (sourced from the flat
+ * top-level `assetsDirectory` field on `wrangler.config.ts`).
  */
 export function mergeRawConfigs(
 	worker: RawConfig,
@@ -208,20 +211,6 @@ interface ZodLikeError {
 
 function dottedPath(issuePath: PropertyKey[]): string {
 	return issuePath.filter((p) => typeof p !== "symbol").join(".");
-}
-
-function formatZodError(err: ZodLikeError): string {
-	if (!err.issues || err.issues.length === 0) {
-		return err.message ?? "Unknown validation error";
-	}
-	return err.issues
-		.map((issue) => {
-			const dotted = dottedPath(issue.path);
-			return dotted
-				? `  • ${dotted}: ${issue.message}`
-				: `  • ${issue.message}`;
-		})
-		.join("\n");
 }
 
 function formatWranglerConfigZodError(err: ZodLikeError): string {

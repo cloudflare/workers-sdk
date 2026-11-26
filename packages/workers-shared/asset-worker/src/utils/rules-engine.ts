@@ -3,7 +3,7 @@
 // It's also everything included in the URLPattern escape (https://wicg.github.io/urlpattern/#escape-a-regexp-string), plus the following: -
 
 import { REDIRECTS_VERSION } from "../handler";
-import type { AssetConfig } from "../../../utils/types";
+import type { NormalizedAssetConfig } from "../types";
 
 // As the answer says, there's no downside to escaping these extra characters, so better safe than sorry
 const ESCAPE_REGEX_CHARACTERS = /[-/\\^$*+?.()|[\]{}]/g;
@@ -114,7 +114,7 @@ export const generateRulesMatcher = <T>(
 };
 
 export const staticRedirectsMatcher = (
-	configuration: Required<AssetConfig>,
+	configuration: NormalizedAssetConfig,
 	host: string,
 	pathname: string
 ) => {
@@ -134,30 +134,43 @@ export const staticRedirectsMatcher = (
 };
 
 export const generateRedirectsMatcher = (
-	configuration: Required<AssetConfig>
+	configuration: NormalizedAssetConfig
 ) =>
 	generateRulesMatcher(
 		configuration.redirects.version === REDIRECTS_VERSION
 			? configuration.redirects.rules
 			: {},
-		({ status, to }, replacements) => {
-			const target = replacer(to, replacements).trim();
-			const protoPattern = /^(\w+:\/\/)/;
-			if (protoPattern.test(target)) {
-				// External redirects are not modified.
-				return {
-					status,
-					to: target,
-				};
-			} else {
-				// Relative redirects are modified to remove multiple slashes.
-				return {
-					status,
-					to: target.replace(/\/+/g, "/"),
-				};
-			}
-		}
+		({ status, to }, replacements) => ({
+			status,
+			to: normalizeRedirectTarget(to, replacements),
+		})
 	);
+
+/**
+ * Replace redirect placeholders and normalize relative pathnames without changing
+ * query values, fragments or explicitly configured external URLs.
+ *
+ * @param value The configured redirect target before placeholder replacement.
+ * @param replacements Placeholder values captured from the request.
+ * @returns A substituted target with repeated relative pathname separators collapsed.
+ */
+export function normalizeRedirectTarget(
+	value: string,
+	replacements: Replacements
+): string {
+	// Captured slashes must not turn a relative target into an external redirect.
+	// Scheme-less targets need a host immediately after the two slashes.
+	const isExternal = /^(?:\w+:\/\/|\/\/[^/\\\s?#])/.test(value.trim());
+	const target = replacer(value, replacements).trim();
+	if (isExternal) {
+		return target;
+	}
+
+	const suffixStart = target.search(/[?#]/);
+	const pathname = suffixStart === -1 ? target : target.slice(0, suffixStart);
+	const suffix = suffixStart === -1 ? "" : target.slice(suffixStart);
+	return pathname.replace(/[/\\]+/g, "/") + suffix;
+}
 
 export const generateStaticRoutingRuleMatcher =
 	(rules: string[]) =>

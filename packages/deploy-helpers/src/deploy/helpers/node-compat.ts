@@ -1,7 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { getNodeCompat } from "miniflare";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import { logger } from "../../shared/context";
-import type { NodeJSCompatMode } from "miniflare";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 
 /**
  * Computes and validates the Node.js compatibility mode we are running.
@@ -46,7 +46,7 @@ import type { NodeJSCompatMode } from "miniflare";
 
 	if (noBundle && hasNodejsCompatV2Flag) {
 		logger.warn(
-			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins and disable Wrangler's bundling, please polyfill as part of your own bundling process."
+			"`nodejs_compat_v2` compatibility flag and `--no-bundle` can't be used together. If you want to polyfill Node.js built-ins while disabling bundling, please polyfill as part of your own bundling process."
 		);
 	}
 

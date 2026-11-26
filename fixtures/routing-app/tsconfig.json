@@ -4,7 +4,7 @@
 		"module": "preserve",
 		"lib": ["ES2020"],
 		"types": ["@cloudflare/workers-types"],
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"noEmit": true
 	},
 	"include": ["**/*.ts"]

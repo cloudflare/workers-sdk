@@ -1,12 +1,162 @@
-import { describe, it } from "vitest";
+import { FormData, Headers, Response } from "undici";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	extractAccountTag,
 	hasMorePages,
 	parseRetryAfterMs,
 	parseRetryAfterValue,
+	performApiFetchBase,
 	throwFetchError,
 } from "../src/cfetch";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../src/environment-variables/misc-variables";
 import { APIError } from "../src/parse";
+import type { Logger } from "../src/logger";
+
+const fetchMock = vi.hoisted(() => vi.fn());
+
+vi.mock("undici", async (importOriginal) => {
+	const original = await importOriginal<typeof import("undici")>();
+	return { ...original, fetch: fetchMock };
+});
+
+function createLogger(): Logger {
+	return {
+		loggerLevel: "debug",
+		debug: vi.fn(),
+		log: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debugWithSanitization: vi.fn(),
+	};
+}
+
+async function performFormDataFetch(logger: Logger): Promise<void> {
+	const body = new FormData();
+	body.append("field", "value");
+	await performApiFetchBase(
+		COMPLIANCE_REGION_CONFIG_UNKNOWN,
+		"/test",
+		{ method: "POST", body },
+		"test-agent",
+		logger,
+		undefined,
+		undefined,
+		{ apiToken: "test-token" }
+	);
+}
+
+describe("performApiFetchBase", () => {
+	beforeEach(() => {
+		fetchMock.mockResolvedValue(new Response());
+	});
+
+	afterEach(() => {
+		vi.unstubAllEnvs();
+		vi.restoreAllMocks();
+	});
+
+	it.for(["true", "false"])(
+		"redacts sensitive headers from request diagnostics with sanitization=%s",
+		async (sanitize, { expect }) => {
+			vi.stubEnv("WRANGLER_LOG_SANITIZE", sanitize);
+			const logger = createLogger();
+			await performApiFetchBase(
+				COMPLIANCE_REGION_CONFIG_UNKNOWN,
+				"/test",
+				{
+					headers: {
+						authorization: "Bearer token",
+						"x-AUTH-key": "global-key",
+						"X-Auth-Email": "user@example.com",
+						"X-Session": "session-secret",
+						"Content-Type": "application/json",
+					},
+				},
+				"test-agent",
+				logger,
+				undefined,
+				undefined,
+				{ apiToken: "test-token" }
+			);
+			const diagnostics =
+				vi.mocked(logger.debugWithSanitization)?.mock.calls ?? [];
+			for (const label of ["HEADERS:", "INIT:"]) {
+				const values = diagnostics.find(([name]) => name === label)?.[1];
+				expect(values).toContain('"x-auth-key": "[REDACTED]"');
+				expect(values).toContain('"x-auth-email": "[REDACTED]"');
+				expect(values).toContain('"x-session": "[REDACTED]"');
+				expect(values).toContain('"authorization": "[REDACTED]"');
+				expect(values).toContain('"content-type": "application/json"');
+			}
+
+			const headers = new Headers(fetchMock.mock.calls[0]?.[1].headers);
+			expect(headers.get("x-auth-key")).toBe("global-key");
+		}
+	);
+
+	it("preserves the sanitized FormData body hint without materializing the body", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_LOG_SANITIZE", "true");
+		const logger = createLogger();
+		const responseText = vi.spyOn(Response.prototype, "text");
+
+		await performFormDataFetch(logger);
+
+		expect(responseText).not.toHaveBeenCalled();
+		expect(logger.debugWithSanitization).toHaveBeenCalledWith(
+			"BODY:",
+			"<multipart body>",
+			null,
+			2
+		);
+	});
+
+	it("materializes FormData request bodies for unsanitized logs", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
+		const logger = createLogger();
+		const responseText = vi.spyOn(Response.prototype, "text");
+
+		await performFormDataFetch(logger);
+
+		expect(responseText).toHaveBeenCalledOnce();
+		expect(logger.debugWithSanitization).toHaveBeenCalledWith(
+			"BODY:",
+			expect.stringContaining('name="field"'),
+			null,
+			2
+		);
+	});
+
+	it("does not materialize FormData request bodies when debug logs are disabled", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
+		const logger = createLogger();
+		logger.loggerLevel = "log";
+		const responseText = vi.spyOn(Response.prototype, "text");
+
+		await performFormDataFetch(logger);
+
+		expect(responseText).not.toHaveBeenCalled();
+	});
+
+	it("does not materialize FormData request bodies without a sanitized logger", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_LOG_SANITIZE", "false");
+		const logger = createLogger();
+		logger.debugWithSanitization = undefined;
+		const responseText = vi.spyOn(Response.prototype, "text");
+
+		await performFormDataFetch(logger);
+
+		expect(responseText).not.toHaveBeenCalled();
+	});
+});
 
 /**
  * hasMorePages is a function that returns a boolean based on the result_info

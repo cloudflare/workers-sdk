@@ -87,7 +87,23 @@ export async function cleanupOldLogFiles(logsDir: string): Promise<void> {
 	}
 }
 
-export const debugLogFilepath = getDebugFilepath();
+let cachedDebugLogFilepath: string | undefined;
+
+/**
+ * Returns the memoized debug log filepath, resolving `WRANGLER_LOG_PATH` on
+ * first access so values set after module import — e.g. in `vite.config.ts`
+ * after a static import of `@cloudflare/vite-plugin` — are still respected.
+ * Matches the lazy read of `WRANGLER_WRITE_LOGS` in `shouldLogToDisk()`.
+ */
+export function getDebugLogFilepath(): string {
+	return (cachedDebugLogFilepath ??= getDebugFilepath());
+}
+
+/** Clears the memoized log path. Used by tests that change cwd or env between cases. */
+export function resetDebugLogFilepathForTests(): void {
+	cachedDebugLogFilepath = undefined;
+}
+
 const mutex = new Mutex();
 
 let hasStartedLogCleanup = false;
@@ -113,6 +129,8 @@ export async function appendToDebugLogFile(
 	message: string
 ) {
 	tryCleanupLogs();
+
+	const debugLogFilepath = getDebugLogFilepath();
 
 	const entry = `
 --- ${new Date().toISOString()} ${messageLevel}

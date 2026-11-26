@@ -3,7 +3,7 @@ import { logger } from "../../../logger";
 import { createdResourceConfig } from "../../../utils/add-created-resource-config";
 import formatLabelledValues from "../../../utils/render-labelled-values";
 import type { SchemaField, Stream } from "../../types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export function formatSchemaFieldsForTable(
 	fields: SchemaField[],

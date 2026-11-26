@@ -16,6 +16,7 @@ const config: TemplateConfig = {
 	configVersion: 1,
 	id: "redwood",
 	platform: "workers",
+	languages: ["ts"],
 	frameworkCli: "create-rwsdk",
 	displayName: "RedwoodSDK",
 	generate,

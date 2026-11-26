@@ -2,26 +2,43 @@ import {
 	downloadWorkerConfig as downloadWorkerConfigBase,
 	fetchWorkerConfig as fetchWorkerConfigBase,
 } from "@cloudflare/deploy-helpers";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 export async function fetchWorkerConfig(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	workerName: string,
-	environment: string
-) {
-	return fetchWorkerConfigBase(accountId, workerName, environment);
+	environment: string,
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
+): ReturnType<typeof fetchWorkerConfigBase> {
+	return fetchWorkerConfigBase(
+		complianceConfig,
+		accountId,
+		workerName,
+		environment,
+		fetchRoutes,
+		fetchCustomDomains
+	);
 }
 
 export async function downloadWorkerConfig(
+	complianceConfig: ComplianceConfig,
 	workerName: string,
 	environment: string,
 	entrypoint: string,
-	accountId: string
+	accountId: string,
+	fetchRoutes: boolean,
+	fetchCustomDomains: boolean
 ): Promise<RawConfig> {
 	return downloadWorkerConfigBase(
+		complianceConfig,
 		workerName,
 		environment,
 		entrypoint,
-		accountId
+		accountId,
+		fetchRoutes,
+		fetchCustomDomains
 	);
 }

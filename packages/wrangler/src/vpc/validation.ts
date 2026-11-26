@@ -1,13 +1,11 @@
 import net from "node:net";
 import { UserError } from "@cloudflare/workers-utils";
+import { tlsSettingsFromArgs, validateTlsArgs } from "./tls";
 import { ServiceType } from "./index";
-import type {
-	CertVerificationMode,
-	ConnectivityServiceRequest,
-	ServiceHost,
-} from "./index";
+import type { ConnectivityServiceRequest, ServiceHost } from "./index";
+import type { TlsArgs } from "./tls";
 
-export interface ServiceArgs {
+export interface ServiceArgs extends TlsArgs {
 	name: string;
 	type: ServiceType;
 	tcpPort?: number;
@@ -19,7 +17,6 @@ export interface ServiceArgs {
 	hostname?: string;
 	tunnelId: string;
 	resolverIps?: string;
-	certVerificationMode?: string;
 }
 
 export function validateHostname(hostname: string): void {
@@ -116,20 +113,21 @@ export function extractPortFromHostname(hostname: string): {
  * `--hostname db.internal:5432` is equivalent to
  * `--hostname db.internal --tcp-port 5432`.
  */
-export function toServiceArgs(args: {
-	name: string;
-	type: string;
-	tcpPort?: number;
-	appProtocol?: string;
-	httpPort?: number;
-	httpsPort?: number;
-	ipv4?: string;
-	ipv6?: string;
-	hostname?: string;
-	tunnelId: string;
-	resolverIps?: string;
-	certVerificationMode?: string;
-}): ServiceArgs {
+export function toServiceArgs(
+	args: {
+		name: string;
+		type: string;
+		tcpPort?: number;
+		appProtocol?: string;
+		httpPort?: number;
+		httpsPort?: number;
+		ipv4?: string;
+		ipv6?: string;
+		hostname?: string;
+		tunnelId: string;
+		resolverIps?: string;
+	} & TlsArgs
+): ServiceArgs {
 	const type = args.type as ServiceType;
 	let { hostname } = args;
 	let tcpPort = args.tcpPort;
@@ -161,10 +159,13 @@ export function toServiceArgs(args: {
 		tunnelId: args.tunnelId,
 		resolverIps: args.resolverIps,
 		certVerificationMode: args.certVerificationMode,
+		certificateAuthority: args.certificateAuthority,
+		clientCertificate: args.clientCertificate,
 	};
 }
 
 export function validateRequest(args: ServiceArgs) {
+	validateTlsArgs(args);
 	// Validate host configuration - must have either IP addresses or hostname, not both
 	const hasIpAddresses = Boolean(args.ipv4 || args.ipv6);
 	const hasHostname = Boolean(args.hostname);
@@ -261,12 +262,7 @@ export function buildRequest(args: ServiceArgs): ConnectivityServiceRequest {
 		request.https_port = args.httpsPort;
 	}
 
-	// Add TLS settings if specified
-	if (args.certVerificationMode) {
-		request.tls_settings = {
-			cert_verification_mode: args.certVerificationMode as CertVerificationMode,
-		};
-	}
+	request.tls_settings = tlsSettingsFromArgs(args);
 
 	return request;
 }

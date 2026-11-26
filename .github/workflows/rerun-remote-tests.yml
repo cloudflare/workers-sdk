@@ -3,9 +3,10 @@ name: "Rerun Remote Tests"
 # Trigger: the "run-remote-tests" or "run-c3-frameworks-tests" label is added
 # to or removed from a pull request.
 #
-# Goal: re-run the E2E workflows (e2e-wrangler.yml, e2e-vite.yml, c3-e2e.yml)
-# so they pick up the label change and either pass or withhold the Cloudflare
-# API token to the test steps. This avoids adding "labeled" as a trigger type
+# Goal: re-run the Wrangler and Vite E2E workflows when the remote-tests label
+# changes so they pick up the label change and either pass or withhold the
+# Cloudflare API token to the test steps. Re-run the C3 E2E workflow when the
+# C3-frameworks label changes. This avoids adding "labeled" as a trigger type
 # to every E2E workflow (which would cause wasteful re-runs on unrelated label
 # changes).
 #
@@ -36,7 +37,7 @@ jobs:
         run: |
           # Determine which workflows to re-run based on the label.
           if [ "$LABEL_NAME" = "ci:run-remote-tests" ]; then
-            WORKFLOWS="e2e-wrangler.yml e2e-vite.yml c3-e2e.yml"
+            WORKFLOWS="e2e-wrangler.yml e2e-vite.yml"
           else
             WORKFLOWS="c3-e2e.yml"
           fi

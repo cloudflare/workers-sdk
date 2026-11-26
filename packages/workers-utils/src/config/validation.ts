@@ -12,8 +12,12 @@ import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { getContainerNameToClassNameMap } from "./containers";
 import { Diagnostics } from "./diagnostics";
-import { getDurableObjectExports } from "./durable-object-exports";
-import { ARTIFACTS_EVENT_TYPES } from "./environment";
+import {
+	getDurableObjectExports,
+	isLiveDurableObjectExport,
+} from "./durable-object-exports";
+import { ARTIFACTS_EVENT_TYPES, WORKFLOW_JURISDICTIONS } from "./environment";
+import { partitionExports } from "./exports";
 import {
 	all,
 	appendEnvName,
@@ -100,6 +104,7 @@ export type ConfigBindingFieldName =
 	| "analytics_engine_datasets"
 	| "text_blobs"
 	| "browser"
+	| "analytics"
 	| "ai"
 	| "images"
 	| "stream"
@@ -112,15 +117,18 @@ export type ConfigBindingFieldName =
 	| "mtls_certificates"
 	| "workflows"
 	| "pipelines"
+	| "k2"
 	| "secrets_store_secrets"
 	| "artifacts"
 	| "ratelimits"
 	| "assets"
 	| "unsafe_hello_world"
 	| "flagship"
+	| "realtimekit"
 	| "worker_loaders"
 	| "vpc_services"
-	| "vpc_networks";
+	| "vpc_networks"
+	| "oidc_tokens";
 
 export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	data_blobs: "Data Blob",
@@ -140,6 +148,7 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	analytics_engine_datasets: "Analytics Engine Dataset",
 	text_blobs: "Text Blob",
 	browser: "Browser Run",
+	analytics: "Analytics SQL",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -152,15 +161,18 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	mtls_certificates: "mTLS Certificate",
 	workflows: "Workflow",
 	pipelines: "Pipeline",
+	k2: "K2 Stream",
 	secrets_store_secrets: "Secrets Store Secret",
 	artifacts: "Artifacts",
 	ratelimits: "Rate Limit",
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	realtimekit: "RealtimeKit",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
 	vpc_networks: "VPC Network",
+	oidc_tokens: "OIDC Token",
 } as const;
 
 /**
@@ -177,6 +189,7 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	wasm_module: "Wasm Module",
 	text_blob: "Text Blob",
 	browser: "Browser Run",
+	analytics: "Analytics SQL",
 	ai: "AI",
 	images: "Images",
 	stream: "Stream",
@@ -198,15 +211,18 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	dispatch_namespace: "Dispatch Namespace",
 	mtls_certificate: "mTLS Certificate",
 	pipeline: "Pipeline",
+	k2: "K2 Stream",
 	secrets_store_secret: "Secrets Store Secret",
 	artifacts: "Artifacts",
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	realtimekit: "RealtimeKit",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
 	vpc_network: "VPC Network",
+	oidc_token: "OIDC Token",
 	media: "Media",
 	assets: "Assets",
 	inherit: "Inherited",
@@ -857,6 +873,43 @@ function normalizeAndValidateAssets(
 		validateAssetsConfig,
 		undefined
 	);
+}
+
+/**
+ * `images` is not inherited by named environments. As `url_transformations` is easy to lose
+ * when an environment declares `images` only for its binding, warn about that case too.
+ */
+function normalizeAndValidateImages(
+	diagnostics: Diagnostics,
+	topLevelEnv: Environment | undefined,
+	rawConfig: RawConfig | undefined,
+	rawEnv: RawEnvironment,
+	envName: string
+): Config["images"] {
+	const images = notInheritable(
+		diagnostics,
+		topLevelEnv,
+		rawConfig,
+		rawEnv,
+		envName,
+		"images",
+		validateImagesBinding(envName),
+		undefined
+	);
+
+	if (
+		images !== undefined &&
+		topLevelEnv?.images?.url_transformations !== undefined &&
+		images.url_transformations === undefined
+	) {
+		diagnostics.warnings.push(
+			`"images.url_transformations" exists at the top level, but not on "env.${envName}".\n` +
+				`This is not what you probably want, since "images.url_transformations" is not inherited by environments.\n` +
+				`Please add "images.url_transformations" to "env.${envName}".`
+		);
+	}
+
+	return images;
 }
 
 /**
@@ -1691,18 +1744,22 @@ function normalizeAndValidateEnvironment(
 			validateDefines(envName),
 			{}
 		),
-		durable_objects: notInheritable(
-			diagnostics,
-			topLevelEnv,
-			rawConfig,
-			rawEnv,
-			envName,
-			"durable_objects",
-			validateBindingsProperty(envName, validateDurableObjectBinding),
-			{
-				bindings: [],
-			}
-		),
+		durable_objects: (() => {
+			const durableObjects = notInheritable(
+				diagnostics,
+				topLevelEnv,
+				rawConfig,
+				rawEnv,
+				envName,
+				"durable_objects",
+				validateDurableObjectsProperty(envName, true),
+				{ bindings: [] }
+			);
+			return {
+				...durableObjects,
+				bindings: durableObjects.bindings ?? [],
+			};
+		})(),
 		workflows: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1955,6 +2012,16 @@ function normalizeAndValidateEnvironment(
 			validateNamedSimpleBinding(envName),
 			undefined
 		),
+		analytics: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"analytics",
+			validateNamedSimpleBinding(envName),
+			undefined
+		),
 		ai: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -1965,15 +2032,12 @@ function normalizeAndValidateEnvironment(
 			validateAIBinding(envName),
 			undefined
 		),
-		images: notInheritable(
+		images: normalizeAndValidateImages(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
-			envName,
-			"images",
-			validateNamedSimpleBinding(envName),
-			undefined
+			envName
 		),
 		stream: notInheritable(
 			diagnostics,
@@ -2003,6 +2067,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"pipelines",
 			validateBindingArray(envName, validatePipelineBinding),
+			[]
+		),
+		k2: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"k2",
+			validateBindingArray(envName, validateK2Binding),
 			[]
 		),
 		secrets_store_secrets: notInheritable(
@@ -2045,6 +2119,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateFlagshipBinding),
 			[]
 		),
+		realtimekit: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"realtimekit",
+			validateBindingArray(envName, validateRealtimeKitBinding),
+			[]
+		),
 		worker_loaders: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2083,6 +2167,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"vpc_networks",
 			validateBindingArray(envName, validateVpcNetworkBinding),
+			[]
+		),
+		oidc_tokens: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"oidc_tokens",
+			validateBindingArray(envName, validateOidcTokenBinding),
 			[]
 		),
 		version_metadata: notInheritable(
@@ -2216,6 +2310,8 @@ function normalizeAndValidateEnvironment(
 		environment.migrations,
 		environment.exports
 	);
+
+	validateWorkflowExportConflicts(diagnostics, environment.exports);
 
 	// `exports` is inherited by named environments but `containers` is not, so the
 	// idiomatic multi-environment layout declares `exports` once at the top level
@@ -2367,10 +2463,11 @@ const validateTriggers: ValidatorFn = (
 					)) {
 						if (
 							(filterName !== "namespace" && filterName !== "repo_name") ||
-							typeof filterValue !== "string"
+							typeof filterValue !== "string" ||
+							filterValue.length === 0
 						) {
 							diagnostics.errors.push(
-								`Expected "${eventFieldName}.filter" to contain only string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
+								`Expected "${eventFieldName}.filter" to contain only non-empty string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
 							);
 							isValid = false;
 							break;
@@ -2713,6 +2810,136 @@ const validateBindingsProperty =
 		return isValid;
 	};
 
+const DURABLE_OBJECTS_CODE_UPDATE_MAX_DELAY_SECONDS = 24 * 60 * 60;
+// Absorbs float64 error in the millisecond precision check. Near the 24-hour
+// maximum the error reaches ~1e-8 ms, so a tighter bound would reject valid
+// values such as 65536.001.
+const MILLISECOND_PRECISION_TOLERANCE = 1e-6;
+
+const validateDurableObjectsProperty =
+	(
+		envName: string,
+		allowMissingBindings = false,
+		allowCodeUpdateStrategy = true
+	): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (value === undefined) {
+			return true;
+		}
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(value)}.`
+			);
+			return false;
+		}
+
+		validateAdditionalProperties(
+			diagnostics,
+			fieldPath,
+			Object.keys(value),
+			allowCodeUpdateStrategy
+				? ["bindings", "code_update_strategy"]
+				: ["bindings"]
+		);
+
+		const bindingsContainer =
+			allowMissingBindings && !hasProperty(value, "bindings")
+				? { ...value, bindings: [] }
+				: value;
+		let isValid = validateBindingsProperty(
+			envName,
+			validateDurableObjectBinding
+		)(diagnostics, field, bindingsContainer, config);
+		if (!allowCodeUpdateStrategy) {
+			return isValid;
+		}
+
+		if (
+			!hasProperty(value, "code_update_strategy") ||
+			value.code_update_strategy === undefined
+		) {
+			return isValid;
+		}
+
+		const strategy = value.code_update_strategy;
+		const strategyPath = `${fieldPath}.code_update_strategy`;
+		if (
+			typeof strategy !== "object" ||
+			strategy === null ||
+			Array.isArray(strategy)
+		) {
+			diagnostics.errors.push(
+				`The field "${strategyPath}" should be an object but got ${JSON.stringify(strategy)}.`
+			);
+			return false;
+		}
+
+		validateAdditionalProperties(
+			diagnostics,
+			strategyPath,
+			Object.keys(strategy),
+			["mode", "max_delay"]
+		);
+		isValid =
+			validateRequiredProperty(
+				diagnostics,
+				strategyPath,
+				"mode",
+				hasProperty(strategy, "mode") ? strategy.mode : undefined,
+				"string",
+				["immediate", "deferred"]
+			) && isValid;
+
+		const maxDelay = hasProperty(strategy, "max_delay")
+			? strategy.max_delay
+			: undefined;
+		const maxDelayHasValidType = validateOptionalProperty(
+			diagnostics,
+			strategyPath,
+			"max_delay",
+			maxDelay,
+			"number"
+		);
+		isValid = maxDelayHasValidType && isValid;
+		if (
+			maxDelayHasValidType &&
+			typeof maxDelay === "number" &&
+			(!Number.isFinite(maxDelay) ||
+				maxDelay < 0 ||
+				maxDelay > DURABLE_OBJECTS_CODE_UPDATE_MAX_DELAY_SECONDS)
+		) {
+			diagnostics.errors.push(
+				`Expected "${strategyPath}.max_delay" to be between 0 and ${DURABLE_OBJECTS_CODE_UPDATE_MAX_DELAY_SECONDS} seconds but got ${JSON.stringify(maxDelay)}.`
+			);
+			isValid = false;
+		}
+		if (
+			maxDelayHasValidType &&
+			typeof maxDelay === "number" &&
+			Number.isFinite(maxDelay) &&
+			maxDelay >= 0 &&
+			maxDelay <= DURABLE_OBJECTS_CODE_UPDATE_MAX_DELAY_SECONDS
+		) {
+			const milliseconds = maxDelay * 1000;
+			const roundedMilliseconds = Math.round(milliseconds);
+			if (
+				(maxDelay > 0 && roundedMilliseconds === 0) ||
+				Math.abs(milliseconds - roundedMilliseconds) >
+					MILLISECOND_PRECISION_TOLERANCE
+			) {
+				diagnostics.errors.push(
+					`Expected "${strategyPath}.max_delay" to use millisecond precision but got ${JSON.stringify(maxDelay)}.`
+				);
+				isValid = false;
+			}
+		}
+
+		return isValid;
+	};
+
 const validateUnsafeSettings =
 	(envName: string): ValidatorFn =>
 	(diagnostics, field, value, config) => {
@@ -2891,6 +3118,7 @@ const workflowNameFormatMessage = `Workflow names must be 1-64 characters long, 
 function validateWorkflowRetentionValue(
 	diagnostics: Diagnostics,
 	field: string,
+	kind: string,
 	key: string,
 	value: unknown
 ): boolean {
@@ -2903,8 +3131,239 @@ function validateWorkflowRetentionValue(
 	}
 
 	diagnostics.errors.push(
-		`"${field}" bindings "default_retention.${key}" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ${JSON.stringify(
+		`"${field}" ${kind} "default_retention.${key}" field must be a positive integer of milliseconds or a duration string such as "3 days", but got ${JSON.stringify(
 			value
+		)}.`
+	);
+	return false;
+}
+
+// The validators below check the settings shared by `workflows` bindings and
+// `workflow` exports. Messages start with `"<field>" <kind>`, where `kind` is
+// "bindings" or "export", and some quote the whole binding or export (`value`).
+
+/**
+ * Check the optional `schedules` setting of a Workflow binding or export.
+ */
+function validateWorkflowSchedules(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { schedules } = value;
+	if (schedules === undefined) {
+		return true;
+	}
+	if (typeof schedules === "string") {
+		if (schedules.length === 0) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} "schedules" field must not be an empty string.`
+			);
+			return false;
+		}
+		return true;
+	}
+	if (Array.isArray(schedules)) {
+		if (schedules.length === 0) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} "schedules" field must not be an empty array.`
+			);
+			return false;
+		}
+		if (!schedules.every((s: unknown) => typeof s === "string")) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+		if (schedules.some((s: unknown) => s === "")) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} "schedules" field must not contain empty strings.`
+			);
+			return false;
+		}
+		return true;
+	}
+	diagnostics.errors.push(
+		`"${field}" ${kind} should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
+			value
+		)}.`
+	);
+	return false;
+}
+
+/**
+ * Check the optional `limits` setting of a Workflow binding or export.
+ */
+function validateWorkflowLimits(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { limits } = value;
+	if (limits === undefined) {
+		return true;
+	}
+	if (typeof limits !== "object" || limits === null || Array.isArray(limits)) {
+		diagnostics.errors.push(
+			`"${field}" ${kind} should, optionally, have an object "limits" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	const { steps } = limits as Record<string, unknown>;
+	if (steps !== undefined) {
+		if (typeof steps !== "number" || !Number.isInteger(steps) || steps < 1) {
+			diagnostics.errors.push(
+				`"${field}" ${kind} "limits.steps" field must be a positive integer but got ${JSON.stringify(
+					steps
+				)}.`
+			);
+			valid = false;
+		} else if (steps > 25_000) {
+			diagnostics.warnings.push(
+				`"${field}" has a step limit of ${steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
+			);
+		}
+	}
+	validateAdditionalProperties(
+		diagnostics,
+		`${field}.limits`,
+		Object.keys(limits),
+		["steps"]
+	);
+	return valid;
+}
+
+/**
+ * Check the optional `default_retention` setting of a Workflow binding or
+ * export.
+ */
+function validateWorkflowDefaultRetention(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { default_retention: defaultRetention } = value;
+	if (defaultRetention === undefined) {
+		return true;
+	}
+	if (
+		typeof defaultRetention !== "object" ||
+		defaultRetention === null ||
+		Array.isArray(defaultRetention)
+	) {
+		diagnostics.errors.push(
+			`"${field}" ${kind} should, optionally, have an object "default_retention" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	const retention = defaultRetention as Record<string, unknown>;
+	for (const key of ["success_retention", "error_retention"]) {
+		if (
+			retention[key] !== undefined &&
+			!validateWorkflowRetentionValue(
+				diagnostics,
+				field,
+				kind,
+				key,
+				retention[key]
+			)
+		) {
+			valid = false;
+		}
+	}
+	validateAdditionalProperties(
+		diagnostics,
+		`${field}.default_retention`,
+		Object.keys(retention),
+		["success_retention", "error_retention"]
+	);
+	return valid;
+}
+
+/**
+ * Check the optional `concurrency` setting of a Workflow binding or export.
+ */
+function validateWorkflowConcurrency(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { concurrency } = value;
+	if (concurrency === undefined) {
+		return true;
+	}
+	if (
+		typeof concurrency !== "object" ||
+		concurrency === null ||
+		Array.isArray(concurrency)
+	) {
+		diagnostics.errors.push(
+			`"${field}" ${kind} should, optionally, have an object "concurrency" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	let valid = true;
+	const { limit } = concurrency as Record<string, unknown>;
+	if (
+		limit !== undefined &&
+		(typeof limit !== "number" || !Number.isInteger(limit) || limit < 1)
+	) {
+		diagnostics.errors.push(
+			`"${field}" ${kind} "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
+				limit
+			)}.`
+		);
+		valid = false;
+	}
+	validateAdditionalProperties(
+		diagnostics,
+		`${field}.concurrency`,
+		Object.keys(concurrency),
+		["limit"]
+	);
+	return valid;
+}
+
+/**
+ * Check the optional `jurisdiction` setting of a Workflow binding or export.
+ */
+function validateWorkflowJurisdiction(
+	diagnostics: Diagnostics,
+	field: string,
+	kind: string,
+	value: Record<string, unknown>
+): boolean {
+	const { jurisdiction } = value;
+	if (
+		jurisdiction === undefined ||
+		WORKFLOW_JURISDICTIONS.some((valid) => valid === jurisdiction)
+	) {
+		return true;
+	}
+	const validJurisdictions = new Intl.ListFormat("en-US", {
+		type: "disjunction",
+	}).format(WORKFLOW_JURISDICTIONS.map((valid) => JSON.stringify(valid)));
+	diagnostics.errors.push(
+		`"${field}" ${kind} "jurisdiction" field must be one of ${validJurisdictions}, but got ${JSON.stringify(
+			jurisdiction
 		)}.`
 	);
 	return false;
@@ -2964,163 +3423,25 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
-	if (hasProperty(value, "schedules") && value.schedules !== undefined) {
-		if (typeof value.schedules === "string") {
-			if (value.schedules.length === 0) {
-				diagnostics.errors.push(
-					`"${field}" bindings "schedules" field must not be an empty string.`
-				);
-				isValid = false;
-			}
-		} else if (Array.isArray(value.schedules)) {
-			if (value.schedules.length === 0) {
-				diagnostics.errors.push(
-					`"${field}" bindings "schedules" field must not be an empty array.`
-				);
-				isValid = false;
-			} else if (
-				!value.schedules.every((s: unknown) => typeof s === "string")
-			) {
-				diagnostics.errors.push(
-					`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
-						value
-					)}.`
-				);
-				isValid = false;
-			} else if (value.schedules.some((s: unknown) => s === "")) {
-				diagnostics.errors.push(
-					`"${field}" bindings "schedules" field must not contain empty strings.`
-				);
-				isValid = false;
-			}
-		} else {
-			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have a string or array of strings "schedules" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		}
-	}
-
-	if (hasProperty(value, "limits") && value.limits !== undefined) {
-		if (
-			typeof value.limits !== "object" ||
-			value.limits === null ||
-			Array.isArray(value.limits)
-		) {
-			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have an object "limits" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		} else {
-			const limits = value.limits as Record<string, unknown>;
-			if (limits.steps !== undefined) {
-				if (
-					typeof limits.steps !== "number" ||
-					!Number.isInteger(limits.steps) ||
-					limits.steps < 1
-				) {
-					diagnostics.errors.push(
-						`"${field}" bindings "limits.steps" field must be a positive integer but got ${JSON.stringify(
-							limits.steps
-						)}.`
-					);
-					isValid = false;
-				} else if (limits.steps > 25_000) {
-					diagnostics.warnings.push(
-						`"${field}" has a step limit of ${limits.steps}, which exceeds the production maximum of 25,000. This configuration may not work when deployed.`
-					);
-				}
-			}
-			validateAdditionalProperties(
-				diagnostics,
-				`${field}.limits`,
-				Object.keys(limits),
-				["steps"]
-			);
-		}
-	}
-
-	if (
-		hasProperty(value, "default_retention") &&
-		value.default_retention !== undefined
-	) {
-		if (
-			typeof value.default_retention !== "object" ||
-			value.default_retention === null ||
-			Array.isArray(value.default_retention)
-		) {
-			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have an object "default_retention" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		} else {
-			const defaultRetention = value.default_retention as Record<
-				string,
-				unknown
-			>;
-			for (const key of ["success_retention", "error_retention"]) {
-				if (
-					defaultRetention[key] !== undefined &&
-					!validateWorkflowRetentionValue(
-						diagnostics,
-						field,
-						key,
-						defaultRetention[key]
-					)
-				) {
-					isValid = false;
-				}
-			}
-			validateAdditionalProperties(
-				diagnostics,
-				`${field}.default_retention`,
-				Object.keys(defaultRetention),
-				["success_retention", "error_retention"]
-			);
-		}
-	}
-
-	if (hasProperty(value, "concurrency") && value.concurrency !== undefined) {
-		if (
-			typeof value.concurrency !== "object" ||
-			value.concurrency === null ||
-			Array.isArray(value.concurrency)
-		) {
-			diagnostics.errors.push(
-				`"${field}" bindings should, optionally, have an object "concurrency" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		} else {
-			const concurrency = value.concurrency as Record<string, unknown>;
-			if (
-				concurrency.limit !== undefined &&
-				(typeof concurrency.limit !== "number" ||
-					!Number.isInteger(concurrency.limit) ||
-					concurrency.limit < 1)
-			) {
-				diagnostics.errors.push(
-					`"${field}" bindings "concurrency.limit" field must be a positive integer but got ${JSON.stringify(
-						concurrency.limit
-					)}.`
-				);
-				isValid = false;
-			}
-			validateAdditionalProperties(
-				diagnostics,
-				`${field}.concurrency`,
-				Object.keys(concurrency),
-				["limit"]
-			);
-		}
-	}
+	const settings = value as Record<string, unknown>;
+	isValid =
+		validateWorkflowSchedules(diagnostics, field, "bindings", settings) &&
+		isValid;
+	isValid =
+		validateWorkflowLimits(diagnostics, field, "bindings", settings) && isValid;
+	isValid =
+		validateWorkflowDefaultRetention(
+			diagnostics,
+			field,
+			"bindings",
+			settings
+		) && isValid;
+	isValid =
+		validateWorkflowConcurrency(diagnostics, field, "bindings", settings) &&
+		isValid;
+	isValid =
+		validateWorkflowJurisdiction(diagnostics, field, "bindings", settings) &&
+		isValid;
 
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
@@ -3131,6 +3452,7 @@ const validateWorkflowBinding: ValidatorFn = (diagnostics, field, value) => {
 		"concurrency",
 		"schedules",
 		"default_retention",
+		"jurisdiction",
 	]);
 
 	return isValid;
@@ -3253,6 +3575,15 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			["single-page-application", "404-page", "none"]
 		) && isValid;
 
+	isValid =
+		validateOptionalProperty(
+			diagnostics,
+			field,
+			"base_path",
+			(value as Assets).base_path,
+			"string"
+		) && isValid;
+
 	if ((value as Assets).run_worker_first !== undefined) {
 		if (typeof (value as Assets).run_worker_first === "boolean") {
 			isValid =
@@ -3286,6 +3617,7 @@ const validateAssetsConfig: ValidatorFn = (diagnostics, field, value) => {
 			"binding",
 			"html_handling",
 			"not_found_handling",
+			"base_path",
 			"run_worker_first",
 		]) && isValid;
 
@@ -3324,6 +3656,168 @@ const validateNamedSimpleBinding =
 
 		return isValid;
 	};
+
+const validateImagesBinding =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		const images = value as NonNullable<Config["images"]>;
+		let isValid = true;
+
+		if (
+			images.binding === undefined &&
+			images.url_transformations === undefined
+		) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should have a "binding" or "url_transformations" field.`
+			);
+			isValid = false;
+		}
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				fieldPath,
+				"binding",
+				images.binding,
+				"string"
+			) && isValid;
+
+		if (!isRemoteValid(value, fieldPath, diagnostics)) {
+			isValid = false;
+		}
+
+		if (images.url_transformations !== undefined) {
+			isValid =
+				validateImagesUrlTransformations(
+					diagnostics,
+					`${fieldPath}.url_transformations`,
+					images.url_transformations
+				) && isValid;
+		}
+
+		validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
+			"binding",
+			"remote",
+			"url_transformations",
+		]);
+
+		return isValid;
+	};
+
+const MAX_IMAGES_ALLOWED_ORIGINS = 10;
+
+const validateImagesAllowedOrigins = (
+	diagnostics: Diagnostics,
+	fieldPath: string,
+	origins: string[]
+): boolean => {
+	if (origins.length === 0) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" should not be empty. Omit it to only allow images from the Worker's own zone.`
+		);
+		return false;
+	}
+	if (origins.includes("*") && origins.length > 1) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" cannot contain "*" alongside other origins. Use ["*"] on its own to allow any origin.`
+		);
+		return false;
+	}
+	if (origins.length > MAX_IMAGES_ALLOWED_ORIGINS) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" can contain at most ${MAX_IMAGES_ALLOWED_ORIGINS} origins, but got ${origins.length}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	for (const [i, origin] of origins.entries()) {
+		if (origin === "") {
+			diagnostics.errors.push(`"${fieldPath}[${i}]" should not be empty.`);
+			isValid = false;
+		} else if (/^https?:\/\//i.test(origin)) {
+			diagnostics.errors.push(
+				`"${fieldPath}[${i}]" should be a hostname without a protocol, e.g. ${JSON.stringify(
+					origin.replace(/^https?:\/\//i, "")
+				)} rather than ${JSON.stringify(origin)}.`
+			);
+			isValid = false;
+		} else if (origin.includes(",")) {
+			diagnostics.errors.push(
+				`"${fieldPath}[${i}]" should not contain a comma, but got ${JSON.stringify(origin)}.`
+			);
+			isValid = false;
+		}
+	}
+	return isValid;
+};
+
+const validateImagesUrlTransformations = (
+	diagnostics: Diagnostics,
+	fieldPath: string,
+	value: unknown
+): boolean => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	const { enabled, allowed_origins } = value as {
+		enabled?: unknown;
+		allowed_origins?: unknown;
+	};
+
+	let isValid = validateRequiredProperty(
+		diagnostics,
+		fieldPath,
+		"enabled",
+		enabled,
+		"boolean"
+	);
+
+	if (allowed_origins !== undefined) {
+		if (
+			!validateTypedArray(
+				diagnostics,
+				`${fieldPath}.allowed_origins`,
+				allowed_origins,
+				"string"
+			)
+		) {
+			isValid = false;
+		} else {
+			isValid =
+				validateImagesAllowedOrigins(
+					diagnostics,
+					`${fieldPath}.allowed_origins`,
+					allowed_origins as string[]
+				) && isValid;
+		}
+	}
+
+	validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
+		"enabled",
+		"allowed_origins",
+	]);
+
+	return isValid;
+};
 
 const validateAIBinding =
 	(envName: string): ValidatorFn =>
@@ -3405,6 +3899,7 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"data_blob",
 			"text_blob",
 			"browser",
+			"analytics",
 			"ai",
 			"ai_search_namespace",
 			"ai_search",
@@ -3417,10 +3912,13 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"logfwdr",
 			"mtls_certificate",
 			"pipeline",
+			"k2",
 			"worker_loader",
 			"vpc_service",
 			"flagship",
+			"realtimekit",
 			"vpc_network",
+			"oidc_token",
 			"stream",
 			"media",
 			"artifacts",
@@ -3544,6 +4042,35 @@ function validateSshPublicKeys(
 				`${fieldPath}.public_key is an unsupported key type. Please provide an ED25519 public key.`
 			);
 		}
+	}
+}
+
+/**
+ * Validate a container SSH config object, as set by `containers.ssh` or the
+ * deprecated `containers.wrangler_ssh`.
+ */
+function validateContainerSshConfig(
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown
+): void {
+	const sshConfig = typeof value === "object" && value !== null ? value : {};
+
+	if (
+		!isRequiredProperty<{ enabled: boolean }>(sshConfig, "enabled", "boolean")
+	) {
+		diagnostics.errors.push(`${field}.enabled must be a boolean`);
+	}
+
+	const port = "port" in sshConfig ? sshConfig.port : undefined;
+	if (
+		!isOptionalProperty<{ port: number }>(sshConfig, "port", "number") ||
+		(typeof port === "number" &&
+			(!Number.isInteger(port) || port < 1 || port > 65535))
+	) {
+		diagnostics.errors.push(
+			`${field}.port must be a number between 1 and 65535 inclusive`
+		);
 	}
 }
 
@@ -3924,12 +4451,31 @@ function validateContainerApp(
 							"scheduling_policy",
 							"images",
 							"observability",
+							"ssh",
+							"authorized_keys",
 							"unsafe",
 						].includes(key)
 				);
 				if (unsupportedFields.length > 0) {
 					diagnostics.errors.push(
-						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", "images", "observability", and restricted "unsafe" settings are supported.`
+						`Unsupported fields for Durable Object-managed Containers in ${field}: ${unsupportedFields.map((key) => `"${key}"`).join(",")}. Only "name", "class_name", "scheduling_policy", "images", "observability", "ssh", "authorized_keys", and restricted "unsafe" settings are supported.`
+					);
+				}
+				// Unlike other containers, `ssh` is not renamed to `wrangler_ssh` here, so
+				// normalized config (e.g. the Vite plugin's output config) still validates.
+				if ("ssh" in containerAppOptional) {
+					validateContainerSshConfig(
+						diagnostics,
+						`${field}.ssh`,
+						containerAppOptional.ssh
+					);
+				}
+				if ("authorized_keys" in containerAppOptional) {
+					validateSshPublicKeys(
+						diagnostics,
+						`${field}.authorized_keys`,
+						containerAppOptional.authorized_keys,
+						true
 					);
 				}
 				continue;
@@ -4203,42 +4749,21 @@ function validateContainerApp(
 				);
 			}
 
-			let sshField: "ssh" | "wrangler_ssh" | undefined;
-			let sshConfig:
-				| ContainerApp["ssh"]
-				| ContainerApp["wrangler_ssh"]
-				| undefined;
-
 			if ("ssh" in containerAppOptional) {
-				sshField = "ssh";
-				sshConfig = containerAppOptional.ssh;
+				validateContainerSshConfig(
+					diagnostics,
+					`${field}.ssh`,
+					containerAppOptional.ssh
+				);
+				// The Containers API calls this field `wrangler_ssh`.
 				containerAppOptional.wrangler_ssh = containerAppOptional.ssh;
 				delete containerAppOptional.ssh;
 			} else if ("wrangler_ssh" in containerAppOptional) {
-				sshField = "wrangler_ssh";
-				sshConfig = containerAppOptional.wrangler_ssh;
-			}
-
-			if (sshField !== undefined) {
-				const sshConfigObject =
-					typeof sshConfig === "object" && sshConfig !== null ? sshConfig : {};
-
-				if (!isRequiredProperty(sshConfigObject, "enabled", "boolean")) {
-					diagnostics.errors.push(
-						`${field}.${sshField}.enabled must be a boolean`
-					);
-				}
-
-				const sshPort =
-					"port" in sshConfigObject ? sshConfigObject.port : undefined;
-				if (
-					!isOptionalProperty(sshConfigObject, "port", "number") ||
-					(typeof sshPort === "number" && (sshPort < 1 || sshPort > 65535))
-				) {
-					diagnostics.errors.push(
-						`${field}.${sshField}.port must be a number between 1 and 65535 inclusive`
-					);
-				}
+				validateContainerSshConfig(
+					diagnostics,
+					`${field}.wrangler_ssh`,
+					containerAppOptional.wrangler_ssh
+				);
 			}
 
 			if ("authorized_keys" in containerAppOptional) {
@@ -4296,10 +4821,10 @@ function validateContainerApp(
 				);
 				if (
 					constraints.jurisdiction &&
-					!["eu", "fedramp"].includes(constraints.jurisdiction)
+					!["eu", "fedramp", "us"].includes(constraints.jurisdiction)
 				) {
 					diagnostics.errors.push(
-						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp"`
+						`${field}.constraints.jurisdiction must be one of: "eu", "fedramp", "us"`
 					);
 				}
 				if (
@@ -4839,6 +5364,15 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "jurisdiction", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "jurisdiction" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	if (!isOptionalProperty(value, "migrations_dir", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "migrations_dir" field but got ${JSON.stringify(
@@ -4871,6 +5405,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"database_id",
 		"database_internal_env",
 		"database_name",
+		"jurisdiction",
 		"migrations_dir",
 		"migrations_pattern",
 		"migrations_table",
@@ -5053,10 +5588,18 @@ const validateHyperdriveBinding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	// `remote: true` opts the binding into connecting to the deployed Hyperdrive
+	// configuration at the edge during local dev (via the remote-bindings proxy).
+	// When set, a `localConnectionString` is optional.
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"id",
 		"localConnectionString",
+		"remote",
 	]);
 
 	return isValid;
@@ -5094,6 +5637,78 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		"binding",
 		"service_id",
 		"remote",
+	]);
+
+	return isValid;
+};
+
+/** The JWS algorithms an OIDC token binding can sign with. */
+const OIDC_TOKEN_ALGS = ["ES256", "RS256"];
+
+/** Matches the Workers OIDC issuer's limit on the `aud` claim. */
+const OIDC_TOKEN_MAX_AUDIENCE_LENGTH = 2048;
+
+/**
+ * Whether an OIDC token audience is accepted at upload: 1 to 2048 printable
+ * ASCII characters with no whitespace. Verifiers compare `aud` byte for byte,
+ * so a stray space or lookalike character would silently never match.
+ *
+ * @param audience - The configured audience
+ * @returns Whether the audience is valid
+ */
+function isValidOidcTokenAudience(audience: string): boolean {
+	return (
+		audience.length > 0 &&
+		audience.length <= OIDC_TOKEN_MAX_AUDIENCE_LENGTH &&
+		/^[\x21-\x7e]+$/.test(audience)
+	);
+}
+
+const validateOidcTokenBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"oidc_tokens" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		!isRequiredProperty(value, "audience", "string") ||
+		!isValidOidcTokenAudience(value.audience)
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "audience" field of 1 to ${OIDC_TOKEN_MAX_AUDIENCE_LENGTH} printable ASCII characters with no whitespace, but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		hasProperty(value, "alg") &&
+		!isRequiredProperty(value, "alg", "string", OIDC_TOKEN_ALGS)
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "alg" field of ${OIDC_TOKEN_ALGS.map((alg) => `"${alg}"`).join(" or ")} if one is set, but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"audience",
+		"alg",
 	]);
 
 	return isValid;
@@ -5183,7 +5798,9 @@ const validateBindingsHaveUniqueNames = (
 			getBindingNames(
 				bindingType === "queues"
 					? config[bindingType]?.producers
-					: config[bindingType]
+					: bindingType === "images" && config.images?.binding === undefined
+						? undefined
+						: config[bindingType]
 			),
 		])
 	);
@@ -5410,7 +6027,12 @@ const validateAnalyticsEngineBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"dataset",
+		"remote",
 	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	return isValid;
 };
@@ -5775,26 +6397,40 @@ const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 	}
 
 	let isValid = true;
+	const connectHandler = value as Record<string, unknown>;
 	if (
-		!validateAdditionalProperties(diagnostics, field, Object.keys(value), [
-			"protocol",
-			"port",
-			"address",
-		])
+		!validateAdditionalProperties(
+			diagnostics,
+			field,
+			Object.keys(value),
+			connectHandler.protocol === "udp"
+				? [
+						"protocol",
+						"port",
+						"address",
+						"idle_timeout_ms",
+						"max_pending_bytes",
+					]
+				: ["protocol", "port", "address"]
+		)
 	) {
 		isValid = false;
 	}
 
-	if ("protocol" in value && value.protocol !== "tcp") {
+	if (
+		"protocol" in value &&
+		value.protocol !== "tcp" &&
+		value.protocol !== "udp"
+	) {
 		diagnostics.errors.push(
-			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+			`"${field}" should have a "protocol" field of "tcp" or "udp" but got ${JSON.stringify(
 				value.protocol
 			)}.`
 		);
 		isValid = false;
 	} else if (!("protocol" in value)) {
 		diagnostics.errors.push(
-			`"${field}" should have a "protocol" field of "tcp" but got ${JSON.stringify(
+			`"${field}" should have a "protocol" field of "tcp" or "udp" but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -5828,6 +6464,26 @@ const validateConnectHandler: ValidatorFn = (diagnostics, field, value) => {
 			)}.`
 		);
 		isValid = false;
+	}
+
+	if (connectHandler.protocol === "udp") {
+		for (const option of ["idle_timeout_ms", "max_pending_bytes"] as const) {
+			if (!(option in connectHandler)) {
+				continue;
+			}
+			const optionValue = connectHandler[option];
+			if (
+				typeof optionValue !== "number" ||
+				!Number.isInteger(optionValue) ||
+				optionValue < 0 ||
+				optionValue > 0xffffffff
+			) {
+				diagnostics.errors.push(
+					`"${field}" should have an integer "${option}" field between 0 and 4294967295 but got ${JSON.stringify(value)}.`
+				);
+				isValid = false;
+			}
+		}
 	}
 
 	return isValid;
@@ -5897,6 +6553,39 @@ const validatePipelineBinding: ValidatorFn = (diagnostics, field, value) => {
 		"remote",
 	]);
 
+	return isValid;
+};
+
+const validateK2Binding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(`"${field}" must have a string "binding" field.`);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "stream", "string")) {
+		diagnostics.errors.push(`"${field}" must have a string "stream" field.`);
+		isValid = false;
+	}
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+	if ("remote" in value && value.remote === false) {
+		diagnostics.errors.push(
+			`"${field}" does not support \`remote: false\`. K2 bindings always access remote resources; omit "remote" or set \`remote: true\`.`
+		);
+		isValid = false;
+	}
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"stream",
+		"remote",
+	]);
 	return isValid;
 };
 
@@ -6039,6 +6728,44 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (!isOptionalProperty(value, "app_id", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings may have a string "app_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"app_id",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	return isValid;
+};
+
+const validateRealtimeKitBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"realtimekit" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "app_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
 				value
 			)}.`
 		);
@@ -6239,18 +6966,22 @@ const validatePreviewsConfig =
 				"streaming_tail_consumers",
 				"unsafe",
 				"browser",
+				"analytics",
 				"ai",
 				"images",
 				"stream",
 				"media",
 				"pipelines",
+				"k2",
 				"secrets_store_secrets",
 				"artifacts",
 				"unsafe_hello_world",
 				"flagship",
+				"realtimekit",
 				"worker_loaders",
 				"ratelimits",
 				"vpc_services",
+				"oidc_tokens",
 				"version_metadata",
 				"containers",
 				"logpush",
@@ -6284,7 +7015,7 @@ const validatePreviewsConfig =
 		);
 
 		isValid =
-			validateBindingsProperty(envName, validateDurableObjectBinding)(
+			validateDurableObjectsProperty(envName, false, false)(
 				diagnostics,
 				`${field}.durable_objects`,
 				previews.durable_objects,
@@ -6442,6 +7173,16 @@ const validatePreviewsConfig =
 				) && isValid;
 		}
 
+		if (previews.analytics !== undefined) {
+			isValid =
+				validateNamedSimpleBinding(envName)(
+					diagnostics,
+					`${field}.analytics`,
+					previews.analytics,
+					undefined
+				) && isValid;
+		}
+
 		if (previews.ai !== undefined) {
 			isValid =
 				validateAIBinding(envName)(
@@ -6453,6 +7194,16 @@ const validatePreviewsConfig =
 		}
 
 		if (previews.images !== undefined) {
+			if (
+				typeof previews.images === "object" &&
+				previews.images !== null &&
+				"url_transformations" in previews.images
+			) {
+				diagnostics.errors.push(
+					`The field "${field}.images.url_transformations" is not supported in previews.`
+				);
+				isValid = false;
+			}
 			isValid =
 				validateNamedSimpleBinding(envName)(
 					diagnostics,
@@ -6499,6 +7250,14 @@ const validatePreviewsConfig =
 			) && isValid;
 
 		isValid =
+			validateBindingArray(envName, validateK2Binding)(
+				diagnostics,
+				`${field}.k2`,
+				previews.k2,
+				undefined
+			) && isValid;
+
+		isValid =
 			validateBindingArray(envName, validateArtifactsBinding)(
 				diagnostics,
 				`${field}.artifacts`,
@@ -6523,6 +7282,14 @@ const validatePreviewsConfig =
 			) && isValid;
 
 		isValid =
+			validateBindingArray(envName, validateRealtimeKitBinding)(
+				diagnostics,
+				`${field}.realtimekit`,
+				previews.realtimekit,
+				undefined
+			) && isValid;
+
+		isValid =
 			validateBindingArray(envName, validateWorkerLoaderBinding)(
 				diagnostics,
 				`${field}.worker_loaders`,
@@ -6543,6 +7310,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.vpc_services`,
 				previews.vpc_services,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateOidcTokenBinding)(
+				diagnostics,
+				`${field}.oidc_tokens`,
+				previews.oidc_tokens,
 				undefined
 			) && isValid;
 
@@ -7016,6 +7791,76 @@ function validateWorkerExportCache(
 	return valid;
 }
 
+function validateWorkflowExport(
+	diagnostics: Diagnostics,
+	exportName: string,
+	workflowExport: { name?: unknown } & Record<string, unknown>
+): boolean {
+	const field = `exports.${exportName}`;
+	let valid = true;
+
+	valid =
+		validateRequiredProperty(
+			diagnostics,
+			field,
+			"name",
+			workflowExport.name,
+			"string"
+		) && valid;
+
+	if (
+		typeof workflowExport.name === "string" &&
+		!isValidWorkflowName(workflowExport.name)
+	) {
+		diagnostics.errors.push(
+			`"${field}.name" is invalid. ${workflowNameFormatMessage}`
+		);
+		valid = false;
+	}
+
+	valid =
+		validateWorkflowSchedules(diagnostics, field, "export", workflowExport) &&
+		valid;
+	valid =
+		validateWorkflowLimits(diagnostics, field, "export", workflowExport) &&
+		valid;
+	valid =
+		validateWorkflowDefaultRetention(
+			diagnostics,
+			field,
+			"export",
+			workflowExport
+		) && valid;
+	valid =
+		validateWorkflowConcurrency(diagnostics, field, "export", workflowExport) &&
+		valid;
+	valid =
+		validateWorkflowJurisdiction(
+			diagnostics,
+			field,
+			"export",
+			workflowExport
+		) && valid;
+
+	valid =
+		validateAdditionalProperties(
+			diagnostics,
+			field,
+			Object.keys(workflowExport),
+			[
+				"type",
+				"name",
+				"limits",
+				"concurrency",
+				"schedules",
+				"default_retention",
+				"jurisdiction",
+			]
+		) && valid;
+
+	return valid;
+}
+
 const validateExports: ValidatorFn = (diagnostics, field, value) => {
 	if (value === undefined || value === null) {
 		return true;
@@ -7047,10 +7892,13 @@ const validateExports: ValidatorFn = (diagnostics, field, value) => {
 		} else if (exportConfig.type === "worker") {
 			valid =
 				validateWorkerExport(diagnostics, exportName, exportConfig) && valid;
+		} else if (exportConfig.type === "workflow") {
+			valid =
+				validateWorkflowExport(diagnostics, exportName, exportConfig) && valid;
 		} else {
 			valid = false;
 			diagnostics.errors.push(
-				`"exports.${exportName}.type" must be "durable-object" or "worker", but got ${JSON.stringify(exportConfig.type)}.`
+				`"exports.${exportName}.type" must be "durable-object", "worker", or "workflow", but got ${JSON.stringify(exportConfig.type)}.`
 			);
 		}
 	}
@@ -7397,6 +8245,12 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 				"boolean"
 			) && isValid;
 
+		if (val.logs.enabled === false && val.logs.invocation_logs === true) {
+			diagnostics.warnings.push(
+				`"${field}.logs.invocation_logs" has no effect when "${field}.logs.enabled" is false. Set "${field}.logs.enabled" to true to enable invocation logs.`
+			);
+		}
+
 		isValid =
 			validateOptionalTypedArray(
 				diagnostics,
@@ -7633,8 +8487,7 @@ function warnIfDurableObjectsHaveNoLifecycleConfig(
 		if (entry === undefined || entry.type !== "durable-object") {
 			return false;
 		}
-		const state = entry.state ?? "created";
-		return state === "created" || state === "expecting-transfer";
+		return isLiveDurableObjectExport(entry);
 	};
 	const uncoveredByExports = exportedDurableObjects.filter(
 		(binding) =>
@@ -7691,6 +8544,33 @@ function errorIfMigrationsAndExportsBothSet(
 		diagnostics.errors.push(
 			`\`migrations\` and \`exports\` are mutually exclusive. Choose one or the other to declare your Durable Object lifecycle, but not both.`
 		);
+	}
+}
+
+/**
+ * Two exports cannot share a Workflow name. Whether a `workflows` binding
+ * agrees with an export of the same name is checked at deploy time, since it
+ * depends on the name the Worker is deployed under.
+ */
+function validateWorkflowExportConflicts(
+	diagnostics: Diagnostics,
+	exports: Config["exports"]
+) {
+	const classNamesByWorkflowName = new Map<string, string>();
+	for (const [className, workflowExport] of Object.entries(
+		partitionExports(exports).workflow
+	)) {
+		if (typeof workflowExport.name !== "string") {
+			continue;
+		}
+		const existing = classNamesByWorkflowName.get(workflowExport.name);
+		if (existing !== undefined) {
+			diagnostics.errors.push(
+				`"exports.${existing}" and "exports.${className}" both declare the Workflow "${workflowExport.name}". Workflow names must be unique.`
+			);
+			continue;
+		}
+		classNamesByWorkflowName.set(workflowExport.name, className);
 	}
 }
 

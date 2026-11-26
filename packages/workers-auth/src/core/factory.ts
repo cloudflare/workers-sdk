@@ -32,11 +32,17 @@ import { createCredentialStorageContext } from "../credential-store";
 import { getAuthFromEnv } from "../credentials";
 import { getCloudflareAccountIdFromEnv as getAccountIdFromEnv } from "../env-vars";
 import { createOAuthFlow } from "../flow";
+import { DEFAULT_TEMPORARY_ACCOUNT_FLAG } from "../temporary";
+import { AuthenticationError } from "./authentication-error";
 import { createFileStorage } from "./file-storage";
 import { createPreferences } from "./preferences";
 import { createTemporaryTermsPrompt } from "./temporary-terms";
 import type { UserAuthConfig } from "../config-file/auth";
 import type { TemporaryPreviewAccount } from "../config-file/temporary";
+import type {
+	TemporaryAccountLogger,
+	TemporaryAccountRequest,
+} from "../context";
 import type { CredentialStore } from "../credential-store";
 import type {
 	LoginOrRefreshFailureReason,
@@ -51,10 +57,20 @@ import type {
 } from "@cloudflare/workers-utils";
 
 /** Details for one of the user's accounts. */
-export type Account = { id: string; name: string };
+export interface Account {
+	id: string;
+	name: string;
+}
+
+interface AccountSelection {
+	account: Account;
+	profile: string;
+}
 
 /** The config surface {@link CloudflareAuth.requireAuth} needs: compliance settings plus an optional `account_id`. */
-export type RequireAuthConfig = ComplianceConfig & { account_id?: string };
+export interface RequireAuthConfig extends ComplianceConfig {
+	account_id?: string;
+}
 
 /** Overrides accepted by {@link CloudflareAuth.login} / {@link CloudflareAuth.loginOrRefreshIfRequired}. */
 export interface CloudflareLoginProps {
@@ -80,8 +96,11 @@ export interface CloudflareAuth {
 	getActiveProfile: () => string;
 	/** The currently-active credential store for the active profile. */
 	getCredentialStore: () => CredentialStore;
-	/** Mark whether `--temporary` is permitted for the current invocation. */
-	setTemporaryAllowed: (allowed: boolean) => void;
+	/** Mark whether temporary-account mode is permitted for the current invocation. */
+	setTemporaryAllowed: (
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	) => void;
 
 	/** Resolve API credentials (env / temporary account / stored OAuth token). */
 	getAPIToken: () => ApiCredentials | undefined;
@@ -110,7 +129,7 @@ export interface CloudflareAuth {
 	/** Persist OAuth credentials via the active credential store. */
 	writeAuthCredentials: (config: UserAuthConfig) => void;
 
-	/** Returns the active account ID without side effects (config → env → cache). */
+	/** Returns the active account ID without fetching accounts or prompting. */
 	getActiveAccountId: (config: { account_id?: string }) => string | undefined;
 	/** Resolve the account ID to use for API requests (fetching / prompting if needed). */
 	getOrSelectAccountId: (config: RequireAuthConfig) => Promise<string>;
@@ -156,16 +175,17 @@ function notLoggedInErrorBodies(
 		"no-credentials-login-failed": `No credentials were found and the login attempt was unsuccessful. Run \`${loginCommand}\` to try again.`,
 		"token-expired-non-interactive": `Your auth token has expired and could not be refreshed, and the environment is non-interactive. Run \`${loginCommand}\` in an interactive terminal or set a CLOUDFLARE_API_TOKEN.`,
 		"token-expired-login-failed": `Your auth token has expired and could not be refreshed, and the login attempt was unsuccessful. Run \`${loginCommand}\` to try again.`,
+		"token-refresh-unreachable": `Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. This is usually a network problem (connectivity, proxy, or IPv6), not an invalid login: your stored credentials were left unchanged. Check your connection and try again.`,
 	};
 }
 
 function logTemporaryPreviewAccount(
-	logger: AuthContext["logger"],
+	temporaryAccountLogger: TemporaryAccountLogger,
 	temporaryPreviewAccount: TemporaryPreviewAccount,
 	cached: boolean
 ): void {
 	const claimExpiresAt = new Date(temporaryPreviewAccount.claim.expiresAt);
-	logger.log(
+	temporaryAccountLogger.log(
 		dedent`
 			Temporary account ready:
 				Account: ${temporaryPreviewAccount.account.name} (${cached ? "reused" : "created"})
@@ -187,13 +207,17 @@ export function createCloudflareAuth(
 	ctx: AuthContext
 ): CloudflareAuth {
 	const { logger } = ctx;
+	const temporaryAccountLogger = ctx.temporaryAccountLogger ?? logger;
 	const cliName = descriptor.cliName;
+	const temporaryAccountFlag =
+		descriptor.temporaryAccountFlag ?? DEFAULT_TEMPORARY_ACCOUNT_FLAG;
 	const NOT_LOGGED_IN_ERROR_BODIES = notLoggedInErrorBodies(
 		descriptor.commands.login
 	);
 	const NOT_LOGGED_IN_WHOAMI_TIP = `\nRun \`${descriptor.commands.whoami}\` to check your current authentication status.`;
 
 	const preferences = createPreferences(descriptor.getConfigPath);
+	const persistAccountSelection = descriptor.persistAccountSelection ?? false;
 
 	// The config cache is generic file-backed storage owned by
 	// `@cloudflare/workers-utils`; build our own instance bound to the injected
@@ -205,6 +229,21 @@ export function createCloudflareAuth(
 			? { namespace: descriptor.cacheNamespace }
 			: undefined
 	);
+	// Non-persistent consumers still reuse a choice for this auth instance so
+	// long-running sessions can refresh without prompting for the account again.
+	let accountSelection: AccountSelection | undefined;
+	// Account lookup and prompting are asynchronous, so concurrent consumers
+	// share the same unresolved selection rather than opening multiple prompts.
+	let accountSelectionPromise: Promise<string> | undefined;
+
+	function clearAccountSelection(): void {
+		accountSelection = undefined;
+	}
+
+	function purgeAccountCaches(): void {
+		clearAccountSelection();
+		configCache.purgeConfigCaches();
+	}
 
 	// The CLI's credential-storage bundle. Plumbs the user-level keyring
 	// opt-in preference into the storage resolver so the OAuth flow's
@@ -240,10 +279,10 @@ export function createCloudflareAuth(
 		openInBrowser: (url) => openInBrowser(url, logger),
 		hasEnvCredentials: () =>
 			getAuthFromEnv({ allowGlobalAuthKey }) !== undefined,
-		purgeOnLoginOrLogout: configCache.purgeConfigCaches,
+		purgeOnLoginOrLogout: purgeAccountCaches,
 		clientId: descriptor.clientId,
 		consent: descriptor.consent,
-		displayName: descriptor.displayName,
+		cliDisplayName: descriptor.displayName,
 		deviceLoginCommand: descriptor.commands.deviceLogin,
 		redirectUri: descriptor.redirectUri,
 		storageFactory: credentialStorage.storageFactory,
@@ -256,7 +295,14 @@ export function createCloudflareAuth(
 				descriptor.fileFormat,
 				descriptor.getTemporaryAccountConfigPath
 			),
-			prompt: createTemporaryTermsPrompt({ logger, prompt: ctx.prompt }),
+			cliDisplayName: descriptor.displayName,
+			logoutCommand: descriptor.commands.logout,
+			temporaryAccountFlag,
+			prompt: createTemporaryTermsPrompt({
+				temporaryAccountLogger,
+				prompt: ctx.prompt,
+			}),
+			temporaryAccountLogger,
 		},
 	});
 
@@ -272,8 +318,11 @@ export function createCloudflareAuth(
 		return credentialStorage.getActiveStore(oauthFlow.getActiveProfile());
 	}
 
-	function setTemporaryAllowed(allowed: boolean): void {
-		oauthFlow.setTemporaryAllowed(allowed);
+	function setTemporaryAllowed(
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	): void {
+		oauthFlow.setTemporaryAllowed(allowed, request);
 	}
 
 	function getAPIToken(): ApiCredentials | undefined {
@@ -336,6 +385,7 @@ export function createCloudflareAuth(
 	}
 
 	function writeAuthCredentials(config: UserAuthConfig): void {
+		clearAccountSelection();
 		credentialStorage.storageFactory(getActiveProfile()).write(config);
 	}
 
@@ -347,14 +397,34 @@ export function createCloudflareAuth(
 		return `${descriptor.accountCachePrefix}-${profile}.json`;
 	}
 
-	function saveAccountToCache(account: Account): void {
-		configCache.saveToConfigCache<{ account: Account }>(
-			getAccountCacheFileName(),
-			{ account }
-		);
+	function retainAccountSelection(account: Account): void {
+		accountSelection = {
+			account,
+			profile: getActiveProfile(),
+		};
+		if (persistAccountSelection) {
+			configCache.saveToConfigCache<{ account: Account }>(
+				getAccountCacheFileName(),
+				{ account }
+			);
+		}
+	}
+
+	function resolveAccountSelection(): Account | undefined {
+		const profile = getActiveProfile();
+		if (persistAccountSelection) {
+			const account = getAccountFromCache();
+			accountSelection = account ? { account, profile } : undefined;
+		} else if (accountSelection?.profile !== profile) {
+			clearAccountSelection();
+		}
+		return accountSelection?.account;
 	}
 
 	function getAccountFromCache(): Account | undefined {
+		if (!persistAccountSelection) {
+			return undefined;
+		}
 		return configCache.getConfigCache<{ account: Account }>(
 			getAccountCacheFileName()
 		).account;
@@ -410,9 +480,10 @@ export function createCloudflareAuth(
 		const { throwOnEmpty = true } = options;
 		const loginResult = await loginOrRefreshIfRequired(complianceConfig);
 		if (!loginResult.loggedIn) {
-			throw new UserError(
+			throw new AuthenticationError(
 				`Not logged in. ${NOT_LOGGED_IN_ERROR_BODIES[loginResult.reason]}${NOT_LOGGED_IN_WHOAMI_TIP}`,
-				{ telemetryMessage: "cfetch auth login required" }
+				loginResult.reason,
+				"cfetch auth login required"
 			);
 		}
 		const credentials = requireApiToken();
@@ -447,13 +518,13 @@ export function createCloudflareAuth(
 						`Failed to automatically retrieve account IDs for the logged in user.
 You may have incorrect permissions on your API token, or an environment variable such as CLOUDFLARE_API_TOKEN, CLOUDFLARE_API_KEY, or CLOUDFLARE_EMAIL may be set to an invalid value.
 Check your environment and unset or correct any Cloudflare credential variables, or run \`${descriptor.commands.login}\` to re-authenticate.
-You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+You can also skip this account check by adding an account ID to your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 						{ telemetryMessage: "user account fetch permission denied" }
 					);
 				}
 				throw new UserError(
 					`Failed to automatically retrieve account IDs for the logged in user.
-You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`${descriptor.commands.login}\` to re-authenticate. You can also skip this account check by adding an \`account_id\` in your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
+You may have incorrect permissions on your API token, or your authentication may have expired. Try running \`${descriptor.commands.login}\` to re-authenticate. You can also skip this account check by adding an account ID to your ${descriptor.getConfigFileLabel()} file, or by setting the value of CLOUDFLARE_ACCOUNT_ID`,
 					{ telemetryMessage: "user account fetch permission denied" }
 				);
 			} else {
@@ -471,7 +542,7 @@ You may have incorrect permissions on your API token, or your authentication may
 		if (usableAccounts.length === 0 && throwOnEmpty) {
 			throw new UserError(
 				`Failed to automatically retrieve account IDs for the logged in user.
-In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or as \`account_id\` in your ${descriptor.getConfigFileLabel()} file.
+In a non-interactive environment, it is mandatory to specify an account ID, either by assigning its value to CLOUDFLARE_ACCOUNT_ID, or in your ${descriptor.getConfigFileLabel()} file.
 Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`,
 				{ telemetryMessage: "user account fetch empty" }
 			);
@@ -493,29 +564,20 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 		if (config.account_id) {
 			return validateAccountId(
 				config.account_id,
-				`set as \`account_id\` in your ${descriptor.getConfigFileLabel()} file`
+				`set in your ${descriptor.getConfigFileLabel()} file`
 			);
 		}
 		const envAccountId = getAccountIdFromEnv();
 		if (envAccountId) {
 			return envAccountId;
 		}
-		return getAccountFromCache()?.id;
+		return resolveAccountSelection()?.id;
 	}
 
-	async function getOrSelectAccountId(
-		config: RequireAuthConfig
-	): Promise<string> {
-		// TODO: v5 we should prioritise the env var instead of the config value here,
-		// for consistency with other env vars.
-		const activeAccountId = getActiveAccountId(config);
-		if (activeAccountId) {
-			return activeAccountId;
-		}
-
+	async function selectAccountId(config: RequireAuthConfig): Promise<string> {
 		const accounts = await fetchAllAccounts(config);
 		if (accounts.length === 1) {
-			saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });
+			retainAccountSelection({ id: accounts[0].id, name: accounts[0].name });
 			return accounts[0].id;
 		}
 
@@ -530,7 +592,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 			if (!account) {
 				throw new Error("Selected account not found in accounts list");
 			}
-			saveAccountToCache({ id: account.id, name: account.name });
+			retainAccountSelection({ id: account.id, name: account.name });
 			return accountID;
 		} catch (e) {
 			// Did we try to select an account in CI or a non-interactive terminal?
@@ -542,7 +604,7 @@ Alternatively, try running \`${descriptor.commands.login}\` to re-authenticate.`
 				const redactAccountName = isCI();
 				throw new UserError(
 					`More than one account available but unable to select one in non-interactive mode.
-Please set the appropriate \`account_id\` in your ${descriptor.getConfigFileLabel()} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
+Please set the appropriate account ID in your ${descriptor.getConfigFileLabel()} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
 	.map(
@@ -557,6 +619,22 @@ ${accounts
 			}
 			throw e;
 		}
+	}
+
+	async function getOrSelectAccountId(
+		config: RequireAuthConfig
+	): Promise<string> {
+		// TODO: v5 we should prioritise the env var instead of the config value here,
+		// for consistency with other env vars.
+		const activeAccountId = getActiveAccountId(config);
+		if (activeAccountId) {
+			return activeAccountId;
+		}
+
+		accountSelectionPromise ??= selectAccountId(config).finally(() => {
+			accountSelectionPromise = undefined;
+		});
+		return accountSelectionPromise;
 	}
 
 	async function requireAuth(config: RequireAuthConfig): Promise<string> {
@@ -580,12 +658,12 @@ ${accounts
 				return latchedTemporaryAccount.account.id;
 			}
 
-			// `--temporary` is only for unauthenticated use. If any credentials are
+			// Temporary-account mode is only for unauthenticated use. If credentials are
 			// already available (env, global key, or a stored OAuth token), refuse
 			// rather than silently provisioning a throwaway account alongside them.
 			if (getAPIToken()) {
 				throw new UserError(
-					"You're already authenticated with Cloudflare, so `--temporary` can't be used. Temporary preview accounts are only for unauthenticated use. Either remove `--temporary` to use your existing account, or log out (and unset CLOUDFLARE_API_TOKEN) first.",
+					`You're already authenticated with Cloudflare, so \`${temporaryAccountFlag}\` can't be used. Temporary preview accounts are only for unauthenticated use. Either remove \`${temporaryAccountFlag}\` to use your existing account, or log out (and unset CLOUDFLARE_API_TOKEN) first.`,
 					{
 						telemetryMessage: "user temporary account already authenticated",
 					}
@@ -594,7 +672,11 @@ ${accounts
 
 			const { account: temporaryPreviewAccount, cached } =
 				await oauthFlow.activateTemporaryAccount();
-			logTemporaryPreviewAccount(logger, temporaryPreviewAccount, cached);
+			logTemporaryPreviewAccount(
+				temporaryAccountLogger,
+				temporaryPreviewAccount,
+				cached
+			);
 			return temporaryPreviewAccount.account.id;
 		}
 
@@ -608,6 +690,10 @@ ${accounts
 					`In a non-interactive environment, it's necessary to set a CLOUDFLARE_API_TOKEN environment variable for ${cliName} to work. Please go to https://developers.cloudflare.com/fundamentals/api/get-started/create-token/ for instructions on how to create an api token, and assign its value to CLOUDFLARE_API_TOKEN.`,
 					{ telemetryMessage: "user auth missing api token non interactive" }
 				);
+			} else if (result.reason === "token-refresh-unreachable") {
+				throw new UserError(NOT_LOGGED_IN_ERROR_BODIES[result.reason], {
+					telemetryMessage: "user auth token refresh unreachable",
+				});
 			} else {
 				// didn't login, let's just quit
 				throw new UserError("Did not login, quitting...", {

@@ -68,6 +68,9 @@ describe("unsafeObservability (wiring)", () => {
 	}) => {
 		const mf = new Miniflare({
 			unsafeObservability: true,
+			unsafeRuntimeEnv: {
+				X_LOCAL_OBSERVABILITY_BATCH_SIZE: "4096",
+			},
 			workers: [
 				plainWorker(
 					`export default { async fetch() { return new Response("ok"); } }`
@@ -80,6 +83,25 @@ describe("unsafeObservability (wiring)", () => {
 		// flags on the user worker) would fail to start workerd or to serve.
 		const res = await mf.dispatchFetch("http://localhost/");
 		expect(await res.text()).toBe("ok");
+	});
+
+	test("rejects an invalid batch size", async ({ expect }) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			unsafeRuntimeEnv: {
+				X_LOCAL_OBSERVABILITY_BATCH_SIZE: "invalid",
+			},
+			workers: [
+				plainWorker(
+					`export default { async fetch() { return new Response("ok"); } }`
+				),
+			],
+		});
+		await expect(mf.ready).rejects.toThrow(
+			"X_LOCAL_OBSERVABILITY_BATCH_SIZE must be a positive safe integer"
+		);
+		// dispose() re-awaits the failed initialisation.
+		await mf.dispose().catch(() => {});
 	});
 
 	test("is a no-op when disabled — worker boots and serves normally", async ({
@@ -142,6 +164,21 @@ export default {
 			const store = env.TRACE_STORE.get(env.TRACE_STORE.idFromName("singleton"));
 			await store.persist(SPANS, LOGS);
 			return new Response("seeded");
+		}
+		if (url.pathname === "/bulk") {
+			const store = env.TRACE_STORE.get(env.TRACE_STORE.idFromName("singleton"));
+			const spans = Array.from({ length: 2048 }, (_, i) => ({
+				traceId: "trace-bulk", spanId: "span-" + i,
+				parentId: i === 0 ? null : "span-0", service: "bulk-worker",
+				name: "bulk-" + i, kind: "span", startMs: 8000 + i,
+				durationMs: i, outcome: "ok", error: null, attributes: { i },
+			}));
+			const logs = Array.from({ length: 513 }, (_, i) => ({
+				traceId: "trace-bulk", spanId: "span-0", tsMs: 9000 + i,
+				level: "info", message: JSON.stringify("bulk-" + i), operation: null,
+			}));
+			await store.persist(spans, logs);
+			return new Response("persisted");
 		}
 		if (url.pathname === "/wt-open") {
 			const store = env.TRACE_STORE.get(env.TRACE_STORE.idFromName("singleton"));
@@ -314,6 +351,37 @@ describe("unsafeObservability (TraceStore + read API)", () => {
 		expect(
 			logs.some((l) => l.level === "error" && l.message.includes("boom-kaboom"))
 		).toBe(true);
+	});
+
+	test("batch-writes 2048 spans and preserves batched log sequencing", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			unsafeObservability: true,
+			workers: [storeWorker()],
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch("http://localhost/bulk");
+		const body = await response.text();
+		expect(response.status, body).toBe(200);
+		expect(body).toBe("persisted");
+
+		const counts = await queryStore(
+			mf,
+			`SELECT
+				(SELECT COUNT(*) FROM spans WHERE trace_id = ?) AS spans,
+				(SELECT COUNT(*) FROM logs WHERE trace_id = ?) AS logs,
+				(SELECT MIN(seq) FROM logs WHERE trace_id = ?) AS min_seq,
+				(SELECT MAX(seq) FROM logs WHERE trace_id = ?) AS max_seq`,
+			["trace-bulk", "trace-bulk", "trace-bulk", "trace-bulk"]
+		);
+		expect(counts[0]).toEqual({
+			spans: 2_048,
+			logs: 513,
+			min_seq: 0,
+			max_seq: 512,
+		});
 	});
 });
 
@@ -496,23 +564,23 @@ describe("unsafeObservability (capture via cf-to-otel)", () => {
 		expect(
 			await (await mf.dispatchFetch("http://localhost/orders")).text()
 		).toBe("ok");
+		expect(
+			await (await mf.dispatchFetch("http://localhost/orders-again")).text()
+		).toBe("ok");
 		await flush();
 
 		const traces = (await queryStore(
 			mf,
 			TRACE_LIST_SQL
 		)) as unknown as TraceRow[];
-		// cf-to-otel names the root fetch span after the method. The finished
-		// /orders request is a "GET"; the `POST /wobs/query` read we're issuing
-		// right now is itself captured (write-through) as a still-running "POST".
-		const trace = traces.find((t) => t.name === "GET" && t.outcome !== null);
+		// cf-to-otel names the root fetch span after the method.
+		const completed = traces.filter(
+			(t) => t.name === "GET" && t.outcome !== null
+		);
+		expect(completed).toHaveLength(2);
+		const trace = completed[0];
 		assert(trace, "expected a captured 'GET' trace");
 		expect(trace.outcome).toBe("ok");
-		// Write-through in action: this very read request is captured while still
-		// running, so a POST trace with no outcome yet is present alongside it.
-		expect(traces.some((t) => t.name === "POST" && t.outcome === null)).toBe(
-			true
-		);
 		expect(trace.span_count).toBeGreaterThan(1); // root + KV child
 		expect(trace.error_count).toBe(0);
 
@@ -561,8 +629,7 @@ describe("unsafeObservability (capture via cf-to-otel)", () => {
 			mf,
 			TRACE_LIST_SQL
 		)) as unknown as TraceRow[];
-		// The in-flight `/wobs/query` read is also a "GET" trace (outcome NULL);
-		// select the finished /boom one.
+		// Select the finished /boom trace.
 		const trace = traces.find((t) => t.name === "GET" && t.outcome !== null);
 		assert(trace, "expected a captured 'GET' trace");
 		expect(trace.error_count).toBeGreaterThan(0);

@@ -54,7 +54,7 @@ import type {
 	Label,
 	SSHPublicKeyID,
 } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 

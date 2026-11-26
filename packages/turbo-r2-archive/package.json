@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/turbo-r2-archive",
-	"version": "0.0.5",
+	"version": "0.0.6",
 	"private": true,
 	"description": "TurboRepo API Compliant Remote Caching w/ Cloudflare Workers using R2",
 	"keywords": [
@@ -18,11 +18,12 @@
 	},
 	"dependencies": {
 		"@hono/zod-validator": "^0.8.0",
-		"hono": "^4.12.5",
+		"hono": "^4.13.11",
 		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

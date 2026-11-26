@@ -203,10 +203,16 @@ async function readJson(
  * endpoint. Mirrors `fetchAuthToken` in `token-exchange.ts`: when the auth
  * domain is behind Cloudflare Access (typically staging), the request needs
  * Access service-token / cookie headers.
+ *
+ * @param logger Logger used for Access detection diagnostics.
+ * @param isNonInteractiveOrCI Whether interactive Access login is unavailable.
+ * @param cliDisplayName Consumer name used in actionable Access errors.
+ * @returns Headers for the device-authorization request.
  */
 async function buildDeviceAuthHeaders(
 	logger: OAuthFlowContext["logger"],
-	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
+	cliDisplayName: string
 ): Promise<Record<string, string>> {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
@@ -217,7 +223,11 @@ async function buildDeviceAuthHeaders(
 		);
 		Object.assign(
 			headers,
-			await getCloudflareAccessHeaders({ logger, isNonInteractiveOrCI })
+			await getCloudflareAccessHeaders({
+				logger,
+				isNonInteractiveOrCI,
+				cliDisplayName,
+			})
 		);
 	}
 	return headers;
@@ -226,12 +236,20 @@ async function buildDeviceAuthHeaders(
 /**
  * Request a `device_code` and `user_code` from the authorization server's
  * device authorization endpoint (RFC 8628 §3.1, §3.2).
+ *
+ * @param scopes OAuth scopes requested by the consuming CLI.
+ * @param clientId OAuth client identifier for the consuming CLI.
+ * @param logger Logger used for request diagnostics.
+ * @param isNonInteractiveOrCI Whether interactive Access login is unavailable.
+ * @param cliDisplayName Consumer name used in actionable Access errors.
+ * @returns The parsed device-authorization response.
  */
 async function requestDeviceAuthorization(
 	scopes: string[],
 	clientId: string,
 	logger: OAuthFlowContext["logger"],
-	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
+	cliDisplayName: string
 ): Promise<DeviceAuthorizationResponse> {
 	// `offline_access` is appended unconditionally so the eventual token
 	// response includes a refresh token, matching the behaviour of the
@@ -241,7 +259,11 @@ async function requestDeviceAuthorization(
 		scope: [...scopes, "offline_access"].join(" "),
 	});
 
-	const headers = await buildDeviceAuthHeaders(logger, isNonInteractiveOrCI);
+	const headers = await buildDeviceAuthHeaders(
+		logger,
+		isNonInteractiveOrCI,
+		cliDisplayName
+	);
 	const deviceAuthUrl = getDeviceAuthUrl();
 	logger.debug("Fetching device authorization from", deviceAuthUrl);
 	const response = await fetch(deviceAuthUrl, {
@@ -296,12 +318,20 @@ async function requestDeviceAuthorization(
  * (e.g. a transient HTML 5xx or bot-challenge page from the Cloudflare edge).
  * The polling loop catches those rejections and treats them as transient, so a
  * single bad poll does not abort the whole login.
+ *
+ * @param deviceCode Device code issued by the authorization endpoint.
+ * @param clientId OAuth client identifier for the consuming CLI.
+ * @param logger Logger used for polling diagnostics.
+ * @param isNonInteractiveOrCI Whether interactive Access login is unavailable.
+ * @param cliDisplayName Consumer name used in actionable Access errors.
+ * @returns The classified result of one token poll.
  */
 async function pollDeviceToken(
 	deviceCode: string,
 	clientId: string,
 	logger: OAuthFlowContext["logger"],
-	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"]
+	isNonInteractiveOrCI: OAuthFlowContext["isNonInteractiveOrCI"],
+	cliDisplayName: string
 ): Promise<DevicePollResult> {
 	const params = new URLSearchParams({
 		grant_type: "urn:ietf:params:oauth:grant-type:device_code",
@@ -309,7 +339,12 @@ async function pollDeviceToken(
 		client_id: clientId,
 	});
 
-	const response = await fetchAuthToken(params, logger, isNonInteractiveOrCI);
+	const response = await fetchAuthToken(
+		params,
+		logger,
+		isNonInteractiveOrCI,
+		cliDisplayName
+	);
 	const body = await readJson(response, logger);
 
 	const error = getStringMember(body, "error");
@@ -382,7 +417,8 @@ export async function getOauthTokenViaDeviceFlow(
 		options.scopes,
 		options.clientId,
 		logger,
-		isNonInteractiveOrCI
+		isNonInteractiveOrCI,
+		ctx.cliDisplayName
 	);
 
 	// The verification URLs are chosen by the server, and we both print them and
@@ -426,7 +462,7 @@ export async function getOauthTokenViaDeviceFlow(
 	// confirm it to disambiguate devices or as remote phishing mitigation".
 	logger.log(
 		dedent`
-		To authorize ${ctx.displayName}, please visit:
+		To authorize ${ctx.cliDisplayName}, please visit:
 
 		  ${deviceAuth.verification_uri}
 
@@ -475,7 +511,8 @@ export async function getOauthTokenViaDeviceFlow(
 				deviceAuth.device_code,
 				options.clientId,
 				logger,
-				isNonInteractiveOrCI
+				isNonInteractiveOrCI,
+				ctx.cliDisplayName
 			);
 		} catch (e) {
 			// A single poll can fail transiently: a network blip, or the
@@ -519,7 +556,7 @@ export async function getOauthTokenViaDeviceFlow(
 					continue;
 				case "access_denied":
 					throw new UserError(
-						`Consent denied. You must grant consent to ${ctx.displayName} in order to login.\n` +
+						`Consent denied. You must grant consent to ${ctx.cliDisplayName} in order to login.\n` +
 							"If you don't want to do this consider passing an API token via the `CLOUDFLARE_API_TOKEN` environment variable.",
 						{ telemetryMessage: "user device-flow consent denied" }
 					);

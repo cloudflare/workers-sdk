@@ -60,6 +60,7 @@ const config: TemplateConfig = {
 	frameworkCli: "create-solid",
 	displayName: "SolidStart",
 	platform: "workers",
+	languages: ["js", "ts"],
 	copyFiles: {
 		path: "./templates",
 	},

@@ -37,15 +37,25 @@ import type {
 	Label,
 	NetworkParameters,
 } from "@cloudflare/containers-shared";
-import type { CloudchamberConfig, Config } from "@cloudflare/workers-utils";
+import type {
+	CloudchamberConfig,
+	Config,
+} from "@cloudflare/workers-utils/config";
 
 export const cloudchamberScope = "cloudchamber:write" as const;
 
 const containerIdRegexp = /[^/]{36}/;
+const imageTagPattern = "[a-zA-Z0-9_][a-zA-Z0-9._-]{0,127}";
+const imageTagRegexp = new RegExp(`^${imageTagPattern}$`);
 
 export function isValidContainerID(value: string): boolean {
 	const matches = value.match(containerIdRegexp);
 	return matches !== null;
+}
+
+/** Returns whether a value matches the OCI image tag grammar. */
+export function isValidImageTag(value: string): boolean {
+	return imageTagRegexp.test(value);
 }
 
 /**
@@ -59,7 +69,7 @@ const imageRe = (() => {
 	const port = ":[0-9]+";
 	const domain = `${alphaNumeric}(?:${separator}${alphaNumeric})*`;
 	const name = `(?:${domain}(?:${port})?/)?(?:${domain}/)*(?:${domain})`;
-	const tag = ":([a-zA-Z0-9_][a-zA-Z0-9._-]{0,127})";
+	const tag = `:(${imageTagPattern})`;
 	const digest = "@(sha256:[A-Fa-f0-9]+)";
 	const reference = `(?:${tag}(?:${digest})?|${digest})`;
 	return new RegExp(`^(${name})${reference}$`);

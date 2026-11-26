@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
+import SCRIPT_D1_ENTRY from "worker:d1/entry";
 import { SharedBindings } from "../../workers";
 import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
 import {
@@ -96,7 +97,15 @@ export const D1_PLUGIN: Plugin = {
 		if (hasLocal) {
 			services.push({
 				name: D1_LOCAL_ENTRY_SERVICE_NAME,
-				worker: objectEntryWorker(D1_DATABASE_OBJECT),
+				worker: {
+					...objectEntryWorker(D1_DATABASE_OBJECT),
+					// Preserve D1 error names across RPC without changing the helper's
+					// compatibility date (internal workers don't inherit the user's date).
+					compatibilityFlags: ["enhanced_error_serialization"],
+					// Reuse the DO binding configuration, but replace the HTTP-only router
+					// with D1's entrypoint, which also implements the query RPC method.
+					modules: [{ name: "entry.worker.js", esModule: SCRIPT_D1_ENTRY() }],
+				},
 			});
 		}
 

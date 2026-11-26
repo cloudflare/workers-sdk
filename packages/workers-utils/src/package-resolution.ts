@@ -78,7 +78,8 @@ export function isPackageInstalled(
  * @param projectPath - The path of the project to check
  * @param opts - Options
  * @param opts.stopAtProjectPath - If `true`, stop walking up at the project's path
- * @returns The installed version string, or `undefined` if the package is not installed
+ * @returns The installed version string, or `undefined` if the package is not
+ * installed or its manifest lacks a name or version
  */
 export function getInstalledPackageVersion(
 	packageName: string,
@@ -94,16 +95,12 @@ export function getInstalledPackageVersion(
 		}
 
 		const lastDir = opts.stopAtProjectPath === true ? projectPath : undefined;
-		const packageJsonPath = findFileUp("package.json", packagePath, lastDir);
+		const packageJson = findPackageRootManifest(packagePath, lastDir);
 
-		if (!packageJsonPath) {
+		if (!packageJson) {
 			return undefined;
 		}
 
-		const packageJson = parsePackageJSON(
-			readFileSync(packageJsonPath),
-			packageJsonPath
-		);
 		// The requested package may be installed under an alias (e.g. vite+
 		// installs `@voidzero-dev/vite-plus-core` under the `vite` alias). In that
 		// case the resolved package.json belongs to the aliased package, so its
@@ -125,40 +122,52 @@ export function getInstalledPackageVersion(
 }
 
 /**
- * Walks up from `startDir` looking for a file named `name`.
- * Stops at `lastDir` (inclusive) if provided, otherwise walks to the filesystem root.
+ * Walks up from `startDir` to find and parse a package's root `package.json`.
  *
- * @param name - The filename to search for
+ * Dual-format packages (e.g. `hono`, `stripe`) often ship nested `package.json`
+ * files such as `dist/cjs/package.json` containing only `{"type": "commonjs"}`.
+ * These tell Node how to load the files in that directory but carry no `name`
+ * or `version`. When the package is resolved through its entry point, the
+ * nearest `package.json` may be one of these markers. Skip nameless manifests
+ * and stop at the first named manifest, returning `undefined` if it has no
+ * version. This also protects symlinked workspace packages resolved outside
+ * `node_modules` from inheriting an ancestor's version. Stop at the installed
+ * package's `node_modules` boundary if no named manifest is found.
+ *
  * @param startDir - The directory to start searching from
  * @param lastDir - If provided, stop searching after reaching this directory
- * @returns The full path to the found file, or `undefined`
+ * @returns The parsed root `package.json`, or `undefined` if none is found
  */
-function findFileUp(
-	name: string,
+function findPackageRootManifest(
 	startDir: string,
 	lastDir?: string
-): string | undefined {
+): ReturnType<typeof parsePackageJSON> | undefined {
 	let dir = startDir;
-	const root = path.parse(dir).root;
 
 	while (true) {
-		const candidate = path.join(dir, name);
-		try {
-			if (statSync(candidate).isFile()) {
-				return candidate;
+		const packageJsonPath = path.join(dir, "package.json");
+		if (statSync(packageJsonPath, { throwIfNoEntry: false })?.isFile()) {
+			const packageJson = parsePackageJSON(
+				readFileSync(packageJsonPath),
+				packageJsonPath
+			);
+			if (packageJson.name !== undefined) {
+				return packageJson.version !== undefined ? packageJson : undefined;
 			}
-		} catch {}
-
-		if (lastDir !== undefined && dir === lastDir) {
-			break;
 		}
 
 		const parent = path.dirname(dir);
-		if (parent === dir || dir === root) {
-			break;
+		// Use the installed directory rather than the manifest's name, which may
+		// be missing or differ from the requested name for npm aliases.
+		if (
+			dir === lastDir ||
+			parent === dir ||
+			path.basename(parent) === "node_modules" ||
+			(path.basename(parent).startsWith("@") &&
+				path.basename(path.dirname(parent)) === "node_modules")
+		) {
+			return undefined;
 		}
 		dir = parent;
 	}
-
-	return undefined;
 }

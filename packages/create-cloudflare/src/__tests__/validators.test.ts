@@ -1,3 +1,6 @@
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test } from "vitest";
 import {
 	isAllowedExistingFile,
@@ -26,9 +29,32 @@ describe("validators", () => {
 			).not.toBeUndefined();
 		});
 
-		test("disallow existing, non-empty directories", async ({ expect }) => {
-			// Existing, non-empty directories should return an error
-			expect(validateProjectDirectory(".", args)).not.toBeUndefined();
+		describe("existing directory checks", () => {
+			runInTempDir();
+
+			test("disallow existing, non-empty directories", async ({ expect }) => {
+				writeFileSync("package.json", "{}");
+				// Existing, non-empty directories should return an error
+				expect(validateProjectDirectory(".", args)).not.toBeUndefined();
+			});
+
+			test("validates project name before checking existing directory", async ({
+				expect,
+			}) => {
+				const invalidDir = "example.com";
+				mkdirSync(invalidDir);
+				writeFileSync(join(invalidDir, "package.json"), "{}");
+				expect(validateProjectDirectory(invalidDir, args)).toBe(
+					"Project names must only contain lowercase characters, numbers, and dashes."
+				);
+
+				const validDir = "example-com";
+				mkdirSync(validDir);
+				writeFileSync(join(validDir, "package.json"), "{}");
+				expect(validateProjectDirectory(validDir, args)).toBe(
+					`Directory \`${validDir}\` already exists and contains files that might conflict. Please choose a new name.`
+				);
+			});
 		});
 
 		test("Relax validation when --existing-script is passed", async ({

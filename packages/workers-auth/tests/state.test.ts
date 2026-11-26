@@ -3,7 +3,7 @@ import { readStoredAuthState } from "../src/state";
 import type {
 	AuthConfigStorage,
 	UserAuthConfig,
-} from "../src/auth-config-file";
+} from "../src/config-file/auth";
 
 function memoryStorage(initial?: UserAuthConfig): AuthConfigStorage {
 	let value = initial;
@@ -19,7 +19,9 @@ function memoryStorage(initial?: UserAuthConfig): AuthConfigStorage {
 			value = config;
 		},
 		clear() {
+			const existed = value !== undefined;
 			value = undefined;
+			return existed;
 		},
 		path() {
 			return "<memory>";

@@ -6,7 +6,9 @@ import {
 	useSidebar,
 } from "@cloudflare/kumo";
 import {
+	ClockCountdownIcon,
 	EnvelopeSimpleIcon,
+	FlagBannerIcon,
 	MonitorIcon,
 	MoonIcon,
 	PulseIcon,
@@ -121,6 +123,7 @@ export function AppSidebar({
 	const kvNamespaces = bindings?.kv ?? [];
 	const r2Buckets = bindings?.r2 ?? [];
 	const workflows = bindings?.workflows ?? [];
+	const flagshipApps = bindings?.flagship ?? [];
 
 	const sidebarItemGroups = [
 		{
@@ -238,6 +241,50 @@ export function AppSidebar({
 				},
 			],
 			title: "Email",
+		},
+		{
+			emptyLabel: "",
+			groupId: "cron-triggers" as const,
+			icon: ClockCountdownIcon,
+			items: [
+				{
+					id: "configured-crons",
+					isActive: currentPath === "/cron-triggers/configured",
+					label: "Configured Crons",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/cron-triggers/configured",
+					},
+				},
+				{
+					id: "ad-hoc-triggers",
+					isActive: currentPath === "/cron-triggers/ad-hoc",
+					label: "Ad-Hoc Triggers",
+					link: {
+						params: {},
+						search: workerSearch,
+						to: "/cron-triggers/ad-hoc",
+					},
+				},
+			],
+			title: "Cron Triggers",
+		},
+		{
+			emptyLabel: "No Flagship apps",
+			groupId: "flagship" as const,
+			icon: FlagBannerIcon,
+			items: flagshipApps.map((app) => ({
+				id: `${app.id}:${app.bindingName}`,
+				isActive: currentPath === `/flagship/${app.id}`,
+				label: app.bindingName,
+				link: {
+					params: { appId: app.id },
+					search: workerSearch,
+					to: "/flagship/$appId",
+				},
+			})),
+			title: "Flagship",
 		},
 	] satisfies Array<{
 		emptyLabel: string;

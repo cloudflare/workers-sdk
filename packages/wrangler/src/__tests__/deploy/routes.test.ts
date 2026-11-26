@@ -41,6 +41,7 @@ import {
 	mockPublishRoutesFallbackRequest,
 	mockPublishRoutesRequest,
 	mockPublishSchedulesRequest,
+	mockPutImageTransformationsRequest,
 	mockServiceScriptData,
 	mockUnauthorizedPublishRoutesRequest,
 	writeAssets,
@@ -680,6 +681,44 @@ describe("deploy", () => {
 					domains: [{ hostname: "api.example.com" }],
 				});
 				await runWrangler("deploy ./index");
+				expect(std.out).toContain("api.example.com (custom domain)");
+			});
+
+			it("should not check for zone route conflicts when only custom domains are configured", async ({
+				expect,
+			}) => {
+				// Regression test for https://github.com/cloudflare/workers-sdk/issues/15863:
+				// with `workers_dev: false` and only custom-domain routes, every deploy
+				// after the first used to query `/zones/:zoneId/workers/routes`, which
+				// fails for API tokens without `Zone > Workers Routes > Read` permission.
+				writeWranglerConfig({
+					workers_dev: false,
+					routes: [{ pattern: "api.example.com", custom_domain: true }],
+				});
+				writeWorkerSource();
+				mockUpdateWorkerSubdomain({ enabled: false });
+				mockUploadWorkerRequest({ expectedType: "esm" });
+				let zoneRoutesRequests = 0;
+				mockGetZones(expect, "api.example.com", [{ id: "api-example-com-id" }]);
+				msw.use(
+					http.get("*/zones/:zoneId/workers/routes", () => {
+						zoneRoutesRequests++;
+						return HttpResponse.json(createFetchResult([]));
+					})
+				);
+				mockCustomDomainsChangesetRequest({});
+				mockPublishCustomDomainsRequest({
+					publishFlags: {
+						override_scope: true,
+						override_existing_origin: false,
+						override_existing_dns_record: false,
+					},
+					domains: [{ hostname: "api.example.com" }],
+				});
+
+				await runWrangler("deploy ./index");
+
+				expect(zoneRoutesRequests).toBe(0);
 				expect(std.out).toContain("api.example.com (custom domain)");
 			});
 
@@ -1794,6 +1833,168 @@ Update them to point to this script instead?`,
 		});
 		it.todo("should error if it's a workers.dev route");
 	});
+	describe("images url_transformations", () => {
+		it("should apply url_transformations after deploying", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: {
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["cdn.example.com"],
+					},
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["cdn.example.com"] },
+			});
+
+			await runWrangler("deploy ./index");
+
+			expect(std.out).toContain(
+				"Images URL transformations: enabled (cdn.example.com)"
+			);
+		});
+
+		it("should apply a named environment's own url_transformations", async () => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+				env: {
+					staging: { images: { url_transformations: { enabled: false } } },
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", env: "staging" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: false },
+				env: "staging",
+			});
+
+			await runWrangler("deploy ./index --env staging");
+		});
+
+		it("should not apply top-level url_transformations to a named environment", async () => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+				env: { staging: {} },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm", env: "staging" });
+
+			await runWrangler("deploy ./index --env staging");
+		});
+
+		it("should error if url_transformations could not be applied", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true },
+				status: 500,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"The Worker was deployed, but its Images URL transformations setting could not be applied:\n" +
+					"A request to the Cloudflare API (/accounts/some-account-id/settings/transformations/workers/test-name) failed.\n" +
+					"Authentication error [code: 10000]\n\n" +
+					"Re-run the same `wrangler deploy` command to retry."
+			);
+		});
+
+		it("should show the API's reason and not suggest a retry if url_transformations is rejected", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: {
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["bad host.com"],
+					},
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["bad host.com"] },
+				status: 400,
+				errors: [
+					{
+						code: 10015,
+						message:
+							'invalid allowed_origins: Origin #0 "bad host.com" has error',
+					},
+				],
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"The Worker was deployed, but its Images URL transformations setting could not be applied:\n" +
+					'invalid allowed_origins: Origin #0 "bad host.com" has error [code: 10015]\n\n' +
+					"Fix the Images URL transformations setting in your configuration and run `wrangler deploy` again."
+			);
+		});
+
+		it("should suggest checking permissions if url_transformations is forbidden", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				images: { url_transformations: { enabled: true } },
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true },
+				status: 403,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"The Worker was deployed, but its Images URL transformations setting could not be applied:\n" +
+					"A request to the Cloudflare API (/accounts/some-account-id/settings/transformations/workers/test-name) failed.\n" +
+					"Authentication error [code: 10000]\n\n" +
+					"Check that your API token has permission to edit Workers scripts on this account, then run `wrangler deploy` again."
+			);
+		});
+
+		it("should still deploy triggers if url_transformations could not be applied", async ({
+			expect,
+		}) => {
+			const crons = ["*/5 * * * *"];
+			writeWranglerConfig({
+				triggers: { crons },
+				images: {
+					url_transformations: {
+						enabled: true,
+						allowed_origins: ["bad host.com"],
+					},
+				},
+			});
+			writeWorkerSource();
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedType: "esm" });
+			mockPublishSchedulesRequest({ crons });
+			mockPutImageTransformationsRequest({
+				expectedBody: { enabled: true, allowed_origins: ["bad host.com"] },
+				status: 400,
+			});
+
+			await expect(runWrangler("deploy ./index")).rejects.toThrow(
+				"could not be applied"
+			);
+			expect(std.out).toContain("schedule: */5 * * * *");
+		});
+	});
+
 	describe("triggers", () => {
 		it("should deploy the worker with a scheduled trigger", async () => {
 			const crons = ["*/5 * * * *", "0 18 * * 6L"];

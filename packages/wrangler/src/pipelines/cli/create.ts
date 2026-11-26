@@ -11,7 +11,7 @@ export const pipelinesCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new pipeline",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 	},
 	args: {
 		pipeline: {
@@ -135,13 +135,13 @@ export const pipelinesCreateCommand = createCommand({
 				await displayUsageExamples(stream, config, args);
 			} else {
 				logger.log(
-					`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`
+					`\nRun 'wrangler basin pipelines get ${pipeline.id}' to view full details.`
 				);
 			}
 		} catch {
 			logger.warn("Could not fetch pipeline details for usage examples.");
 			logger.log(
-				`\nRun 'wrangler pipelines get ${pipeline.id}' to view full details.`
+				`\nRun 'wrangler basin pipelines get ${pipeline.id}' to view full details.`
 			);
 		}
 	},

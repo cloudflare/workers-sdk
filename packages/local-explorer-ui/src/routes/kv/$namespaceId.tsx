@@ -36,12 +36,10 @@ export const Route = createFileRoute("/kv/$namespaceId")({
 		}
 
 		const cursor = keysResponse.data?.result_info?.cursor ?? null;
-		const entries = keys.map(
-			(key): KVEntry => ({
-				key,
-				value: values.get(key) ?? null,
-			})
-		);
+		const entries = keys.map((key): KVEntry => ({
+			key,
+			value: values.get(key) ?? null,
+		}));
 
 		return {
 			cursor,
@@ -328,7 +326,6 @@ function NamespaceView() {
 		if (originalKey !== newKey) {
 			await workersKvNamespaceDeleteKeyValuePair({
 				path: { namespace_id: namespaceId, key_name: originalKey },
-				body: null,
 			});
 		}
 
@@ -388,7 +385,6 @@ function NamespaceView() {
 			setDeleting(true);
 			await workersKvNamespaceDeleteKeyValuePair({
 				path: { namespace_id: namespaceId, key_name: deleteTarget },
-				body: null,
 			});
 			setEntries((prev) => removeEntry(prev, deleteTarget));
 			setDeleteTarget(null);

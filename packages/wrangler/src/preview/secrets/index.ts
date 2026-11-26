@@ -7,7 +7,7 @@ import {
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { createNamespace } from "../../core/create-command";
 import type { Binding } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export const previewSecretNamespace = createNamespace({
 	metadata: {

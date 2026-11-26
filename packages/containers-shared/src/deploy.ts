@@ -3,7 +3,6 @@
  * However this code is only used for containers interactions, not cloudchamber ones!
  */
 import assert from "node:assert";
-import { setTimeout } from "node:timers/promises";
 import {
 	endSection,
 	log,
@@ -19,7 +18,8 @@ import {
 	dim,
 	green,
 } from "@cloudflare/cli-shared-helpers/colors";
-import { formatConfigSnippet } from "@cloudflare/workers-utils";
+import { retryWhileVersionNotReadable } from "@cloudflare/workers-utils";
+import { formatConfigSnippet } from "@cloudflare/workers-utils/config";
 import { FatalError, UserError } from "@cloudflare/workers-utils/errors";
 import {
 	ApiError,
@@ -27,7 +27,7 @@ import {
 	CreateApplicationRolloutRequest,
 	RolloutsService,
 } from "./client";
-import { fetchPagedListResult, fetchResult } from "./context";
+import { fetchPagedListResult, fetchResult, logger } from "./context";
 import { Diff } from "./diff";
 import { resolveImageName } from "./images";
 import { inferInstanceType } from "./limits";
@@ -47,16 +47,18 @@ import type {
 import type { ContainerNormalizedConfig } from "./types";
 import type {
 	ComplianceConfig,
-	Config,
-	ContainerApp,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+import type { Config, ContainerApp } from "@cloudflare/workers-utils/config";
 
 type DeployContainersArgs = {
 	dispatchNamespace?: string;
 	versionId: string;
 	accountId: string;
 	scriptName: string;
+	configFileName: string;
+	observabilityTargetPercentageField: string;
+	observabilityTargetCountField: string;
 };
 
 type ObservabilityWriteTarget = "top-level" | "configuration";
@@ -89,7 +91,15 @@ export type DurableObjectNamespace = {
 
 export function createDurableObjectNamespaceResolver(
 	config: Config,
-	{ versionId, accountId, scriptName, dispatchNamespace }: DeployContainersArgs
+	{
+		versionId,
+		accountId,
+		scriptName,
+		dispatchNamespace,
+	}: Pick<
+		DeployContainersArgs,
+		"versionId" | "accountId" | "scriptName" | "dispatchNamespace"
+	>
 ): (className: string) => Promise<string> {
 	const boundDOs = new Set(
 		config.durable_objects.bindings.map((binding) => binding.class_name)
@@ -101,11 +111,13 @@ export function createDurableObjectNamespaceResolver(
 		// Worker version endpoints do not address dispatch scripts. Resolve those
 		// from the account list, including their dispatch namespace in the identity.
 		if (boundDOs.has(className) && dispatchNamespace === undefined) {
-			maybeVersionInfo ??= await fetchUploadedVersion(
-				config,
-				accountId,
-				scriptName,
-				versionId
+			maybeVersionInfo ??= await retryWhileVersionNotReadable(
+				() =>
+					fetchResult<ApiVersion>(
+						config,
+						`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${versionId}`
+					),
+				logger
 			);
 			type DurableObjectBinding = Extract<
 				WorkerMetadataBinding,
@@ -155,7 +167,15 @@ export function createDurableObjectNamespaceResolver(
 export async function deployContainers(
 	config: Config,
 	containerDeployments: ResolvedContainerDeployment[],
-	{ versionId, accountId, scriptName, dispatchNamespace }: DeployContainersArgs
+	{
+		versionId,
+		accountId,
+		scriptName,
+		dispatchNamespace,
+		configFileName,
+		observabilityTargetPercentageField,
+		observabilityTargetCountField,
+	}: DeployContainersArgs
 ) {
 	const resolveNamespaceId = createDurableObjectNamespaceResolver(config, {
 		versionId,
@@ -170,42 +190,15 @@ export async function deployContainers(
 			{
 				imageRef,
 				durable_object_namespace_id: namespaceId,
+				configFileName,
+				observabilityTargetPercentageField,
+				observabilityTargetCountField,
 			},
 			container,
 			config,
 			accountId
 		);
 	}
-}
-
-async function fetchUploadedVersion(
-	config: Config,
-	accountId: string,
-	scriptName: string,
-	versionId: string
-): Promise<ApiVersion> {
-	for (let attempt = 0; attempt < 5; attempt++) {
-		try {
-			return await fetchResult<ApiVersion>(
-				config,
-				`/accounts/${accountId}/workers/scripts/${scriptName}/versions/${versionId}`
-			);
-		} catch (error) {
-			if (!isUploadedVersionNotReadyError(error) || attempt === 4) {
-				throw error;
-			}
-			await setTimeout(500);
-		}
-	}
-	throw new Error("Unable to fetch uploaded Worker version");
-}
-
-function isUploadedVersionNotReadyError(error: unknown): boolean {
-	return (
-		error instanceof Error &&
-		"code" in error &&
-		(error as { code?: unknown }).code === 100146
-	);
 }
 
 export async function listDurableObjects(
@@ -483,7 +476,12 @@ function buildApplicationObservabilityPatch(
 
 function assertCanUseApplicationObservabilityTargeting(
 	prevApp: Application,
-	containerConfig: ContainerNormalizedConfig
+	containerConfig: ContainerNormalizedConfig,
+	options: {
+		configFileName: string;
+		observabilityTargetPercentageField: string;
+		observabilityTargetCountField: string;
+	}
 ) {
 	if (!hasTopLevelOnlyObservabilityFields(containerConfig.observability)) {
 		return;
@@ -494,7 +492,7 @@ function assertCanUseApplicationObservabilityTargeting(
 	}
 
 	throw new UserError(
-		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your Wrangler config and deploy once, then deploy again with target_instance_percentage or target_instance_count.`,
+		`Application-level observability targeting cannot be enabled for container ${containerConfig.name} while it still uses legacy rollout-based observability. Set containers[].observability.enabled = false in your ${options.configFileName} and deploy once, then deploy again with ${options.observabilityTargetPercentageField} or ${options.observabilityTargetCountField}.`,
 		{
 			telemetryMessage: "containers deploy observability migration blocked",
 		}
@@ -607,6 +605,9 @@ export async function apply(
 	args: {
 		imageRef: ImageRef;
 		durable_object_namespace_id: string;
+		configFileName: string;
+		observabilityTargetPercentageField: string;
+		observabilityTargetCountField: string;
 	},
 	containerConfig: ContainerNormalizedConfig,
 	config: Config,
@@ -702,7 +703,11 @@ export async function apply(
 	const observabilityWriteTarget = selectObservabilityWriteTarget(prevApp);
 
 	if (prevApp !== undefined) {
-		assertCanUseApplicationObservabilityTargeting(prevApp, containerConfig);
+		assertCanUseApplicationObservabilityTargeting(
+			prevApp,
+			containerConfig,
+			args
+		);
 	}
 
 	// let's always convert normalised container config -> CreateApplicationRequest

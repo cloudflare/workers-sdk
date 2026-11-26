@@ -3,7 +3,7 @@ import { createNamespace } from "../core/create-command";
 export const artifactsNamespace = createNamespace({
 	metadata: {
 		description: "🧱 Manage Artifacts namespaces and repos",
-		status: "private beta",
+		status: "open beta",
 		owner: "Product: Artifacts",
 		category: "Storage & databases",
 	},

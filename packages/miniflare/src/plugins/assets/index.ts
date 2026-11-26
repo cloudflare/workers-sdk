@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import os from "node:os";
 import path, { join } from "node:path";
 import {
 	CONTENT_HASH_OFFSET,
@@ -26,6 +25,7 @@ import {
 } from "@cloudflare/workers-shared/utils/constants";
 import {
 	createAssetsIgnoreFunction,
+	InvalidAssetsIgnoreError,
 	maybeGetFile,
 } from "@cloudflare/workers-shared/utils/helpers";
 import {
@@ -37,6 +37,7 @@ import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
 import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
+import { MiniflareCoreError } from "../../shared";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
 import { getEnvBindingsOfType, ProxyNodeBinding } from "../shared";
@@ -52,11 +53,6 @@ import type { Service } from "../../runtime";
 import type { Plugin } from "../shared";
 import type { Logger, RouterConfig } from "@cloudflare/workers-shared";
 import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
-
-// Cache of temp directories created for missing asset directories, keyed by
-// the Worker's name followed by the assets directory path. Prevents accumulating
-// orphaned temp directories when getServices is called repeatedly
-const tempDirCache = new Map<string, string>();
 
 function resolveAssetDirectory(
 	rootPath: string | undefined,
@@ -123,7 +119,7 @@ export const ASSETS_PLUGIN: Plugin = {
 		};
 	},
 
-	async getServices({ options, log }) {
+	async getServices({ options, log, tmpPath }) {
 		const assets = options.config.assets;
 		if (!assets) {
 			return [];
@@ -141,31 +137,22 @@ export const ASSETS_PLUGIN: Plugin = {
 		});
 		if (!directoryStats) {
 			// If the assets directory doesn't exist yet (e.g. the build output
-			// hasn't been generated), create an empty temp directory so that the
-			// asset services can still start up with zero assets.
-			// Reuse a previously created temp directory for this path to avoid
-			// accumulating orphaned temp directories on repeated calls.
-			const cacheKey = `${options.config.name}:${assetDirectory}`;
-			const cached = tempDirCache.get(cacheKey);
-			const cachedExists = cached
-				? await fs.stat(cached).catch(() => undefined)
-				: undefined;
-			if (cached && cachedExists) {
-				assetDirectory = cached;
-			} else {
-				assetDirectory = await fs.mkdtemp(
-					path.join(os.tmpdir(), "miniflare-assets-")
-				);
-				tempDirCache.set(cacheKey, assetDirectory);
-			}
+			// hasn't been generated), serve zero assets from an empty directory.
+			// It lives inside this instance's temporary directory so `dispose()`
+			// and the exit hook remove it, and its fixed path lets repeated
+			// `getServices()` calls reuse it. Workers can share it because it is
+			// always empty and the disk service is read-only.
+			assetDirectory = path.join(tmpPath, ASSETS_PLUGIN_NAME, "empty");
+			await fs.mkdir(assetDirectory, { recursive: true });
 		}
 
-		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage`;
+		const storageServiceName = `${ASSETS_PLUGIN_NAME}:storage:${options.config.name}`;
 		const storageService: Service = {
 			name: storageServiceName,
 			disk: {
 				path: assetDirectory,
-				writable: true,
+				// Reject writes even when callers bypass the read-only namespace Worker.
+				writable: false,
 				allowDotfiles: true,
 			},
 		};
@@ -220,6 +207,7 @@ export const ASSETS_PLUGIN: Plugin = {
 			compatibility_flags: options.config.compatibilityFlags,
 			html_handling: assets.htmlHandling,
 			not_found_handling: assets.notFoundHandling,
+			base_path: assets.basePath,
 			redirects: parsedRedirects,
 			headers: parsedHeaders,
 			debug: true,
@@ -391,7 +379,14 @@ const walk = async (dir: string) => {
 	const files = await fs.readdir(dir, { recursive: true });
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
-	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir).catch(
+		(error: unknown) => {
+			if (error instanceof InvalidAssetsIgnoreError) {
+				throw new MiniflareCoreError("ERR_VALIDATION", error.message);
+			}
+			throw error;
+		}
+	);
 	let counter = 0;
 	await Promise.all(
 		files.map(async (file) => {
@@ -460,7 +455,7 @@ const walk = async (dir: string) => {
 					contentHash,
 				});
 				assetsReverseMap[bytesToHex(contentHash)] = {
-					filePath: relativeFilepath,
+					filePath: relativeFilepath.split(path.sep).join("/"),
 					contentType: getContentType(filepath),
 				};
 				counter++;

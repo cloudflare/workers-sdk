@@ -1,7 +1,6 @@
 import { beforeEach, describe, test } from "vitest";
 import {
 	cleanupWorkflow,
-	clickButton,
 	isTextVisible,
 	navigateToWorkflow,
 	page,
@@ -12,6 +11,10 @@ import {
 } from "../utils";
 
 const WORKFLOW_NAME = "my-workflow";
+
+async function clickTriggerButton(): Promise<void> {
+	await page.getByRole("button", { name: "Trigger", exact: true }).click();
+}
 
 describe("Workflows", () => {
 	beforeEach(async () => {
@@ -35,7 +38,10 @@ describe("Workflows", () => {
 		test("shows Trigger button", async () => {
 			await navigateToWorkflow(WORKFLOW_NAME);
 
-			const triggerButton = page.getByRole("button", { name: "Trigger" });
+			const triggerButton = page.getByRole("button", {
+				name: "Trigger",
+				exact: true,
+			});
 			await triggerButton.waitFor({ state: "visible", timeout: 10_000 });
 		});
 
@@ -77,7 +83,7 @@ describe("Workflows", () => {
 		test("opens trigger dialog via 'Trigger' button", async () => {
 			await navigateToWorkflow(WORKFLOW_NAME);
 
-			await clickButton("Trigger");
+			await clickTriggerButton();
 
 			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 			await waitForText("Trigger this workflow?");
@@ -86,7 +92,7 @@ describe("Workflows", () => {
 		test("triggers a new instance and navigates to its detail page", async () => {
 			await navigateToWorkflow(WORKFLOW_NAME);
 
-			await clickButton("Trigger");
+			await clickTriggerButton();
 			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 
 			const dialog = page.getByRole("dialog");
@@ -103,7 +109,7 @@ describe("Workflows", () => {
 		test("cancels the trigger dialog", async () => {
 			await navigateToWorkflow(WORKFLOW_NAME);
 
-			await clickButton("Trigger");
+			await clickTriggerButton();
 			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 
 			const dialog = page.getByRole("dialog");
@@ -118,7 +124,7 @@ describe("Workflows", () => {
 		test("shows validation error for invalid JSON params", async () => {
 			await navigateToWorkflow(WORKFLOW_NAME);
 
-			await clickButton("Trigger");
+			await clickTriggerButton();
 			await waitForSelector('[role="dialog"]', { timeout: 5_000 });
 
 			const dialog = page.getByRole("dialog");

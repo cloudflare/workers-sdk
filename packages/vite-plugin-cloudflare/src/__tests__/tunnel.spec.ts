@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from "node:util";
-import { startTunnel } from "@cloudflare/workers-utils";
+import { resolveNamedTunnel, startTunnel } from "@cloudflare/workers-utils";
 import { createDeferred } from "@cloudflare/workers-utils/test-helpers";
 import { createServer, preview } from "vite";
 import {
@@ -10,7 +10,7 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
-import * as wrangler from "wrangler";
+import { createAuth, createLogger } from "../auth";
 import { PluginContext } from "../context";
 import {
 	QUICK_TUNNEL_ALLOWED_HOST,
@@ -25,7 +25,27 @@ import type { TunnelConfig } from "../plugin-config";
 import type * as vite from "vite";
 
 vi.mock("@cloudflare/workers-utils");
-vi.mock("wrangler");
+vi.mock("../auth", () => ({
+	USER_AGENT: "vite-plugin/test",
+	createLogger: vi.fn(() => ({})),
+	resolveAuthProfile: vi.fn(() => "default"),
+	createAuthForProfile: vi.fn(() => ({
+		getActiveProfile: vi.fn(() => "default"),
+		requireAuth: vi.fn(
+			(options: { account_id?: string }) =>
+				options.account_id ?? "selected-account-id"
+		),
+		requireApiToken: vi.fn(() => ({ apiToken: "test-token" })),
+	})),
+	createAuth: vi.fn(() => ({
+		getActiveProfile: vi.fn(() => "default"),
+		requireAuth: vi.fn(
+			(options: { account_id?: string }) =>
+				options.account_id ?? "selected-account-id"
+		),
+		requireApiToken: vi.fn(() => ({ apiToken: "test-token" })),
+	})),
+}));
 
 function createMockPluginContext(options: {
 	type: "workers" | "preview";
@@ -33,32 +53,19 @@ function createMockPluginContext(options: {
 	account_id?: string;
 }) {
 	const ctx = new PluginContext({
-		hasShownWorkerConfigWarnings: false,
 		restartingDevServerCount: 0,
 		tunnelHostnames: new Set(),
 	});
 	Object.defineProperty(ctx, "resolvedPluginConfig", {
 		value: {
 			type: options.type,
+			settings: { accountId: options.account_id },
 			tunnel: {
 				autoStart: options.tunnel?.autoStart ?? false,
 				name: options.tunnel?.name,
+				allowedMail: options.tunnel?.allowedMail,
 			},
 		},
-	});
-	if (options.type === "workers") {
-		Object.defineProperty(ctx, "entryWorkerConfig", {
-			value: {
-				account_id: options.account_id,
-			},
-		});
-	}
-	Object.defineProperty(ctx, "allWorkerConfigs", {
-		value: [
-			{
-				account_id: options.account_id,
-			},
-		],
 	});
 	return ctx;
 }
@@ -118,6 +125,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenCalledWith({
 			origin: new URL(server.resolvedUrls?.local?.[0] ?? ""),
 			token: undefined,
+			allowedMail: undefined,
 			extendHint: "Press a + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
@@ -179,6 +187,68 @@ describe("tunnel plugin", () => {
 		expect(restart).not.toHaveBeenCalled();
 	});
 
+	it("restarts the tunnel when the allowed mail list changes", async ({
+		expect,
+	}) => {
+		const server = await createServer();
+		const ctx = createMockPluginContext({
+			type: "workers",
+			tunnel: {
+				autoStart: true,
+				allowedMail: ["alice@example.com"],
+			},
+		});
+		const tunnelManager = new TunnelManager(server.config.logger);
+		vi.spyOn(server, "restart").mockResolvedValue();
+
+		onTestFinished(() => server.close());
+
+		await server.listen(0);
+		await setupDevTunnel(server, ctx, tunnelManager);
+
+		expect(startTunnel).toHaveBeenNthCalledWith(
+			1,
+			expect.objectContaining({ allowedMail: ["alice@example.com"] })
+		);
+
+		ctx.resolvedPluginConfig.tunnel.allowedMail = ["bob@example.com"];
+		await setupDevTunnel(server, ctx, tunnelManager);
+
+		expect(startTunnel).toHaveBeenNthCalledWith(
+			2,
+			expect.objectContaining({ allowedMail: ["bob@example.com"] })
+		);
+	});
+
+	it("treats an empty allowed mail list as unprotected", async ({ expect }) => {
+		const server = await createServer();
+		const ctx = createMockPluginContext({
+			type: "workers",
+			tunnel: {
+				autoStart: true,
+				allowedMail: [],
+			},
+		});
+		const tunnelManager = new TunnelManager(server.config.logger);
+		const restart = vi.spyOn(server, "restart").mockResolvedValue();
+
+		onTestFinished(() => server.close());
+
+		await server.listen(0);
+		await setupDevTunnel(server, ctx, tunnelManager);
+
+		expect(startTunnel).toHaveBeenCalledWith(
+			expect.objectContaining({ allowedMail: undefined })
+		);
+
+		restart.mockClear();
+		ctx.resolvedPluginConfig.tunnel.allowedMail = undefined;
+		await setupDevTunnel(server, ctx, tunnelManager);
+
+		expect(startTunnel).toHaveBeenCalledTimes(1);
+		expect(restart).not.toHaveBeenCalled();
+	});
+
 	it("starts a new tunnel when the origin changes", async ({ expect }) => {
 		vi.mocked(startTunnel)
 			.mockReturnValueOnce({
@@ -218,6 +288,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenNthCalledWith(1, {
 			origin: new URL(server1.resolvedUrls?.local?.[0] ?? ""),
 			token: undefined,
+			allowedMail: undefined,
 			extendHint: "Press a + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
@@ -244,6 +315,7 @@ describe("tunnel plugin", () => {
 		expect(startTunnel).toHaveBeenNthCalledWith(2, {
 			origin: new URL(server2.resolvedUrls?.local?.[0] ?? ""),
 			token: undefined,
+			allowedMail: undefined,
 			extendHint: "Press a + enter to extend by 1 hour.",
 			logger: expect.objectContaining({
 				log: expect.any(Function),
@@ -293,20 +365,26 @@ describe("tunnel plugin", () => {
 		await tunnelManager.startTunnel({
 			origin: "http://localhost:3000",
 			name: undefined,
+			allowedMail: undefined,
 			mode: "dev",
 			allowedHosts: true,
 			accountId: undefined,
 			complianceRegion: undefined,
+			getAuth: () =>
+				createAuth(server.config.root, createLogger(server.config.logger)),
 		});
 
 		await expect(
 			tunnelManager.startTunnel({
 				origin: "http://localhost:3001",
 				name: undefined,
+				allowedMail: undefined,
 				mode: "dev",
 				allowedHosts: true,
 				accountId: undefined,
 				complianceRegion: undefined,
+				getAuth: () =>
+					createAuth(server.config.root, createLogger(server.config.logger)),
 			})
 		).rejects.toBe(disposeError);
 
@@ -506,7 +584,7 @@ describe("tunnel plugin", () => {
 	it("starts a named preview tunnel and keeps only allowed hosts", async ({
 		expect,
 	}) => {
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+		vi.mocked(resolveNamedTunnel).mockResolvedValue({
 			hostnames: [
 				"dev.example.com",
 				"preview.example.com",
@@ -541,12 +619,16 @@ describe("tunnel plugin", () => {
 
 		await setupPreviewTunnel(previewServer, ctx, tunnelManager);
 
-		expect(wrangler.unstable_resolveNamedTunnel).toHaveBeenCalledWith(
+		expect(resolveNamedTunnel).toHaveBeenCalledWith(
 			"my-tunnel",
 			expect.any(URL),
 			{
+				abortSignal: expect.any(AbortSignal),
 				accountId: "account-id",
+				apiToken: { apiToken: "test-token" },
 				complianceRegion: undefined,
+				logger: expect.any(Object),
+				userAgent: expect.stringMatching(/^vite-plugin\//),
 			}
 		);
 		expect(tunnelManager.publicUrls).toEqual([
@@ -558,7 +640,7 @@ describe("tunnel plugin", () => {
 	it("throws when no named preview tunnel hosts are allowed", async ({
 		expect,
 	}) => {
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockResolvedValue({
+		vi.mocked(resolveNamedTunnel).mockResolvedValue({
 			hostnames: ["dev.example.com", "preview.example.com"],
 			token: "TOKEN",
 		});
@@ -596,15 +678,23 @@ describe("tunnel plugin", () => {
 		`);
 	});
 
-	it("cancels a named tunnel that is closed while still starting", async ({
+	it("cancels a named tunnel without clearing a replacement", async ({
 		expect,
 	}) => {
-		const namedTunnelDeferred = createDeferred<{
-			hostnames: string[];
-			token: string;
-		}>();
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
-			namedTunnelDeferred.promise
+		vi.mocked(resolveNamedTunnel).mockImplementation(
+			(_name, _origin, options) =>
+				new Promise((_resolve, reject) => {
+					const { abortSignal } = options;
+					if (abortSignal?.aborted) {
+						reject(abortSignal.reason);
+						return;
+					}
+					abortSignal?.addEventListener(
+						"abort",
+						() => reject(abortSignal.reason),
+						{ once: true }
+					);
+				})
 		);
 
 		const server = await createServer();
@@ -615,23 +705,37 @@ describe("tunnel plugin", () => {
 		const startPromise = tunnelManager.startTunnel({
 			origin: "http://localhost:3000",
 			name: "my-tunnel",
+			allowedMail: undefined,
 			mode: "dev",
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
+			getAuth: () =>
+				createAuth(server.config.root, createLogger(server.config.logger)),
 		});
 
 		expect(tunnelManager.isOpen()).toBe(true);
 		tunnelManager.dispose();
 
-		namedTunnelDeferred.resolve({
-			hostnames: ["dev.example.com"],
-			token: "TOKEN",
+		const replacementPromise = tunnelManager.startTunnel({
+			origin: "http://localhost:3001",
+			name: undefined,
+			allowedMail: undefined,
+			mode: "dev",
+			allowedHosts: true,
+			accountId: "account-id",
+			complianceRegion: undefined,
+			getAuth: () =>
+				createAuth(server.config.root, createLogger(server.config.logger)),
 		});
 
 		await expect(startPromise).resolves.toBeNull();
-		expect(startTunnel).not.toHaveBeenCalled();
-		expect(tunnelManager.isOpen()).toBe(false);
+		await expect(replacementPromise).resolves.toEqual([
+			"https://example.trycloudflare.com/",
+		]);
+		expect(
+			tunnelManager.isStarted("http://localhost:3001", undefined, undefined)
+		).toBe(true);
 	});
 
 	it("logs tunnel closed only after tunnel startup begins", async ({
@@ -641,9 +745,7 @@ describe("tunnel plugin", () => {
 			hostnames: string[];
 			token: string;
 		}>();
-		vi.mocked(wrangler.unstable_resolveNamedTunnel).mockReturnValue(
-			namedTunnelDeferred.promise
-		);
+		vi.mocked(resolveNamedTunnel).mockReturnValue(namedTunnelDeferred.promise);
 
 		const server = await createServer();
 		const tunnelManager = new TunnelManager(server.config.logger);
@@ -663,10 +765,13 @@ describe("tunnel plugin", () => {
 		const startPromise = tunnelManager.startTunnel({
 			origin: "http://localhost:3000",
 			name: "my-tunnel",
+			allowedMail: undefined,
 			mode: "dev",
 			allowedHosts: true,
 			accountId: "account-id",
 			complianceRegion: undefined,
+			getAuth: () =>
+				createAuth(server.config.root, createLogger(server.config.logger)),
 		});
 
 		tunnelManager.dispose();

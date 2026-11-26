@@ -9,9 +9,11 @@ import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import {
 	AccountService,
+	ApplicationsService,
 	buildCommand,
 	cleanupBuiltImages,
 	buildContainerImages,
+	deployContainers,
 	getCloudflareContainerRegistry,
 	getContainerImageTag,
 	ImageRegistriesService,
@@ -19,12 +21,18 @@ import {
 	InstanceType,
 	pushBuiltContainerImage,
 	pushCommand,
+	pushImageIfChanged,
 	SchedulingPolicy,
 } from "../index";
 import type { BuiltContainerImage, BuiltImage } from "../src/build";
 import type { CompleteAccountCustomer } from "../src/client";
 import type { ContainerNormalizedConfig } from "../src/types";
-import type { FetchResultFetcher, Logger } from "@cloudflare/workers-utils";
+import type {
+	FetchPagedListResultFetcher,
+	FetchResultFetcher,
+	Logger,
+} from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 vi.mock("node:child_process");
 
@@ -88,7 +96,7 @@ function createBuildArgs() {
 	};
 }
 
-function createFakeChildProcess(args: string[]): ChildProcess {
+function createFakeChildProcess(args: string[], exitCode = 0): ChildProcess {
 	const child = new EventEmitter() as ChildProcess;
 	const stdout = new EventEmitter();
 	const stderr = new EventEmitter();
@@ -111,8 +119,8 @@ function createFakeChildProcess(args: string[]): ChildProcess {
 		if (args[0] === "image" && args[1] === "inspect") {
 			stdout.emit("data", inspectOutputs.shift() ?? "");
 		}
-		child.emit("exit", 0);
-		child.emit("close", 0);
+		child.emit("exit", exitCode);
+		child.emit("close", exitCode);
 	});
 
 	return child;
@@ -201,7 +209,10 @@ describe("buildCommand", () => {
 				throw new Error(`Unexpected fetchResult path: ${path}`);
 			}
 		) as FetchResultFetcher;
-		initContainersSharedContext({ logger, fetchResult: fetchResultMock });
+		initContainersSharedContext({
+			logger,
+			fetchResult: fetchResultMock,
+		});
 	});
 
 	afterEach(() => {
@@ -237,6 +248,56 @@ describe("buildCommand", () => {
 			"-",
 			dir,
 		]);
+	});
+
+	it("allows opting into zstd compression", async () => {
+		vi.stubEnv("WRANGLER_CONTAINER_IMAGE_COMPRESSION", "zstd");
+		vi.mocked(execFileSync).mockReturnValueOnce(
+			'[["driver-type","io.containerd.snapshotter.v1"]]'
+		);
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await buildCommand({
+			PATH: dir,
+			tag: args.tag,
+			pathToDocker: "docker",
+			push: false,
+		});
+		expectSpawnWith([
+			"build",
+			"--output",
+			"type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true",
+			"-t",
+			"test-app:tag",
+			"--platform",
+			"linux/amd64",
+			"--provenance=false",
+			"-f",
+			"-",
+			dir,
+		]);
+	});
+
+	it("rejects zstd compression with Docker's classic image store", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_CONTAINER_IMAGE_COMPRESSION", "zstd");
+		vi.mocked(execFileSync).mockReturnValueOnce('[["driver-type","overlay2"]]');
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: args.tag,
+				pathToDocker: "docker",
+				push: false,
+			})
+		).rejects.toThrow(
+			"Zstd compression requires Docker's containerd image store. Enable the containerd image store or unset WRANGLER_CONTAINER_IMAGE_COMPRESSION."
+		);
+		expect(spawn).not.toHaveBeenCalled();
 	});
 
 	it("tags and pushes new images, returning the pushed digest", async ({
@@ -285,6 +346,42 @@ describe("buildCommand", () => {
 		]);
 	});
 
+	it.for([0, 1])(
+		"only cleans the source tag after a successful push (exit code %s)",
+		async (exitCode, { expect }) => {
+			vi.mocked(spawn).mockImplementation((_dockerPath, args) =>
+				createFakeChildProcess(
+					Array.from(args ?? []),
+					args?.[0] === "push" ? exitCode : 0
+				)
+			);
+			const push = pushImageIfChanged({
+				pathToDocker: "docker",
+				sourceTag: "test-app:tag",
+				targetTag: "test-app:tag",
+				accountId: "some-account-id",
+				containerConfig: dockerfileContainer,
+				cleanupSourceTag: true,
+			});
+
+			if (exitCode === 0) {
+				await expect(push).resolves.toHaveProperty("remoteDigest");
+				expectSpawnWith(["image", "rm", "test-app:tag"]);
+				const commands = vi.mocked(spawn).mock.calls.map(([, args]) => args);
+				expect(commands.findIndex((args) => args?.[0] === "push")).toBeLessThan(
+					commands.findIndex(
+						(args) => args?.[0] === "image" && args[1] === "rm"
+					)
+				);
+			} else {
+				await expect(push).rejects.toThrow(
+					"Docker command exited with code: 1"
+				);
+				expectNoSpawnWith(["image", "rm", "test-app:tag"]);
+			}
+		}
+	);
+
 	it("skips pushing when the remote digest already exists", async ({
 		expect,
 	}) => {
@@ -314,6 +411,64 @@ describe("buildCommand", () => {
 		]);
 	});
 
+	it("preserves a reusable Build Output image tag across uploads", async ({
+		expect,
+	}) => {
+		const digest =
+			"registry.cloudflare.com/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+		inspectOutputs = [
+			"[]",
+			"53387881 2",
+			`["${digest}"]`,
+			`["${digest}"]`,
+			"53387881 2",
+		];
+		vi.mocked(execFileSync).mockReturnValue(
+			'{"Descriptor":{"digest":"sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}}'
+		);
+
+		for (let attempt = 0; attempt < 2; attempt++) {
+			await expect(
+				pushImageIfChanged({
+					pathToDocker: "docker",
+					sourceTag: "test-app:tag",
+					targetTag: "test-app:tag",
+					accountId: "some-account-id",
+					containerConfig: dockerfileContainer,
+					cleanupSourceTag: false,
+				})
+			).resolves.toEqual({
+				remoteDigest: `${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`,
+			});
+		}
+
+		expectNoSpawnWith(["image", "rm", "test-app:tag"]);
+		expect(
+			vi.mocked(spawn).mock.calls.filter(([, args]) => args?.[0] === "push")
+		).toHaveLength(1);
+	});
+
+	it("validates a local image against its container disk limit", async ({
+		expect,
+	}) => {
+		inspectOutputs = ["[]", "2200000000 2"];
+
+		await expect(
+			pushImageIfChanged({
+				pathToDocker: "docker",
+				sourceTag: "test-app:tag",
+				targetTag: "test-app:tag",
+				accountId: "some-account-id",
+				containerConfig: dockerfileContainer,
+				cleanupSourceTag: false,
+			})
+		).rejects.toThrow(/Image too large/);
+		expectNoSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
 	it("uses docker manifest inspect when pushed image inspect has no digest", async ({
 		expect,
 	}) => {
@@ -337,7 +492,7 @@ describe("buildCommand", () => {
 				"-v",
 				`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 			],
-			{ encoding: "utf8" }
+			{ encoding: "utf8", stdio: "pipe" }
 		);
 	});
 });
@@ -371,7 +526,10 @@ describe("deploy container image build and push", () => {
 				throw new Error(`Unexpected fetchResult path: ${path}`);
 			}
 		) as FetchResultFetcher;
-		initContainersSharedContext({ logger, fetchResult: fetchResultMock });
+		initContainersSharedContext({
+			logger,
+			fetchResult: fetchResultMock,
+		});
 	});
 
 	afterEach(() => {
@@ -400,6 +558,25 @@ describe("deploy container image build and push", () => {
 
 		await expect(
 			buildContainerImages([container, imageUriContainer], "docker", false)
+		).resolves.toStrictEqual([
+			{
+				container,
+				localTag: TEST_LOCAL_TAG,
+			},
+		]);
+	});
+
+	it("keeps the internal image tag stable", async ({ expect }) => {
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+		const container = {
+			...dockerfileContainer,
+			dockerfile: args.pathToDockerfile,
+			image_build_context: dir,
+		};
+
+		await expect(
+			buildContainerImages([container], "docker", false)
 		).resolves.toStrictEqual([
 			{
 				container,
@@ -509,7 +686,7 @@ describe("deploy container image build and push", () => {
 			TEST_LOCAL_TAG,
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 		]);
-		expectSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
+		expectNoSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
 		expectSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
@@ -525,13 +702,6 @@ describe("deploy container image build and push", () => {
 						`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 					])
 			);
-		const cleanupCallIndex = vi
-			.mocked(spawn)
-			.mock.calls.findIndex(
-				([, args]) =>
-					JSON.stringify(args) ===
-					JSON.stringify(["image", "rm", TEST_LOCAL_TAG])
-			);
 		const pushCallIndex = vi
 			.mocked(spawn)
 			.mock.calls.findIndex(
@@ -542,9 +712,42 @@ describe("deploy container image build and push", () => {
 						`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 					])
 			);
-		expect(tagCallIndex).toBeLessThan(cleanupCallIndex);
-		expect(cleanupCallIndex).toBeLessThan(pushCallIndex);
+		expect(tagCallIndex).toBeLessThan(pushCallIndex);
+		expect(builtImage.localTagCleaned).toBeUndefined();
+
+		await cleanupBuiltImages([builtImage], "docker");
+		expectSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
 		expect(builtImage.localTagCleaned).toBe(true);
+	});
+
+	it("retains a built image when its remote digest already exists", async ({
+		expect,
+	}) => {
+		const builtImage: BuiltContainerImage = {
+			container: dockerfileContainer,
+			localTag: TEST_LOCAL_TAG,
+		};
+		const digest = `${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:${"a".repeat(64)}`;
+		inspectOutputs = [JSON.stringify([digest]), "53387881 2"];
+		vi.mocked(execFileSync).mockReturnValue(
+			JSON.stringify({ Descriptor: { digest: `sha256:${"a".repeat(64)}` } })
+		);
+
+		await expect(
+			pushBuiltContainerImage(
+				builtImage,
+				"Galaxy-Class",
+				"docker",
+				"some-account-id"
+			)
+		).resolves.toEqual({ remoteDigest: digest });
+
+		expectNoSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
+		expectNoSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
+		]);
+		expect(builtImage.localTagCleaned).toBeUndefined();
 	});
 
 	it("cleans up built deployment images that were not pushed", async ({
@@ -659,13 +862,77 @@ describe("deploy container image build and push", () => {
 	});
 });
 
+describe("caller-specific container guidance", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it("uses consumer-owned config field names", async ({ expect }) => {
+		const container = {
+			...dockerfileContainer,
+			observability: {
+				logs_enabled: true,
+				target_instance_percentage: 10,
+			},
+		} satisfies ContainerNormalizedConfig;
+		const fetchPagedListResult = vi.fn(async () => [
+			{
+				id: "namespace-id",
+				class: container.class_name,
+				name: "namespace",
+				script: "worker",
+				use_sqlite: true,
+			},
+		]) as unknown as FetchPagedListResultFetcher;
+		initContainersSharedContext({
+			logger,
+			fetchResult: vi.fn() as never,
+			fetchPagedListResult,
+		});
+		vi.spyOn(ApplicationsService, "listApplications").mockResolvedValue([
+			{
+				id: "application-id",
+				name: container.name,
+				configuration: {
+					image: "registry.cloudflare.com/example/image:tag",
+					observability: { logs: { enabled: true } },
+				},
+				durable_objects: { namespace_id: "namespace-id" },
+			},
+		] as never);
+
+		await expect(
+			deployContainers(
+				{
+					containers: [container],
+					durable_objects: { bindings: [] },
+				} as unknown as Config,
+				[{ container, imageRef: { newTag: "example/image:tag" } }],
+				{
+					versionId: "version-id",
+					accountId: "account-id",
+					scriptName: "worker",
+					configFileName: "test.config.ts",
+					observabilityTargetPercentageField: "targetInstancePercentage",
+					observabilityTargetCountField: "targetInstanceCount",
+				}
+			)
+		).rejects.toThrow(
+			"Set containers[].observability.enabled = false in your test.config.ts and deploy once, then deploy again with targetInstancePercentage or targetInstanceCount."
+		);
+	});
+});
+
 describe("buildCommand arguments", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		tempDirs = [];
 		inspectOutputs = [];
 		mockDockerProcesses();
-		initContainersSharedContext({ logger, fetchResult: vi.fn() });
+		initContainersSharedContext({
+			logger,
+			fetchResult: vi.fn(),
+		});
 	});
 
 	afterEach(() => {
@@ -701,6 +968,52 @@ describe("buildCommand arguments", () => {
 			"-",
 			dir,
 		]);
+	});
+
+	it("builds for linux/arm64", async ({ expect }) => {
+		const { dir } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: "test-app:tag",
+				pathToDocker: "docker",
+				push: false,
+				platform: "linux/arm64",
+			})
+		).resolves.toBeUndefined();
+
+		expectSpawnWith([
+			"build",
+			"--load",
+			"-t",
+			"test-app:tag",
+			"--platform",
+			"linux/arm64",
+			"--provenance=false",
+			"-f",
+			"-",
+			dir,
+		]);
+	});
+
+	it("rejects unsupported platforms", async ({ expect }) => {
+		const { dir } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: "test-app:tag",
+				pathToDocker: "docker",
+				push: false,
+				platform: "linux/386",
+			})
+		).rejects.toThrow(
+			'Unsupported platform: Platform "linux/386" is unsupported. Please use "linux/amd64" or "linux/arm64" instead.'
+		);
+		expect(spawn).not.toHaveBeenCalled();
 	});
 
 	it("falls back to WRANGLER_DOCKER_BIN when no Docker path is provided", async ({
@@ -805,15 +1118,31 @@ describe("pushCommand", () => {
 		]);
 	});
 
-	it("rejects unsupported image platforms", async ({ expect }) => {
+	it("pushes linux/arm64 images", async () => {
 		inspectOutputs = ["linux/arm64"];
+
+		await pushCommand(
+			{ TAG: "test-app:tag", pathToDocker: "docker" },
+			"some-account-id"
+		);
+
+		expectSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
+	it("rejects unsupported image platforms", async ({ expect }) => {
+		inspectOutputs = ["linux/386"];
 
 		await expect(
 			pushCommand(
 				{ TAG: "test-app:tag", pathToDocker: "docker" },
 				"some-account-id"
 			)
-		).rejects.toThrow("Unsupported platform");
+		).rejects.toThrow(
+			"Unsupported platform: Image platform (linux/386) is not linux/amd64 or linux/arm64"
+		);
 		expectNoSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,

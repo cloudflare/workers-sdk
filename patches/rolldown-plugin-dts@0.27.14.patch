@@ -1,0 +1,13 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 56fe487103a0cbb35b2657f184368111bc214ca9..6979fcde77321f656b13c1f1c698014d2fc1b658 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1023,7 +1023,7 @@ function isReferenceId(node) {
+ 	return is.oneOf(node, ["Identifier", "MemberExpression"]);
+ }
+ function isHelperImport(node) {
+-	return node.type === "ImportDeclaration" && node.specifiers.length && node.specifiers.every((spec) => spec.type === "ImportSpecifier" && spec.imported.type === "Identifier" && ["__exportAll", "__reExport"].includes(spec.local.name));
++	return node.type === "ImportDeclaration" && node.specifiers.length && node.specifiers.every((spec) => spec.type === "ImportSpecifier" && spec.imported.type === "Identifier" && ["__exportAll", "__reExport", "__name"].includes(spec.local.name));
+ }
+ /**
+ * patch `.d.ts` suffix in import source to `.js`

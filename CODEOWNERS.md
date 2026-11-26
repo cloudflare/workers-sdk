@@ -6,7 +6,7 @@ This repository uses [Codeowners Plus](https://github.com/multimediallc/codeowne
 
 ### Overview
 
-When a PR is opened, updated, or reviewed, the Codeowners Plus GitHub Action runs. It reads `.codeowners` and `codeowners.toml` from the **base branch** (not the PR), evaluates the ownership rules, and:
+When a PR is opened, updated, or reviewed, the Codeowners Plus GitHub Action runs. It reads `.codeowners` and `codeowners.toml` from the PR's **immediate base commit**, evaluates the ownership rules, and:
 
 - Posts a PR comment listing which teams need to approve
 - Requests reviews from those teams
@@ -48,7 +48,7 @@ PR opened/updated/reviewed
 | Multiple teams on a path | **OR** — any one team can approve | **AND** via `&` prefix — all listed teams must approve                          |
 | Path matching for `*.js` | Matches anywhere in repo          | Matches only in the `.codeowners` file's directory; use `**/*.js` for recursive |
 | Per-directory config     | Single file only                  | `.codeowners` file in any directory (rules are relative to that directory)      |
-| Stale review dismissal   | All-or-nothing                    | Smart — only dismisses when reviewer's owned files change                       |
+| Stale review dismissal   | All-or-nothing                    | Smart — only dismisses when reviewer's owned files change (disabled here)       |
 | Optional reviewers       | Not supported                     | `?` prefix — CC without blocking                                                |
 
 ## Configuration Files
@@ -88,7 +88,7 @@ This exists only so that GitHub branch protection can gate merging on the bot's 
 
 A single workflow handles PR events (`pull_request_target`). When reviews are submitted or dismissed, the `rerun-codeowners.yml` / `rerun-codeowners-privileged.yml` workflow pair re-runs the check (using the `workflow_run` pattern so it works for fork PRs too).
 
-Using `pull_request_target` (not `pull_request`) ensures the workflow has access to secrets for **fork PRs**. The checkout is always the base branch, so PR authors cannot modify ownership rules.
+Using `pull_request_target` (not `pull_request`) ensures the workflow has access to secrets for **fork PRs**. GitHub runs the workflow from the base repository's default branch. Codeowners Plus reads ownership rules from the PR's immediate base commit, which may be a parent feature branch for stacked PRs. The PR head is never checked out or executed.
 
 ## Common Scenarios
 
@@ -134,7 +134,7 @@ Repository admins can bypass all requirements by submitting an **approval review
 
 ### Fork PRs
 
-Fork PRs are fully supported. The workflow uses `pull_request_target` to run in the base repo context with access to secrets. The base branch is checked out (so ownership rules come from the protected branch), and the PR head is fetched as git objects only for diff computation. No fork code is executed.
+Fork PRs are fully supported. The workflow uses `pull_request_target` to run from the base repository's default branch with access to secrets. Codeowners Plus reads ownership rules from the PR's immediate base commit, and the PR head is fetched as git objects only for diff computation. No fork code is executed.
 
 ## Adding a New Product Team
 
@@ -162,9 +162,11 @@ R2, Queues, AI, Hyperdrive, Vectorize, Pipelines, SSL/Secrets Store, WVPC.
 
 ## Stale Review Handling
 
-Codeowners Plus uses **smart dismissal**: when new commits are pushed to a PR, it only dismisses an approval if the files owned by that reviewer were changed. This avoids the frustration of GitHub's all-or-nothing stale review dismissal.
+Codeowners Plus supports **smart dismissal** (only dismissing an approval when files owned by that reviewer change), but this repo disables it with `disable_smart_dismissal = true` in `codeowners.toml`. Human approvals are therefore never dismissed when new commits are pushed.
 
-For this to work, the branch protection setting **"Dismiss stale pull request approvals when new commits are pushed"** must be **disabled**. Codeowners Plus handles dismissal itself.
+The branch protection setting **"Dismiss stale pull request approvals when new commits are pushed"** must also stay **disabled**, otherwise GitHub would dismiss every approval on each push.
+
+With smart dismissal disabled, Codeowners Plus also never withdraws its own approval. To stop an earlier bot approval (for example, one given while the PR briefly had no diff) from letting a PR merge after changes that need codeowner review are pushed, the **"Dismiss Stale Bot Approval"** step in `.github/workflows/codeowners.yml` runs after every check. If Codeowners Plus reports that reviews are no longer satisfied, the step dismisses any approvals from the `@workers-devprod` account with the message "Codeowners reviews no longer satisfied". The bot approves again once the required codeowner reviews are in.
 
 ## Troubleshooting
 

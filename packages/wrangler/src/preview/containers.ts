@@ -4,6 +4,7 @@ import {
 	buildAndMaybePush,
 	initContainersSharedContext,
 	listDurableObjects,
+	pushImageIfChanged,
 } from "@cloudflare/containers-shared";
 import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
@@ -17,7 +18,8 @@ import type {
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
 import type { DeploymentResource } from "@cloudflare/deploy-helpers";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Confirm the API token carries the `containers` scope. `applyPreviewContainers`
@@ -48,14 +50,15 @@ export async function deployPreviewContainers(
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource,
 	accountId: string,
-	options: { quiet: boolean }
+	options: { quiet: boolean; localImageReferences?: Map<string, string> }
 ): Promise<void> {
 	if (!options.quiet) {
 		return applyPreviewContainers(
 			scopedConfig,
 			normalisedContainerConfig,
 			deployment,
-			accountId
+			accountId,
+			options.localImageReferences
 		);
 	}
 
@@ -73,7 +76,8 @@ export async function deployPreviewContainers(
 				scopedConfig,
 				normalisedContainerConfig,
 				deployment,
-				accountId
+				accountId,
+				options.localImageReferences
 			)
 		);
 	} finally {
@@ -95,19 +99,23 @@ async function applyPreviewContainers(
 	scopedConfig: Config,
 	normalisedContainerConfig: ContainerNormalizedConfig[],
 	deployment: DeploymentResource,
-	accountId: string
+	accountId: string,
+	localImageReferences: Map<string, string> | undefined
 ): Promise<void> {
-	initContainersSharedContext({ logger, fetchPagedListResult, fetchResult });
+	initContainersSharedContext({
+		logger,
+		fetchPagedListResult,
+		fetchResult,
+	});
 	await fillOpenAPIConfiguration(scopedConfig, containersScope);
 	const dockerPath = getDockerPath();
 
-	// Skip bindings carrying `script_name`. Those name a Durable Object
-	// implemented by another Worker, which owns its own container application,
-	// so their namespace belongs to that Worker. A preview may bind the same
-	// class name both locally and cross-script, and since this map is keyed on
-	// class name alone, an unfiltered cross-script entry could overwrite the
-	// preview's own namespace_id and attach the container to the wrong storage.
-	// `wrangler deploy` applies the same restriction.
+	// Skip bindings carrying `script_name`, including the parent Worker's name:
+	// those target deployed namespaces rather than this preview's isolated
+	// namespace. A preview may bind the same class name both locally and
+	// cross-script, and since this map is keyed on class name alone, an unfiltered
+	// cross-script entry could overwrite the preview's own namespace_id and
+	// attach the container to the wrong storage.
 	const classNameToNamespaceId = new Map<string, string>();
 	for (const binding of Object.values(deployment.env ?? {})) {
 		if (
@@ -149,7 +157,19 @@ async function applyPreviewContainers(
 		}
 
 		let imageRef;
-		if ("dockerfile" in container) {
+		const localImageReference = localImageReferences?.get(container.class_name);
+		if (localImageReference !== undefined) {
+			imageRef = await pushImageIfChanged({
+				pathToDocker: dockerPath,
+				sourceTag: localImageReference,
+				targetTag: localImageReference,
+				accountId,
+				complianceConfig: scopedConfig,
+				containerConfig: container,
+				// Build Output can be uploaded again without rebuilding the image.
+				cleanupSourceTag: false,
+			});
+		} else if ("dockerfile" in container) {
 			// Docker rejects uppercase characters in an image repository name, and
 			// a preview application name embeds the Durable Object class name
 			// verbatim, which is conventionally PascalCase. Lowercase the name for
@@ -172,7 +192,13 @@ async function applyPreviewContainers(
 		}
 
 		await apply(
-			{ imageRef, durable_object_namespace_id: namespaceId },
+			{
+				imageRef,
+				durable_object_namespace_id: namespaceId,
+				configFileName: "Wrangler config",
+				observabilityTargetPercentageField: "target_instance_percentage",
+				observabilityTargetCountField: "target_instance_count",
+			},
 			container,
 			scopedConfig,
 			accountId

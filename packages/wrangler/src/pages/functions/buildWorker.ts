@@ -14,8 +14,8 @@ import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { CfModule, Entry } from "@cloudflare/workers-utils";
+import type { NodeJSCompatMode } from "@cloudflare/workers-utils/node-compat";
 import type { Plugin } from "esbuild";
-import type { NodeJSCompatMode } from "miniflare";
 
 export type Options = {
 	routesModule: string;

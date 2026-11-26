@@ -19,6 +19,7 @@ import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
 import { getScriptName } from "../utils/getScriptName";
+import { resolveDurableObjectsCodeUpdateStrategy } from "../versions/deployment-args";
 import { getEntry } from "./entry";
 import { applyZoneArgsToRoutes } from "./route-zone-args";
 import type { HandlerArgs } from "../core/types";
@@ -33,7 +34,7 @@ import type {
 } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions } from "@cloudflare/workers-utils";
 import type { EphemeralDirectory } from "@cloudflare/workers-utils";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 type SharedArgs = HandlerArgs<typeof sharedDeployVersionsArgs>;
 
@@ -146,7 +147,7 @@ export async function mergeDeployConfigArgs(
 		? applyZoneArgsToRoutes(args.routes, args)
 		: (config.routes ?? (config.route ? [config.route] : []));
 	const normalizedContainerConfig = await getNormalizedContainerOptions(
-		config,
+		{ ...config, name: shared.name },
 		{
 			containersRollout: args.containersRollout,
 			dryRun: shared.dryRun,
@@ -169,6 +170,10 @@ export async function mergeDeployConfigArgs(
 			dispatchNamespace: args.dispatchNamespace,
 			oldAssetTtl: args.oldAssetTtl,
 			containersRollout: args.containersRollout,
+			durableObjectsCodeUpdateStrategy: resolveDurableObjectsCodeUpdateStrategy(
+				args.durableObjectsCodeUpdateMode,
+				config.durable_objects.code_update_strategy
+			),
 			containers: {
 				...shared.containers,
 				standard: {

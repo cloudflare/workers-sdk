@@ -1,6 +1,6 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
 import type { NamedArgDefinitions } from "../core/types";
-import type { Route } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 /**
  * CLI args that attach a zone to the routes passed via `--route`.

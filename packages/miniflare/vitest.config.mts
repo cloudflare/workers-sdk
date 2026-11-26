@@ -1,5 +1,6 @@
 import path from "node:path";
 import { defineConfig } from "vitest/config";
+import { getVitestShard } from "../../tools/test/vitest-shard.cjs";
 
 export default defineConfig({
 	test: {
@@ -7,7 +8,12 @@ export default defineConfig({
 		testTimeout: 30_000,
 		hookTimeout: 30_000,
 		pool: "forks",
-		maxWorkers: 1,
+		// workerd's CI runs this suite against its own builds with this same
+		// setting, so keep the worker count fixed rather than scaling it with
+		// the runner's cores.
+		maxWorkers: 4,
+		// Vitest reads `shard` from inline test config but only types it as a CLI option.
+		...{ shard: getVitestShard() },
 		include: ["test/**/*.spec.ts"],
 		setupFiles: [path.resolve(import.meta.dirname, "test/setup.mjs")],
 		globals: true,

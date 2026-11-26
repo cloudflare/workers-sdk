@@ -10,6 +10,7 @@
 		"worker-https",
 		"worker-postgres",
 		"worker-process",
+		"worker-process-populated-env",
 		"worker-random",
 		"worker-resolve-externals"
 	]

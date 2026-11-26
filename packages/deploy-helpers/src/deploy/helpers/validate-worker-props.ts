@@ -1,14 +1,17 @@
 import assert from "node:assert";
 import {
-	configFileName,
 	DEFAULT_COMPAT_DATE,
-	experimental_patchConfig,
-	formatConfigSnippet,
-	isDurableObjectContainerApp,
 	isNonInteractiveOrCI,
 	UserError,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	experimental_patchConfig,
+	formatConfigSnippet,
+	isDurableObjectContainerApp,
+} from "@cloudflare/workers-utils/config";
 import { confirm, fetchResult, logger } from "../../shared/context";
+import { partitionRoutes } from "../../shared/partition-routes";
 import {
 	getSubdomainValues,
 	validateEventTriggerTargets,
@@ -21,6 +24,7 @@ import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import { getDeployConfirmFunction } from "./deploy-confirm";
 import { downloadWorkerConfig } from "./download-worker-config";
 import { verifyWorkerMatchesCITag } from "./match-tag";
+import { validateOwnedWorkflowDeclarations } from "./owned-workflows";
 import { validateRoutes } from "./validate-routes";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
@@ -28,7 +32,11 @@ import type {
 	DeployProps,
 	VersionsUploadProps,
 } from "../../shared/types";
-import type { AssetsOptions, RawConfig } from "@cloudflare/workers-utils";
+import type {
+	AssetsOptions,
+	ServiceMetadataRes,
+} from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /**
  *
@@ -64,7 +72,7 @@ export function validateWorkerProps<T extends ValidateWorkerPropsInput>(
 	if (!compatibilityDate) {
 		const compatibilityDateStr = DEFAULT_COMPAT_DATE;
 		throw new UserError(
-			`A compatibility_date is required when uploading a Worker. Add the following to your ${configFileName(config.configPath)} file:
+			`A compatibility_date is required when uploading a Worker. Add the following to your ${configFileName(config.configPath, config.userConfigPath)} file:
     \`\`\`
     ${formatConfigSnippet({ compatibility_date: compatibilityDateStr }, config.configPath, false)}
     \`\`\`
@@ -88,21 +96,28 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 	if (config.text_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			`You cannot configure [text_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath, config.userConfigPath)} file`,
 			{ telemetryMessage: "text_blobs with es module worker" }
 		);
 	}
 
 	if (config.data_blobs && format === "modules") {
 		throw new UserError(
-			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath)} file`,
+			`You cannot configure [data_blobs] with an ES module worker. Instead, import the file directly in your code, and optionally configure \`[rules]\` in your ${configFileName(config.configPath, config.userConfigPath)} file`,
 			{ telemetryMessage: "data_blobs with es module worker" }
 		);
 	}
 
+	validateOwnedWorkflowDeclarations(config, name);
+
 	if (props.command === "deploy") {
 		validateEventTriggerTargets(config, name);
-		validateRoutes(props.routes, props.assetsOptions);
+		const workersDevEnabled = getSubdomainValues(
+			config.workers_dev,
+			config.preview_urls,
+			props.routes
+		).workers_dev;
+		validateRoutes(props.routes, props.assetsOptions, workersDevEnabled);
 		assert(
 			!config.site || config.site.bucket,
 			"A [site] definition requires a `bucket` field with a path to the site's assets directory."
@@ -146,7 +161,8 @@ export type PreUploadApiChecksResult = {
  */
 export async function preUploadApiChecks(
 	props: DeployProps | VersionsUploadProps,
-	config: ContainerlessConfig
+	config: ContainerlessConfig,
+	queueCreateCommand: (queueName: string) => string
 ): Promise<PreUploadApiChecksResult> {
 	const { accountId, name } = props;
 
@@ -163,6 +179,7 @@ export async function preUploadApiChecks(
 
 	const deployConfirm = getDeployConfirmFunction({
 		strictMode: props.strict,
+		strictModeAbortMessage: props.strictModeAbortMessage,
 	});
 
 	// TODO: warn if git/hg has uncommitted changes
@@ -190,21 +207,18 @@ export async function preUploadApiChecks(
 		}
 	} else {
 		try {
-			const serviceMetaData = await fetchResult<{
-				default_environment: {
-					environment: string;
-					script: {
-						tag: string;
-						tags: string[] | null;
-						last_deployed_from: "dash" | "api";
-					};
-				};
-			}>(config, `/accounts/${accountId}/workers/services/${name}`);
+			const serviceMetaData = await fetchResult<ServiceMetadataRes>(
+				config,
+				`/accounts/${accountId}/workers/services/${name}`
+			);
 			const {
 				default_environment: { script },
 			} = serviceMetaData;
-			workerTag = script.tag;
-			tags = script.tags ?? tags;
+			workerExists = Boolean(script);
+			if (script) {
+				workerTag = script.tag;
+				tags = script.tags ?? tags;
+			}
 
 			// This non-interactive deploy could not prove the local project owns
 			// the target Worker name (no config file names it, and the name was
@@ -216,17 +230,26 @@ export async function preUploadApiChecks(
 			// propagates.
 			if (props.command === "deploy" && props.failIfWorkerNameTaken) {
 				throw new UserError(
-					`A Worker named "${name}" already exists in your account. This deploy could not confirm that it should update that Worker, so it stopped instead of overwriting it. To update the existing Worker, add a Wrangler configuration file naming "${name}"; to deploy separately, use a different name.`,
+					`A Worker named "${name}" already exists in your account. This deploy could not confirm that it should update that Worker, so it stopped instead of overwriting it. To update the existing Worker, add a ${configFileName(config.configPath, config.userConfigPath)} that names "${name}"; to deploy separately, use a different name.`,
 					{ telemetryMessage: "deploy unverified worker name already exists" }
 				);
 			}
 
-			if (script.last_deployed_from === "dash") {
+			if (script?.last_deployed_from === "dash") {
+				// Trigger configuration is only changed by `deploy`, and only for
+				// route categories present in the local configuration. Avoid requiring
+				// unrelated route permissions just to compare versioned settings.
+				const { routesOnly, customDomainsOnly } = partitionRoutes(
+					props.command === "deploy" ? props.routes : []
+				);
 				const remoteWorkerConfig = await downloadWorkerConfig(
+					config,
 					name,
 					serviceMetaData.default_environment.environment,
 					props.entry.file,
-					accountId
+					accountId,
+					routesOnly.length > 0,
+					customDomainsOnly.length > 0
 				);
 
 				const configForDiff =
@@ -277,7 +300,7 @@ export async function preUploadApiChecks(
 						return { workerTag, tags, workerExists, aborted: true };
 					}
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (script?.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to upload a Worker that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);
@@ -286,17 +309,17 @@ export async function preUploadApiChecks(
 				}
 			}
 		} catch (e) {
-			if (isWorkerNotFoundError(e)) {
-				if (props.command === "versions upload") {
-					throw new UserError(
-						"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first.",
-						{ telemetryMessage: "versions upload worker not found" }
-					);
-				}
-				workerExists = false;
-			} else {
+			if (!isWorkerNotFoundError(e)) {
 				throw e;
 			}
+			workerExists = false;
+		}
+
+		if (!workerExists && props.command === "versions upload") {
+			throw new UserError(
+				"You cannot upload a new version of a Worker that does not yet exist. Please run the `deploy` command first.",
+				{ telemetryMessage: "versions upload worker not found" }
+			);
 		}
 	}
 
@@ -313,14 +336,12 @@ export async function preUploadApiChecks(
 		}
 	}
 
-	if (config.workflows?.length) {
-		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
+	const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
 
-		if (workflowCheck.hasConflicts) {
-			logger.warn(workflowCheck.message);
-			if (!(await deployConfirm("Do you want to continue?"))) {
-				return { workerTag, tags, workerExists, aborted: true };
-			}
+	if (workflowCheck.hasConflicts) {
+		logger.warn(workflowCheck.message);
+		if (!(await deployConfirm("Do you want to continue?"))) {
+			return { workerTag, tags, workerExists, aborted: true };
 		}
 	}
 
@@ -328,7 +349,8 @@ export async function preUploadApiChecks(
 		config,
 		accountId,
 		!props.resourcesProvision,
-		name
+		name,
+		queueCreateCommand
 	);
 
 	// Resolve whether this deploy will actually publish to workers.dev, using

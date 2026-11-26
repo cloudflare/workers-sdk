@@ -1,9 +1,11 @@
 import { getZoneForRoute, getZoneIdFromHost } from "@cloudflare/deploy-helpers";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { fetchListResult } from "./cfetch";
 import { levenshteinDistance } from "./utils/levenshtein";
 import type { ZoneIdCache } from "@cloudflare/deploy-helpers";
-import type { ComplianceConfig, Route } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 export {
 	getHostFromRoute,

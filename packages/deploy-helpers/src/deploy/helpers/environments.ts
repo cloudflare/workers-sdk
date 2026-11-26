@@ -2,8 +2,9 @@ import {
 	ENVIRONMENT_TAG_PREFIX,
 	SERVICE_TAG_PREFIX,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { logger } from "../../shared/context";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export function hasDefinedEnvironments(config: Config) {
 	return Boolean(config.definedEnvironments?.length);
@@ -16,7 +17,7 @@ export function applyServiceAndEnvironmentTags(config: Config, tags: string[]) {
 
 	if (shouldApplyTags && !serviceName) {
 		logger.warn(
-			"No top-level `name` has been defined in Wrangler configuration. Add a top-level `name` to group this Worker together with its sibling environments in the Cloudflare dashboard."
+			`No top-level \`name\` has been defined in your ${configFileName(config.configPath, config.userConfigPath)}. Add a top-level \`name\` to group this Worker together with its sibling environments in the Cloudflare dashboard.`
 		);
 	}
 

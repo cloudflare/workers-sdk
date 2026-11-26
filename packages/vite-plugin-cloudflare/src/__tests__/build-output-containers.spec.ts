@@ -1,87 +1,75 @@
-import { InputContainerSchema } from "@cloudflare/config";
+import * as fs from "node:fs";
+import { getContainerDir } from "@cloudflare/build-output-utils";
 import { buildAndWriteContainerOutput } from "@cloudflare/containers-shared";
-import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { buildOutputContainers } from "../build-output-containers";
-import type { ResolvedPluginConfig } from "../plugin-config";
+import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
+import { createBuilder } from "vite";
+import { beforeEach, test, vi } from "vitest";
+import { cloudflare } from "../index";
 
-vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
-	const actual =
-		await importOriginal<typeof import("@cloudflare/containers-shared")>();
-	return {
-		...actual,
-		buildAndWriteContainerOutput: vi.fn(),
-	};
+vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
+	...(await importOriginal()),
+	buildAndWriteContainerOutput: vi.fn(),
+}));
+
+runInTempDir();
+
+beforeEach(() => {
+	vi.mocked(buildAndWriteContainerOutput).mockClear();
+	fs.writeFileSync(
+		"cloudflare.config.ts",
+		`export default { worker: {
+			name: "build-output-containers",
+			entrypoint: "./worker.ts",
+			compatibilityDate: "2024-12-30",
+		} };`
+	);
+	fs.writeFileSync(
+		"worker.ts",
+		`export default { fetch() { return new Response("ok"); } };`
+	);
 });
 
-describe("buildOutputContainers", () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	afterEach(() => {
-		vi.unstubAllEnvs();
-	});
-
-	it("does nothing when experimental Build Output is disabled", async ({
-		expect,
-	}) => {
-		await buildOutputContainers(createResolvedConfig(false), "/project");
-
-		expect(buildAndWriteContainerOutput).not.toHaveBeenCalled();
-	});
-
-	it("builds and writes Container output when enabled", async ({ expect }) => {
-		vi.stubEnv("WRANGLER_DOCKER_BIN", "/usr/bin/docker");
-		const container = InputContainerSchema.parse({
-			name: "api-container",
-			image: { dockerfile: "./container/Dockerfile" },
-		});
-		const containers = [container];
-
-		await buildOutputContainers(
-			createResolvedConfig(true, { containers }),
-			"/project"
-		);
-
-		expect(buildAndWriteContainerOutput).toHaveBeenCalledOnce();
-		expect(buildAndWriteContainerOutput).toHaveBeenCalledWith({
-			containers,
-			root: "/project",
-			pathToDocker: "/usr/bin/docker",
-		});
-	});
-
-	it("propagates Container output failures", async ({ expect }) => {
-		vi.mocked(buildAndWriteContainerOutput).mockRejectedValueOnce(
-			new Error("build failed")
-		);
-
-		await expect(
-			buildOutputContainers(createResolvedConfig(true), "/project")
-		).rejects.toThrow("build failed");
-	});
-});
-
-function createResolvedConfig(
-	cfBuildOutput: boolean,
-	parsedNewConfig = {
-		containers: [
-			InputContainerSchema.parse({
-				name: "api-container",
-				image: { reference: "registry.example.com/api:latest" },
-			}),
-		],
-	}
-): ResolvedPluginConfig {
-	return {
-		type: "workers",
-		experimental: {
-			headersAndRedirectsDevModeSupport: false,
-			newConfig: {
-				cfBuildOutput,
-				types: { generate: true, includeRuntime: true },
-			},
+async function buildFixture() {
+	const builder = await createBuilder(
+		{
+			root: process.cwd(),
+			configFile: false,
+			logLevel: "silent",
+			plugins: [cloudflare({ types: { generate: false } })],
 		},
-		parsedNewConfig,
-	} as unknown as ResolvedPluginConfig;
+		null
+	);
+	await builder.buildApp();
 }
+
+test("reports that the previous output had no Containers so the build does not look up stale image tags", async ({
+	expect,
+}) => {
+	await buildFixture();
+
+	expect(buildAndWriteContainerOutput).toHaveBeenCalledOnce();
+	expect(buildAndWriteContainerOutput).toHaveBeenCalledWith(
+		expect.objectContaining({
+			containers: [],
+			previousOutputHadContainers: false,
+		})
+	);
+});
+
+test("reports Container output left by a previous build before cleaning it", async ({
+	expect,
+}) => {
+	const previousContainerDir = getContainerDir(process.cwd(), "old-api");
+	fs.mkdirSync(previousContainerDir, { recursive: true });
+
+	await buildFixture();
+
+	expect(fs.existsSync(previousContainerDir)).toBe(false);
+	expect(buildAndWriteContainerOutput).toHaveBeenCalledOnce();
+	expect(buildAndWriteContainerOutput).toHaveBeenCalledWith(
+		expect.objectContaining({
+			containers: [],
+			previousOutputHadContainers: true,
+		})
+	);
+});

@@ -1,4 +1,6 @@
 import * as z from "zod";
+import { WORKFLOW_JURISDICTIONS } from "./exports";
+import { ARTIFACTS_EVENT_TYPES } from "./workflow-events";
 import type { SendEmailBinding, VpcNetworkBinding } from "./bindings";
 import type { Settings } from "./types";
 import type { ContainerConfig, WorkerConfig } from "./types";
@@ -19,11 +21,17 @@ export const AssetsSchema = z.strictObject({
 	notFoundHandling: z
 		.enum(["single-page-application", "404-page", "none"])
 		.optional(),
+	basePath: z.string().optional(),
 	runWorkerFirst: z.union([z.array(z.string()), z.boolean()]).optional(),
 });
 
 export const BrowserBindingSchema = z.strictObject({
 	type: z.literal("browser"),
+	dev: RemoteBindingDevSchema.optional(),
+});
+
+export const AnalyticsSqlBindingSchema = z.strictObject({
+	type: z.literal("analytics-sql"),
 	dev: RemoteBindingDevSchema.optional(),
 });
 
@@ -35,18 +43,54 @@ export const WorkerBindingSchema = z.strictObject({
 	dev: RemoteBindingDevSchema.optional(),
 });
 
+export const WorkflowBindingSchema = z.strictObject({
+	type: z.literal("workflow"),
+	name: z.string(),
+	worker: z.string(),
+	exportName: z.string(),
+});
+
 export const D1BindingSchema = z.strictObject({
 	type: z.literal("d1"),
 	name: z.string().optional(),
 	id: z.string().optional(),
+	jurisdiction: z.string().optional(),
 	dev: RemoteBindingDevSchema.optional(),
 });
 
-export const KVBindingSchema = z.strictObject({
+export const KvBindingSchema = z.strictObject({
 	type: z.literal("kv"),
 	id: z.string().optional(),
 	// TODO: name support not yet implemented
 	// name: z.string().optional(),
+	dev: RemoteBindingDevSchema.optional(),
+});
+
+/**
+ * A field that was renamed. It accepts no value, so setting it fails with a
+ * message that names its replacement instead of a generic unknown-key error.
+ */
+function renamedFieldSchema(message: string) {
+	return z.never({ error: message }).optional();
+}
+
+const PipelineBindingSchema = z.strictObject({
+	type: z.literal("pipeline"),
+	// Listed first so its error comes before the missing "streamId" error.
+	name: renamedFieldSchema(
+		'"name" was renamed to "streamId". Set "streamId" to the ID of the Pipelines stream, not its name.'
+	),
+	streamId: z.string(),
+	dev: RemoteBindingDevSchema.optional(),
+});
+
+const K2BindingSchema = z.strictObject({
+	type: z.literal("k2"),
+	// Listed first so its error comes before the missing "id" error.
+	stream: renamedFieldSchema(
+		'"stream" was renamed to "id". Set "id" to the ID of the K2 stream.'
+	),
+	id: z.string(),
 	dev: RemoteBindingDevSchema.optional(),
 });
 
@@ -75,6 +119,7 @@ export const R2BindingSchema = z.strictObject({
 export const AnalyticsEngineDatasetBindingSchema = z.strictObject({
 	type: z.literal("analytics-engine-dataset"),
 	name: z.string().optional(),
+	dev: RemoteBindingDevSchema.optional(),
 });
 
 export const FlagshipBindingSchema = z.strictObject({
@@ -83,10 +128,18 @@ export const FlagshipBindingSchema = z.strictObject({
 	dev: RemoteBindingDevSchema.optional(),
 });
 
+export const RealtimeKitBindingSchema = z.strictObject({
+	type: z.literal("realtime-kit"),
+	id: z.string(),
+	dev: RemoteBindingDevSchema.optional(),
+});
+
 export const HyperdriveBindingSchema = z.strictObject({
 	type: z.literal("hyperdrive"),
 	id: z.string(),
-	dev: z.strictObject({ connectionString: z.string().optional() }).optional(),
+	dev: RemoteBindingDevSchema.extend({
+		connectionString: z.string().optional(),
+	}).optional(),
 });
 
 export const KnownBindingSchema = z.discriminatedUnion("type", [
@@ -117,6 +170,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 	}),
 	z.strictObject({ type: z.literal("assets") }),
 	BrowserBindingSchema,
+	AnalyticsSqlBindingSchema,
 	D1BindingSchema,
 	z.strictObject({
 		type: z.literal("dispatch-namespace"),
@@ -135,13 +189,14 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		exportName: z.string(),
 	}),
 	FlagshipBindingSchema,
+	RealtimeKitBindingSchema,
 	HyperdriveBindingSchema,
 	z.strictObject({
 		type: z.literal("images"),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
 	z.strictObject({ type: z.literal("json"), value: z.json() }),
-	KVBindingSchema,
+	KvBindingSchema,
 	z.strictObject({ type: z.literal("logfwdr"), destination: z.string() }),
 	z.strictObject({
 		type: z.literal("media"),
@@ -152,11 +207,8 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		id: z.string(),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
-	z.strictObject({
-		type: z.literal("pipeline"),
-		name: z.string(),
-		dev: RemoteBindingDevSchema.optional(),
-	}),
+	PipelineBindingSchema,
+	K2BindingSchema,
 	QueueBindingSchema,
 	z.strictObject({
 		type: z.literal("rate-limit"),
@@ -206,6 +258,16 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		id: z.string(),
 		dev: RemoteBindingDevSchema.optional(),
 	}),
+	z.strictObject({
+		type: z.literal("oidc-token"),
+		// The same rule as Wrangler's validation and the API: printable ASCII, no whitespace.
+		audience: z
+			.string()
+			.min(1)
+			.max(2048)
+			.regex(/^[\x21-\x7e]+$/),
+		alg: z.enum(["ES256", "RS256"]).optional(),
+	}),
 	z
 		.strictObject({
 			type: z.literal("vpc-network"),
@@ -230,12 +292,7 @@ export const KnownBindingSchema = z.discriminatedUnion("type", [
 		),
 	WorkerBindingSchema,
 	z.strictObject({ type: z.literal("worker-loader") }),
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	worker: z.string(),
-	// 	exportName: z.string(),
-	// }),
+	WorkflowBindingSchema,
 ]);
 
 export const UnsafeBindingSchema = z.looseObject({
@@ -291,10 +348,11 @@ const CacheSchema = z.strictObject({
 /**
  * Binding types that can only be defined once per worker.
  */
-const SINGLETON_BINDING_TYPES = new Set([
+export const SINGLETON_BINDING_TYPES: ReadonlySet<string> = new Set([
 	"ai",
 	"assets",
 	"browser",
+	"analytics-sql",
 	"images",
 	"media",
 	"stream",
@@ -349,12 +407,12 @@ const ContainerImageLocalReferenceSchema = z.strictObject({
 	localReference: z.string().min(1),
 });
 
-const InputContainerImageSchema = z.union([
+const ContainerImageSchema = z.union([
 	ContainerImageDockerfileSchema,
 	ContainerImageReferenceSchema,
 ]);
 
-const OutputContainerImageSchema = z.union([
+const BuildOutputContainerImageSchema = z.union([
 	ContainerImageReferenceSchema,
 	ContainerImageLocalReferenceSchema,
 ]);
@@ -450,11 +508,20 @@ const StandardContainerObservabilitySchema = z.union([
 const BaseContainerSchema = z.strictObject({
 	name: z.string().min(1),
 	unsafe: z.record(z.string(), z.unknown()).optional(),
+	ssh: z
+		.strictObject({
+			enabled: z.boolean(),
+			port: z.number().int().min(1).max(65_535).optional(),
+		})
+		.optional(),
+	authorizedKeys: z
+		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
+		.optional(),
 });
 
 const StandardContainerBaseSchema = BaseContainerSchema.extend({
 	observability: StandardContainerObservabilitySchema.optional(),
-	maxInstances: z.number().int().nonnegative().default(20),
+	maxInstances: z.number().int().nonnegative().optional(),
 	instanceType: z
 		.union([
 			z.enum([
@@ -473,15 +540,6 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 		])
 		.optional(),
 	schedulingPolicy: z.enum(["default", "regional"]).optional(),
-	ssh: z
-		.strictObject({
-			enabled: z.boolean(),
-			port: z.number().int().min(1).max(65_535).optional(),
-		})
-		.optional(),
-	authorizedKeys: z
-		.array(z.strictObject({ name: z.string(), publicKey: z.string() }))
-		.optional(),
 	constraints: z
 		.strictObject({
 			regions: z
@@ -499,7 +557,7 @@ const StandardContainerBaseSchema = BaseContainerSchema.extend({
 					])
 				)
 				.optional(),
-			jurisdiction: z.enum(["eu", "fedramp"]).optional(),
+			jurisdiction: z.enum(["eu", "fedramp", "us"]).optional(),
 		})
 		.optional(),
 	rollout: z
@@ -517,35 +575,37 @@ const DurableObjectContainerBaseSchema = BaseContainerSchema.extend({
 });
 
 /**
- * Input Container schema — parses user-authored `cloudflare.config.ts`
- * Container objects. Dockerfiles are built by the consuming build tool.
+ * Container schema — parses Container objects from user-authored
+ * `cloudflare.config.ts` files. Dockerfiles are built by the consuming build
+ * tool.
  */
-export const InputContainerSchema = z.union([
+export const ContainerConfigSchema = z.union([
 	StandardContainerBaseSchema.extend({
-		image: InputContainerImageSchema,
+		image: ContainerImageSchema,
 	}).superRefine(validateContainerRelationships),
 	DurableObjectContainerBaseSchema.extend({
-		images: z.record(z.string(), InputContainerImageSchema).optional(),
+		images: z.record(z.string(), ContainerImageSchema).optional(),
 	}),
 ]);
 
-export type ParsedInputContainerConfig = z.output<typeof InputContainerSchema>;
+export type ParsedContainerConfig = z.output<typeof ContainerConfigSchema>;
 
 /**
- * Output Container schema — parses `container.config.json` files in the Build
- * Output Specification, after any Dockerfile has been built into a local image reference.
+ * Build output Container schema — parses `container.config.json` files in the
+ * Build Output Specification, after any Dockerfile has been built into a local
+ * image reference.
  */
-export const OutputContainerSchema = z.union([
+export const BuildOutputContainerConfigSchema = z.union([
 	StandardContainerBaseSchema.extend({
-		image: OutputContainerImageSchema,
+		image: BuildOutputContainerImageSchema,
 	}).superRefine(validateContainerRelationships),
 	DurableObjectContainerBaseSchema.extend({
-		images: z.record(z.string(), OutputContainerImageSchema).optional(),
+		images: z.record(z.string(), BuildOutputContainerImageSchema).optional(),
 	}),
 ]);
 
-export type ParsedOutputContainerConfig = z.output<
-	typeof OutputContainerSchema
+export type ParsedBuildOutputContainerConfig = z.output<
+	typeof BuildOutputContainerConfigSchema
 >;
 
 // `state` defaults to `"created"` (live) when omitted. Tombstones use one of
@@ -588,6 +648,44 @@ export const WorkerEntrypointExportSchema = z.strictObject({
 	cache: z.strictObject({ enabled: z.boolean() }).optional(),
 });
 
+const WorkflowRetentionSchema = z.union([
+	z.number().int().min(1),
+	z.string().min(1),
+]);
+
+export const ArtifactsEventTypeSchema = z.enum(ARTIFACTS_EVENT_TYPES);
+export const ArtifactsEventSubscriptionSchema = z.strictObject({
+	type: ArtifactsEventTypeSchema,
+	filter: z
+		.strictObject({
+			namespace: z.string().min(1).optional(),
+			repoName: z.string().min(1).optional(),
+		})
+		.optional(),
+});
+
+export const WorkflowExportSchema = z.strictObject({
+	type: z.literal("workflow"),
+	events: z.array(ArtifactsEventSubscriptionSchema).optional(),
+	name: z.string(),
+	limits: z
+		.strictObject({ steps: z.number().int().min(1).optional() })
+		.optional(),
+	concurrency: z
+		.strictObject({ limit: z.number().int().min(1).optional() })
+		.optional(),
+	schedules: z
+		.union([z.string().min(1), z.array(z.string().min(1)).min(1)])
+		.optional(),
+	defaultRetention: z
+		.strictObject({
+			successRetention: WorkflowRetentionSchema.optional(),
+			errorRetention: WorkflowRetentionSchema.optional(),
+		})
+		.optional(),
+	jurisdiction: z.enum(WORKFLOW_JURISDICTIONS).optional(),
+});
+
 // Containers are only supported on the SQLite storage engine, so each live
 // variant enters the union split by `storage`: `container` exists on the
 // `sqlite` branch and is absent from the `legacy-kv` one. Splitting rather than
@@ -619,12 +717,7 @@ export const ExportSchema = z.union([
 	DurableObjectExpectingTransferSqliteExportSchema,
 	DurableObjectExpectingTransferLegacyKvExportSchema,
 	WorkerEntrypointExportSchema,
-	// TODO: support Workflows
-	// z.strictObject({
-	// 	type: z.literal("workflow"),
-	// 	name: z.string(),
-	// 	limits: z.strictObject({ steps: z.number().optional() }).optional(),
-	// }),
+	WorkflowExportSchema,
 ]);
 
 const LimitsSchema = z.strictObject({
@@ -656,6 +749,41 @@ const ObservabilitySchema = z.strictObject({
 		.optional(),
 });
 
+const AccessSchema = z.strictObject({
+	dev: z
+		.strictObject({
+			aud: z.string(),
+			identity: z.record(z.string(), z.unknown()).optional(),
+		})
+		.optional(),
+});
+
+const ImagesSchema = z.strictObject({
+	urlTransformations: z
+		.strictObject({
+			enabled: z.boolean(),
+			allowedOrigins: z
+				.array(
+					z
+						.string()
+						.min(1)
+						.refine((origin) => !origin.includes(","), {
+							message: "Allowed origins must not contain commas",
+						})
+						.refine((origin) => !/^https?:\/\//i.test(origin), {
+							message: "Allowed origins must be hostnames without a protocol",
+						})
+				)
+				.min(1)
+				.max(10)
+				.refine((origins) => origins.length === 1 || !origins.includes("*"), {
+					message: 'Allowed origins must not combine "*" with other origins',
+				})
+				.optional(),
+		})
+		.optional(),
+});
+
 const PlacementSchema = z.union([
 	z.strictObject({
 		mode: z.enum(["off", "smart"]),
@@ -677,7 +805,12 @@ const PlacementSchema = z.union([
 
 export const TailConsumerSchema = z.strictObject({
 	worker: z.string(),
-	streaming: z.boolean().optional(),
+});
+
+export const ExperimentalSchema = z.strictObject({
+	streamingTailConsumers: z.array(TailConsumerSchema).optional(),
+	/** @internal */
+	firstPartyWorker: z.boolean().optional(),
 });
 
 const TriggerSchema = z.discriminatedUnion("type", [
@@ -696,7 +829,7 @@ const TriggerSchema = z.discriminatedUnion("type", [
 		deadLetterQueue: z.string().optional(),
 		maxBatchSize: z.number().optional(),
 		maxBatchTimeout: z.number().optional(),
-		maxConcurrency: z.number().nullable().optional(),
+		maxConcurrency: z.number().optional(),
 		maxRetries: z.number().optional(),
 		retryDelay: z.number().optional(),
 		visibilityTimeoutMs: z.number().optional(),
@@ -705,12 +838,22 @@ const TriggerSchema = z.discriminatedUnion("type", [
 		type: z.literal("scheduled"),
 		schedule: z.string(),
 	}),
-	z.strictObject({
-		type: z.literal("connect"),
-		protocol: z.enum(["tcp"]),
-		port: z.number(),
-		address: z.string().optional(),
-	}),
+	z.discriminatedUnion("protocol", [
+		z.strictObject({
+			type: z.literal("connect"),
+			protocol: z.literal("tcp"),
+			port: z.number(),
+			address: z.string().optional(),
+		}),
+		z.strictObject({
+			type: z.literal("connect"),
+			protocol: z.literal("udp"),
+			port: z.number(),
+			address: z.string().optional(),
+			idleTimeoutMs: z.number().int().min(0).max(0xffffffff).optional(),
+			maxPendingBytes: z.number().int().min(0).max(0xffffffff).optional(),
+		}),
+	]),
 ]);
 
 const UnsafeSchema = z.strictObject({
@@ -731,16 +874,29 @@ const UnsafeSchema = z.strictObject({
 		.optional(),
 });
 
+const DomainSchema = z.union([
+	z.string(),
+	z
+		.strictObject({
+			hostname: z.string(),
+			production: z.boolean(),
+			previews: z.boolean(),
+		})
+		.refine((domain) => domain.production || domain.previews, {
+			message: "At least one of production or previews must be enabled.",
+		}),
+]);
+
 /**
- * Base Worker schema — the set of fields shared between the input
- * (user-authored) and output (on-disk) Worker configs.
+ * Base Worker schema — the set of fields shared between the user-authored
+ * Worker config and the Worker config in the build output.
  */
 const BaseWorkerSchema = z.strictObject({
 	name: z.string(),
 	compatibilityDate: z.string(),
 	compatibilityFlags: z.array(z.string()).optional(),
 	assets: AssetsSchema.optional(),
-	domains: z.array(z.string()).optional(),
+	domains: z.array(DomainSchema).optional(),
 	triggers: z.array(TriggerSchema).optional(),
 	tailConsumers: z.array(TailConsumerSchema).optional(),
 	cache: CacheSchema.optional(),
@@ -748,9 +904,11 @@ const BaseWorkerSchema = z.strictObject({
 	limits: LimitsSchema.optional(),
 	logpush: z.boolean().optional(),
 	observability: ObservabilitySchema.optional(),
+	access: AccessSchema.optional(),
+	images: ImagesSchema.optional(),
 	workersDev: z.boolean().optional(),
 	previewUrls: z.boolean().optional(),
-	firstPartyWorker: z.boolean().optional(),
+	experimental: ExperimentalSchema.optional(),
 	unsafe: UnsafeSchema.optional(),
 	// TODO: support previews
 	env: EnvSchema,
@@ -758,38 +916,94 @@ const BaseWorkerSchema = z.strictObject({
 });
 
 /**
- * Input Worker schema — parses Worker definitions from user-authored
- * `cloudflare.config.ts` files. Adds an optional `entrypoint` field to the base
- * schema.
+ * Worker schema — parses Worker definitions from user-authored
+ * `cloudflare.config.ts` files, after the config loader has resolved
+ * `defineWorker()` references and module entrypoints. Adds an optional string
+ * `entrypoint` field to the base schema.
  */
-export const InputWorkerSchema = BaseWorkerSchema.extend({
-	entrypoint: z
-		.union([z.string(), z.strictObject({ default: z.string() })])
-		.transform((value) => (typeof value === "string" ? value : value.default))
-		.optional(),
+export const WorkerConfigSchema = BaseWorkerSchema.extend({
+	entrypoint: z.string().optional(),
 });
 
-export type ParsedInputWorkerConfig = z.output<typeof InputWorkerSchema>;
+export type ParsedWorkerConfig = z.output<typeof WorkerConfigSchema>;
 
 /**
- * Input settings schema — parses the account settings at the top level of
+ * Settings schema — parses the account settings at the top level of
  * `cloudflare.config.ts`.
  */
-export const InputSettingsSchema = z.object({
+export const SettingsSchema = z.object({
 	accountId: z.string().optional(),
 	complianceRegion: z.enum(["public", "fedramp-high"]).optional(),
 });
 
-export type ParsedInputSettingsConfig = z.output<typeof InputSettingsSchema>;
+export type ParsedSettings = z.output<typeof SettingsSchema>;
 
-/** The resolved, user-authored project configuration. */
-export const InputConfigSchema = z.strictObject({
-	...InputSettingsSchema.shape,
-	worker: InputWorkerSchema.optional(),
-	containers: z.array(InputContainerSchema).default([]),
-});
+/** Validate relationships after resource definitions have been resolved to names. */
+function validateConfigRelationships(
+	config: {
+		worker?: ParsedWorkerConfig;
+		containers?: ParsedContainerConfig[];
+	},
+	ctx: z.RefinementCtx
+): void {
+	const firstIndexByName = new Map<string, number>();
+	for (const [index, container] of (config.containers ?? []).entries()) {
+		const firstIndex = firstIndexByName.get(container.name);
+		if (firstIndex !== undefined) {
+			ctx.addIssue({
+				code: "custom",
+				path: ["containers", index, "name"],
+				message: `The Container name "${container.name}" is also used by \`containers[${firstIndex}]\`. Container names must be unique.`,
+			});
+			continue;
+		}
+		firstIndexByName.set(container.name, index);
+	}
 
-export type ParsedInputConfig = z.output<typeof InputConfigSchema>;
+	const firstExportByContainerName = new Map<string, string>();
+	for (const [exportName, workerExport] of Object.entries(
+		config.worker?.exports ?? {}
+	)) {
+		if (
+			workerExport.type !== "durable-object" ||
+			!("container" in workerExport) ||
+			workerExport.container === undefined
+		) {
+			continue;
+		}
+
+		const containerName = workerExport.container;
+		const issuePath = ["worker", "exports", exportName, "container"];
+		if (!firstIndexByName.has(containerName)) {
+			ctx.addIssue({
+				code: "custom",
+				path: issuePath,
+				message: `The referenced Container "${containerName}" is not included in the \`containers\` array.`,
+			});
+		}
+		const firstExportName = firstExportByContainerName.get(containerName);
+		if (firstExportName !== undefined) {
+			ctx.addIssue({
+				code: "custom",
+				path: issuePath,
+				message: `The Container "${containerName}" is already referenced by \`worker.exports.${firstExportName}\`. A Container can only be linked to one Durable Object.`,
+			});
+			continue;
+		}
+		firstExportByContainerName.set(containerName, exportName);
+	}
+}
+
+/** The resolved project configuration, including relationships between resources. */
+export const CloudflareConfigSchema = z
+	.strictObject({
+		...SettingsSchema.shape,
+		worker: WorkerConfigSchema.optional(),
+		containers: z.array(ContainerConfigSchema).optional(),
+	})
+	.superRefine(validateConfigRelationships);
+
+export type ParsedCloudflareConfig = z.output<typeof CloudflareConfigSchema>;
 
 const BuildContextSchema = z.strictObject({
 	isPreview: z.boolean(),
@@ -797,16 +1011,34 @@ const BuildContextSchema = z.strictObject({
 });
 
 /**
- * The shape of the root `config.json` in the Build Output Specification.
- * Account settings remain at the top level while build context is grouped
- * under `buildContext`.
+ * The tool that wrote a Build Output Specification tree, such as a framework
+ * adapter or build plugin. Used only in diagnostics, never for deploy
+ * behaviour.
  */
-export const OutputRootConfigSchema = z.strictObject({
-	...InputSettingsSchema.shape,
+export const BuildOutputProducerSchema = z.strictObject({
+	name: z.string(),
+	version: z.string(),
+});
+
+export type ParsedBuildOutputProducer = z.output<
+	typeof BuildOutputProducerSchema
+>;
+
+/**
+ * The shape of the root `config.json` in the Build Output Specification.
+ * Account settings are grouped under `settings` and build context under
+ * `buildContext`. `settings` is omitted when there are none. `producer` is
+ * optional because it doesn't affect what gets deployed.
+ */
+export const BuildOutputRootConfigSchema = z.strictObject({
+	producer: BuildOutputProducerSchema.optional(),
+	settings: z.strictObject(SettingsSchema.shape).optional(),
 	buildContext: BuildContextSchema,
 });
 
-export type ParsedOutputRootConfig = z.output<typeof OutputRootConfigSchema>;
+export type ParsedBuildOutputRootConfig = z.output<
+	typeof BuildOutputRootConfigSchema
+>;
 
 export const ModuleTypeSchema = z.enum([
 	"esm",
@@ -852,37 +1084,37 @@ const ManifestSchema = z
 	});
 
 /**
- * Output Worker schema — the shape of the Worker's `worker.config.json` in the
+ * Build output Worker schema — the shape of the Worker's `worker.config.json` in the
  * Build Output Specification. Adds an optional `manifest` field to the base
  * schema.
  */
-export const OutputWorkerSchema = BaseWorkerSchema.extend({
+export const BuildOutputWorkerConfigSchema = BaseWorkerSchema.extend({
 	manifest: ManifestSchema.optional(),
 });
 
-export type ParsedOutputWorkerConfig = z.output<typeof OutputWorkerSchema>;
+export type ParsedBuildOutputWorkerConfig = z.output<
+	typeof BuildOutputWorkerConfigSchema
+>;
 
 /**
- * Bidirectional drift check between {@link InputWorkerSchema} and the
- * public {@link WorkerConfig} interface. Excludes `entrypoint`, `env`, and
- * `exports`, which deliberately differ:
- *
- * - `entrypoint`: the public type accepts a `WorkerModule` namespace
- *   (produced by `import ... with { type: "cf-worker" }`), but the schema
- *   only accepts the post-`load.ts` shape (`string` or `{ default: string }`).
+ * Bidirectional drift check between {@link WorkerConfigSchema} and the
+ * public {@link WorkerConfig} interface. The public `entrypoint` type accepts a
+ * `WorkerModule` namespace, which the config loader replaces with its string
+ * specifier before parsing. Excludes `env` and `exports`, which deliberately
+ * differ:
  *
  * - `env`: see the separate unidirectional drift check below.
  *
  * - `exports`: see the separate resolved-reference drift check below.
  */
 type _ComparableInput = Omit<
-	z.input<typeof InputWorkerSchema>,
-	"entrypoint" | "env" | "exports"
+	z.input<typeof WorkerConfigSchema>,
+	"env" | "exports"
 >;
 type _ComparableWorkerConfig = Omit<
 	WorkerConfig,
 	"entrypoint" | "env" | "exports"
->;
+> & { entrypoint?: string };
 type _AssertSchemaMatchesWorkerConfig = [
 	_ComparableInput extends _ComparableWorkerConfig ? true : false,
 	_ComparableWorkerConfig extends _ComparableInput ? true : false,
@@ -901,26 +1133,32 @@ type _ResolvedBinding<TBinding> = TBinding extends {
 	: TBinding;
 
 type _ResolvedWorkerConfigEnv =
-	| Record<string, _ResolvedBinding<NonNullable<WorkerConfig["env"]>[string]>>
+	| Record<
+			string,
+			Exclude<
+				_ResolvedBinding<NonNullable<WorkerConfig["env"]>[string]>,
+				false | null | undefined
+			>
+	  >
 	| undefined;
 
 /**
- * Drift checks between the schema and resolved public `env` types. Authored
- * cross-Worker bindings may contain a Worker config reference; the config
- * loader replaces those references with names before parsing. Schema input is
- * otherwise intentionally broader for bindings with cross-field validation.
+ * Drift checks between the schema and resolved public `env` types. The config
+ * loader removes omitted bindings and replaces cross-Worker config references
+ * with names before parsing. Schema input is otherwise intentionally broader
+ * for bindings with cross-field validation.
  *
  * These checks catch fields or bindings that are missing, renamed, or typed
  * differently between the public definitions and the schema.
  */
 type _AssertSchemaEnvMatchesWorkerConfig = [
-	_ResolvedWorkerConfigEnv extends z.input<typeof InputWorkerSchema>["env"]
+	_ResolvedWorkerConfigEnv extends z.input<typeof WorkerConfigSchema>["env"]
 		? true
 		: false,
-	z.output<typeof InputWorkerSchema>["env"] extends _ResolvedWorkerConfigEnv
+	z.output<typeof WorkerConfigSchema>["env"] extends _ResolvedWorkerConfigEnv
 		? true
 		: false,
-	_ResolvedWorkerConfigEnv extends z.output<typeof InputWorkerSchema>["env"]
+	_ResolvedWorkerConfigEnv extends z.output<typeof WorkerConfigSchema>["env"]
 		? true
 		: false,
 ];
@@ -949,17 +1187,17 @@ type _ResolvedWorkerConfigExports =
  */
 type _AssertSchemaExportsMatchWorkerConfig = [
 	_ResolvedWorkerConfigExports extends z.input<
-		typeof InputWorkerSchema
+		typeof WorkerConfigSchema
 	>["exports"]
 		? true
 		: false,
 	z.output<
-		typeof InputWorkerSchema
+		typeof WorkerConfigSchema
 	>["exports"] extends _ResolvedWorkerConfigExports
 		? true
 		: false,
 	_ResolvedWorkerConfigExports extends z.output<
-		typeof InputWorkerSchema
+		typeof WorkerConfigSchema
 	>["exports"]
 		? true
 		: false,
@@ -969,24 +1207,24 @@ const _assertSchemaExportsMatchWorkerConfig: _AssertSchemaExportsMatchWorkerConf
 void _assertSchemaExportsMatchWorkerConfig;
 
 /**
- * Bidirectional drift check between {@link InputContainerSchema} and the
+ * Bidirectional drift check between {@link ContainerConfigSchema} and the
  * public {@link ContainerConfig} interface.
  */
 type _AssertInputContainerSchemaMatchesConfig = [
-	z.input<typeof InputContainerSchema> extends ContainerConfig ? true : false,
-	ContainerConfig extends z.input<typeof InputContainerSchema> ? true : false,
+	z.input<typeof ContainerConfigSchema> extends ContainerConfig ? true : false,
+	ContainerConfig extends z.input<typeof ContainerConfigSchema> ? true : false,
 ];
 const _assertInputContainerSchemaMatchesConfig: _AssertInputContainerSchemaMatchesConfig =
 	[true, true];
 void _assertInputContainerSchemaMatchesConfig;
 
 /**
- * Bidirectional drift check between {@link InputSettingsSchema} and the public
+ * Bidirectional drift check between {@link SettingsSchema} and the public
  * {@link Settings} interface.
  */
 type _AssertInputSettingsSchemaMatchesConfig = [
-	z.input<typeof InputSettingsSchema> extends Settings ? true : false,
-	Settings extends z.input<typeof InputSettingsSchema> ? true : false,
+	z.input<typeof SettingsSchema> extends Settings ? true : false,
+	Settings extends z.input<typeof SettingsSchema> ? true : false,
 ];
 const _assertInputSettingsSchemaMatchesConfig: _AssertInputSettingsSchemaMatchesConfig =
 	[true, true];

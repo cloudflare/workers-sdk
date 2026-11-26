@@ -7,9 +7,16 @@ export default defineConfig({
 	},
 	plugins: [
 		cloudflare({
-			configPath: "./worker-a/wrangler.jsonc",
+			types: { includeRuntime: false },
 			auxiliaryWorkers: [
-				{ configPath: "./worker-b/wrangler.jsonc", devOnly: true },
+				{
+					config: {
+						name: "worker-b",
+						entrypoint: "./worker-b/index.ts",
+						compatibilityDate: "2024-12-30",
+					},
+					devOnly: true,
+				},
 			],
 			inspectorPort: false,
 			persistState: false,

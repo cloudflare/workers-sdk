@@ -1,5 +1,6 @@
 export * from "./error";
 export * from "./event";
+export * from "./forwarded-proto";
 export * from "./log";
 export * from "./matcher";
 export * from "./streams";

@@ -1,7 +1,9 @@
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, it } from "vitest";
+import { mockConsoleMethods } from "../../../packages/workers-utils/src/test-helpers/mock";
 import {
 	deleteDatabase,
+	deleteK2Stream,
 	deleteKVNamespace,
 	deleteProject,
 	deleteR2Bucket,
@@ -9,10 +11,11 @@ import {
 	listTmpDatabases,
 	listTmpE2EProjects,
 	listTmpE2EWorkers,
+	listTmpK2Streams,
 	listTmpKVNamespaces,
 	listTmpR2Buckets,
 } from "../common";
-import type { Worker } from "../common";
+import type { K2Stream, Worker } from "../common";
 
 const originalAccountID = process.env.CLOUDFLARE_ACCOUNT_ID;
 const MOCK_CLOUDFLARE_ACCOUNT_ID = "mock-cloudflare-account";
@@ -192,6 +195,59 @@ describe("listTmpKVNamespaces()", () => {
 		const result = await listTmpKVNamespaces();
 
 		expect(result.map((p) => p.id)).toMatchInlineSnapshot(`[]`);
+	});
+
+	it("keeps temp kv namespaces whose encoded creation time is under an hour old", async ({
+		expect,
+	}) => {
+		const recent = Date.now() - 1000 * 60 * 10;
+		const old = Date.now() - 1000 * 60 * 100;
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces`,
+				method: "GET",
+				query: {
+					page: 1,
+				},
+			})
+			.reply(
+				200,
+				JSON.stringify({
+					result: [
+						// Wrangler E2E format: `generateResourceName("kv" + Date.now())` with `_`
+						{ id: "wrangler-recent", title: `tmp_e2e_kv${recent}_0a1b2c3d` },
+						{ id: "wrangler-old", title: `tmp_e2e_kv${old}_0a1b2c3d` },
+						// Fixture format
+						{
+							id: "fixture-recent",
+							title: `tmp-e2e-kv${recent}-test-remote-bindings-0a1b2c3d`,
+						},
+						{
+							id: "fixture-old",
+							title: `tmp-e2e-kv${old}-test-remote-bindings-0a1b2c3d`,
+						},
+						// No encoded creation time, so treated as old
+						{ id: "undated", title: "tmp-e2e-kv-0a1b2c3d" },
+						{ id: "preserved", title: "preserve-e2e-get-platform-proxy-kv" },
+					],
+					result_info: {
+						page: 1,
+						per_page: 100,
+						count: 6,
+						total_count: 6,
+						total_pages: 1,
+					},
+				})
+			);
+
+		const result = await listTmpKVNamespaces();
+
+		expect(result.map((p) => p.id)).toEqual([
+			"wrangler-old",
+			"fixture-old",
+			"undated",
+		]);
 	});
 });
 
@@ -433,5 +489,145 @@ describe("deleteR2Bucket()", () => {
 			})
 			.reply(200, JSON.stringify({ result: [] }));
 		await deleteR2Bucket(MOCK_BUCKET);
+	});
+});
+
+describe("listTmpK2Streams()", () => {
+	const std = mockConsoleMethods();
+
+	it("makes paged REST requests and returns a filtered list of K2 streams", async ({
+		expect,
+	}) => {
+		const query = { per_page: 100, name: "tmp_e2e_k2_" };
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams`,
+				method: "GET",
+				query: { page: 1, ...query },
+			})
+			.reply(
+				200,
+				JSON.stringify({
+					result: [
+						{ id: "1", name: "tmp_e2e_k2_recent", created_at: nowStr },
+						{ id: "2", name: "tmp_e2e_k2_old", created_at: oldTimeStr },
+						// The name filter matches substrings, but only the prefix is ours
+						{ id: "3", name: "keep_tmp_e2e_k2_old", created_at: oldTimeStr },
+						...Array(97).fill({
+							id: "4",
+							name: "TMP_E2E_K2_UPPERCASE",
+							created_at: oldTimeStr,
+						}),
+					] satisfies K2Stream[],
+					result_info: { page: 1, per_page: 100, count: 100, total_count: 101 },
+				})
+			);
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams`,
+				method: "GET",
+				query: { page: 2, ...query },
+			})
+			.reply(
+				200,
+				JSON.stringify({
+					result: [
+						{ id: "5", name: "tmp_e2e_k2_old_page_2", created_at: oldTimeStr },
+					] satisfies K2Stream[],
+					result_info: { page: 2, per_page: 100, count: 1, total_count: 101 },
+				})
+			);
+
+		const result = await listTmpK2Streams();
+
+		expect(result.map((s) => s.name)).toEqual([
+			"tmp_e2e_k2_old",
+			"tmp_e2e_k2_old_page_2",
+		]);
+	});
+
+	it("returns no streams and logs the body when an error response isn't JSON", async ({
+		expect,
+	}) => {
+		agent
+			.get("https://api.cloudflare.com")
+			.intercept({
+				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams`,
+				method: "GET",
+				query: { page: 1, per_page: 100, name: "tmp_e2e_k2_" },
+			})
+			.reply(502, "<html>Bad gateway</html>");
+
+		expect(await listTmpK2Streams()).toEqual([]);
+		expect(std.err).toContain("(502)");
+		expect(std.err).toContain("<html>Bad gateway</html>");
+	});
+});
+
+describe("deleteK2Stream()", () => {
+	const std = mockConsoleMethods();
+	const MOCK_STREAM_ID = "mock-stream";
+
+	function interceptDeletion(id = MOCK_STREAM_ID) {
+		return agent.get("https://api.cloudflare.com").intercept({
+			path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/k2/streams/${id}`,
+			method: "DELETE",
+		});
+	}
+
+	it("makes a REST request to delete the given K2 stream", async ({
+		expect,
+	}) => {
+		interceptDeletion("stream%2Fid").reply(
+			200,
+			JSON.stringify({ success: true, result: {} })
+		);
+
+		expect(await deleteK2Stream("stream/id")).toBe(true);
+		expect(std.err).toBe("");
+	});
+
+	it("returns false and logs the API errors when the deletion is rejected", async ({
+		expect,
+	}) => {
+		interceptDeletion().reply(
+			403,
+			JSON.stringify({
+				success: false,
+				errors: [{ code: 10000, message: "Authentication error" }],
+			})
+		);
+
+		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(false);
+		expect(std.err).toContain("(403) Forbidden");
+		expect(console.error).toHaveBeenCalledWith([
+			{ code: 10000, message: "Authentication error" },
+		]);
+	});
+
+	it("returns false when a successful response reports the deletion as unsuccessful", async ({
+		expect,
+	}) => {
+		interceptDeletion().reply(
+			200,
+			JSON.stringify({ success: false, errors: [], result: {} })
+		);
+
+		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(false);
+		expect(std.err).toContain(
+			`DELETE /k2/streams/${MOCK_STREAM_ID} was unsuccessful`
+		);
+	});
+
+	it("returns false and logs the body when an error response isn't JSON", async ({
+		expect,
+	}) => {
+		interceptDeletion().reply(502, "<html>Bad gateway</html>");
+
+		expect(await deleteK2Stream(MOCK_STREAM_ID)).toBe(false);
+		expect(std.err).toContain("(502)");
+		expect(std.err).toContain("<html>Bad gateway</html>");
 	});
 });

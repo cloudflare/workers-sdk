@@ -58,10 +58,21 @@ export const vitestConfig = (
 	};
 `;
 
-export function waitFor<T>(callback: Parameters<typeof vi.waitFor<T>>[0]) {
+/**
+ * Poll an assertion until it passes, allowing time for child Worker processes.
+ *
+ * @param callback - The assertion to retry.
+ * @param timeout - The polling budget in milliseconds; startup checks may need
+ * a longer budget on busy CI runners.
+ * @returns The value returned by the successful assertion.
+ */
+export function waitFor<T>(
+	callback: Parameters<typeof vi.waitFor<T>>[0],
+	timeout = 10_000
+) {
 	// The default timeout of `vi.waitFor()` is only 1s, which is a little
 	// short for some of these tests, especially on Windows.
-	return vi.waitFor(callback, { timeout: 10_000, interval: 500 });
+	return vi.waitFor(callback, { timeout, interval: 500 });
 }
 
 async function seed(root: string, files: Record<string, string>) {
@@ -111,15 +122,17 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	};
 }
 
+interface VitestProcessOptions {
+	flags?: string[];
+	maxBuffer?: number;
+}
+
 // eslint-disable-next-line jest/expect-expect, jest/no-disabled-tests -- base test fixture definition, not an actual test
 export const test = baseTest.extend<{
 	tmpPath: string;
 	seed: (files: Record<string, string>) => Promise<void>;
-	vitestRun: (options?: {
-		flags?: string[];
-		maxBuffer?: number;
-	}) => Promise<Process>;
-	vitestDev: (options?: { flags?: string[]; maxBuffer?: number }) => Process;
+	vitestRun: (options?: VitestProcessOptions) => Promise<Process>;
+	vitestDev: (options?: VitestProcessOptions) => Process;
 }>({
 	// Fixture for creating a temporary directory
 	// eslint-disable-next-line no-empty-pattern -- Vitest requires the 1st argument to use object destructuring
@@ -138,7 +151,7 @@ export const test = baseTest.extend<{
 	async vitestRun({ tmpPath }, use) {
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 
-		await use(async ({ flags = [], maxBuffer } = {}) => {
+		await use(async ({ flags = [], maxBuffer }: VitestProcessOptions = {}) => {
 			// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- test helper
 			const proc = childProcess.exec(
 				`pnpm exec vitest run --root="${tmpPath}" ` + flags.join(" "),
@@ -171,7 +184,7 @@ export const test = baseTest.extend<{
 		};
 		process.on("exit", killAllProcesses);
 
-		await use(({ flags = [], maxBuffer } = {}) => {
+		await use(({ flags = [], maxBuffer }: VitestProcessOptions = {}) => {
 			// eslint-disable-next-line workers-sdk/no-unsafe-command-execution -- test helper
 			const proc = childProcess.exec(
 				`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),

@@ -1,12 +1,11 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
 import {
 	extractBindingsOfType,
-	INHERIT_SYMBOL,
 	isUnsafeBindingType,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { FormData } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
 import type {
@@ -17,7 +16,7 @@ import type {
 	CfSendEmailBindings,
 	CfWorkerInit,
 	WorkerMetadata,
-	WorkerMetadataBinding,
+	WorkerUploadMetadataBinding,
 } from "@cloudflare/workers-utils";
 
 export const moduleTypeMimeType: {
@@ -68,6 +67,7 @@ export function createWorkerUploadForm(
 		main,
 		sourceMaps,
 		migrations,
+		code_update_strategy,
 		exports: configuredExports,
 		compatibility_date,
 		compatibility_flags,
@@ -90,6 +90,7 @@ export function createWorkerUploadForm(
 	const assetConfig: AssetConfigMetadata = {
 		html_handling: assets?.assetConfig?.html_handling,
 		not_found_handling: assets?.assetConfig?.not_found_handling,
+		base_path: assets?.assetConfig?.base_path,
 		run_worker_first: assets?.run_worker_first,
 		_redirects: assets?._redirects,
 		_headers: assets?._headers,
@@ -113,7 +114,7 @@ export function createWorkerUploadForm(
 	}
 	let { modules } = worker;
 
-	const metadataBindings: WorkerMetadataBinding[] = [];
+	const metadataBindings: WorkerUploadMetadataBinding[] = [];
 
 	const plain_text = extractBindingsOfType("plain_text", bindings);
 	const json_bindings = extractBindingsOfType("json", bindings);
@@ -146,9 +147,11 @@ export function createWorkerUploadForm(
 		bindings
 	);
 	const flagship = extractBindingsOfType("flagship", bindings);
+	const realtimekit = extractBindingsOfType("realtimekit", bindings);
 	const ratelimits = extractBindingsOfType("ratelimit", bindings);
 	const vpc_services = extractBindingsOfType("vpc_service", bindings);
 	const vpc_networks = extractBindingsOfType("vpc_network", bindings);
+	const oidc_tokens = extractBindingsOfType("oidc_token", bindings);
 	const services = extractBindingsOfType("service", bindings);
 	const analytics_engine_datasets = extractBindingsOfType(
 		"analytics_engine",
@@ -160,10 +163,12 @@ export function createWorkerUploadForm(
 	);
 	const mtls_certificates = extractBindingsOfType("mtls_certificate", bindings);
 	const pipelines = extractBindingsOfType("pipeline", bindings);
+	const k2 = extractBindingsOfType("k2", bindings);
 	const worker_loaders = extractBindingsOfType("worker_loader", bindings);
 	const logfwdr = extractBindingsOfType("logfwdr", bindings);
 	const wasm_modules = extractBindingsOfType("wasm_module", bindings);
 	const browser = extractBindingsOfType("browser", bindings)[0];
+	const analytics = extractBindingsOfType("analytics", bindings)[0];
 	const ai = extractBindingsOfType("ai", bindings)[0];
 	const images = extractBindingsOfType("images", bindings)[0];
 	const stream = extractBindingsOfType("stream", bindings)[0];
@@ -338,7 +343,7 @@ export function createWorkerUploadForm(
 				metadataBindings.push({
 					name: binding,
 					type: "d1",
-					id: database_id,
+					database_id,
 					internalEnv: database_internal_env,
 					raw,
 				});
@@ -470,6 +475,10 @@ export function createWorkerUploadForm(
 		);
 	});
 
+	realtimekit.forEach(({ binding, app_id }) => {
+		metadataBindings.push({ name: binding, type: "realtimekit", app_id });
+	});
+
 	ratelimits.forEach(({ name, namespace_id, simple }) => {
 		metadataBindings.push({
 			name,
@@ -583,10 +592,23 @@ export function createWorkerUploadForm(
 		}
 	});
 
+	k2.forEach(({ binding, stream: k2Stream }) => {
+		metadataBindings.push({ name: binding, type: "k2", stream: k2Stream });
+	});
+
 	worker_loaders.forEach(({ binding }) => {
 		metadataBindings.push({
 			name: binding,
 			type: "worker_loader",
+		});
+	});
+
+	oidc_tokens.forEach(({ binding, audience, alg }) => {
+		metadataBindings.push({
+			name: binding,
+			type: "oidc_token",
+			audience,
+			...(alg !== undefined && { alg }),
 		});
 	});
 
@@ -624,6 +646,13 @@ export function createWorkerUploadForm(
 			name: browser.binding,
 			type: "browser",
 			raw: browser.raw,
+		});
+	}
+
+	if (analytics !== undefined) {
+		metadataBindings.push({
+			name: analytics.binding,
+			type: "analytics",
 		});
 	}
 
@@ -730,7 +759,7 @@ export function createWorkerUploadForm(
 				name: bindingName,
 				type: type.slice("unsafe_".length),
 				...data,
-			} as WorkerMetadataBinding);
+			} as WorkerUploadMetadataBinding);
 		}
 	}
 
@@ -882,6 +911,7 @@ export function createWorkerUploadForm(
 			compatibility_flags,
 		}),
 		...(migrations && { migrations }),
+		...(code_update_strategy && { code_update_strategy }),
 		...(configuredExports &&
 			Object.keys(configuredExports).length > 0 && {
 				exports: configuredExports,
@@ -911,7 +941,6 @@ export function createWorkerUploadForm(
 			metadata[key] = options.unsafe.metadata[key];
 		}
 	}
-
 	formData.set("metadata", JSON.stringify(metadata));
 
 	if (main.type === "commonjs" && modules && modules.length > 0) {

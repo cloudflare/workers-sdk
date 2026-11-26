@@ -13,6 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import type { ContainerDefinition } from "./definition";
+import type { ArtifactsEventSubscription } from "./workflow-events";
 
 /**
  * Storage backend for the Durable Object.
@@ -161,6 +162,48 @@ export interface WorkerEntrypointExport extends WorkerEntrypointExportOptions {
 	type: "worker";
 }
 
+export const WORKFLOW_JURISDICTIONS = ["eu", "fedramp", "us"] as const;
+
+export interface WorkflowExportOptions {
+	/** Events that automatically start this Workflow. Only Artifacts events are currently supported. */
+	events?: ArtifactsEventSubscription[];
+	/**
+	 * The name of the Workflow. It identifies the Workflow's instances and must
+	 * be unique within the account.
+	 */
+	name: string;
+	limits?: {
+		/** Maximum number of steps a single Workflow instance may run. */
+		steps?: number;
+	};
+	concurrency?: {
+		/** Maximum number of Workflow instances that can run concurrently. */
+		limit?: number;
+	};
+	/** Cron schedule(s) that automatically trigger Workflow instances. */
+	schedules?: string | string[];
+	/**
+	 * Default retention for instances of this Workflow, applied when an instance
+	 * does not set its own retention. Accepts milliseconds or a duration string
+	 * such as `"3 days"`.
+	 */
+	defaultRetention?: {
+		/** How long to retain instances that completed successfully or were terminated. */
+		successRetention?: number | string;
+		/** How long to retain errored instances. */
+		errorRetention?: number | string;
+	};
+	/**
+	 * Jurisdiction that the Workflow's instances run and store their data in.
+	 * It is set when the Workflow is created and cannot be changed afterwards.
+	 */
+	jurisdiction?: (typeof WORKFLOW_JURISDICTIONS)[number];
+}
+
+export interface WorkflowExport extends WorkflowExportOptions {
+	type: "workflow";
+}
+
 /**
  * Configuration for named exports declared by the Worker. Each entry's
  * key is the exported class name; the value configures the export.
@@ -215,6 +258,15 @@ export interface Exports {
 
 	/** Declares a WorkerEntrypoint export defined by this Worker. */
 	worker(options?: WorkerEntrypointExportOptions): WorkerEntrypointExport;
+
+	/**
+	 * Declares a Workflow defined by this Worker. The export's key must name a
+	 * class that extends `WorkflowEntrypoint`.
+	 *
+	 * For more information about Workflows, see the documentation at
+	 * https://developers.cloudflare.com/workflows/
+	 */
+	workflow(options: WorkflowExportOptions): WorkflowExport;
 }
 
 function durableObject<
@@ -253,6 +305,10 @@ function worker(
 	return { type: "worker", ...options };
 }
 
+function workflow(options: WorkflowExportOptions): WorkflowExport {
+	return { type: "workflow", ...options };
+}
+
 /**
  * Exports builder for configuring Worker exports.
  *
@@ -273,6 +329,7 @@ function worker(
  *     OldName:         exports.durableObject({ state: "renamed", renamedTo: "NewName" }),
  *     Outgoing:        exports.durableObject({ state: "transferred", transferredTo: "target-worker" }),
  *     Incoming:        exports.durableObject({ state: "expecting-transfer", storage: "sqlite", transferFrom: "source-worker" }),
+ *     MyWorkflow:      exports.workflow({ name: "my-workflow", limits: { steps: 100 }, schedules: "0 * * * *" }),
  *   },
  * });
  *
@@ -282,4 +339,5 @@ function worker(
 export const exports: Exports = {
 	durableObject,
 	worker,
+	workflow,
 };

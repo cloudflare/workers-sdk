@@ -6,7 +6,6 @@
 	"compilerOptions": {
 		"module": "preserve",
 		"allowJs": true,
-		"outDir": "dist",
 		"types": ["node"],
 		"resolveJsonModule": true
 	}

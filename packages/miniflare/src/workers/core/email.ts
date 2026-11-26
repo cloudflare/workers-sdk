@@ -5,7 +5,6 @@ import PostalMime from "postal-mime";
 import {
 	captureRawForBodyRow,
 	MAX_PRODUCTION_EMAIL_BYTES,
-	RAW_EMAIL,
 	stripEmailHeader,
 } from "../email/capture";
 import {
@@ -15,10 +14,12 @@ import {
 import { logEmailToLoopback, storeEmailTempFile } from "../email/loopback";
 import { messageIdToStorageId, synthesizeMessageId } from "../email/message-id";
 import { buildReplyFromMessageBuilder } from "../email/mime";
+import { commitReceivedCapture } from "../email/received-capture";
 import { isEmailReplyable, validateReply } from "../email/validate";
 import { CoreBindings } from "./constants";
 import type { MiniflareEmailMessage } from "../email/email.worker";
 import type {
+	EmailCaptureOrigin,
 	EmailHandlerEvent,
 	EmailHandlerForward,
 	EmailHandlerReply,
@@ -37,6 +38,11 @@ type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_EMAIL_STORE]: EmailStoreService;
 };
+
+export interface EmailCaptureContext {
+	origin?: EmailCaptureOrigin;
+	capturedPortion?: boolean;
+}
 
 function renderEmailHeaders(headers: Headers | undefined) {
 	return headers
@@ -64,7 +70,8 @@ export async function handleEmail(
 	service: Fetcher,
 	workerName: string,
 	env: Env,
-	ctx: ExecutionContext
+	ctx: ExecutionContext,
+	captureContext: EmailCaptureContext = {}
 ): Promise<Response> {
 	const events: EmailHandlerEvent[] = [];
 	const forwards: EmailHandlerForward[] = [];
@@ -182,6 +189,9 @@ export async function handleEmail(
 				"bcc",
 			]);
 			const metadata: StoredRoutingEmailMetadata = {
+				origin: captureContext.origin ?? "unknown",
+				capturedPortion:
+					(captureContext.capturedPortion ?? false) || capturedRaw.truncated,
 				worker: workerName,
 				from: storedFrom,
 				to: storedTo,
@@ -209,27 +219,16 @@ export async function handleEmail(
 				events,
 				...(capturedRaw.truncated ? { captureTruncated: true } : {}),
 			};
-			const captureId = crypto.randomUUID();
-			try {
-				await store.storeReceivedBody(captureId, 0, rawBase64);
-				for (const [index] of replies.entries()) {
-					const replyRawBase64 = capturedReplyRawBase64[index];
-					if (replyRawBase64 === undefined) {
-						throw new Error(
-							`Received email ${metadata.messageId} has no captured reply body at index ${index}`
-						);
-					}
-					await store.storeReceivedBody(captureId, index + 1, replyRawBase64);
+			const replyBodies = replies.map((_, index) => {
+				const replyRawBase64 = capturedReplyRawBase64[index];
+				if (replyRawBase64 === undefined) {
+					throw new Error(
+						`Received email ${metadata.messageId} has no captured reply body at index ${index}`
+					);
 				}
-				await store.storeReceivedMetadata(
-					captureId,
-					replies.length + 1,
-					metadata
-				);
-			} catch (error) {
-				await store.discardReceived(captureId).catch(() => undefined);
-				throw error;
-			}
+				return replyRawBase64;
+			});
+			await commitReceivedCapture(store, metadata, [rawBase64, ...replyBodies]);
 		} catch (error) {
 			stored = false;
 			try {
@@ -259,6 +258,7 @@ export async function handleEmail(
 				raw: deliveredEmailBody,
 				rawSize: deliveredEmailRaw.byteLength,
 				headers: incomingEmailHeaders,
+				canBeForwarded: true,
 				setReject: (reason: string): void => {
 					ctx.waitUntil(
 						logEmailToLoopback(
@@ -317,7 +317,7 @@ export async function handleEmail(
 					}
 					let validatedReply: { raw: Uint8Array; messageId: string };
 					let replySender: string;
-					if (RAW_EMAIL in replyMessage) {
+					if ("raw" in replyMessage) {
 						const rawReply = replyMessage as MiniflareEmailMessage;
 						validatedReply = await validateReply(parsedIncomingEmail, rawReply);
 						replySender = rawReply.from;

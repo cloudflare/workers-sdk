@@ -1,8 +1,8 @@
 import * as z from "zod";
 import { loadConfig } from "./load";
-import { InputConfigSchema, InputSettingsSchema } from "./schema";
+import { CloudflareConfigSchema, SettingsSchema } from "./schema";
 import type { ConfigContext } from "./definition";
-import type { ParsedInputConfig, ParsedInputSettingsConfig } from "./schema";
+import type { ParsedCloudflareConfig, ParsedSettings } from "./schema";
 
 const CROSS_WORKER_BINDING_TYPES = new Set([
 	"durable-object",
@@ -18,11 +18,11 @@ interface NormalizeWorkerResult {
 }
 
 export type ConfigParseResult =
-	| z.ZodSafeParseSuccess<ParsedInputConfig>
+	| z.ZodSafeParseSuccess<ParsedCloudflareConfig>
 	| z.ZodSafeParseError<unknown>;
 
 export type ConfigSettingsParseResult =
-	| z.ZodSafeParseSuccess<ParsedInputSettingsConfig>
+	| z.ZodSafeParseSuccess<ParsedSettings>
 	| z.ZodSafeParseError<unknown>;
 
 export interface LoadAndParseConfigResult {
@@ -73,7 +73,7 @@ function createDefinitionResolver(ctx: ConfigContext): ResolveDefinition {
 	};
 }
 
-async function normalizeWorkerReferences(
+async function normalizeWorkerEnv(
 	resolved: unknown,
 	resolveDefinition: ResolveDefinition
 ): Promise<unknown> {
@@ -83,6 +83,11 @@ async function normalizeWorkerReferences(
 
 	const env: Record<PropertyKey, unknown> = { ...resolved.env };
 	for (const [bindingName, binding] of Object.entries(env)) {
+		if (binding === false || binding === null || binding === undefined) {
+			delete env[bindingName];
+			continue;
+		}
+
 		if (
 			!isRecord(binding) ||
 			typeof binding.type !== "string" ||
@@ -100,6 +105,18 @@ async function normalizeWorkerReferences(
 	}
 
 	return { ...resolved, env };
+}
+
+function normalizeWorkerEntrypoint(resolved: unknown): unknown {
+	if (
+		!isRecord(resolved) ||
+		!isRecord(resolved.entrypoint) ||
+		!("default" in resolved.entrypoint)
+	) {
+		return resolved;
+	}
+
+	return { ...resolved, entrypoint: resolved.entrypoint.default };
 }
 
 async function normalizeContainerReferences(
@@ -165,8 +182,8 @@ async function normalizeWorkerConfig(
 	resolveDefinition: ResolveDefinition,
 	containers: unknown[]
 ): Promise<NormalizeWorkerResult> {
-	const partiallyNormalizedConfig = await normalizeWorkerReferences(
-		resolved,
+	const partiallyNormalizedConfig = await normalizeWorkerEnv(
+		normalizeWorkerEntrypoint(resolved),
 		resolveDefinition
 	);
 	return normalizeContainerReferences(
@@ -186,63 +203,6 @@ function prefixIssues(
 	}));
 }
 
-function validateUniqueContainerNames(
-	config: ParsedInputConfig
-): z.core.$ZodIssue[] {
-	const issues: z.core.$ZodIssue[] = [];
-	const firstIndexByName = new Map<string, number>();
-
-	for (const [index, container] of config.containers.entries()) {
-		const firstIndex = firstIndexByName.get(container.name);
-		if (firstIndex !== undefined) {
-			issues.push({
-				code: "custom",
-				input: container.name,
-				path: ["containers", index, "name"],
-				message: `The Container name "${container.name}" is also used by \`containers[${firstIndex}]\`. Container names must be unique.`,
-			});
-			continue;
-		}
-
-		firstIndexByName.set(container.name, index);
-	}
-
-	return issues;
-}
-
-function validateContainerLinks(config: ParsedInputConfig): z.core.$ZodIssue[] {
-	const issues: z.core.$ZodIssue[] = [];
-	const firstExportByContainerName = new Map<string, string>();
-
-	for (const [exportName, workerExport] of Object.entries(
-		config.worker?.exports ?? {}
-	)) {
-		if (
-			workerExport.type !== "durable-object" ||
-			!("container" in workerExport) ||
-			workerExport.container === undefined
-		) {
-			continue;
-		}
-
-		const containerName = workerExport.container;
-		const firstExportName = firstExportByContainerName.get(containerName);
-		if (firstExportName !== undefined) {
-			issues.push({
-				code: "custom",
-				input: containerName,
-				path: ["worker", "exports", exportName, "container"],
-				message: `The Container "${containerName}" is already referenced by \`worker.exports.${firstExportName}\`. A Container can only be linked to one Durable Object.`,
-			});
-			continue;
-		}
-
-		firstExportByContainerName.set(containerName, exportName);
-	}
-
-	return issues;
-}
-
 /** Resolve and parse the default configuration export. */
 export async function resolveAndParseConfig(
 	input: unknown,
@@ -251,7 +211,7 @@ export async function resolveAndParseConfig(
 	const resolveDefinition = createDefinitionResolver(ctx);
 	const resolved = await resolveDefinition(input);
 	if (!isRecord(resolved)) {
-		return InputConfigSchema.safeParse(resolved);
+		return CloudflareConfigSchema.safeParse(resolved);
 	}
 
 	const containerInputs = Array.isArray(resolved.containers)
@@ -275,16 +235,11 @@ export async function resolveAndParseConfig(
 			: { worker: normalizedWorker.value }),
 		...(Array.isArray(resolved.containers) ? { containers } : {}),
 	};
-	const result = InputConfigSchema.safeParse(candidate);
+	const result = CloudflareConfigSchema.safeParse(candidate);
 	const issues = [...prefixIssues(normalizedWorker.issues, "worker")];
 
 	if (!result.success) {
 		issues.push(...result.error.issues);
-	} else {
-		issues.push(
-			...validateUniqueContainerNames(result.data),
-			...validateContainerLinks(result.data)
-		);
 	}
 
 	return issues.length > 0
@@ -298,7 +253,7 @@ export async function resolveAndParseConfigSettings(
 	ctx: ConfigContext
 ): Promise<ConfigSettingsParseResult> {
 	const resolved = await createDefinitionResolver(ctx)(input);
-	return InputSettingsSchema.safeParse(resolved);
+	return SettingsSchema.safeParse(resolved);
 }
 
 /** Load and parse `cloudflare.config.ts`'s default export. */

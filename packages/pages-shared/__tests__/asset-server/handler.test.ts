@@ -956,6 +956,82 @@ describe("asset-server handler", () => {
 				}
 			`);
 		});
+
+		test("assets that only get HEAD requests are preserved", async ({
+			expect,
+		}) => {
+			const metadata = createMetadataObject({
+				deploymentId: "deployment-" + Math.random(),
+			}) as Metadata;
+
+			const { response, spies } = await getTestResponse({
+				request: new Request("https://example.com/head-only", {
+					method: "HEAD",
+				}),
+				metadata,
+				findAssetEntryForPath: async (path: string) =>
+					path === "/head-only.html" ? "asset-key-head-only.html" : null,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response.status).toBe(200);
+
+			await Promise.all(spies.waitUntil);
+
+			// Delete the asset from the manifest and ensure it's served from preservation cache
+			const { response: response2 } = await getTestResponse({
+				request: new Request("https://example.com/head-only"),
+				metadata,
+				findAssetEntryForPath: async () => null,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response2.status).toBe(200);
+			expect(await response2.text()).toBe("hello world!");
+		});
+
+		test("HEAD requests don't rewrite an unchanged preservation entry", async ({
+			expect,
+		}) => {
+			const metadata = createMetadataObject({
+				deploymentId: "deployment-" + Math.random(),
+			}) as Metadata;
+
+			const preservationCacheV2 = await caches.open("assetPreservationCacheV2");
+			await preservationCacheV2.put(
+				"https://example.com/head-unchanged",
+				new Response("asset-key-head-unchanged.html", {
+					headers: {
+						"cache-control": "public, s-maxage=604800",
+						"x-original-entry": "1",
+					},
+				})
+			);
+
+			const { response, spies } = await getTestResponse({
+				request: new Request("https://example.com/head-unchanged", {
+					method: "HEAD",
+				}),
+				metadata,
+				findAssetEntryForPath: async (path: string) =>
+					path === "/head-unchanged.html"
+						? "asset-key-head-unchanged.html"
+						: null,
+				caches,
+				fetchAsset: () =>
+					Promise.resolve(Object.assign(new Response("hello world!"))),
+			});
+			expect(response.status).toBe(200);
+
+			await Promise.all(spies.waitUntil);
+
+			const preservationRes = await preservationCacheV2.match(
+				"https://example.com/head-unchanged"
+			);
+			expect(preservationRes?.headers.get("x-original-entry")).toBe("1");
+		});
 	});
 
 	describe("isPreservationCacheResponseExpiring()", () => {
@@ -1151,6 +1227,66 @@ describe("asset-server handler", () => {
 	});
 
 	describe("redirects", () => {
+		test.for(["http", "https"])(
+			"preserves scheme-less redirect targets on %s requests",
+			async (protocol, { expect }) => {
+				const { response } = await getTestResponse({
+					request: `${protocol}://foo.com/old//images/logo.png`,
+					metadata: createMetadataObjectWithRedirects([
+						{
+							from: "/old/*",
+							to: "//other.example/:splat?next=https://example.com/a//b#section//one",
+							status: 302,
+						},
+					]),
+				});
+
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe(
+					`${protocol}://other.example//images/logo.png?next=https://example.com/a//b#section//one`
+				);
+			}
+		);
+
+		test.for([
+			["/old/*", "/old//images/logo.png", "/:splat", "/images/logo.png"],
+			["/old*", "/old/images/logo.png", "/:splat", "/images/logo.png"],
+			["/old/*", "/old/evil.example", "///:splat", "/evil.example"],
+			["/old/*", "/old/evil.example", "//\\:splat", "/evil.example"],
+			[
+				"/old/*",
+				"/old///images/logo.png?keep=1",
+				"/:splat",
+				"/images/logo.png?keep=1",
+			],
+			["/old/*", "/old/%2Fimages/logo.png", "/:splat", "/%2Fimages/logo.png"],
+			[
+				"/old/*",
+				"/old//images/logo.png",
+				"/:splat?next=https://example.com/a//b#section//one",
+				"/images/logo.png?next=https://example.com/a//b#section//one",
+			],
+			[
+				"/old/*",
+				"/old//images/logo.png",
+				"https://other.example/:splat",
+				"https://other.example//images/logo.png",
+			],
+		])(
+			"normalizes the pathname of %s -> %s (%s)",
+			async ([from, path, to, location], { expect }) => {
+				const { response } = await getTestResponse({
+					request: `https://foo.com${path}`,
+					metadata: createMetadataObjectWithRedirects([
+						{ from, to, status: 302 },
+					]),
+				});
+
+				expect(response.status).toBe(302);
+				expect(response.headers.get("Location")).toBe(location);
+			}
+		);
+
 		test("it should redirect uri-encoded paths", async ({ expect }) => {
 			const { response, spies } = await getTestResponse({
 				request: "https://foo.com/some%20page",
