@@ -49,6 +49,7 @@ export type MetadataHeaderEntry = {
 export type MetadataHeadersV2 = {
 	version: number; // TODO: This could be 2
 	rules: MetadataHeadersRulesV2;
+	orderedRules?: [string, MetadataHeaderEntry][];
 };
 
 export type Metadata = {

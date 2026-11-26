@@ -196,6 +196,11 @@ export async function generateHandler<
 		? await caches?.open(`eh:${metadata.deploymentId}`)
 		: undefined;
 
+	const orderedRules =
+		metadata.headers?.version === HEADERS_VERSION &&
+		"orderedRules" in metadata.headers
+			? metadata.headers.orderedRules
+			: undefined;
 	const headerRules = metadata.headers
 		? normaliseHeaders(metadata.headers)
 		: {};
@@ -504,7 +509,7 @@ export async function generateHandler<
 
 		// Iterate through rules and find rules that match the path
 		const headersMatcher = generateRulesMatcher(
-			headerRules,
+			orderedRules ?? headerRules,
 			({ set = {}, unset = [] }, replacements) => {
 				const replacedSet: Record<string, string> = {};
 				Object.keys(set).forEach((key) => {

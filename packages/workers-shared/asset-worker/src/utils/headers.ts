@@ -72,7 +72,7 @@ export function attachCustomHeaders(
 		// Iterate through rules and find rules that match the path
 		const headersMatcher = generateRulesMatcher(
 			configuration.headers?.version === HEADERS_VERSION
-				? configuration.headers.rules
+				? (configuration.headers.orderedRules ?? configuration.headers.rules)
 				: {},
 			({ set = {}, unset = [] }, replacements) => {
 				const replacedSet: Record<string, string> = {};

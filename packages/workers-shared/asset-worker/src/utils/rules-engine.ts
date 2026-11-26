@@ -66,14 +66,15 @@ export const generateRuleRegExp = (rule: string) => {
 };
 
 export const generateRulesMatcher = <T>(
-	rules?: Record<string, T>,
+	rules?: Record<string, T> | [string, T][],
 	replacerFn: (match: T, replacements: Replacements) => T = (match) => match
 ) => {
 	if (!rules) {
 		return () => [];
 	}
 
-	const compiledRules = Object.entries(rules)
+	const entries = Array.isArray(rules) ? rules : Object.entries(rules);
+	const compiledRules = entries
 		.map(([rule, match]) => {
 			const crossHost = rule.startsWith("https://");
 

@@ -1,3 +1,4 @@
+import type { MetadataHeadersV2 } from "../asset-server/metadata";
 import type {
 	ParsedHeaders,
 	ParsedRedirects,
@@ -40,10 +41,7 @@ export type Metadata = {
 		staticRules: MetadataRedirects;
 		rules: MetadataRedirects;
 	};
-	headers?: {
-		version: number;
-		rules: MetadataHeaders;
-	};
+	headers?: MetadataHeadersV2;
 	analytics?: {
 		version: number;
 		token: string;

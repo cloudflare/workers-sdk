@@ -1,3 +1,4 @@
+import { parseHeaders } from "@cloudflare/workers-shared/utils/configuration/parseHeaders";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import {
 	CACHE_PRESERVATION_WRITE_FREQUENCY,
@@ -43,6 +44,34 @@ describe("asset-server handler", () => {
 			);
 		}
 	);
+
+	test("applies repeated paths and intervening matches in file order", async ({
+		expect,
+	}) => {
+		const headers = parseHeaders(`/*
+  X-Order: first
+  X-Reset: first
+
+/:name
+  x-order: middle
+  ! X-RESET
+  X-Reset: :name
+  X-Remove: middle
+
+/*
+  X-ORDER: last
+  x-reset: last
+  ! x-remove`);
+		const { response } = await getTestResponse({
+			request: "https://example.com/file",
+			metadata: createMetadataObject({ headers }) as Metadata,
+			findAssetEntryForPath: async (path) => (path === "/file" ? path : null),
+		});
+
+		expect(response.headers.get("X-Order")).toBe("first, middle, last");
+		expect(response.headers.get("X-Reset")).toBe("file, last");
+		expect(response.headers.has("X-Remove")).toBe(false);
+	});
 
 	test("Returns appropriate status codes", async ({ expect }) => {
 		const statuses = [301, 302, 303, 307, 308];

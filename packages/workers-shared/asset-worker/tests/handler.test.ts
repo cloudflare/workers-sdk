@@ -1,5 +1,8 @@
 import { describe, it, vi } from "vitest";
+import { constructHeaders } from "../../utils/configuration/constructConfiguration";
+import { parseHeaders } from "../../utils/configuration/parseHeaders";
 import { mockJaegerBinding } from "../../utils/tracing";
+import { HeadersSchema } from "../../utils/types";
 import { Analytics } from "../src/analytics";
 import { SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING } from "../src/compatibility-flags";
 import { normalizeConfiguration } from "../src/configuration";
@@ -280,6 +283,43 @@ describe("[Asset Worker] `handleRequest`", () => {
 	});
 
 	describe("_headers", () => {
+		it("applies both wildcard blocks from _headers to an asset response", async ({
+			expect,
+		}) => {
+			const headers = parseHeaders(`/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+
+/*
+  Cache-Control: public, max-age=3600`);
+			const metadata = constructHeaders({
+				headers,
+				logger: { ...console, log: vi.fn() },
+			});
+			const response = await handleRequest(
+				new Request("https://example.com/"),
+				// @ts-expect-error Empty config defaults to using mocked jaeger
+				mockEnv,
+				normalizeConfiguration({
+					html_handling: "none",
+					headers: HeadersSchema.parse(metadata.headers),
+				}),
+				vi.fn().mockResolvedValue("etag"),
+				vi.fn().mockResolvedValue({
+					readableStream: null,
+					contentType: "text/plain",
+				}),
+				analytics
+			);
+
+			expect(response.status).toBe(200);
+			expect(Object.fromEntries(response.headers)).toMatchObject({
+				"x-frame-options": "DENY",
+				"x-content-type-options": "nosniff",
+				"cache-control": "public, max-age=3600",
+			});
+		});
+
 		it("attaches custom headers", async ({ expect }) => {
 			const configuration: AssetConfig = normalizeConfiguration({
 				html_handling: "none",

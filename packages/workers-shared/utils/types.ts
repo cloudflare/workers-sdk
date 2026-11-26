@@ -66,6 +66,9 @@ export const HeadersSchema = z
 	.object({
 		version: z.literal(2),
 		rules: MetadataHeaders,
+		orderedRules: z
+			.array(z.tuple([z.string(), MetadataHeaderEntry]))
+			.optional(),
 	})
 	.optional();
 

@@ -141,24 +141,29 @@ export function constructHeaders({
 		return {};
 	}
 
-	const rules: MetadataHeaders = {};
-	for (const rule of headers.rules) {
-		const configuredRule: MetadataHeaders[string] = {};
+	const orderedRules = headers.rules.map(
+		(rule): [string, MetadataHeaders[string]] => {
+			const configuredRule: MetadataHeaders[string] = {};
 
-		if (Object.keys(rule.headers).length) {
-			configuredRule.set = rule.headers;
-		}
-		if (rule.unsetHeaders.length) {
-			configuredRule.unset = rule.unsetHeaders;
-		}
+			if (Object.keys(rule.headers).length) {
+				configuredRule.set = rule.headers;
+			}
+			if (rule.unsetHeaders.length) {
+				configuredRule.unset = rule.unsetHeaders;
+			}
 
-		rules[rule.path] = configuredRule;
-	}
+			return [rule.path, configuredRule];
+		}
+	);
+	const rules = Object.fromEntries(orderedRules);
 
 	return {
 		headers: {
 			version: HEADERS_VERSION,
 			rules,
+			// Keep the v2 map for older readers. A repeated path needs the full
+			// sequence because other matching rules can occur between its blocks.
+			...(Object.keys(rules).length < orderedRules.length && { orderedRules }),
 		},
 	};
 }
