@@ -101,7 +101,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	const lazy =
 		Object.keys(remoteBindings).length === 0
 			? (preExistingRemoteProxySessionData?.lazy ?? false)
-			: Object.values(remoteBindings).every(isRemoteOnlyBinding);
+			: shouldStartRemoteProxySessionLazily(remoteBindings);
 	const authSameAsBefore =
 		(key !== undefined ||
 		preExistingRemoteProxySessionData?.authKey !== undefined
@@ -160,12 +160,16 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	};
 }
 
-function isRemoteOnlyBinding(binding: Binding): boolean {
-	const support = getBindingLocalSupport(binding.type);
-	return (
-		support === "remote" ||
-		support === "DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
-	);
+export function shouldStartRemoteProxySessionLazily(
+	remoteBindings: Record<string, Binding>
+): boolean {
+	return Object.values(remoteBindings).every((binding) => {
+		const support = getBindingLocalSupport(binding.type);
+		return (
+			support === "remote" ||
+			support === "DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
+		);
+	});
 }
 
 function deepStrictEqual(source: unknown, target: unknown): boolean {

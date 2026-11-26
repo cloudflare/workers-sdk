@@ -1,9 +1,11 @@
 import assert from "node:assert";
+import { execFile } from "node:child_process";
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { promisify } from "node:util";
 import { getCloudflareApiBaseUrl } from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
 import { fetch } from "undici";
@@ -18,6 +20,7 @@ import {
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { WRANGLER_IMPORT } from "./helpers/wrangler";
 import type { K2Stream } from "../src/k2/client";
 import type { K2Producer } from "@cloudflare/config";
 import type { ExpectStatic } from "vitest";
@@ -56,6 +59,71 @@ async function seedProducer(
 }
 
 describe("K2 producer configuration", () => {
+	it("finishes the first lazy getPlatformProxy() call when authentication fails", async ({
+		expect,
+	}) => {
+		const helper = new WranglerE2ETestHelper();
+		await seedProducer(helper, streamId);
+		await helper.seed({
+			"platform-proxy.mjs": `
+				import assert from "node:assert/strict";
+				import { getPlatformProxy } from ${JSON.stringify(WRANGLER_IMPORT.href)};
+
+				const proxy = await getPlatformProxy({ persist: false });
+				try {
+					await assert.rejects(async () => {
+						await proxy.env.ORDERS.send([{ content: new ArrayBuffer(1) }]);
+					});
+				} finally {
+					await proxy.dispose();
+				}
+			`,
+		});
+		const requests: string[] = [];
+		const server = createServer((request, response) => {
+			requests.push(new URL(request.url ?? "/", "http://localhost").pathname);
+			response.setHeader("Content-Type", "application/json");
+			response.end(JSON.stringify({ success: true, result: [] }));
+		});
+		server.listen(0, "127.0.0.1");
+		await once(server, "listening");
+		helper.onTeardown(
+			() =>
+				new Promise<void>((resolve, reject) =>
+					server.close((error) => (error ? reject(error) : resolve()))
+				)
+		);
+		const address = server.address();
+		assert(address && typeof address !== "string");
+		const { stderr } = await promisify(execFile)(
+			process.execPath,
+			["platform-proxy.mjs"],
+			{
+				cwd: helper.tmpPath,
+				timeout: 15_000,
+				killSignal: "SIGKILL",
+				env: {
+					...process.env,
+					HOME: helper.tmpPath,
+					USERPROFILE: helper.tmpPath,
+					XDG_CONFIG_HOME: helper.tmpPath,
+					CLOUDFLARE_ACCOUNT_ID: "",
+					CF_ACCOUNT_ID: "",
+					CLOUDFLARE_API_KEY: "",
+					CF_API_KEY: "",
+					CLOUDFLARE_API_TOKEN: "k2-test-token",
+					CLOUDFLARE_API_BASE_URL: `http://127.0.0.1:${address.port}/client/v4`,
+					WRANGLER_LOG: "warn",
+				},
+			}
+		);
+		expect(requests.sort()).toEqual([
+			"/client/v4/accounts",
+			"/client/v4/memberships",
+		]);
+		expect(stderr).toContain("Failed to automatically retrieve account IDs");
+	});
+
 	it("creates, gets, lists and deletes streams through the built CLI and an isolated API server", async ({
 		expect,
 	}) => {

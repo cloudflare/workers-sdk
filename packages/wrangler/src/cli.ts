@@ -24,6 +24,11 @@ import {
 	unstable_pages,
 	unstable_readConfig,
 } from "./api";
+import {
+	PLATFORM_PROXY_REMOTE_SESSION_ARG,
+	runPlatformProxyRemoteSession,
+} from "./api/integrations/platform/remote-session";
+import { logger } from "./logger";
 import { registerOutputStreamErrorHandler } from "./output-stream-errors";
 import { main } from "./index";
 import type {
@@ -56,13 +61,25 @@ if (typeof vitest === "undefined" && require.main === module) {
 	registerOutputStreamErrorHandler(process.stdout);
 	registerOutputStreamErrorHandler(process.stderr);
 
-	main(hideBin(process.argv)).catch((e) => {
-		// The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.
-		// Here we just want to ensure that the process exits with a non-zero code.
-		// We don't want to do this inside the `main()` function, since that would kill the process when running our tests.
-		const exitCode = (e instanceof FatalError && e.code) || 1;
-		process.exit(exitCode);
-	});
+	const args = hideBin(process.argv);
+	if (
+		process.send &&
+		args.length === 1 &&
+		args[0] === PLATFORM_PROXY_REMOTE_SESSION_ARG
+	) {
+		runPlatformProxyRemoteSession().catch((error) => {
+			logger.error(error);
+			process.exitCode = 1;
+		});
+	} else {
+		main(args).catch((e) => {
+			// The logging of any error that was thrown from `main()` is handled in the `yargs.fail()` handler.
+			// Here we just want to ensure that the process exits with a non-zero code.
+			// We don't want to do this inside the `main()` function, since that would kill the process when running our tests.
+			const exitCode = (e instanceof FatalError && e.code) || 1;
+			process.exit(exitCode);
+		});
+	}
 }
 
 /**
