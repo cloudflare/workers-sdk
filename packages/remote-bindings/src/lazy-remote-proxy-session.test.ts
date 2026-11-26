@@ -1,3 +1,4 @@
+import { setImmediate } from "node:timers/promises";
 import { ErrorAuthServerUnreachable } from "@cloudflare/workers-auth";
 import { UserError } from "@cloudflare/workers-utils";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -6,6 +7,19 @@ import { it, vi } from "vitest";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import { createDeferred } from "./startDevWorker/utils";
 import type { RemoteBindingsLogger } from "./logger";
+import type { CfAccount } from "@cloudflare/workers-utils";
+
+function createLogger(): RemoteBindingsLogger {
+	return {
+		loggerLevel: "none",
+		debug: vi.fn(),
+		log: vi.fn(),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		console: vi.fn(),
+	};
+}
 
 it("starts login on the first AI call and keeps unrelated requests available while login is pending or fails", async ({
 	expect,
@@ -19,15 +33,7 @@ it("starts login on the first AI call and keeps unrelated requests available whi
 			telemetryMessage: "test login cancelled",
 		});
 	});
-	const logger: RemoteBindingsLogger = {
-		loggerLevel: "none",
-		debug: vi.fn(),
-		log: vi.fn(),
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-		console: vi.fn(),
-	};
+	const logger = createLogger();
 	const session = await startRemoteProxySession(
 		{ AI: { type: "ai" } },
 		{ auth, logger, cliDisplayName: "Wrangler" }
@@ -99,20 +105,7 @@ it("reports an unreachable OAuth refresh endpoint without marking the failure de
 	});
 	const session = await startRemoteProxySession(
 		{ AI: { type: "ai" } },
-		{
-			lazy: true,
-			auth,
-			cliDisplayName: "Wrangler",
-			logger: {
-				loggerLevel: "none",
-				debug: vi.fn(),
-				log: vi.fn(),
-				info: vi.fn(),
-				warn: vi.fn(),
-				error: vi.fn(),
-				console: vi.fn(),
-			},
-		}
+		{ auth, cliDisplayName: "Wrangler", logger: createLogger() }
 	);
 	onTestFinished(() => session.dispose());
 	const response = await fetch(session.remoteProxyConnectionString, {
@@ -122,4 +115,27 @@ it("reports an unreachable OAuth refresh endpoint without marking the failure de
 	expect(response.status).toBe(503);
 	expect(response.headers.has("mf-remote-session-error")).toBe(false);
 	expect(await response.text()).toContain("OAuth endpoint unavailable");
+});
+
+it("reports an auth promise rejected while idle on the first binding call", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const auth = createDeferred<CfAccount>();
+	const logger = createLogger();
+	const session = await startRemoteProxySession(
+		{ AI: { type: "ai" } },
+		{ auth: auth.promise, logger, cliDisplayName: "Wrangler" }
+	);
+	onTestFinished(() => session.dispose());
+	auth.reject(new Error("Credentials unavailable"));
+	await setImmediate();
+	expect(logger.warn).not.toHaveBeenCalled();
+
+	const response = await fetch(session.remoteProxyConnectionString, {
+		headers: { "MF-Binding": "AI" },
+		signal: AbortSignal.timeout(5_000),
+	});
+	expect(response.status).toBe(503);
+	expect(await response.text()).toContain("Credentials unavailable");
 });

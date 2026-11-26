@@ -12,7 +12,6 @@ import type {
 	MiniflareOptions,
 	Miniflare as MiniflareType,
 	RemoteProxyConnectionString,
-	Response,
 } from "miniflare";
 
 const { Miniflare } = await importMiniflare();
@@ -91,15 +90,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					getMfOptions(remoteProxySession.remoteProxyConnectionString)
 				);
 
-				const response = await timedDispatchFetch(mf);
-				const responseText = await response?.text();
-
-				expect(responseText).toEqual(
-					"worker response: Hello from a remote worker"
-				);
-
-				await mf.dispose();
-				await remoteProxySession.dispose();
+				try {
+					const response = await dispatchFirstBindingCall(mf);
+					expect(await response.text()).toEqual(
+						"worker response: Hello from a remote worker"
+					);
+				} finally {
+					await Promise.all([mf.dispose(), remoteProxySession.dispose()]);
+				}
 			});
 
 			test("handles different bindings across fresh sessions with the same Worker name", async ({
@@ -189,15 +187,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
 				);
 
-				const response = await timedDispatchFetch(mf);
-				const responseText = await response?.text();
-
-				expect(responseText).toEqual(
-					"worker response: Hello from a remote worker"
-				);
-
-				await mf.dispose();
-				await proxySessionData.session.dispose();
+				try {
+					const response = await dispatchFirstBindingCall(mf);
+					expect(await response.text()).toEqual(
+						"worker response: Hello from a remote worker"
+					);
+				} finally {
+					await Promise.all([mf.dispose(), proxySessionData.session.dispose()]);
+				}
 			});
 
 			test("fails on the first binding call with incorrect auth data", async ({
@@ -240,12 +237,17 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	}
 );
 
-async function timedDispatchFetch(mf: MiniflareType): Promise<Response | null> {
+async function dispatchFirstBindingCall(mf: MiniflareType) {
+	const signal = AbortSignal.timeout(30_000);
 	try {
-		return await mf.dispatchFetch("http://localhost/", {
-			signal: AbortSignal.timeout(5000),
-		});
-	} catch {
-		return null;
+		return await mf.dispatchFetch("http://localhost/", { signal });
+	} catch (error) {
+		if (signal.aborted) {
+			throw new Error(
+				"The first remote binding call timed out after 30 seconds, including authentication and preview setup.",
+				{ cause: error }
+			);
+		}
+		throw error;
 	}
 }

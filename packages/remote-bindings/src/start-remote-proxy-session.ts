@@ -91,6 +91,12 @@ export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
+	let auth = options.auth;
+	if (typeof auth !== "function" && "then" in auth) {
+		auth = Promise.resolve(auth);
+		void auth.catch(() => {});
+	}
+
 	for (const [name, binding] of Object.entries(bindings ?? {})) {
 		if (binding.type === "flagship" && binding.app_id === undefined) {
 			// cf reads `cloudflare.config.ts`, where the app ID setting is `id`
@@ -125,7 +131,7 @@ export async function startRemoteProxySession(
 		compatibilityFlags: ["enhanced_error_serialization"],
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
-		auth: options.auth,
+		auth,
 		server: { port: 0, secure: false },
 	};
 
