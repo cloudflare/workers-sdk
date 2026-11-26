@@ -562,6 +562,47 @@ describe("deploy", () => {
 		`);
 	});
 
+	it("should treat an 'Unable to authenticate request' [code: 10001] error when checking deployment source as an authentication error", async ({
+		expect,
+	}) => {
+		// https://github.com/cloudflare/workers-sdk/issues/17206
+		// The Cloudflare API rejects credentials on this endpoint with
+		// `Unable to authenticate request [code: 10001]`. Wrangler should give
+		// the same guidance (token hint, account list) as for other
+		// authentication errors, rather than the bare API error and a
+		// suggestion to open a bug report.
+		writeWorkerSource();
+		writeWranglerConfig();
+		mockSubDomainRequest();
+		mockUploadWorkerRequest();
+		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
+		msw.use(
+			http.get("*/accounts/:accountId/workers/services/:scriptName", () => {
+				return HttpResponse.json(
+					createFetchResult(null, false, [
+						{ code: 10001, message: "Unable to authenticate request" },
+					])
+				);
+			}),
+			http.get("*/user/tokens/verify", () => {
+				return HttpResponse.json(createFetchResult([]));
+			})
+		);
+
+		await expect(
+			runWrangler("deploy index.js")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[APIError: A request to the Cloudflare API (/accounts/some-account-id/workers/services/test-name) failed.]`
+		);
+		expect(std.err).toContain("Unable to authenticate request [code: 10001]");
+		expect(std.err).not.toContain("If you think this is a bug");
+		expect(std.out).toContain(
+			"📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable."
+		);
+		expect(std.out).toContain("Getting User settings...");
+		expect(std.out).toContain("│ Account One │ account-1 │");
+	});
+
 	it("should error helpfully if pages_build_output_dir is set in wrangler.toml when --no-autoconfig", async ({
 		expect,
 	}) => {
