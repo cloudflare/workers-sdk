@@ -505,7 +505,7 @@ export class ReactRouter extends Framework {
 				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
-			// A project that already runs on Workers keeps its own Worker
+			// Only a project without a Worker entrypoint of its own gets the default workers/app.ts
 			if (existingWorkerConfig?.entrypoint === undefined) {
 				mkdirSync("workers", { recursive: true });
 				writeAppTs(useMiddlewarePattern);

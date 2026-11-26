@@ -92,8 +92,8 @@ export class SolidStart extends Framework {
 
 /**
  * Chooses the Worker entrypoint for cf, which builds SolidStart with the Cloudflare Vite plugin.
- * Nitro's build output, which a Wrangler config set up for Nitro points at, isn't built any more,
- * so it is replaced. A custom entrypoint is kept.
+ * A project's Wrangler config whose `main` points at Nitro's build output, as Wrangler's SolidStart
+ * setup writes it, gets the plugin's entry instead. A custom entrypoint is kept.
  *
  * @param existingEntrypoint The project's current Worker entrypoint, if it has one
  * @returns The Worker entrypoint
