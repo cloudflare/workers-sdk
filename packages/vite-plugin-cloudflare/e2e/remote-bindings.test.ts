@@ -3,6 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
+import { arrayBuffer } from "node:stream/consumers";
 import { setTimeout } from "node:timers/promises";
 import { assert, beforeAll, describe, onTestFinished, test, vi } from "vitest";
 import {
@@ -173,10 +174,11 @@ describe.skipIf(isWindows)("failure to connect to remote bindings", () => {
 		test("logs the binding error without stopping the server", async ({
 			expect,
 		}) => {
-			const bucketError = "R2 bucket 'non-existent-r2-bucket' not found";
-			const apiUrl = await startMockCloudflareApi((request, response) => {
+			const expectedBucket = "non-existent-r2-bucket";
+			const bucketError = `R2 bucket '${expectedBucket}' not found`;
+			let uploadedBucket: string | undefined;
+			const apiUrl = await startMockCloudflareApi(async (request, response) => {
 				const route = request.url ?? "";
-				request.resume();
 				response.setHeader("Content-Type", "application/json");
 				if (route.endsWith("/subdomain/edge-preview")) {
 					response.end(
@@ -193,13 +195,42 @@ describe.skipIf(isWindows)("failure to connect to remote bindings", () => {
 					request.method === "POST" &&
 					route.endsWith("/edge-preview")
 				) {
+					try {
+						const form = await new Response(await arrayBuffer(request), {
+							headers: {
+								"Content-Type": request.headers["content-type"] ?? "",
+							},
+						}).formData();
+						const metadata = form.get("metadata");
+						if (typeof metadata === "string") {
+							const { bindings } = JSON.parse(metadata) as {
+								bindings?: {
+									name: string;
+									type: string;
+									bucket_name?: string;
+								}[];
+							};
+							uploadedBucket = bindings?.find(
+								(binding) =>
+									binding.name === "MY_R2" && binding.type === "r2_bucket"
+							)?.bucket_name;
+						}
+					} catch {
+						uploadedBucket = undefined;
+					}
+
 					response.writeHead(400).end(
 						JSON.stringify({
 							success: false,
-							errors: [{ code: 10085, message: bucketError }],
+							errors: [
+								uploadedBucket === expectedBucket
+									? { code: 10085, message: bucketError }
+									: { message: "Unexpected R2 binding in preview upload" },
+							],
 						})
 					);
 				} else {
+					request.resume();
 					response.writeHead(404).end(
 						JSON.stringify({
 							success: false,
@@ -220,6 +251,7 @@ describe.skipIf(isWindows)("failure to connect to remote bindings", () => {
 			});
 			expect(response.ok).toBe(false);
 			await response.text();
+			expect(uploadedBucket).toBe(expectedBucket);
 			await vi.waitFor(() => expect(proc.stderr).toContain(bucketError), {
 				timeout: 10_000,
 			});
@@ -280,6 +312,9 @@ describe.skipIf(isWindows)(
 				CLOUDFLARE_API_TOKEN: undefined,
 				CLOUDFLARE_API_KEY: undefined,
 				CLOUDFLARE_EMAIL: undefined,
+				CF_API_TOKEN: undefined,
+				CF_API_KEY: undefined,
+				CF_EMAIL: undefined,
 				CLOUDFLARE_AUTH_PROFILE: undefined,
 			});
 			const url = await waitForReady(proc);
