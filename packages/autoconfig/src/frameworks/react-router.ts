@@ -288,7 +288,7 @@ function needsViteEnvAPIFutureFlag(reactRouterVersion: string): boolean {
 }
 
 /**
- * Writes the `workers/app.ts` Worker entry point. When `v8_middleware` is enabled,
+ * Writes the `workers/app.ts` Worker entry point, unless the project already has one. When `v8_middleware` is enabled,
  * generates a simplified fetch handler that delegates directly to the request handler.
  * Otherwise generates the traditional pattern with `AppLoadContext` module augmentation
  * and explicit `env`/`ctx` forwarding.
@@ -296,6 +296,11 @@ function needsViteEnvAPIFutureFlag(reactRouterVersion: string): boolean {
  * @param useMiddlewarePattern - Whether `v8_middleware` is enabled in the user's config.
  */
 function writeAppTs(useMiddlewarePattern: boolean) {
+	// A project that already runs on Workers, such as a migrated one, keeps its own Worker
+	if (existsSync("workers/app.ts")) {
+		return;
+	}
+
 	if (useMiddlewarePattern) {
 		writeFileSync(
 			"workers/app.ts",
@@ -494,7 +499,7 @@ export class ReactRouter extends Framework {
 				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
-			mkdirSync("workers");
+			mkdirSync("workers", { recursive: true });
 
 			writeAppTs(useMiddlewarePattern);
 
