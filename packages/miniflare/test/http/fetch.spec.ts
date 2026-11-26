@@ -1,6 +1,8 @@
 import { Blob } from "node:buffer";
 import { execFile } from "node:child_process";
 import http from "node:http";
+import net from "node:net";
+import { setImmediate } from "node:timers/promises";
 import { URLSearchParams } from "node:url";
 import { promisify } from "node:util";
 import {
@@ -8,11 +10,12 @@ import {
 	DispatchFetchDispatcher,
 	fetch,
 	FormData,
+	Miniflare,
 } from "miniflare";
 import { errors, MockAgent, Pool } from "undici";
 import { assert, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
-import { useServer } from "../test-shared";
+import { singleModuleManifest, useDispose, useServer } from "../test-shared";
 import type { CloseEvent, MessageEvent } from "miniflare";
 import type { AddressInfo } from "node:net";
 
@@ -456,3 +459,54 @@ test.for(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"])(
 		expect(sockets.size).toBe(2);
 	}
 );
+
+test("fetch: closes the runtime connection once a rejected WebSocket upgrade body is read", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		host: "127.0.0.1",
+		cf: false,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-01-01",
+					manifest: singleModuleManifest(`export default {
+						fetch() {
+							return new Response("unauthorized", { status: 401 });
+						}
+					}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+	await mf.ready;
+
+	const before = new Set(
+		(
+			process as unknown as { _getActiveHandles(): unknown[] }
+		)._getActiveHandles()
+	);
+	const res = await mf.dispatchFetch("http://127.0.0.1/", {
+		headers: {
+			Upgrade: "websocket",
+			Connection: "Upgrade",
+			"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+			"Sec-WebSocket-Version": "13",
+		},
+	});
+	expect(res.status).toBe(401);
+	expect(await res.text()).toBe("unauthorized");
+	await setImmediate();
+	const dangling = (process as unknown as { _getActiveHandles(): unknown[] })
+		._getActiveHandles()
+		.filter(
+			(handle): handle is net.Socket =>
+				handle instanceof net.Socket && !before.has(handle) && !handle.destroyed
+		);
+	expect(
+		dangling,
+		"no socket to the runtime may linger once the response body is consumed"
+	).toEqual([]);
+});

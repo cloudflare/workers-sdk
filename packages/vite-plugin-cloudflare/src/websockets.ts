@@ -1,3 +1,5 @@
+import { ServerResponse } from "node:http";
+import { sendResponse } from "@remix-run/node-fetch-server";
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import {
@@ -84,15 +86,23 @@ export function handleWebSocket(
 				const response = await miniflare.dispatchFetch(url, {
 					headers: [...headers],
 					method: request.method,
+					// A redirect is the Worker's answer to the upgrade, so send it as is.
+					redirect: "manual",
 				});
 				const workerWebSocket = response.webSocket;
 
-				if (!workerWebSocket) {
-					socket.destroy();
+				if (socket.destroyed) {
 					return;
 				}
 
-				if (socket.destroyed) {
+				if (!workerWebSocket) {
+					const res = new ServerResponse(request);
+					res.shouldKeepAlive = false;
+					res.assignSocket(request.socket);
+					// Node removes its HTTP drain handler when it hands off the upgrade.
+					request.socket.on("drain", () => res.emit("drain"));
+					await sendResponse(res, response as unknown as Response);
+					request.socket.destroySoon();
 					return;
 				}
 
