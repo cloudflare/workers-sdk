@@ -36,8 +36,11 @@ export interface SharedContext {
 	configChangeCoordinator?: ConfigChangeCoordinator;
 	/** Allowed hostnames for tunnel connections */
 	tunnelHostnames: Set<string>;
-	/** Auth instance shared by features within the same Vite project. */
-	auth?: CloudflareAuth;
+	/**
+	 * Auth instance shared by features within the same Vite project, with the
+	 * `CLOUDFLARE_API_TOKEN` it was created under.
+	 */
+	auth?: { instance: CloudflareAuth; apiToken: string | undefined };
 }
 
 /** An explicitly typed additional module emitted by a Vite environment. */
@@ -67,10 +70,19 @@ export class PluginContext {
 
 	getCloudflareAuth(profileDir: string, logger: Logger): CloudflareAuth {
 		const profile = resolveAuthProfile(profileDir, logger);
-		if (this.#sharedContext.auth?.getActiveProfile() !== profile) {
-			this.#sharedContext.auth = createAuthForProfile(profile, logger);
+		// The token can change when Vite restarts after an edit to a `.env` file.
+		// The new token may not reach the account selected with the old one, so
+		// replace the auth instead of keeping its selection.
+		const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+		let auth = this.#sharedContext.auth;
+		if (
+			auth?.instance.getActiveProfile() !== profile ||
+			auth.apiToken !== apiToken
+		) {
+			auth = { instance: createAuthForProfile(profile, logger), apiToken };
+			this.#sharedContext.auth = auth;
 		}
-		return this.#sharedContext.auth;
+		return auth.instance;
 	}
 
 	/** Creates a new Miniflare instance or updates the existing instance */

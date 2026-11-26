@@ -853,6 +853,50 @@ describe("resolvePluginConfig", () => {
 		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBeUndefined();
 	});
 
+	test("updates Cloudflare-prefixed values in process.env when the config is reloaded", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		const envFile = path.join(root, ".env.production");
+		fs.writeFileSync(
+			envFile,
+			"CLOUDFLARE_ACCOUNT_ID=first-account\nCLOUDFLARE_API_TOKEN=first-token"
+		);
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
+		await resolvePluginConfig({}, { root }, buildEnv);
+
+		// Vite reloads the config in the same process when an environment file changes
+		fs.writeFileSync(envFile, "CLOUDFLARE_ACCOUNT_ID=second-account");
+		const result = await resolvePluginConfig({}, { root }, buildEnv);
+
+		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBe("second-account");
+		expect(process.env.CLOUDFLARE_ACCOUNT_ID).toBe("second-account");
+		expect(process.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
+	});
+
+	test("keeps Cloudflare-prefixed values not copied from environment files when the config is reloaded", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		const envFile = path.join(root, ".env.production");
+		fs.writeFileSync(
+			envFile,
+			"CLOUDFLARE_ACCOUNT_ID=file-account\nCLOUDFLARE_API_TOKEN=file-token"
+		);
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "shell-account");
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", undefined);
+		await resolvePluginConfig({}, { root }, buildEnv);
+
+		vi.stubEnv("CLOUDFLARE_API_TOKEN", "later-token");
+		fs.writeFileSync(envFile, "");
+		const result = await resolvePluginConfig({}, { root }, buildEnv);
+
+		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBe("shell-account");
+		expect(process.env.CLOUDFLARE_ACCOUNT_ID).toBe("shell-account");
+		expect(process.env.CLOUDFLARE_API_TOKEN).toBe("later-token");
+	});
+
 	test("rejects duplicate Vite environment names", async ({ expect }) => {
 		writeEntryConfig();
 		writeSource("src/aux.ts");

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { format } from "node:util";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import {
@@ -90,8 +91,10 @@ export function createAuthForProfile(
 /**
  * Get the cf credentials for remote bindings sessions.
  *
- * The key includes the resolved profile so a profile change restarts the
- * session with the newly selected credentials.
+ * The key includes the resolved profile, `CLOUDFLARE_ACCOUNT_ID` and
+ * `CLOUDFLARE_API_TOKEN`, so a change to any of them restarts the session with
+ * the new credentials. The variables can change when Vite restarts after an
+ * edit to a `.env` file. The key is hashed so it holds no secret.
  *
  * @param profileDir - Directory used to resolve the cf auth profile.
  * @param accountId - The configured account ID, if any.
@@ -114,7 +117,17 @@ export function getRemoteBindingsAuth(
 				apiToken: auth.requireApiToken(),
 			};
 		},
-		key: JSON.stringify([profileDir, accountId, auth.getActiveProfile()]),
+		key: createHash("sha256")
+			.update(
+				JSON.stringify([
+					profileDir,
+					accountId,
+					process.env.CLOUDFLARE_ACCOUNT_ID,
+					process.env.CLOUDFLARE_API_TOKEN,
+					auth.getActiveProfile(),
+				])
+			)
+			.digest("hex"),
 	};
 }
 
