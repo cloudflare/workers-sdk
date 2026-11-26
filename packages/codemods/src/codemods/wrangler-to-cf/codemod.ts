@@ -1,14 +1,8 @@
 import path from "node:path";
 import { getDetailsForAutoConfig, runAutoConfig } from "@cloudflare/autoconfig";
-import { fileExists, filterByFileRestrictions } from "../../files";
-import type { Codemod, CodemodContext } from "../../types";
+import { filterByFileRestrictions } from "../../files";
+import type { Codemod } from "../../types";
 import type { AutoConfigContext } from "@cloudflare/autoconfig";
-
-const DEFAULT_CONFIG_FILES = [
-	"wrangler.json",
-	"wrangler.jsonc",
-	"wrangler.toml",
-] as const;
 
 /** Runs autoconfig without asking, since running the codemod is the request. */
 const autoConfigContext: AutoConfigContext = {
@@ -30,63 +24,15 @@ const autoConfigContext: AutoConfigContext = {
 	},
 };
 
-async function getConfigPath(context: CodemodContext): Promise<string> {
-	if (context.configPath) {
-		return path.resolve(context.cwd, context.configPath);
-	}
-
-	const candidates = DEFAULT_CONFIG_FILES.map((fileName) =>
-		path.join(context.cwd, fileName)
-	);
-	const existingCandidates = (
-		await Promise.all(
-			candidates.map(async (candidate) => ({
-				candidate,
-				exists: await fileExists(candidate),
-			}))
-		)
-	)
-		.filter(({ exists }) => exists)
-		.map(({ candidate }) => candidate);
-
-	if (existingCandidates.length === 1) {
-		return existingCandidates[0];
-	}
-	if (existingCandidates.length === 0) {
-		throw new Error(
-			`No Wrangler config found in ${context.cwd}. Pass --config with the exact config path.`
-		);
-	}
-
-	throw new Error(
-		`Multiple Wrangler configs found in ${context.cwd}. Pass --config with the exact config path.`
-	);
-}
-
 export const wranglerToCfCodemod: Codemod = {
 	name: "wrangler-to-cf",
 	aliases: ["wrangler to cf"],
 	description: `Migrate a Wrangler project to cf, including its configuration and framework`,
 	managesGitWorktreeSafety: true,
 	run: async (context) => {
-		const configPath = await getConfigPath(context);
-		const [includedConfigPath] = await filterByFileRestrictions(context, [
-			configPath,
-		]);
-		if (!includedConfigPath) {
-			return {
-				changedFiles: [],
-				message: `${path
-					.relative(context.cwd, configPath)
-					.split(path.sep)
-					.join(path.posix.sep)} does not match any --files pattern.`,
-				status: "skipped",
-			};
-		}
-
 		const details = await getDetailsForAutoConfig({
 			projectPath: context.cwd,
-			wranglerConfigPath: includedConfigPath,
+			wranglerConfigPath: context.configPath,
 			target: "cf",
 			context: autoConfigContext,
 		});
@@ -95,6 +41,26 @@ export const wranglerToCfCodemod: Codemod = {
 				`Cannot migrate because ${path.join(context.cwd, "cloudflare.config.ts")} already exists. Inspect and finish the existing migration; it will not be overwritten. Automated agents should read its TODOs and ask the user about unresolved choices.`
 			);
 		}
+		if (details.wranglerConfigPath === undefined) {
+			throw new Error(
+				`No Wrangler config found in ${context.cwd}. Pass --config with the exact config path.`
+			);
+		}
+
+		const [includedConfigPath] = await filterByFileRestrictions(context, [
+			details.wranglerConfigPath,
+		]);
+		if (!includedConfigPath) {
+			return {
+				changedFiles: [],
+				message: `${path
+					.relative(context.cwd, details.wranglerConfigPath)
+					.split(path.sep)
+					.join(path.posix.sep)} does not match any --files pattern.`,
+				status: "skipped",
+			};
+		}
+
 		const { wranglerMigration } = await runAutoConfig(details, {
 			target: "cf",
 			context: autoConfigContext,

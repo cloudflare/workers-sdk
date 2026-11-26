@@ -221,7 +221,7 @@ describe("codemod runner", () => {
 
 		await expect(
 			runCodemod("wrangler-to-cf", { cwd, dryRun: false })
-		).rejects.toThrow("Multiple Wrangler configs found");
+		).rejects.toThrow("Found more than one Wrangler config");
 	});
 
 	it("runs the Vitest migrations manually, in sequence", async ({ expect }) => {
