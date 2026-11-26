@@ -279,7 +279,7 @@ export async function getDetailsForAutoConfig({
 
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, {
-			// A Wrangler config that sets `pages_build_output_dir` belongs to a Pages project
+			// The caller's parsed config, or the one setup migrates
 			wranglerConfig: wranglerConfig ?? wranglerRawConfig,
 			target,
 		});
