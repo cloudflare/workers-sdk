@@ -579,7 +579,6 @@ export class BundlerController extends Controller {
 				return;
 			}
 
-			const assetsIgnorePath = path.join(assetsDir, CF_ASSETS_IGNORE_FILENAME);
 			let assetsIgnoreChanged = false;
 			const debouncedRefreshBundle = debounce(() => {
 				if (!isCurrent()) {
@@ -605,7 +604,9 @@ export class BundlerController extends Controller {
 				.on("all", (eventName, filePath) => {
 					const message = getAssetChangeMessage(eventName, filePath);
 					logger.debug(`🌀 ${message}...`);
-					assetsIgnoreChanged ||= path.resolve(filePath) === assetsIgnorePath;
+					assetsIgnoreChanged ||=
+						getAssetMetadataFilename(path.relative(assetsDir, filePath)) ===
+						CF_ASSETS_IGNORE_FILENAME;
 					debouncedRefreshBundle();
 				})
 				.on("error", (err) => {
@@ -725,6 +726,16 @@ export class BundlerController extends Controller {
 	}
 }
 
+/** Recognize root asset metadata even if the watcher reports a different casing. */
+function getAssetMetadataFilename(relativePath: string) {
+	const filename = relativePath.toLowerCase();
+	return filename === CF_ASSETS_IGNORE_FILENAME ||
+		filename === HEADERS_FILENAME ||
+		filename === REDIRECTS_FILENAME
+		? filename
+		: undefined;
+}
+
 /**
  * Match the asset scanner's ignore rules without filtering out metadata that
  * needs to trigger reloads. Let the asset scanner report unreadable ignore
@@ -749,9 +760,7 @@ async function createAssetsWatchMatcher(
 			relativePath === ".." ||
 			relativePath.startsWith("../") ||
 			path.isAbsolute(relativePath) ||
-			relativePath === CF_ASSETS_IGNORE_FILENAME ||
-			relativePath === HEADERS_FILENAME ||
-			relativePath === REDIRECTS_FILENAME
+			getAssetMetadataFilename(relativePath) !== undefined
 		) {
 			return false;
 		}
