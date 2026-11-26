@@ -121,31 +121,28 @@ const MAX_INLINE_SIZE = 31 * 1024 * 1024; // 31 MiB, leaving room for the rest
 const MAX_STREAM_CHUNK_SIZE = 1024 * 1024; // 1 MiB
 
 /**
- * @param stream Stream argument about to be sent over Cap'n Web
- * @returns `stream` with chunks no larger than `MAX_STREAM_CHUNK_SIZE`
+ * @returns Stream splitting chunks larger than `MAX_STREAM_CHUNK_SIZE`
  */
-function splitLargeChunks(stream: ReadableStream): ReadableStream {
-	return stream.pipeThrough(
-		new TransformStream({
-			transform(chunk, controller) {
-				if (
-					!ArrayBuffer.isView(chunk) ||
-					chunk.byteLength <= MAX_STREAM_CHUNK_SIZE
-				) {
-					controller.enqueue(chunk);
-					return;
-				}
-				const bytes = new Uint8Array(
-					chunk.buffer,
-					chunk.byteOffset,
-					chunk.byteLength
-				);
-				for (let i = 0; i < bytes.byteLength; i += MAX_STREAM_CHUNK_SIZE) {
-					controller.enqueue(bytes.subarray(i, i + MAX_STREAM_CHUNK_SIZE));
-				}
-			},
-		})
-	);
+function createChunkSplitter(): TransformStream {
+	return new TransformStream({
+		transform(chunk, controller) {
+			if (
+				!ArrayBuffer.isView(chunk) ||
+				chunk.byteLength <= MAX_STREAM_CHUNK_SIZE
+			) {
+				controller.enqueue(chunk);
+				return;
+			}
+			const bytes = new Uint8Array(
+				chunk.buffer,
+				chunk.byteOffset,
+				chunk.byteLength
+			);
+			for (let i = 0; i < bytes.byteLength; i += MAX_STREAM_CHUNK_SIZE) {
+				controller.enqueue(bytes.subarray(i, i + MAX_STREAM_CHUNK_SIZE));
+			}
+		},
+	});
 }
 
 function poisonedError() {
@@ -321,6 +318,13 @@ export class ProxyClient {
 		// `dispose()` is called.
 		return this.#bridge.dispose();
 	}
+}
+
+interface EncodeState {
+	// Estimated serialised size of everything sent in the call's message
+	inlineSize: number;
+	// Stream arguments, and the splitters sent in their place
+	streams: [ReadableStream, TransformStream][];
 }
 
 interface NativeTargetHeldValue {
@@ -574,19 +578,32 @@ class ProxyClientBridge {
 	 * Prepares arguments for a Workers RPC call over Cap'n Web.
 	 *
 	 * @param args Arguments passed by the user
+	 * @returns Arguments to send, and a function to start piping stream
+	 * arguments once the call has been made
 	 */
-	encodeArgs(args: unknown[]): unknown[] {
-		const state = { inlineSize: 0 };
+	encodeArgs(args: unknown[]): {
+		encodedArgs: unknown[];
+		pipeStreams(): void;
+	} {
+		const state: EncodeState = { inlineSize: 0, streams: [] };
 		const encodedArgs = args.map((arg) => this.#encode(arg, state));
 		if (state.inlineSize > MAX_INLINE_SIZE) {
 			throw new RangeError(
 				"Arguments sent to the Workers runtime from Node.js must be less than 32 MiB once serialised"
 			);
 		}
-		return encodedArgs;
+		return {
+			encodedArgs,
+			pipeStreams() {
+				for (const [stream, splitter] of state.streams) {
+					// Errors are passed on to the splitter
+					void stream.pipeTo(splitter.writable).catch(() => {});
+				}
+			},
+		};
 	}
 
-	#encode(value: unknown, state: { inlineSize: number }): unknown {
+	#encode(value: unknown, state: EncodeState): unknown {
 		// Estimate the serialised size of `value`, including a separator
 		state.inlineSize += 1;
 		if (typeof value === "string") {
@@ -613,7 +630,9 @@ class ProxyClientBridge {
 			return value;
 		}
 		if (value instanceof ReadableStream) {
-			return splitLargeChunks(value);
+			const splitter = createChunkSplitter();
+			state.streams.push([value, splitter]);
+			return splitter.readable;
 		}
 		const globalHTTPObject = toGlobalHTTPObject(value);
 		if (globalHTTPObject !== undefined) {
@@ -819,11 +838,12 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 
 	apply(_target: () => void, _thisArg: unknown, args: unknown[]) {
 		this.#assertSafe();
-		const encodedArgs = this.bridge.encodeArgs(args);
-		return this.bridge.createCallResultProxy(
-			this.raw(...encodedArgs),
-			this.proxy
-		);
+		const { encodedArgs, pipeStreams } = this.bridge.encodeArgs(args);
+		const result = this.raw(...encodedArgs);
+		// Only lock stream arguments once Cap'n Web accepts the call, so rejected
+		// calls can be retried with them
+		pipeStreams();
+		return this.bridge.createCallResultProxy(result, this.proxy);
 	}
 }
 

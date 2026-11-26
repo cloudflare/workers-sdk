@@ -243,7 +243,7 @@ describe("ProxyClient", () => {
 		const { BINDING } = await mf.getBindings<{
 			BINDING: {
 				size(value: Uint8Array | number[]): Promise<number>;
-				streamSize(stream: ReadableStream): Promise<number>;
+				streamSize(stream: ReadableStream, ...rest: unknown[]): Promise<number>;
 			};
 		}>();
 		// Base64 encoded, this is over 32 MiB. Like other values that can't be
@@ -261,6 +261,12 @@ describe("ProxyClient", () => {
 		const streamSize = 30 * 1024 * 1024;
 		const stream = new Blob([new Uint8Array(streamSize)]).stream();
 		expect(await BINDING.streamSize(stream)).toBe(streamSize);
+		// Rejected calls don't lock stream arguments, so they can be retried
+		const retried = new Blob(["abc"]).stream();
+		expect(() =>
+			BINDING.streamSize(retried, new Array(5_000_000).fill(123456))
+		).toThrow(RangeError);
+		expect(await BINDING.streamSize(retried)).toBe(3);
 	});
 
 	test("rejects pending Workers RPC results once poisoned", async ({
