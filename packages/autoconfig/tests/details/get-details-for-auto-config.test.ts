@@ -391,7 +391,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		expect,
 	}) => {
 		await expect(
-			details.getDetailsForAutoConfig({ context })
+			details.getDetailsForAutoConfig({ target: "wrangler", context })
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
 		);
@@ -436,7 +436,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 
 		await expect(
-			details.getDetailsForAutoConfig({ context })
+			details.getDetailsForAutoConfig({ target: "wrangler", context })
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
 		);

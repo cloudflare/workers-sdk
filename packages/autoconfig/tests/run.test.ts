@@ -752,6 +752,21 @@ describe("runAutoConfig()", () => {
 		expect(existsSync(".assetsignore")).toBe(false);
 	});
 
+	it("explains when a project has nothing to deploy", async ({ expect }) => {
+		await seed({ "package.json": JSON.stringify({ name: "empty" }) });
+		const context = createMockContext();
+
+		await expect(
+			runAutoConfig(
+				await getDetailsForAutoConfig({
+					projectPath: process.cwd(),
+					context,
+				}),
+				{ context, runBuild: false, skipConfirmations: true }
+			)
+		).rejects.toThrow("Couldn't tell what to deploy in");
+	});
+
 	describe("for a Wrangler project", () => {
 		/**
 		 * Detects the project in the current directory, set up as cf runs autoconfig.

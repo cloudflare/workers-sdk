@@ -24,6 +24,7 @@ import { readWranglerConfig } from "../wrangler-to-cf/config-reader";
 import { detectFramework } from "./framework-detection";
 import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
+import type { Framework } from "../frameworks/framework-class";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
@@ -58,6 +59,36 @@ function findWranglerConfigFile(projectPath: string): string | undefined {
 		);
 	}
 	return configPaths[0];
+}
+
+/**
+ * Explains why a project without an output directory, and without a Worker config of its own, can't be set up.
+ *
+ * @param framework The detected framework
+ * @param projectPath The path of the project
+ * @param target The configuration target
+ * @returns The error to report
+ */
+export function getMissingOutputDirError(
+	framework: Pick<Framework, "id" | "name">,
+	projectPath: string,
+	target: AutoConfigTarget
+): AutoConfigDetectionError {
+	const isStatic =
+		framework.id === staticFramework.id || framework.id === "cloudflare-pages";
+	const message =
+		target === "cf"
+			? isStatic
+				? `Couldn't tell what to deploy in ${projectPath}: it has no supported framework, no Wrangler config and no index.html (in the folder or a folder directly inside it). Check that you're in the project's folder, or add a cloudflare.config.ts that describes your Worker.`
+				: `Couldn't find where ${framework.name} writes its build output in ${projectPath}.`
+			: isStatic
+				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
+				: "Failed to detect an output directory for the project";
+	return new AutoConfigDetectionError(message, {
+		telemetryMessage: "autoconfig details output directory missing",
+		frameworkId: framework.id,
+		configured: false,
+	});
 }
 
 /**
@@ -346,18 +377,8 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	// Setup needs the project's output directory, unless a Wrangler config already describes its Worker
-	if (!outputDir && wranglerConfigFile === undefined) {
-		const errorMessage =
-			framework.id === "static" || framework.id === "cloudflare-pages"
-				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
-				: "Failed to detect an output directory for the project";
-
-		throw new AutoConfigDetectionError(errorMessage, {
-			telemetryMessage: "autoconfig details output directory missing",
-			frameworkId: framework.id,
-			configured,
-		});
+	if (!outputDir && target === "wrangler") {
+		throw getMissingOutputDirError(framework, projectPath, target);
 	}
 
 	return {

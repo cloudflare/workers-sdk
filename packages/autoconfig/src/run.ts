@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { relative, resolve } from "node:path";
@@ -28,6 +27,7 @@ import {
 	displayAutoConfigDetails,
 	getProjectCommand,
 	getDetailsForAutoConfig,
+	getMissingOutputDirError,
 } from "./details";
 import {
 	getFrameworkSupportError,
@@ -117,11 +117,10 @@ export async function runAutoConfig(
 	) {
 		throw frameworkSupportError;
 	}
-	// A Wrangler config can serve a Worker without any static assets
-	assert(
-		existingWorkerConfig !== undefined || outputDir,
-		"The Output Directory is unexpectedly missing"
-	);
+	// A project with its own Worker config doesn't need an output directory to be set up
+	if (!outputDir && existingWorkerConfig === undefined) {
+		throw getMissingOutputDirError(framework, projectPath, target);
+	}
 
 	const compatibilityDate = DEFAULT_COMPAT_DATE;
 
