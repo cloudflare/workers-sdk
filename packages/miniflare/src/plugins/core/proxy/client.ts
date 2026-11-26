@@ -3,7 +3,7 @@ import assert from "node:assert";
 import crypto from "node:crypto";
 import { ReadableStream, TransformStream } from "node:stream/web";
 import util from "node:util";
-import { newWebSocketRpcSession, RpcStub } from "capnweb";
+import { newWebSocketRpcSession, RpcPromise, RpcStub } from "capnweb";
 import { stringify } from "devalue";
 import { Agent, WebSocket } from "undici";
 import { Request } from "../../../http";
@@ -13,7 +13,6 @@ import {
 	CorePaths,
 	createHTTPReducers,
 	createHTTPRevivers,
-	isDevControlCall,
 	isDurableObjectStub,
 	isFetcherFetch,
 	isHeadersLike,
@@ -47,10 +46,11 @@ import type {
 	ImageTransformer,
 	ServiceWorkerGlobalScope,
 } from "@cloudflare/workers-types/experimental";
-import type { RpcPromise } from "capnweb";
 
 const kAddress = Symbol("kAddress");
 const kName = Symbol("kName");
+// Returns the Cap'n Web stub behind a Workers RPC proxy
+const kRaw = Symbol("kRaw");
 // Registered globally, unlike the symbols above, as streams may be passed
 // between proxies created by different loaded copies of Miniflare (e.g. the
 // Vitest plugin and Wrangler resolving separate installs), which would
@@ -174,44 +174,56 @@ function restoreErrorName(error: unknown) {
 }
 
 /**
- * Converts `Headers`, `Request`s and `Response`s from other implementations
- * (e.g. Miniflare's `undici` classes) to Node's globals, the only ones Cap'n Web
- * can serialise.
+ * Converts `Headers`, `Request`s and `Response`s to Node's globals, the only
+ * ones Cap'n Web can serialise (e.g. from Miniflare's `undici` classes).
+ * Bodies are replaced, as Node.js may read them in chunks too large to send.
  *
  * @param value Argument about to be sent over Cap'n Web
+ * @param encodeBody Encodes a body like a stream argument
  * @returns Equivalent global instance, or `undefined` if `value` isn't one of
- * these types or is already global
+ * these types
  */
-function toGlobalHTTPObject(value: object): object | undefined {
-	if (
-		value instanceof globalThis.Headers ||
-		value instanceof globalThis.Request ||
-		value instanceof globalThis.Response
-	) {
-		return;
-	}
+function toGlobalHTTPObject(
+	value: object,
+	encodeBody: (body: object) => unknown
+): object | undefined {
 	if (isHeadersLike(value)) {
-		return new globalThis.Headers([...value.entries()]);
+		return value instanceof globalThis.Headers
+			? value
+			: new globalThis.Headers([...value.entries()]);
 	}
+	let result: globalThis.Request | globalThis.Response;
 	if (isRequestLike(value)) {
-		return new globalThis.Request(value.url, {
-			method: value.method,
-			headers: [...value.headers.entries()],
-			body: value.body as globalThis.ReadableStream | null,
-			redirect: value.redirect as globalThis.RequestInit["redirect"],
+		const init = {
+			body: (value.body && encodeBody(value.body)) as globalThis.ReadableStream,
 			duplex: value.body === null ? undefined : "half",
-		});
-	}
-	if (isResponseLike(value)) {
-		return new globalThis.Response(
-			value.body as globalThis.ReadableStream | null,
+		} as globalThis.RequestInit;
+		result =
+			value instanceof globalThis.Request
+				? new globalThis.Request(value, init)
+				: new globalThis.Request(value.url, {
+						...init,
+						method: value.method,
+						headers: [...value.headers.entries()],
+						redirect: value.redirect as globalThis.RequestInit["redirect"],
+					});
+	} else if (isResponseLike(value)) {
+		result = new globalThis.Response(
+			(value.body && encodeBody(value.body)) as globalThis.ReadableStream,
 			{
 				status: value.status,
 				statusText: value.statusText,
 				headers: [...value.headers.entries()],
 			}
 		);
+	} else {
+		return;
 	}
+	// Cap'n Web serialises `cf` if present
+	if ("cf" in value && value.cf !== undefined) {
+		Object.defineProperty(result, "cf", { value: value.cf });
+	}
+	return result;
 }
 
 // Cap'n Web stub for `ProxyServer`'s main interface. `stub()` returns an
@@ -325,6 +337,30 @@ interface EncodeState {
 	inlineSize: number;
 	// Stream arguments, and the splitters sent in their place
 	streams: [ReadableStream, TransformStream][];
+	// Arrays and objects containing the value being encoded
+	ancestors: Set<object>;
+}
+
+// Cap'n Web stub behind a Workers RPC proxy, shared with the proxy's finalizer
+interface RpcStubRef {
+	raw: any; // eslint-disable-line @typescript-eslint/no-explicit-any -- Cap'n Web stubs accept any property or call
+	// Session `raw` was created on, if it's for a "heap" object. The "heap"
+	// outlives sessions, so these get a new stub if it closes.
+	session?: ProxyRpcSession;
+	// Set once a call result is awaited, as Cap'n Web then releases it itself
+	awaited?: boolean;
+}
+
+interface RpcProxyOptions {
+	// Native target, if this is a proxy for a "heap" object
+	target?: NativeTarget;
+	// Whether this is thenable, i.e. for a property or call result
+	isPromise?: boolean;
+	// Proxy `raw` was derived from, which must outlive it, as it releases the
+	// stub `raw` depends on when garbage collected
+	parent?: object;
+	// Whether to release `raw` once the proxy is garbage collected
+	owned?: boolean;
 }
 
 interface NativeTargetHeldValue {
@@ -332,14 +368,11 @@ interface NativeTargetHeldValue {
 	address?: number;
 	version: number;
 	// Cap'n Web stub to release
-	stub?: Disposable;
-	// If set, `stub` is a call result to release only if it wasn't awaited, as
-	// Cap'n Web releases awaited results itself
-	awaited?: { value: boolean };
+	ref?: RpcStubRef;
 }
 
 // Class containing functions that should accessible by both `ProxyClient` and
-// `ProxyStubHandler`, but not exported to consumers of `ProxyClient`
+// the proxy handlers, but not exported to consumers of `ProxyClient`
 class ProxyClientBridge {
 	// Each proxy stub is initialised with the version stored here. Whenever
 	// `poisonProxies()` is called, this version is incremented. Before the
@@ -368,13 +401,6 @@ class ProxyClientBridge {
 	// Cap'n Web session, used for objects that speak Workers RPC
 	#session?: ProxyRpcSession;
 
-	// Underlying Cap'n Web stubs for proxies, used when sending them as
-	// arguments
-	readonly #rpcProxies = new WeakMap<
-		object,
-		{ raw: object; version: number }
-	>();
-
 	constructor(
 		public url: URL,
 		readonly dispatchFetch: DispatchFetch
@@ -386,11 +412,16 @@ class ProxyClientBridge {
 		return this.#version;
 	}
 
-	get rpc(): ProxyRpcStub {
+	/**
+	 * @returns Open Cap'n Web session, replacing the previous one if it closed
+	 * (e.g. `workerd` closes it on receiving a message that's too large)
+	 */
+	get session(): ProxyRpcSession {
 		if (this.#session === undefined || this.#session.closed) {
+			this.#session?.dispose();
 			this.#session = new ProxyRpcSession(this.url);
 		}
-		return this.#session.api;
+		return this.#session;
 	}
 
 	/**
@@ -442,8 +473,8 @@ class ProxyClientBridge {
 				if (held.address !== undefined) {
 					addresses.push(held.address);
 				}
-				if (!held.awaited?.value) {
-					held.stub?.[Symbol.dispose]();
+				if (held.ref !== undefined && !held.ref.awaited) {
+					held.ref.raw[Symbol.dispose]();
 				}
 			}
 		}
@@ -482,17 +513,11 @@ class ProxyClientBridge {
 		return proxy;
 	}
 
-	#register(
-		proxy: object,
-		address?: number,
-		stub?: Disposable,
-		awaited?: { value: boolean }
-	) {
+	#register(proxy: object, address?: number, ref?: RpcStubRef) {
 		const held: NativeTargetHeldValue = {
 			address,
 			version: this.#version,
-			stub,
-			awaited,
+			ref,
 		};
 		this.#finalizationRegistry.register(proxy, held, this);
 	}
@@ -504,73 +529,36 @@ class ProxyClientBridge {
 	 * @param target Native target for the "heap" object
 	 */
 	createHeapRpcProxy(target: NativeTarget): object {
+		const session = this.session;
 		// Cap'n Web pipelines calls on the returned `RpcPromise`, so we can use it
 		// immediately, without waiting for a round trip
-		const stub = this.rpc.stub(target[kAddress]);
-		const proxy = this.createRpcProxy(stub, target);
-		this.#register(proxy, target[kAddress], stub);
-		return proxy;
+		const raw = session.api.stub(target[kAddress]);
+		return this.createRpcProxy({ raw, session }, { target, owned: true });
 	}
 
 	/**
 	 * Wraps a Cap'n Web stub or promise, so it can be used like a Workers RPC
 	 * stub returned by the rest of the proxy.
 	 *
-	 * @param raw Cap'n Web `RpcStub` or `RpcPromise`
-	 * @param target Native target if `raw` is for a "heap" object
-	 * @param isPromise Whether `raw` should be thenable
-	 * @param parent Proxy `raw` was derived from, which must outlive it, as it
-	 * releases the stub `raw` depends on when garbage collected
+	 * @param ref Cap'n Web `RpcStub` or `RpcPromise` to wrap
+	 * @param options How the proxy behaves, and when `ref` is released
 	 */
-	createRpcProxy(
-		raw: object,
-		target?: NativeTarget,
-		isPromise = false,
-		parent?: object,
-		awaited?: { value: boolean }
-	): object {
-		const handler = new RpcProxyHandler(
-			this,
-			raw,
-			target,
-			isPromise,
-			parent,
-			awaited
-		);
-		// Cap'n Web stubs are callable, so this must be too
-		const proxyTarget: { (): void; [util.inspect.custom]?: unknown } = () => {};
+	createRpcProxy(ref: RpcStubRef, options: RpcProxyOptions = {}): object {
+		const handler = new RpcProxyHandler(this, ref, options);
+		// Cap'n Web stubs are callable, so this must be too, apart from service
+		// bindings and Durable Object stubs, which aren't functions in `workerd`
+		const name = options.target?.[kName];
+		const isService =
+			name === "Fetcher" || (name !== undefined && isDurableObjectStub(name));
 		// `util.inspect()` inspects the target directly, rather than the `Proxy`
-		proxyTarget[util.inspect.custom] = handler.inspect;
+		const proxyTarget = Object.assign(isService ? {} : () => {}, {
+			[util.inspect.custom]: handler.inspect,
+		});
 		const proxy = new Proxy(proxyTarget, handler);
 		handler.proxy = proxy;
-		this.#rpcProxies.set(proxy, { raw, version: this.#version });
-		return proxy;
-	}
-
-	/**
-	 * Wraps the `RpcPromise` returned by a call. If it's never awaited (e.g. it's
-	 * only used to pipeline other calls), its result is released once the
-	 * returned proxy can't be used.
-	 *
-	 * @param raw Cap'n Web `RpcPromise`
-	 * @param parent Proxy the call was made on
-	 */
-	createCallResultProxy(raw: Disposable, parent?: object): object {
-		const awaited = { value: false };
-		const proxy = this.createRpcProxy(raw, undefined, true, parent, awaited);
-		this.#register(proxy, undefined, raw, awaited);
-		return proxy;
-	}
-
-	/**
-	 * Wraps a Cap'n Web stub we own (e.g. from a call result), releasing it once
-	 * the returned proxy can't be used.
-	 *
-	 * @param raw Cap'n Web `RpcStub`
-	 */
-	createOwnedRpcProxy(raw: Disposable): object {
-		const proxy = this.createRpcProxy(raw);
-		this.#register(proxy, undefined, raw);
+		if (options.owned) {
+			this.#register(proxy, options.target?.[kAddress], ref);
+		}
 		return proxy;
 	}
 
@@ -585,7 +573,11 @@ class ProxyClientBridge {
 		encodedArgs: unknown[];
 		pipeStreams(): void;
 	} {
-		const state: EncodeState = { inlineSize: 0, streams: [] };
+		const state: EncodeState = {
+			inlineSize: 0,
+			streams: [],
+			ancestors: new Set(),
+		};
 		const encodedArgs = args.map((arg) => this.#encode(arg, state));
 		if (state.inlineSize > MAX_INLINE_SIZE) {
 			throw new RangeError(
@@ -604,10 +596,11 @@ class ProxyClientBridge {
 	}
 
 	#encode(value: unknown, state: EncodeState): unknown {
-		// Estimate the serialised size of `value`, including a separator
+		// Estimate the size of `value` in Cap'n Web's JSON messages, including a
+		// separator
 		state.inlineSize += 1;
 		if (typeof value === "string") {
-			state.inlineSize += Buffer.byteLength(value) + 2;
+			state.inlineSize += Buffer.byteLength(JSON.stringify(value));
 			return value;
 		}
 		if (
@@ -617,12 +610,17 @@ class ProxyClientBridge {
 			state.inlineSize += String(value).length;
 			return value;
 		}
-		const rpcProxy = this.#rpcProxies.get(value);
-		if (rpcProxy !== undefined) {
-			if (rpcProxy.version !== this.#version) {
-				throw poisonedError();
-			}
-			return rpcProxy.raw;
+		// Workers RPC proxies throw here once poisoned
+		const raw = (value as { [kRaw]?: unknown })[kRaw];
+		if (raw !== undefined) {
+			return raw;
+		}
+		if (isNativeTarget(value)) {
+			// Like `workerd`, which can't send native objects over Workers RPC
+			throw new DOMException(
+				`Could not serialize object of type "${value[kName]}".`,
+				"DataCloneError"
+			);
 		}
 		if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
 			// Cap'n Web base64 encodes bytes
@@ -639,25 +637,44 @@ class ProxyClientBridge {
 			state.streams.push([value, splitter]);
 			return splitter.readable;
 		}
-		const globalHTTPObject = toGlobalHTTPObject(value);
+		// Cap'n Web only accepts exact `Blob`s, but Node.js sometimes returns
+		// subclasses (e.g. from `Blob#slice()` in Node.js 22)
+		if (
+			value instanceof Blob &&
+			!(value instanceof File) &&
+			Object.getPrototypeOf(value) !== Blob.prototype
+		) {
+			return new Blob([value], { type: value.type });
+		}
+		const globalHTTPObject = toGlobalHTTPObject(value, (body) =>
+			this.#encode(body, state)
+		);
 		if (globalHTTPObject !== undefined) {
 			return globalHTTPObject;
 		}
+		if (!Array.isArray(value) && !isPlainObject(value)) {
+			return value;
+		}
+		if (state.ancestors.has(value)) {
+			throw new TypeError("Cannot send cyclic values over Workers RPC");
+		}
+		state.ancestors.add(value);
+		let result: unknown;
 		if (Array.isArray(value)) {
 			// Cap'n Web wraps arrays in another array
 			state.inlineSize += 4;
-			return value.map((v) => this.#encode(v, state));
-		}
-		if (isPlainObject(value)) {
+			result = value.map((v) => this.#encode(v, state));
+		} else {
 			state.inlineSize += 2;
-			const result: Record<string, unknown> = {};
+			const record: Record<string, unknown> = {};
 			for (const [k, v] of Object.entries(value)) {
-				state.inlineSize += Buffer.byteLength(k) + 3;
-				result[k] = this.#encode(v, state);
+				state.inlineSize += Buffer.byteLength(JSON.stringify(k)) + 1;
+				record[k] = this.#encode(v, state);
 			}
-			return result;
+			result = record;
 		}
-		return value;
+		state.ancestors.delete(value);
+		return result;
 	}
 
 	/**
@@ -675,7 +692,7 @@ class ProxyClientBridge {
 		}
 		// Cap'n Web resolves promises in results before returning them
 		if (value instanceof RpcStub) {
-			return this.createOwnedRpcProxy(value as unknown as Disposable);
+			return this.createRpcProxy({ raw: value }, { owned: true });
 		}
 		if (value instanceof Error) {
 			restoreErrorName(value);
@@ -726,7 +743,7 @@ class ProxyClientBridge {
 // Proxy handler for objects that speak Workers RPC (e.g. service bindings,
 // Durable Object stubs, `RpcTarget`s and functions). Everything is forwarded
 // to an underlying Cap'n Web stub, so these never block the main thread.
-class RpcProxyHandler implements ProxyHandler<() => void> {
+class RpcProxyHandler implements ProxyHandler<object> {
 	readonly #version: number;
 	#settled?: Promise<unknown>;
 	#nativeHandler?: ProxyStubHandler<object>;
@@ -735,14 +752,8 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 
 	constructor(
 		readonly bridge: ProxyClientBridge,
-		// Cap'n Web `RpcStub` or `RpcPromise`
-		readonly raw: any, // eslint-disable-line @typescript-eslint/no-explicit-any -- Cap'n Web stubs accept any property or call
-		readonly target: NativeTarget | undefined,
-		readonly isPromise: boolean,
-		// Kept alive while this proxy is, see `ProxyClientBridge#createRpcProxy()`
-		readonly parent: object | undefined,
-		// Set once awaited, see `ProxyClientBridge#createCallResultProxy()`
-		readonly awaited: { value: boolean } | undefined
+		readonly ref: RpcStubRef,
+		readonly options: RpcProxyOptions
 	) {
 		this.#version = bridge.version;
 	}
@@ -756,16 +767,28 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 		}
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Cap'n Web stubs accept any property or call
+	get #raw(): any {
+		const { target } = this.options;
+		if (target !== undefined && this.ref.session?.closed) {
+			const session = this.bridge.session;
+			this.ref.raw = session.api.stub(target[kAddress]);
+			this.ref.session = session;
+		}
+		return this.ref.raw;
+	}
+
 	inspect = (_depth: number, options: util.InspectOptions) => {
-		const details = { name: this.target?.[kName], poisoned: this.#poisoned };
-		const type = this.isPromise ? "RpcPromise" : "RpcStub";
+		const details = {
+			name: this.options.target?.[kName],
+			poisoned: this.#poisoned,
+		};
+		const type = this.options.isPromise ? "RpcPromise" : "RpcStub";
 		return `${type} ${util.inspect(details, options)}`;
 	};
 
 	#settle(): Promise<unknown> {
-		if (this.#settled === undefined && this.awaited !== undefined) {
-			this.awaited.value = true;
-		}
+		this.ref.awaited = true;
 		this.#settled ??= this.#poisoned
 			? Promise.reject(poisonedError())
 			: this.#resolve();
@@ -773,7 +796,7 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 	}
 	async #resolve(): Promise<unknown> {
 		try {
-			return this.bridge.decode(await this.raw);
+			return this.bridge.decode(await this.#raw);
 		} catch (e) {
 			restoreErrorName(e);
 			if (typeof e === "object" && e !== null) {
@@ -783,13 +806,13 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 		}
 	}
 
-	get(_target: () => void, key: string | symbol) {
+	get(_target: object, key: string | symbol) {
 		if (key === util.inspect.custom) {
 			return this.inspect;
 		}
 
 		// Once poisoned, results reject rather than throw, like other promises
-		if (this.isPromise) {
+		if (this.options.isPromise) {
 			if (key === "then") {
 				return (
 					onFulfilled?: (value: unknown) => unknown,
@@ -805,23 +828,33 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 			}
 		}
 		this.#assertSafe();
+		if (key === kRaw) {
+			return this.#raw;
+		}
 		if (key === Symbol.dispose) {
 			// Only stubs, and promises for call results, are disposable
-			return this.raw[Symbol.dispose];
+			return this.#raw[Symbol.dispose];
 		}
 		// Ignore all other symbol properties, or `then()`s of stubs, which
 		// shouldn't be thenable
 		if (typeof key === "symbol" || key === "then") {
 			return undefined;
 		}
+		// Cap'n Web stubs return their own methods for these (e.g. `dup()`,
+		// `map()`, `toString()`), so they can't be called remotely. Behave like
+		// other objects for `Object.prototype`'s instead.
+		if (key in RpcPromise.prototype) {
+			return Reflect.get(Object.prototype, key);
+		}
 
-		if (this.target !== undefined) {
-			const name = this.target[kName];
+		const { target } = this.options;
+		if (target !== undefined) {
+			const name = target[kName];
 			// Handle these like native objects. See `isFetcherFetch()` and
 			// `isDurableObjectStub()` comments for why they're special.
 			const native = (this.#nativeHandler ??= new ProxyStubHandler(
 				this.bridge,
-				this.target
+				target
 			));
 			if (isFetcherFetch(name, key)) {
 				return (...args: unknown[]) => {
@@ -834,21 +867,29 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 			}
 		}
 		return this.bridge.createRpcProxy(
-			this.raw[key],
-			undefined,
-			true,
-			this.proxy
+			{ raw: this.#raw[key] },
+			{ isPromise: true, parent: this.proxy }
 		);
 	}
 
-	apply(_target: () => void, _thisArg: unknown, args: unknown[]) {
+	has(_target: object, key: string | symbol) {
+		// Like Cap'n Web stubs, any property may exist remotely
+		return (
+			typeof key === "string" && (this.options.isPromise || key !== "then")
+		);
+	}
+
+	apply(_target: object, _thisArg: unknown, args: unknown[]) {
 		this.#assertSafe();
 		const { encodedArgs, pipeStreams } = this.bridge.encodeArgs(args);
-		const result = this.raw(...encodedArgs);
+		const result = this.#raw(...encodedArgs);
 		// Only lock stream arguments once Cap'n Web accepts the call, so rejected
 		// calls can be retried with them
 		pipeStreams();
-		return this.bridge.createCallResultProxy(result, this.proxy);
+		return this.bridge.createRpcProxy(
+			{ raw: result },
+			{ isPromise: true, parent: this.proxy, owned: true }
+		);
 	}
 }
 
@@ -1226,11 +1267,6 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		this.#assertSafe();
 
 		const targetName = this.target[kName];
-		// See `isFetcherFetch()` comment for why this is special
-		if (isFetcherFetch(targetName, key)) {
-			return this.fetcherFetchCall(args);
-		}
-
 		const stringified = stringifyWithStreams(
 			NODE_PLATFORM_IMPL,
 			args,
@@ -1239,12 +1275,6 @@ class ProxyStubHandler<T extends object> implements ProxyHandler<T> {
 		);
 		if (
 			knownAsync ||
-			// Durable Object stub RPC calls should always be async to avoid blocking
-			// the Node.js event loop with `Atomics.wait()`. This allows Promise.race()
-			// and timeouts to work correctly when racing against DO method calls.
-			isDurableObjectStub(targetName) ||
-			// Dev control calls can wait on Node.js (see `isDevControlCall()`)
-			isDevControlCall(targetName, key) ||
 			// We assume every call with `ReadableStream`/`Blob` arguments is async.
 			// Note that you can't consume `ReadableStream`/`Blob` synchronously: if
 			// you tried a similar trick to `SynchronousFetcher`, blocking the main

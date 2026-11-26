@@ -175,6 +175,7 @@ describe("ProxyClient", () => {
 								async callback(fn) { return \`called with \${await fn("arg")}\`; }
 								increment(counter) { return counter.increment(); }
 								text(response) { return response.text(); }
+								colo(request) { return request.cf?.colo; }
 							}
 						`),
 					},
@@ -191,9 +192,14 @@ describe("ProxyClient", () => {
 				};
 				callback(fn: (value: string) => string): Promise<string>;
 				increment(counter: { increment(): Promise<number> }): Promise<number>;
-				text(response: Response): Promise<string>;
+				text(response: Response | Blob | object): Promise<string>;
+				colo(request: Request): Promise<string>;
 			};
 		}>();
+		// Service bindings aren't functions, like in `workerd`
+		expect(typeof BINDING).toBe("object");
+		expect("property" in BINDING).toBe(true);
+		expect(`${BINDING}`).toBe("[object Object]");
 		expect(await BINDING.property).toBe("value");
 		expect(await BINDING.getCounter().increment()).toBe(1);
 		expect(await BINDING.callback((value) => value.toUpperCase())).toBe(
@@ -206,9 +212,25 @@ describe("ProxyClient", () => {
 		expect(await counter.increment()).toBe(2);
 		// Miniflare's `Request`, `Response` and `Headers` can be sent
 		expect(await BINDING.text(new Response("body"))).toBe("body");
+		expect(
+			await BINDING.colo(new Request("http://x", { cf: { colo: "LHR" } }))
+		).toBe("LHR");
+		// `Blob#slice()` returns a `Blob` subclass in Node.js 22
+		expect(await BINDING.text(new Blob(["abc"]).slice(1))).toBe("bc");
+
+		// Like `workerd`, values that can't be sent throw when calling
+		const caches = await mf.getCaches();
+		expect(() => BINDING.text(caches)).toThrow(
+			'Could not serialize object of type "CacheStorage"'
+		);
+		const cyclic: Record<string, unknown> = {};
+		cyclic.self = cyclic;
+		expect(() => BINDING.text(cyclic)).toThrow(
+			"Cannot send cyclic values over Workers RPC"
+		);
 	});
 
-	test("rejects Workers RPC arguments over workerd's WebSocket message limit", async ({
+	test("handles Workers RPC messages over workerd's WebSocket message limit", async ({
 		expect,
 	}) => {
 		const mf = new Miniflare({
@@ -232,6 +254,8 @@ describe("ProxyClient", () => {
 								async streamSize(stream) {
 									return (await new Response(stream).arrayBuffer()).byteLength;
 								}
+								async bodySize(response) { return (await response.arrayBuffer()).byteLength; }
+								async callback(fn) { return (await fn()).length; }
 							}
 						`),
 					},
@@ -244,6 +268,8 @@ describe("ProxyClient", () => {
 			BINDING: {
 				size(value: Uint8Array | number[]): Promise<number>;
 				streamSize(stream: ReadableStream, ...rest: unknown[]): Promise<number>;
+				bodySize(response: Response): Promise<number>;
+				callback(fn: () => string): Promise<number>;
 			};
 		}>();
 		// Base64 encoded, this is over 32 MiB. Like other values that can't be
@@ -261,6 +287,9 @@ describe("ProxyClient", () => {
 		const streamSize = 30 * 1024 * 1024;
 		const stream = new Blob([new Uint8Array(streamSize)]).stream();
 		expect(await BINDING.streamSize(stream)).toBe(streamSize);
+		// Including bodies, which Node.js reads in one chunk here
+		const body = new Uint8Array(streamSize);
+		expect(await BINDING.bodySize(new Response(body))).toBe(streamSize);
 		// Rejected calls don't lock stream arguments, so they can be retried
 		const retried = new Blob(["abc"]).stream();
 		expect(() =>
@@ -271,6 +300,12 @@ describe("ProxyClient", () => {
 		const locked = new Blob(["abc"]).stream();
 		locked.getReader();
 		expect(() => BINDING.streamSize(locked)).toThrow(TypeError);
+
+		// Callback results can't be checked before they're sent, so `workerd`
+		// closes the session. Bindings get a new one on their next use.
+		const large = "x".repeat(40 * 1024 * 1024);
+		await expect(BINDING.callback(() => large).then()).rejects.toThrow();
+		expect(await BINDING.size(new Uint8Array(1))).toBe(1);
 	});
 
 	test("rejects pending Workers RPC results once poisoned", async ({

@@ -33,14 +33,18 @@ assumption is required as synchronous operations block the main thread and
 prevent chunks from `ReadableStream`s being read.
 
 Objects that speak Workers RPC (service bindings, Durable Object stubs,
-`RpcTarget`s and functions) are the exception. Instead of proxies, the client
-uses [Cap'n Web](https://github.com/cloudflare/capnweb) stubs to them, over a
-WebSocket session with the `ProxyServer`. Calls, property accesses, promise
-pipelining and callbacks are forwarded by Cap'n Web, so these behave like
-Workers RPC and never block the main thread. Only `fetch()`, which is sent with
-`dispatchFetch()` to support WebSockets, and Durable Object stubs' synchronous
-`id` and `name` properties are handled like native objects. Values follow Cap'n
-Web's rules, which differ slightly from Workers RPC (e.g. `Map`s can't be sent).
+`RpcTarget`s and functions) are the exception. Their proxies wrap
+[Cap'n Web](https://github.com/cloudflare/capnweb) stubs, over a WebSocket
+session with the `ProxyServer`. Calls, property accesses, promise pipelining
+and callbacks are forwarded by Cap'n Web, so these behave like Workers RPC and
+never block the main thread. For "heap" objects, only `fetch()`, which is sent
+with `dispatchFetch()` to support WebSockets, and Durable Object stubs'
+synchronous `id` and `name` properties are handled like native objects. Values
+follow Cap'n Web's rules, which differ slightly from Workers RPC (e.g. `Map`s
+and cyclic values can't be sent, and methods Cap'n Web stubs define themselves,
+like `map()`, can't be called). If the session closes (e.g. `workerd` closes it
+on receiving a message over 32 MiB), proxies for "heap" objects get new stubs
+on their next use, but stubs returned over the old session stay broken.
 
 If the function call threw, or returned a `Promise` that rejected, the error
 will be serialised and re-thrown/rejected in the client. Note that the stack
