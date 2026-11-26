@@ -9,13 +9,6 @@ import { AutoConfigFrameworkConfigurationError } from "../../src/errors";
 import { Astro } from "../../src/frameworks/astro";
 import { createMockContext } from "../helpers/mock-context";
 
-/** The Worker settings that Astro's cf setup gives autoconfig, as in the config `astro add` scaffolds */
-const astroCfWorkerConfig = {
-	entrypoint: "@astrojs/cloudflare/entrypoints/server",
-	compatibilityFlags: ["global_fetch_strictly_public"],
-	env: { ASSETS: { type: "assets" } },
-};
-
 const context = createMockContext();
 
 function createFramework(version: string): Astro {
@@ -68,7 +61,7 @@ describe("Astro framework", () => {
 			expect(existsSync(join(projectPath, "public", ".assetsignore"))).toBe(
 				false
 			);
-			expect(result).toEqual({ workerConfig: astroCfWorkerConfig });
+			expect(result).toEqual({ workerConfig: null });
 		}
 	);
 
@@ -79,7 +72,7 @@ describe("Astro framework", () => {
 
 		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 		expect(cliCommand.runCommand).not.toHaveBeenCalled();
-		expect(result).toEqual({ workerConfig: astroCfWorkerConfig });
+		expect(result).toEqual({ workerConfig: null });
 	});
 
 	it("configures Astro 6 or later for Wrangler with `astro add cloudflare`", async ({

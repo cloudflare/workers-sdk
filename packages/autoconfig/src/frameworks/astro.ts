@@ -123,13 +123,8 @@ export class Astro extends Framework {
 		}
 
 		return {
-			// What the cloudflare.config.ts that `astro add` scaffolds sets. Autoconfig writes that
-			// file itself, and a migrated Wrangler config keeps its own values for these.
-			workerConfig: {
-				entrypoint: "@astrojs/cloudflare/entrypoints/server",
-				compatibilityFlags: ["global_fetch_strictly_public"],
-				env: { ASSETS: { type: "assets" } },
-			},
+			// `astro add` owns the Cloudflare configuration.
+			workerConfig: null,
 		};
 	}
 
