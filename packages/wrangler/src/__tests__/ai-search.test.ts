@@ -486,6 +486,59 @@ describe("ai-search commands", () => {
 			expect(capturedNamespace).toBe("blog");
 		});
 
+		it("should offer namespaces beyond the first page in the interactive picker", async ({
+			expect,
+		}) => {
+			let capturedNamespace: string | undefined;
+			const namespaces = Array.from({ length: 21 }, (_, i) => ({
+				name: `ns-${i + 1}`,
+				created_at: "2025-01-01T00:00:00Z",
+				description: `Namespace ${i + 1}`,
+			}));
+			mockListTokens([MOCK_TOKEN]);
+			mockPaginatedListNamespaces(namespaces);
+			mockSelect({
+				text: "Select a namespace:",
+				options: {
+					choices: [
+						{ title: "default", value: "default" },
+						...namespaces.map((ns) => ({
+							title: ns.name,
+							description: ns.description,
+							value: ns.name,
+						})),
+						{
+							title: "Create new namespace",
+							description: "Provision a brand-new namespace for this instance",
+							value: "__create_new__",
+						},
+					],
+					defaultOption: 0,
+				},
+				result: "ns-21",
+			});
+			mockConfirm({
+				text: "Configure custom metadata fields? (optional)",
+				result: false,
+			});
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/ai-search/namespaces/:namespace/instances",
+					({ params }) => {
+						capturedNamespace = params.namespace as string;
+						return HttpResponse.json(
+							createFetchResult({ ...MOCK_INSTANCE, namespace: "ns-21" }, true)
+						);
+					},
+					{ once: true }
+				)
+			);
+			await runWrangler(
+				"ai-search create my-instance --type r2 --source my-bucket"
+			);
+			expect(capturedNamespace).toBe("ns-21");
+		});
+
 		it("should offer the 'default' namespace in the picker even when the list endpoint omits it", async ({
 			expect,
 		}) => {
@@ -2822,6 +2875,29 @@ function mockListNamespaces(namespaces: unknown[]) {
 			},
 			{ once: true }
 		)
+	);
+}
+
+/**
+ * Mock the namespaces list endpoint the way the API paginates it: it honours
+ * `page` and `per_page`, and returns 20 namespaces per page by default.
+ */
+function mockPaginatedListNamespaces(namespaces: unknown[]) {
+	msw.use(
+		http.get("*/accounts/:accountId/ai-search/namespaces", ({ request }) => {
+			const url = new URL(request.url);
+			const page = Number(url.searchParams.get("page") ?? "1");
+			const perPage = Number(url.searchParams.get("per_page") ?? "20");
+			const result = namespaces.slice((page - 1) * perPage, page * perPage);
+			return HttpResponse.json(
+				createFetchResult(result, true, [], [], {
+					page,
+					per_page: perPage,
+					count: result.length,
+					total_count: namespaces.length,
+				})
+			);
+		})
 	);
 }
 
