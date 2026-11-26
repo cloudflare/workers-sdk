@@ -103,17 +103,14 @@ export abstract class Framework {
 
 export type ConfigurationOptions = {
 	target: AutoConfigTarget;
-	/** The detected output directory. Absent for a project whose own Worker config has no static assets. */
-	outputDir?: string;
+	outputDir: string | undefined;
 	projectPath: string;
 	workerName: string;
 	dryRun: boolean;
 	packageManager: PackageManager;
 	isWorkspaceRoot: boolean;
 	context: AutoConfigContext;
-	/** The project's current Worker configuration, if it has one, such as a Wrangler config that setup migrates. */
 	existingWorkerConfig?: Partial<WorkerConfig>;
-	/** Whether setup may install packages (default: true). A framework whose setup needs packages does nothing otherwise. */
 	installDependencies?: boolean;
 };
 
