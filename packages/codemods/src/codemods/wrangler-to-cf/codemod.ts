@@ -89,7 +89,7 @@ export const wranglerToCfCodemod: Codemod = {
 			installDependencies: context.installDependencies,
 		});
 		if (!wranglerMigration) {
-			throw new Error("Autoconfig did not migrate the Wrangler config.");
+			throw new Error("The Wrangler config wasn't migrated.");
 		}
 
 		return {
