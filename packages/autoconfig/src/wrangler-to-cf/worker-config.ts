@@ -1,4 +1,3 @@
-import path from "node:path";
 import { convertBindings } from "./bindings";
 import {
 	addProperty,
@@ -92,7 +91,7 @@ export function convertWorkerConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	bundler: MigrationBundler,
-	frameworkAssetsDirectory: string | undefined,
+	isFrameworkAssetsDirectory: ((directory: string) => boolean) | undefined,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): OutputObject {
@@ -201,11 +200,9 @@ export function convertWorkerConfig(
 			bundler === "vite" &&
 			hasOwn(assets, "directory") &&
 			!(
-				frameworkAssetsDirectory !== undefined &&
 				typeof assets.directory === "string" &&
 				// The framework builds its static assets into this directory, so its setup covers them
-				path.resolve(assets.directory) ===
-					path.resolve(frameworkAssetsDirectory)
+				isFrameworkAssetsDirectory?.(assets.directory)
 			)
 		) {
 			report(
@@ -402,7 +399,7 @@ export function convertRootConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	bundler: MigrationBundler,
-	frameworkAssetsDirectory: string | undefined,
+	isFrameworkAssetsDirectory: ((directory: string) => boolean) | undefined,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): OutputObject {
@@ -423,7 +420,7 @@ export function convertRootConfig(
 			source,
 			sourcePrefix,
 			bundler,
-			frameworkAssetsDirectory,
+			isFrameworkAssetsDirectory,
 			imports,
 			followUps
 		),

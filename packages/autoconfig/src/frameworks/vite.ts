@@ -42,7 +42,12 @@ export class Vite extends Framework {
 		packageManager,
 		isWorkspaceRoot,
 		target,
+		installDependencies,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		// Setup installs the Vite plugin
+		if (installDependencies === false) {
+			return { workerConfig: {}, skipped: true };
+		}
 		if (hasViteConfig(projectPath)) {
 			assertViteConfigCanBeTransformed(projectPath);
 		}

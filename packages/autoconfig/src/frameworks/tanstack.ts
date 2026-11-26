@@ -18,7 +18,13 @@ export class TanstackStart extends Framework {
 		packageManager,
 		isWorkspaceRoot,
 		target,
+		existingWorkerConfig,
+		installDependencies,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		// Setup installs the Vite plugin
+		if (installDependencies === false) {
+			return { workerConfig: {}, skipped: true };
+		}
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
@@ -33,7 +39,10 @@ export class TanstackStart extends Framework {
 		return {
 			buildTool: "vite",
 			workerConfig: {
-				entrypoint: "@tanstack/react-start/server-entry",
+				// A project that already runs on Workers keeps its own server entry
+				entrypoint:
+					existingWorkerConfig?.entrypoint ??
+					"@tanstack/react-start/server-entry",
 			},
 		};
 	}

@@ -1,7 +1,6 @@
-import assert from "node:assert";
 import { existsSync } from "node:fs";
-import { readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve } from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
+import { relative, resolve } from "node:path";
 import {
 	maybeAppendWranglerToGitIgnoreLikeFile,
 	maybeAppendWranglerToGitIgnore,
@@ -30,11 +29,8 @@ import {
 	getDetailsForAutoConfig,
 } from "./details";
 import {
-	isFrameworkSupported,
-	isKnownFramework,
-	requiresFrameworkSetup,
+	getFrameworkSupportError,
 	type PackageJsonScriptsOverrides,
-	validateFrameworkTargetSupport,
 } from "./frameworks";
 import { getFrameworkPackageInfo } from "./frameworks/all-frameworks";
 import { Static } from "./frameworks/static";
@@ -45,6 +41,7 @@ import {
 	saveCloudflareTypesTsconfigUpdate,
 } from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
+import { readWranglerConfig } from "./wrangler-to-cf/config-reader";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
 import type {
 	BuildConfig,
@@ -82,8 +79,10 @@ export async function runAutoConfig(
 	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
 		dryRun || autoConfigOptions.skipConfirmations === true;
+	const installDependencies = autoConfigOptions.installDependencies ?? true;
 	const enableTargetCliInstallation =
-		autoConfigOptions.enableTargetCliInstallation ?? true;
+		installDependencies &&
+		(autoConfigOptions.enableTargetCliInstallation ?? true);
 
 	assertNonConfigured(autoConfigDetails);
 
@@ -104,45 +103,19 @@ export async function runAutoConfig(
 
 	const { framework, outputDir, projectPath, wranglerConfigPath } =
 		autoConfigDetails;
-	// Framework setup works on the project root, so it only follows a migration of the root's Wrangler config
-	const cfFramework =
-		wranglerConfigPath !== undefined &&
-		requiresFrameworkSetup(framework.id) &&
-		dirname(wranglerConfigPath) === resolve(projectPath);
-	const bundler =
-		autoConfigOptions.bundler ??
-		(cfFramework ||
-		autoConfigDetails.packageJson?.dependencies?.["@cloudflare/vite-plugin"] !==
-			undefined ||
-		autoConfigDetails.packageJson?.devDependencies?.[
-			"@cloudflare/vite-plugin"
-		] !== undefined
-			? "vite"
-			: "wrangler");
-	// A Wrangler config provides the Worker config, so the framework is only set up when autoconfig can set it up for cf
-	const setUpFramework =
-		wranglerConfigPath === undefined || (cfFramework && bundler === "vite");
-
-	// A Wrangler config provides the Worker config of a framework that autoconfig doesn't set up
-	if (wranglerConfigPath === undefined) {
-		validateFrameworkTargetSupport(framework, target);
-	}
+	// A Wrangler config that setup migrates is the project's own Worker config, which framework setup builds on
+	const existingWorkerConfig: Partial<WorkerConfig> | undefined =
+		wranglerConfigPath === undefined
+			? undefined
+			: { entrypoint: readWranglerConfig(wranglerConfigPath).main };
+	const frameworkSupportError = getFrameworkSupportError(framework, target);
+	// A project with its own Worker config is still set up without a framework that autoconfig
+	// can't set up. Pages projects aren't supported either way.
 	if (
-		wranglerConfigPath === undefined &&
-		isKnownFramework(autoConfigDetails.framework.id, target)
+		frameworkSupportError &&
+		(existingWorkerConfig === undefined || framework.id === "cloudflare-pages")
 	) {
-		const frameworkIsSupported = isFrameworkSupported(
-			autoConfigDetails.framework.id,
-			target
-		);
-		if (!frameworkIsSupported) {
-			throw new FatalError(
-				autoConfigDetails.framework.id === "cloudflare-pages"
-					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
-					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`,
-				{ telemetryMessage: "autoconfig run framework unsupported" }
-			);
-		}
+		throw frameworkSupportError;
 	}
 
 	const compatibilityDate = DEFAULT_COMPAT_DATE;
@@ -159,33 +132,34 @@ export async function runAutoConfig(
 	const isWorkspaceRoot = autoConfigDetails.isWorkspaceRoot ?? false;
 
 	/**
-	 * Runs the framework's setup, or returns no settings when the framework isn't set up.
+	 * Runs the framework's setup, which decides what to do for this project.
 	 *
 	 * @param dryRunSetup Whether to only report the settings, without changing anything
 	 * @returns The framework's configuration results
 	 */
 	const configureFramework = async (
 		dryRunSetup: boolean
-	): Promise<ConfigurationResults> => {
-		if (!setUpFramework) {
-			return { workerConfig: {} };
-		}
-		assert(outputDir, "The Output Directory is unexpectedly missing");
-		return framework.configure({
-			target,
-			outputDir,
-			projectPath,
-			workerName: autoConfigDetails.workerName,
-			isWorkspaceRoot,
-			dryRun: dryRunSetup,
-			packageManager,
-			context,
-		});
-	};
+	): Promise<ConfigurationResults> =>
+		frameworkSupportError
+			? { workerConfig: {}, skipped: true }
+			: framework.configure({
+					target,
+					outputDir,
+					projectPath,
+					workerName: autoConfigDetails.workerName,
+					isWorkspaceRoot,
+					dryRun: dryRunSetup,
+					packageManager,
+					context,
+					existingWorkerConfig,
+					installDependencies,
+				});
 
-	const frameworkPackageInfo = setUpFramework
-		? getFrameworkPackageInfo(framework.id, target)
-		: undefined;
+	// Frameworks only set up when they can install packages, so only then does their installed version matter
+	const frameworkPackageInfo =
+		frameworkSupportError === undefined && installDependencies
+			? getFrameworkPackageInfo(framework.id, target)
+			: undefined;
 	if (frameworkPackageInfo) {
 		framework.validateFrameworkVersion(
 			projectPath,
@@ -199,12 +173,37 @@ export async function runAutoConfig(
 		defaultWorkerConfig,
 		dryRunConfigurationResults.workerConfig
 	);
+	// The framework says what builds the Worker it sets up. Otherwise, the project's dependencies do.
+	const frameworkBundler = dryRunConfigurationResults.buildTool;
+	if (
+		wranglerConfigPath !== undefined &&
+		autoConfigOptions.bundler !== undefined &&
+		frameworkBundler !== undefined &&
+		autoConfigOptions.bundler !== frameworkBundler
+	) {
+		throw new FatalError(
+			`${framework.name} builds its Worker with ${frameworkBundler === "vite" ? "Vite" : "Wrangler"}, so it can't use the "${autoConfigOptions.bundler}" bundler.`,
+			{ telemetryMessage: "autoconfig run bundler conflict" }
+		);
+	}
 	const migrationOptions = {
-		bundler,
-		installDependencies: enableTargetCliInstallation,
+		bundler:
+			autoConfigOptions.bundler ??
+			frameworkBundler ??
+			(autoConfigDetails.packageJson?.dependencies?.[
+				"@cloudflare/vite-plugin"
+			] !== undefined ||
+			autoConfigDetails.packageJson?.devDependencies?.[
+				"@cloudflare/vite-plugin"
+			] !== undefined
+				? "vite"
+				: "wrangler"),
+		installDependencies,
 		// The framework's build covers the assets it builds
-		frameworkAssetsDirectory: setUpFramework ? outputDir : undefined,
-	};
+		frameworkAssetsDirectory: dryRunConfigurationResults.skipped
+			? undefined
+			: outputDir,
+	} as const;
 	if (
 		target === "cf" &&
 		dryRunConfigurationResults.buildTool === "wrangler" &&
@@ -287,13 +286,6 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigOptions.requireCleanGitWorktree) {
-		// Loaded on use, so that importing autoconfig doesn't load the Git helper
-		const { ensureCleanGitWorktree } =
-			await import("@cloudflare/cli-shared-helpers/git");
-		await ensureCleanGitWorktree(projectPath, false);
-	}
-
 	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
 		if (target === "cf") {
 			const hasCfDependency =
@@ -312,6 +304,7 @@ export async function runAutoConfig(
 
 	if (
 		autoConfigDetails.packageJson &&
+		installDependencies &&
 		target === "cf" &&
 		dryRunConfigurationResults.buildTool === "wrangler"
 	) {
@@ -363,11 +356,6 @@ export async function runAutoConfig(
 
 	if (target === "cf") {
 		if (wranglerConfigPath !== undefined) {
-			if (setUpFramework) {
-				// Framework setup can scaffold its own cloudflare.config.ts, as `astro add` does.
-				// Detection found none before setup, so the migrated one replaces it.
-				await rm(resolve(projectPath, "cloudflare.config.ts"), { force: true });
-			}
 			// Loaded on use, so that importing autoconfig doesn't load the migration
 			const { migrateWranglerToCf } = await import("./wrangler-to-cf");
 			autoConfigSummary.wranglerMigration = await migrateWranglerToCf(
@@ -826,6 +814,7 @@ export async function buildOperationsSummary(
 
 	if (
 		autoConfigDetails.framework &&
+		!configurationResults.skipped &&
 		!(autoConfigDetails.framework instanceof Static) &&
 		!autoConfigDetails.framework.isConfigured(autoConfigDetails.projectPath, {
 			target,

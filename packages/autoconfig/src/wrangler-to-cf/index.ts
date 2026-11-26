@@ -97,7 +97,11 @@ export async function migrateWranglerToCf(
 		rawConfig,
 		bundler,
 		secretFiles,
-		frameworkAssetsDirectory
+		frameworkAssetsDirectory === undefined
+			? undefined
+			: (directory) =>
+					path.resolve(projectDirectory, directory) ===
+					path.resolve(projectDirectory, frameworkAssetsDirectory)
 	);
 	if (frameworkSettings) {
 		addFrameworkSettings(convertedConfig, frameworkSettings);

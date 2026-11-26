@@ -1,6 +1,7 @@
 import {
 	existsSync,
 	readFileSync as fsReadFileSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
@@ -35,7 +36,13 @@ export class Astro extends Framework {
 		projectPath,
 		isWorkspaceRoot,
 		context,
+		existingWorkerConfig,
+		installDependencies,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		// `astro add` installs the Cloudflare adapter
+		if (installDependencies === false) {
+			return { workerConfig: {}, skipped: true };
+		}
 		const astroVersion = this.frameworkVersion;
 
 		if (target === "wrangler") {
@@ -101,6 +108,11 @@ export class Astro extends Framework {
 		}
 
 		if (!dryRun) {
+			const cloudflareConfigPath = join(projectPath, "cloudflare.config.ts");
+			// `astro add` scaffolds cloudflare.config.ts when there's none, which a project
+			// with its own Worker config, such as a migrated Wrangler config, doesn't use
+			const removeScaffoldedConfig =
+				existingWorkerConfig !== undefined && !existsSync(cloudflareConfigPath);
 			// Only the Astro beta's `astro add` writes `cloudflare.config.ts`, so run it
 			// without installing it: the project's stable Astro works with the adapter beta
 			await runCommand(
@@ -120,9 +132,14 @@ export class Astro extends Framework {
 					)}`,
 				}
 			);
+			if (removeScaffoldedConfig) {
+				rmSync(cloudflareConfigPath, { force: true });
+			}
 		}
 
 		return {
+			// The Cloudflare adapter builds the Worker with the Cloudflare Vite plugin
+			buildTool: "vite",
 			// `astro add` owns the Cloudflare configuration.
 			workerConfig: null,
 		};

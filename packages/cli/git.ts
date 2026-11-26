@@ -77,12 +77,16 @@ async function hasGitMetadata(cwd: string): Promise<boolean> {
  * Reads the tracked and untracked changes in a Git worktree.
  *
  * @param cwd The directory in which to run Git.
+ * @param bypassHint The caller's instructions for skipping the check, added to its errors.
  *
  * @returns The porcelain status output, or `undefined` when the directory is outside a Git worktree.
  *
  * @throws When Git status cannot be determined for any other reason.
  */
-async function getGitStatus(cwd: string): Promise<string | undefined> {
+async function getGitStatus(
+	cwd: string,
+	bypassHint: string | undefined
+): Promise<string | undefined> {
 	try {
 		const { stdout } = await execFileAsync(
 			"git",
@@ -105,10 +109,22 @@ async function getGitStatus(cwd: string): Promise<string | undefined> {
 			return undefined;
 		}
 		throw new Error(
-			"Unable to verify that the Git worktree is clean. Rerun with --force to bypass this safety check.",
+			withHint("Unable to verify that the Git worktree is clean.", bypassHint),
 			{ cause: error }
 		);
 	}
+}
+
+/**
+ * Adds the caller's instructions for skipping the check to an error message.
+ *
+ * @param message The error message.
+ * @param bypassHint The caller's instructions, if any.
+ *
+ * @returns The error message.
+ */
+function withHint(message: string, bypassHint: string | undefined): string {
+	return bypassHint === undefined ? message : `${message} ${bypassHint}`;
 }
 
 /**
@@ -117,6 +133,7 @@ async function getGitStatus(cwd: string): Promise<string | undefined> {
  *
  * @param cwd The target directory to check.
  * @param force Whether to bypass the Git worktree safety check.
+ * @param bypassHint How the caller's users skip the check, such as "Rerun with `--force` to bypass this safety check.", added to its errors.
  *
  * @returns A promise that resolves when the target is safe to modify.
  *
@@ -124,16 +141,20 @@ async function getGitStatus(cwd: string): Promise<string | undefined> {
  */
 export async function ensureCleanGitWorktree(
 	cwd: string,
-	force: boolean
+	force: boolean,
+	bypassHint?: string
 ): Promise<void> {
 	if (force) {
 		return;
 	}
 
-	const status = await getGitStatus(cwd);
+	const status = await getGitStatus(cwd, bypassHint);
 	if (status && status.length > 0) {
 		throw new Error(
-			"Git worktree is not clean. Commit or stash your changes, or rerun with `--force` to bypass this safety check."
+			withHint(
+				"Git worktree is not clean. Commit or stash your changes first.",
+				bypassHint
+			)
 		);
 	}
 }

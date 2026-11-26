@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { FatalError } from "@cloudflare/workers-utils";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getAllFrameworksInfos, staticFramework } from "./all-frameworks";
 import { NoOpFramework } from "./no-op";
@@ -64,52 +65,37 @@ export function isFrameworkSupported(
 }
 
 /**
- * Checks whether autoconfig sets up a framework for cf when migrating a Wrangler project.
- * Static projects, and frameworks that autoconfig cannot set up for cf, only get their
- * Worker config migrated. So do Next.js projects: `vinext init` refuses projects that
- * still have a Wrangler configuration.
- *
- * @param frameworkId The id of the framework
- * @returns Whether a Wrangler project gets its framework set up for cf
- */
-export function requiresFrameworkSetup(frameworkId: string): boolean {
-	const frameworkInfo = getAllFrameworksInfos("cf").find(
-		({ id }) => id === frameworkId
-	);
-	return (
-		frameworkInfo?.supported === true &&
-		frameworkInfo.supportsCf &&
-		frameworkInfo.id !== staticFramework.id &&
-		frameworkInfo.id !== "next"
-	);
-}
-
-/**
- * Validates that a framework supports the requested autoconfig target.
+ * Explains why autoconfig can't set up a framework for the requested target, if it can't.
  *
  * @param framework - The detected framework.
  * @param target - The requested autoconfig target.
- * @throws {AutoConfigFrameworkConfigurationError} If a Wrangler-only framework is targeted by `cf`.
+ * @returns The error to report, or `undefined` when autoconfig can set up the framework.
  */
-export function validateFrameworkTargetSupport(
+export function getFrameworkSupportError(
 	framework: Framework,
 	target: AutoConfigTarget
-): void {
-	if (target !== "cf") {
-		return;
-	}
-
+): Error | undefined {
 	const frameworkInfo = getAllFrameworksInfos(target).find(
 		({ id }) => id === framework.id
 	);
-	if (frameworkInfo?.supported !== true || frameworkInfo.supportsCf) {
-		return;
+	if (frameworkInfo === undefined) {
+		return undefined;
 	}
-
-	throw new AutoConfigFrameworkConfigurationError(
-		`cf does not support ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
-		{ telemetryMessage: "autoconfig framework unsupported for cf" }
-	);
+	if (!frameworkInfo.supported) {
+		return new FatalError(
+			framework.id === "cloudflare-pages"
+				? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
+				: `The detected framework ("${framework.name}") cannot be automatically configured.`,
+			{ telemetryMessage: "autoconfig run framework unsupported" }
+		);
+	}
+	if (target === "cf" && !frameworkInfo.supportsCf) {
+		return new AutoConfigFrameworkConfigurationError(
+			`cf does not support ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`,
+			{ telemetryMessage: "autoconfig framework unsupported for cf" }
+		);
+	}
+	return undefined;
 }
 
 export type FrameworkInfo = {

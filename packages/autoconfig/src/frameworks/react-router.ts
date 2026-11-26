@@ -296,7 +296,7 @@ function needsViteEnvAPIFutureFlag(reactRouterVersion: string): boolean {
  * @param useMiddlewarePattern - Whether `v8_middleware` is enabled in the user's config.
  */
 function writeAppTs(useMiddlewarePattern: boolean) {
-	// A project that already runs on Workers, such as a migrated one, keeps its own Worker
+	// Rerunning setup keeps the Worker it wrote, along with any changes made to it since
 	if (existsSync("workers/app.ts")) {
 		return;
 	}
@@ -486,7 +486,13 @@ export class ReactRouter extends Framework {
 		isWorkspaceRoot,
 		context,
 		target,
+		existingWorkerConfig,
+		installDependencies,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		// Setup installs the Vite plugin and isbot
+		if (installDependencies === false) {
+			return { workerConfig: {}, skipped: true };
+		}
 		const useMiddlewarePattern = hasV8MiddlewareFlag(
 			projectPath,
 			this.frameworkVersion
@@ -499,9 +505,11 @@ export class ReactRouter extends Framework {
 				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
-			mkdirSync("workers", { recursive: true });
-
-			writeAppTs(useMiddlewarePattern);
+			// A project that already runs on Workers keeps its own Worker
+			if (existingWorkerConfig?.entrypoint === undefined) {
+				mkdirSync("workers", { recursive: true });
+				writeAppTs(useMiddlewarePattern);
+			}
 
 			await installPackages(packageManager.type, ["isbot"], {
 				dev: true,
@@ -528,7 +536,7 @@ export class ReactRouter extends Framework {
 		return {
 			buildTool: "vite",
 			workerConfig: {
-				entrypoint: "./workers/app.ts",
+				entrypoint: existingWorkerConfig?.entrypoint ?? "./workers/app.ts",
 			},
 		};
 	}

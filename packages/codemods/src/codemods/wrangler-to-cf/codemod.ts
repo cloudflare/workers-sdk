@@ -1,5 +1,6 @@
 import path from "node:path";
 import { getDetailsForAutoConfig, runAutoConfig } from "@cloudflare/autoconfig";
+import { ensureCleanGitWorktree } from "@cloudflare/cli-shared-helpers/git";
 import { filterByFileRestrictions } from "../../files";
 import type { Codemod } from "../../types";
 import type { AutoConfigContext } from "@cloudflare/autoconfig";
@@ -14,7 +15,9 @@ const autoConfigContext: AutoConfigContext = {
 		error: console.error,
 	},
 	dialogs: {
-		confirm: async (_text, options) => options?.defaultValue ?? true,
+		// Nobody answers, so answer as autoconfig does without a terminal
+		confirm: async (_text, options) =>
+			options?.fallbackValue ?? options?.defaultValue ?? true,
 		prompt: async (_text, options) => options?.defaultValue ?? "",
 		select: async (_text, options) =>
 			options.choices[options.defaultOption ?? 0]?.value ?? "",
@@ -38,7 +41,7 @@ export const wranglerToCfCodemod: Codemod = {
 		});
 		if (details.configured) {
 			throw new Error(
-				`Cannot migrate because ${path.join(context.cwd, "cloudflare.config.ts")} already exists. Inspect and finish the existing migration; it will not be overwritten. Automated agents should read its TODOs and ask the user about unresolved choices.`
+				`Cannot migrate because ${path.join(details.projectPath, "cloudflare.config.ts")} already exists. Inspect and finish the existing migration; it will not be overwritten. Automated agents should read its TODOs and ask the user about unresolved choices.`
 			);
 		}
 		if (details.wranglerConfigPath === undefined) {
@@ -61,6 +64,15 @@ export const wranglerToCfCodemod: Codemod = {
 			};
 		}
 
+		// Checked after the existing-migration check, so that a rerun reports the existing migration
+		if (!context.dryRun) {
+			await ensureCleanGitWorktree(
+				details.projectPath,
+				context.force ?? false,
+				"Rerun with `--force` to bypass this safety check."
+			);
+		}
+
 		const { wranglerMigration } = await runAutoConfig(details, {
 			target: "cf",
 			context: autoConfigContext,
@@ -68,8 +80,7 @@ export const wranglerToCfCodemod: Codemod = {
 			skipConfirmations: true,
 			runBuild: false,
 			bundler: context.bundler,
-			requireCleanGitWorktree: !context.force,
-			enableTargetCliInstallation: context.installDependencies,
+			installDependencies: context.installDependencies,
 		});
 		if (!wranglerMigration) {
 			throw new Error("Autoconfig did not migrate the Wrangler config.");

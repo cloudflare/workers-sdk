@@ -42,7 +42,11 @@ export async function runCodemod(
 		throw new Error(`Unknown codemod: ${name}`);
 	}
 	if (!codemod.managesGitWorktreeSafety) {
-		await ensureCleanGitWorktree(context.cwd, context.force ?? false);
+		await ensureCleanGitWorktree(
+			context.cwd,
+			context.force ?? false,
+			"Rerun with `--force` to bypass this safety check."
+		);
 	}
 
 	const stagedFiles = new Map<string, string>();

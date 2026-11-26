@@ -23,6 +23,11 @@ export class NextJs extends Framework {
 	async configure(
 		options: ConfigurationOptions
 	): Promise<ConfigurationResults> {
+		// `vinext init` refuses projects that still have a Wrangler configuration, and both tools
+		// install packages, so such a project only keeps its own Worker config for now
+		if (options.existingWorkerConfig || options.installDependencies === false) {
+			return { workerConfig: {}, skipped: true };
+		}
 		// The summary displays this description after the dry run, so it names the tool that will run
 		if (this.shouldUseVinext(options.target)) {
 			this.configurationDescription = VINEXT_CONFIGURATION_DESCRIPTION;

@@ -5,11 +5,12 @@ export interface WranglerToCfMigrationOptions {
 	dryRun?: boolean;
 	/** Whether to install cf and install or upgrade Vite plugin and Wrangler dependencies when needed. Required dependency changes become blocking follow-ups when false. */
 	installDependencies?: boolean;
-	/** The Worker settings of the framework set up for cf, which fill in what the Wrangler config doesn't set */
+	/** The Worker settings of the framework set up for cf. Its entrypoint replaces the Wrangler config's; its other settings fill in what the Wrangler config doesn't set. */
 	frameworkSettings?: Record<string, unknown>;
 	/**
-	 * The directory the framework builds its static assets into. A Wrangler assets directory
-	 * matching it is dropped without a follow-up, because the framework's build covers it.
+	 * The directory the framework builds its static assets into, relative to the Wrangler config's
+	 * directory. A Wrangler assets directory matching it is dropped without a follow-up, because the
+	 * framework's build covers it.
 	 */
 	frameworkAssetsDirectory?: string;
 }

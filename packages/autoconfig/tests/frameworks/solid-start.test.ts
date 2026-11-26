@@ -7,6 +7,7 @@ import { SolidStart } from "../../src/frameworks/solid-start";
 import { installCloudflareVitePlugin } from "../../src/frameworks/utils/vite-plugin";
 import { createMockContext } from "../helpers/mock-context";
 import type { AutoConfigContext } from "../../src/context";
+import type { WorkerConfig } from "@cloudflare/config";
 
 vi.mock("../../src/frameworks/utils/vite-plugin", () => ({
 	installCloudflareVitePlugin: vi.fn(),
@@ -17,9 +18,14 @@ vi.mock("../../src/frameworks/utils/vite-plugin", () => ({
  *
  * @param context The autoconfig context
  * @param version The installed SolidStart version
+ * @param existingWorkerConfig The project's current Worker configuration, if it has one
  * @returns The configuration results
  */
-function configureForCf(context: AutoConfigContext, version: string) {
+function configureForCf(
+	context: AutoConfigContext,
+	version: string,
+	existingWorkerConfig?: Partial<WorkerConfig>
+) {
 	const framework = new SolidStart({ id: "solid-start", name: "Solid Start" });
 	vi.spyOn(framework, "frameworkVersion", "get").mockReturnValue(version);
 	return framework.configure({
@@ -31,11 +37,41 @@ function configureForCf(context: AutoConfigContext, version: string) {
 		packageManager: NpmPackageManager,
 		isWorkspaceRoot: false,
 		context,
+		existingWorkerConfig,
 	});
 }
 
 describe("SolidStart", () => {
 	runInTempDir();
+
+	it("replaces a Wrangler config's Nitro entrypoint, and keeps a custom one, when configuring for cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"vite.config.ts": dedent`
+				import { defineConfig } from "vite";
+				import { solidStart } from "@solidjs/start/config";
+
+				export default defineConfig({ plugins: [solidStart()] });
+			`,
+		});
+
+		// The Vite plugin builds the Worker instead of Nitro, so Nitro's output is gone
+		await expect(
+			configureForCf(createMockContext(), "2.0.0", {
+				entrypoint: "./.output/server/index.mjs",
+			})
+		).resolves.toMatchObject({
+			workerConfig: { entrypoint: "@solidjs/start/server/entry" },
+		});
+		await expect(
+			configureForCf(createMockContext(), "2.0.0", {
+				entrypoint: "src/worker.ts",
+			})
+		).resolves.toMatchObject({
+			workerConfig: { entrypoint: "src/worker.ts" },
+		});
+	});
 
 	it("replaces Nitro with the Cloudflare Vite plugin when configuring for cf", async ({
 		expect,

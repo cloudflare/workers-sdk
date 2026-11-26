@@ -268,6 +268,21 @@ describe("React Router framework configure()", () => {
 			const content = readFileSync(resolve("workers/app.ts"), "utf-8");
 			expect(content).toBe(existingContent);
 		});
+
+		it("keeps the Worker of a project that already has one", async ({
+			expect,
+		}) => {
+			const framework = createFramework("7.16.0");
+			const result = await framework.configure({
+				...getBaseOptions(),
+				existingWorkerConfig: { entrypoint: "./server/worker.ts" },
+			});
+
+			expect(result.workerConfig).toEqual({
+				entrypoint: "./server/worker.ts",
+			});
+			expect(existsSync(resolve("workers/app.ts"))).toBe(false);
+		});
 	});
 
 	describe("entry.server.tsx — existing file not overwritten", () => {

@@ -22,6 +22,10 @@ import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
+import type { WorkerConfig } from "@cloudflare/config";
+
+/** The Worker that SolidStart's Nitro build writes */
+const NITRO_ENTRYPOINT = ".output/server/index.mjs";
 
 export class SolidStart extends Framework {
 	async configure({
@@ -31,8 +35,14 @@ export class SolidStart extends Framework {
 		packageManager,
 		isWorkspaceRoot,
 		context,
+		existingWorkerConfig,
+		installDependencies,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (target === "cf") {
+			// Setup installs the Vite plugin
+			if (installDependencies === false) {
+				return { workerConfig: {}, skipped: true };
+			}
 			// SolidStart 2 runs on Vite environments, so its `ssr` environment can run on the
 			// Cloudflare Vite plugin instead of Nitro, as SolidStart's deployment guide describes
 			if (!dryRun) {
@@ -52,8 +62,7 @@ export class SolidStart extends Framework {
 			return {
 				buildTool: "vite",
 				workerConfig: {
-					// SolidStart resolves this alias to its server entry, wherever `appRoot` puts it
-					entrypoint: "@solidjs/start/server/entry",
+					entrypoint: getCfEntrypoint(existingWorkerConfig?.entrypoint),
 				},
 			};
 		}
@@ -71,7 +80,7 @@ export class SolidStart extends Framework {
 		return {
 			buildTool: "wrangler",
 			workerConfig: {
-				entrypoint: "./.output/server/index.mjs",
+				entrypoint: `./${NITRO_ENTRYPOINT}`,
 				env: {
 					ASSETS: { type: "assets" },
 				},
@@ -79,6 +88,28 @@ export class SolidStart extends Framework {
 			buildConfig: { assetsDirectory: "./.output/public" },
 		};
 	}
+}
+
+/**
+ * Chooses the Worker entrypoint for cf, which builds SolidStart with the Cloudflare Vite plugin.
+ * Nitro's build output, which a Wrangler config set up for Nitro points at, isn't built any more,
+ * so it is replaced. A custom entrypoint is kept.
+ *
+ * @param existingEntrypoint The project's current Worker entrypoint, if it has one
+ * @returns The Worker entrypoint
+ */
+function getCfEntrypoint(
+	existingEntrypoint: WorkerConfig["entrypoint"]
+): WorkerConfig["entrypoint"] {
+	if (
+		existingEntrypoint === undefined ||
+		(typeof existingEntrypoint === "string" &&
+			existingEntrypoint.replace(/^\.\//, "") === NITRO_ENTRYPOINT)
+	) {
+		// SolidStart resolves this alias to its server entry, wherever `appRoot` puts it
+		return "@solidjs/start/server/entry";
+	}
+	return existingEntrypoint;
 }
 
 /**

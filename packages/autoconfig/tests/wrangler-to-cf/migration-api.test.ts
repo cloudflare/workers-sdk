@@ -1830,7 +1830,7 @@ describe("migrateWranglerToCf", () => {
 		).rejects.toMatchObject({ code: "ENOENT" });
 	});
 
-	it("keeps the Wrangler config's settings and adds the framework's missing ones", async ({
+	it("uses the framework's entrypoint and adds the framework's settings the Wrangler config doesn't set", async ({
 		expect,
 	}) => {
 		const cwd = await createProject({
@@ -1839,15 +1839,16 @@ describe("migrateWranglerToCf", () => {
 				compatibility_date: "2026-09-23",
 				compatibility_flags: ["nodejs_compat"],
 				kv_namespaces: [{ binding: "KV", id: "kv-id" }],
-				main: "src/index.ts",
+				main: ".output/server/index.mjs",
 				name: "example-worker",
+				env: { staging: { main: "src/staging.ts" } },
 			}),
 		});
 
 		await migrateWranglerToCf(path.join(cwd, "wrangler.json"), {
 			bundler: "wrangler",
 			frameworkSettings: {
-				entrypoint: "@astrojs/cloudflare/entrypoints/server",
+				entrypoint: "@solidjs/start/server/entry",
 				compatibilityFlags: ["global_fetch_strictly_public"],
 				env: { ASSETS: { type: "assets" } },
 			},
@@ -1857,7 +1858,12 @@ describe("migrateWranglerToCf", () => {
 			path.join(cwd, "cloudflare.config.ts"),
 			"utf8"
 		);
-		expect(cloudflareConfig).toContain('entrypoint: "src/index.ts"');
+		expect(cloudflareConfig).toContain(
+			'entrypoint: "@solidjs/start/server/entry"'
+		);
+		expect(cloudflareConfig).not.toContain(".output/server/index.mjs");
+		// An environment's own entrypoint isn't the one the framework replaced
+		expect(cloudflareConfig).toContain('entrypoint: "src/staging.ts"');
 		expect(cloudflareConfig).not.toContain("global_fetch_strictly_public");
 		expect(cloudflareConfig).toContain("KV: bindings.kv(");
 		expect(cloudflareConfig).toContain('type: "assets"');

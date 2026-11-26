@@ -408,7 +408,7 @@ function convertBranch(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	bundler: MigrationBundler,
-	frameworkAssetsDirectory: string | undefined,
+	isFrameworkAssetsDirectory: ((directory: string) => boolean) | undefined,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): ConvertedBranch {
@@ -416,7 +416,7 @@ function convertBranch(
 		source,
 		sourcePrefix,
 		bundler,
-		frameworkAssetsDirectory,
+		isFrameworkAssetsDirectory,
 		imports,
 		followUps
 	);
@@ -457,7 +457,7 @@ function convertBranch(
 			previewSource,
 			previewPath,
 			bundler,
-			frameworkAssetsDirectory,
+			isFrameworkAssetsDirectory,
 			imports,
 			followUps
 		),
@@ -490,7 +490,7 @@ export function convertWranglerConfig(
 	rawConfig: RawConfig,
 	bundler: MigrationBundler,
 	secretFiles: string[],
-	frameworkAssetsDirectory?: string
+	isFrameworkAssetsDirectory?: (directory: string) => boolean
 ): ConvertedWranglerConfig {
 	const source = rawConfig as UnknownRecord;
 	const imports = new Set<string>();
@@ -601,7 +601,7 @@ export function convertWranglerConfig(
 		baseSource,
 		"",
 		bundler,
-		frameworkAssetsDirectory,
+		isFrameworkAssetsDirectory,
 		imports,
 		followUps
 	);
@@ -623,7 +623,7 @@ export function convertWranglerConfig(
 				environmentSource,
 				`env.${name}`,
 				bundler,
-				frameworkAssetsDirectory,
+				isFrameworkAssetsDirectory,
 				imports,
 				followUps
 			)

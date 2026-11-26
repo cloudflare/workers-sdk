@@ -1,5 +1,4 @@
-import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
 import { loadAndParseConfig } from "@cloudflare/config";
@@ -52,16 +51,6 @@ class OwnAssetsDirectoryFramework extends Framework {
 			workerConfig: { entrypoint: "./.output/server/index.mjs" },
 			buildConfig: { assetsDirectory: "./.output/public/" },
 		};
-	}
-}
-
-/** Scaffolds its own cloudflare.config.ts during setup, as `astro add` does. */
-class ScaffoldingFramework extends Framework {
-	configure({ dryRun }: ConfigurationOptions): ConfigurationResults {
-		if (!dryRun) {
-			writeFileSync("cloudflare.config.ts", "export default {};\n");
-		}
-		return { buildTool: "vite", workerConfig: { entrypoint: "src/app.ts" } };
 	}
 }
 
@@ -817,6 +806,8 @@ describe("runAutoConfig()", () => {
 			const cloudflareConfig = readFileSync("cloudflare.config.ts", "utf8");
 			expect(cloudflareConfig).toContain('name: "my-worker"');
 			expect(cloudflareConfig).toContain("bindings.kv");
+			// The Wrangler config already describes the Worker, so the static setup does nothing
+			expect(existsSync("wrangler.config.ts")).toBe(false);
 		});
 
 		it("migrates the Wrangler config of a framework autoconfig can't set up for cf", async ({
@@ -835,35 +826,56 @@ describe("runAutoConfig()", () => {
 
 			expect(summary.wranglerMigration?.status).toBe("complete");
 			expect(summary.frameworkId).toBe("hono");
+			expect(summary.frameworkConfiguration).toBeUndefined();
 		});
+
+		it("refuses a Pages project before changing anything", async ({
+			expect,
+		}) => {
+			await seed({
+				...worker,
+				"wrangler.jsonc": JSON.stringify({
+					name: "my-site",
+					pages_build_output_dir: "./dist",
+				}),
+				"dist/index.html": "<h1>Hello World</h1>",
+			});
+
+			await expect(setUp()).rejects.toThrow(
+				"Automatically migrating from a Pages project to Workers is not yet supported."
+			);
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
+		});
+
+		const viteSpa = {
+			// Declares the Vite plugin, as its mocked install would
+			"package.json": JSON.stringify({
+				name: "my-spa",
+				devDependencies: {
+					"@cloudflare/vite-plugin": "^2.0.0-rc.0",
+					cf: "1.0.0",
+					vite: "^7.0.0",
+				},
+			}),
+			"node_modules/vite/package.json": JSON.stringify({
+				name: "vite",
+				version: "7.0.0",
+			}),
+			"vite.config.ts": `import { defineConfig } from "vite";\nexport default defineConfig({ plugins: [] });\n`,
+			"index.html": "<h1>Hello World</h1>",
+			"wrangler.jsonc": JSON.stringify({
+				name: "my-spa",
+				compatibility_date: "2026-09-24",
+				assets: { directory: "./dist" },
+				kv_namespaces: [{ binding: "KV", id: "kv-id" }],
+			}),
+		};
 
 		it("sets up the framework and migrates the Wrangler config in one pass", async ({
 			expect,
 		}) => {
 			vi.spyOn(cliPackages, "installPackages").mockResolvedValue();
-			await seed({
-				// Declares the Vite plugin, as its mocked install would
-				"package.json": JSON.stringify({
-					name: "my-spa",
-					devDependencies: {
-						"@cloudflare/vite-plugin": "^2.0.0-rc.0",
-						cf: "1.0.0",
-						vite: "^7.0.0",
-					},
-				}),
-				"node_modules/vite/package.json": JSON.stringify({
-					name: "vite",
-					version: "7.0.0",
-				}),
-				"vite.config.ts": `import { defineConfig } from "vite";\nexport default defineConfig({ plugins: [] });\n`,
-				"index.html": "<h1>Hello World</h1>",
-				"wrangler.jsonc": JSON.stringify({
-					name: "my-spa",
-					compatibility_date: "2026-09-24",
-					assets: { directory: "./dist" },
-					kv_namespaces: [{ binding: "KV", id: "kv-id" }],
-				}),
-			});
+			await seed(viteSpa);
 
 			const summary = await setUp();
 
@@ -879,34 +891,35 @@ describe("runAutoConfig()", () => {
 			expect(cloudflareConfig).toContain("single-page-application");
 		});
 
-		it("replaces a cloudflare.config.ts that framework setup scaffolds", async ({
+		it("only migrates the Wrangler config when it may not install packages", async ({
 			expect,
 		}) => {
-			await seed(worker);
-			const framework = new ScaffoldingFramework({ id: "vite", name: "Vite" });
+			const installPackages = vi
+				.spyOn(cliPackages, "installPackages")
+				.mockResolvedValue();
+			await seed(viteSpa);
 
-			await runAutoConfig(
-				{
-					configured: false,
-					projectPath: process.cwd(),
-					wranglerConfigPath: join(process.cwd(), "wrangler.jsonc"),
-					framework,
-					outputDir: "dist",
-					workerName: "my-worker",
-					packageManager: NpmPackageManager,
-				},
-				{
-					context: createMockContext(),
-					runBuild: false,
-					skipConfirmations: true,
-					enableTargetCliInstallation: false,
-				}
+			const summary = await setUp({ installDependencies: false });
+
+			expect(installPackages).not.toHaveBeenCalled();
+			expect(readFileSync("vite.config.ts", "utf8")).not.toContain(
+				"cloudflare()"
 			);
+			expect(summary.frameworkConfiguration).toBeUndefined();
+			expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
+				"bindings.kv"
+			);
+		});
 
-			const cloudflareConfig = readFileSync("cloudflare.config.ts", "utf8");
-			expect(cloudflareConfig).toContain("bindings.kv");
-			// The Wrangler config's entrypoint wins over the framework's
-			expect(cloudflareConfig).toContain('entrypoint: "src/index.ts"');
+		it("refuses a bundler that the framework doesn't build with", async ({
+			expect,
+		}) => {
+			await seed(viteSpa);
+
+			await expect(setUp({ bundler: "wrangler" })).rejects.toThrow(
+				'Vite builds its Worker with Vite, so it can\'t use the "wrangler" bundler.'
+			);
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
 		});
 
 		it("previews the migration in a dry run without changing files", async ({
@@ -920,55 +933,6 @@ describe("runAutoConfig()", () => {
 				"cloudflare.config.ts",
 			]);
 			expect(existsSync("cloudflare.config.ts")).toBe(false);
-		});
-
-		it("requires a clean Git worktree only when asked", async ({ expect }) => {
-			await seed(worker);
-			execFileSync("git", ["init", "--quiet"]);
-
-			await expect(setUp({ requireCleanGitWorktree: true })).rejects.toThrow(
-				"Git worktree is not clean"
-			);
-			expect(existsSync("cloudflare.config.ts")).toBe(false);
-			await setUp();
-			expect(existsSync("cloudflare.config.ts")).toBe(true);
-		});
-
-		it("only migrates a Wrangler config outside the project root", async ({
-			expect,
-		}) => {
-			await seed({
-				"package.json": JSON.stringify({
-					name: "my-spa",
-					devDependencies: { cf: "1.0.0", vite: "^7.0.0" },
-				}),
-				"vite.config.ts": "export default { plugins: [] };",
-				"index.html": "<h1>Hello World</h1>",
-				"config/wrangler.jsonc": JSON.stringify({
-					name: "my-spa",
-					compatibility_date: "2026-09-24",
-				}),
-			});
-			const context = createMockContext();
-
-			await runAutoConfig(
-				await getDetailsForAutoConfig({
-					projectPath: process.cwd(),
-					wranglerConfigPath: "config/wrangler.jsonc",
-					context,
-				}),
-				{
-					context,
-					runBuild: false,
-					skipConfirmations: true,
-					enableTargetCliInstallation: false,
-				}
-			);
-
-			expect(existsSync("config/cloudflare.config.ts")).toBe(true);
-			expect(readFileSync("vite.config.ts", "utf8")).not.toContain(
-				"cloudflare()"
-			);
 		});
 	});
 });

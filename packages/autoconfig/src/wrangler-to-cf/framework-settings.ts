@@ -1,31 +1,50 @@
 import type {
 	ConvertedWranglerConfig,
 	OutputObject,
+	OutputProperty,
 	OutputValue,
 } from "./types";
 
 /**
- * Adds the framework's Worker settings that a converted Wrangler config doesn't set, to every
- * Worker it renders, one per environment and preview. A Wrangler project is already set up for
- * its framework, so its own values, such as its entrypoint, flags and bindings, are kept.
+ * Adds the framework's Worker settings to every Worker a converted Wrangler config renders, one
+ * per environment and preview. The framework decides the entrypoint, having seen the Wrangler
+ * config's: it replaces that entrypoint wherever a Worker uses it. Of the other settings, it
+ * only fills in what the Wrangler config doesn't set, since a Wrangler project's own values, such
+ * as its flags and bindings, are already right for it.
  *
  * @param converted The converted Wrangler config
  * @param settings The framework's Worker settings
  */
 export function addFrameworkSettings(
 	converted: ConvertedWranglerConfig,
-	settings: Record<string, unknown>
+	{ entrypoint, ...settings }: Record<string, unknown>
 ): void {
-	for (const branch of [converted.base, ...converted.environments.values()]) {
-		for (const config of [branch.config, branch.previewConfig]) {
-			const worker = config?.properties.find(
-				(property) => property.key === "worker"
-			)?.value;
-			if (isOutputObject(worker)) {
-				mergeSettings(worker, settings);
-			}
+	const workers = [converted.base, ...converted.environments.values()]
+		.flatMap((branch) => [branch.config, branch.previewConfig])
+		.map(
+			(config) =>
+				config?.properties.find((property) => property.key === "worker")?.value
+		)
+		.filter(isOutputObject);
+	const existingEntrypoint = getProperty(workers[0], "entrypoint")?.value;
+	for (const worker of workers) {
+		const workerEntrypoint = getProperty(worker, "entrypoint");
+		if (
+			typeof entrypoint === "string" &&
+			workerEntrypoint !== undefined &&
+			workerEntrypoint.value === existingEntrypoint
+		) {
+			workerEntrypoint.value = entrypoint;
 		}
+		mergeSettings(worker, { entrypoint, ...settings });
 	}
+}
+
+function getProperty(
+	object: OutputObject | undefined,
+	key: string
+): OutputProperty | undefined {
+	return object?.properties.find((property) => property.key === key);
 }
 
 /**
