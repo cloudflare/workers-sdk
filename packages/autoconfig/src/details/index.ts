@@ -175,10 +175,8 @@ export async function getDetailsForAutoConfig({
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
 	/**
-	 * For the cf target, the Wrangler config file that setup migrates to `cloudflare.config.ts`.
-	 * Defaults to the `wrangler.jsonc`, `wrangler.toml` or `wrangler.json` at the project root.
-	 * Ignored when `cloudflare.config.ts` already exists. Relative paths are resolved against
-	 * `projectPath`. It must be in the project folder, where `cloudflare.config.ts` goes.
+	 * For the cf target, the Wrangler config to migrate, inside `projectPath` and relative to it.
+	 * Defaults to the one at the project root. Ignored if `cloudflare.config.ts` exists.
 	 */
 	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
