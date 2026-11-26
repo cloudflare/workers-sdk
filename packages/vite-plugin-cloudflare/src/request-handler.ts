@@ -221,6 +221,16 @@ export function toMiniflareRequest(request: Request): MiniflareRequest {
 	if (secFetchMode) {
 		request.headers.set(CoreHeaders.SEC_FETCH_MODE, secFetchMode);
 	}
+	// Undici also adds `Sec-Fetch-Mode` and `Accept-Language` when they are absent,
+	// so we name the ones the client didn't send for them to be removed again.
+	const absentHeaders = ["Sec-Fetch-Mode", "Accept-Language"].filter(
+		(name) => !request.headers.has(name)
+	);
+	if (absentHeaders.length > 0) {
+		request.headers.set(CoreHeaders.ABSENT_HEADERS, absentHeaders.join(", "));
+	} else {
+		request.headers.delete(CoreHeaders.ABSENT_HEADERS);
+	}
 	return new MiniflareRequest(request.url, {
 		method: request.method,
 		headers: [["accept-encoding", "identity"], ...request.headers],

@@ -54,6 +54,11 @@ export const CoreHeaders = {
 	ACCESS_BLOB: "MF-Access-Blob",
 	/** Used by the Vite plugin to pass through the original `sec-fetch-mode` header */
 	SEC_FETCH_MODE: "MF-Sec-Fetch-Mode",
+	/**
+	 * Used by the Vite plugin to name the `sec-fetch-mode` and `accept-language`
+	 * headers the original request lacked, which undici's `fetch()` adds
+	 */
+	ABSENT_HEADERS: "MF-Absent-Headers",
 
 	// API Proxy
 	OP_SECRET: "MF-Op-Secret",

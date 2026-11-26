@@ -49,6 +49,12 @@ type Env = {
 
 const encoder = new TextEncoder();
 
+/**
+ * Headers undici's `fetch()` adds to requests that lack them, which
+ * {@link CoreHeaders.ABSENT_HEADERS} may name for removal
+ */
+const FETCH_ADDED_HEADERS = ["sec-fetch-mode", "accept-language"];
+
 function getUserRequest(
 	request: Request<unknown, IncomingRequestCfProperties>,
 	env: Env,
@@ -133,6 +139,20 @@ function getUserRequest(
 		request.headers.set("Sec-Fetch-Mode", secFetchMode);
 	}
 	request.headers.delete(CoreHeaders.SEC_FETCH_MODE);
+
+	// The Vite plugin forwards requests with undici's `fetch()`, which adds these
+	// headers when they are absent, so it names the ones the client didn't send
+	const absentHeaders = request.headers
+		.get(CoreHeaders.ABSENT_HEADERS)
+		?.toLowerCase()
+		.split(",")
+		.map((name) => name.trim());
+	for (const name of FETCH_ADDED_HEADERS) {
+		if (absentHeaders?.includes(name)) {
+			request.headers.delete(name);
+		}
+	}
+	request.headers.delete(CoreHeaders.ABSENT_HEADERS);
 
 	if (rewriteHeadersFromOriginalUrl) {
 		request.headers.set("Host", url.host);
