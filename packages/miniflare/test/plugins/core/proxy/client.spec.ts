@@ -229,6 +229,9 @@ describe("ProxyClient", () => {
 							import { WorkerEntrypoint } from "cloudflare:workers";
 							export default class extends WorkerEntrypoint {
 								size(value) { return value.length; }
+								async streamSize(stream) {
+									return (await new Response(stream).arrayBuffer()).byteLength;
+								}
 							}
 						`),
 					},
@@ -238,7 +241,10 @@ describe("ProxyClient", () => {
 		useDispose(mf);
 
 		const { BINDING } = await mf.getBindings<{
-			BINDING: { size(value: Uint8Array | number[]): Promise<number> };
+			BINDING: {
+				size(value: Uint8Array | number[]): Promise<number>;
+				streamSize(stream: ReadableStream): Promise<number>;
+			};
 		}>();
 		// Base64 encoded, this is over 32 MiB. Like other values that can't be
 		// sent, this throws when calling.
@@ -251,6 +257,10 @@ describe("ProxyClient", () => {
 		);
 		// Rejected before it was sent, so the session is still usable
 		expect(await BINDING.size(new Uint8Array(1))).toBe(1);
+		// Streams' chunks are sent in separate messages, and large ones are split
+		const streamSize = 30 * 1024 * 1024;
+		const stream = new Blob([new Uint8Array(streamSize)]).stream();
+		expect(await BINDING.streamSize(stream)).toBe(streamSize);
 	});
 
 	test("rejects pending Workers RPC results once poisoned", async ({

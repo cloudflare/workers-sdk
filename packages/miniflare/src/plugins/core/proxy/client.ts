@@ -116,6 +116,37 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 // session and breaking every stub, so calls with more data than this are
 // rejected before they're sent
 const MAX_INLINE_SIZE = 31 * 1024 * 1024; // 31 MiB, leaving room for the rest
+// Cap'n Web sends each chunk of a stream argument in its own message, so larger
+// chunks are split
+const MAX_STREAM_CHUNK_SIZE = 1024 * 1024; // 1 MiB
+
+/**
+ * @param stream Stream argument about to be sent over Cap'n Web
+ * @returns `stream` with chunks no larger than `MAX_STREAM_CHUNK_SIZE`
+ */
+function splitLargeChunks(stream: ReadableStream): ReadableStream {
+	return stream.pipeThrough(
+		new TransformStream({
+			transform(chunk, controller) {
+				if (
+					!ArrayBuffer.isView(chunk) ||
+					chunk.byteLength <= MAX_STREAM_CHUNK_SIZE
+				) {
+					controller.enqueue(chunk);
+					return;
+				}
+				const bytes = new Uint8Array(
+					chunk.buffer,
+					chunk.byteOffset,
+					chunk.byteLength
+				);
+				for (let i = 0; i < bytes.byteLength; i += MAX_STREAM_CHUNK_SIZE) {
+					controller.enqueue(bytes.subarray(i, i + MAX_STREAM_CHUNK_SIZE));
+				}
+			},
+		})
+	);
+}
 
 function poisonedError() {
 	return new Error(
@@ -298,6 +329,9 @@ interface NativeTargetHeldValue {
 	version: number;
 	// Cap'n Web stub to release
 	stub?: Disposable;
+	// If set, `stub` is a call result to release only if it wasn't awaited, as
+	// Cap'n Web releases awaited results itself
+	awaited?: { value: boolean };
 }
 
 // Class containing functions that should accessible by both `ProxyClient` and
@@ -404,7 +438,9 @@ class ProxyClientBridge {
 				if (held.address !== undefined) {
 					addresses.push(held.address);
 				}
-				held.stub?.[Symbol.dispose]();
+				if (!held.awaited?.value) {
+					held.stub?.[Symbol.dispose]();
+				}
 			}
 		}
 		// If there are no addresses to free, we don't need to send a request
@@ -442,11 +478,17 @@ class ProxyClientBridge {
 		return proxy;
 	}
 
-	#register(proxy: object, address?: number, stub?: Disposable) {
+	#register(
+		proxy: object,
+		address?: number,
+		stub?: Disposable,
+		awaited?: { value: boolean }
+	) {
 		const held: NativeTargetHeldValue = {
 			address,
 			version: this.#version,
 			stub,
+			awaited,
 		};
 		this.#finalizationRegistry.register(proxy, held, this);
 	}
@@ -480,9 +522,17 @@ class ProxyClientBridge {
 		raw: object,
 		target?: NativeTarget,
 		isPromise = false,
-		parent?: object
+		parent?: object,
+		awaited?: { value: boolean }
 	): object {
-		const handler = new RpcProxyHandler(this, raw, target, isPromise, parent);
+		const handler = new RpcProxyHandler(
+			this,
+			raw,
+			target,
+			isPromise,
+			parent,
+			awaited
+		);
 		// Cap'n Web stubs are callable, so this must be too
 		const proxyTarget: { (): void; [util.inspect.custom]?: unknown } = () => {};
 		// `util.inspect()` inspects the target directly, rather than the `Proxy`
@@ -490,6 +540,21 @@ class ProxyClientBridge {
 		const proxy = new Proxy(proxyTarget, handler);
 		handler.proxy = proxy;
 		this.#rpcProxies.set(proxy, { raw, version: this.#version });
+		return proxy;
+	}
+
+	/**
+	 * Wraps the `RpcPromise` returned by a call. If it's never awaited (e.g. it's
+	 * only used to pipeline other calls), its result is released once the
+	 * returned proxy can't be used.
+	 *
+	 * @param raw Cap'n Web `RpcPromise`
+	 * @param parent Proxy the call was made on
+	 */
+	createCallResultProxy(raw: Disposable, parent?: object): object {
+		const awaited = { value: false };
+		const proxy = this.createRpcProxy(raw, undefined, true, parent, awaited);
+		this.#register(proxy, undefined, raw, awaited);
 		return proxy;
 	}
 
@@ -546,6 +611,9 @@ class ProxyClientBridge {
 			// Cap'n Web base64 encodes bytes
 			state.inlineSize += Math.ceil(value.byteLength / 3) * 4;
 			return value;
+		}
+		if (value instanceof ReadableStream) {
+			return splitLargeChunks(value);
 		}
 		const globalHTTPObject = toGlobalHTTPObject(value);
 		if (globalHTTPObject !== undefined) {
@@ -648,7 +716,9 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 		readonly target: NativeTarget | undefined,
 		readonly isPromise: boolean,
 		// Kept alive while this proxy is, see `ProxyClientBridge#createRpcProxy()`
-		readonly parent: object | undefined
+		readonly parent: object | undefined,
+		// Set once awaited, see `ProxyClientBridge#createCallResultProxy()`
+		readonly awaited: { value: boolean } | undefined
 	) {
 		this.#version = bridge.version;
 	}
@@ -669,6 +739,9 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 	};
 
 	#settle(): Promise<unknown> {
+		if (this.#settled === undefined && this.awaited !== undefined) {
+			this.awaited.value = true;
+		}
 		this.#settled ??= this.#poisoned
 			? Promise.reject(poisonedError())
 			: this.#resolve();
@@ -747,10 +820,8 @@ class RpcProxyHandler implements ProxyHandler<() => void> {
 	apply(_target: () => void, _thisArg: unknown, args: unknown[]) {
 		this.#assertSafe();
 		const encodedArgs = this.bridge.encodeArgs(args);
-		return this.bridge.createRpcProxy(
+		return this.bridge.createCallResultProxy(
 			this.raw(...encodedArgs),
-			undefined,
-			true,
 			this.proxy
 		);
 	}
