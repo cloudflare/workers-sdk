@@ -34,7 +34,6 @@
 		"@cloudflare/config": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",

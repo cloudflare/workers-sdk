@@ -1764,9 +1764,6 @@ importers:
         specifier: workspace:*
         version: link:../config
     devDependencies:
-      '@cloudflare/workers-shared':
-        specifier: workspace:*
-        version: link:../workers-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig

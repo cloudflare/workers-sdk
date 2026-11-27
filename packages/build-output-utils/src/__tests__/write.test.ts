@@ -7,6 +7,7 @@ import {
 	BuildOutputRootConfigSchema,
 	BuildOutputWorkerConfigSchema,
 } from "@cloudflare/config";
+import { createAssetsCopyFilter } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
@@ -405,7 +406,11 @@ describe("writeAssets", () => {
 				"included"
 			);
 
-			await writeAssets({ root, sourceDirectory });
+			await writeAssets({
+				root,
+				sourceDirectory,
+				filter: await createAssetsCopyFilter(sourceDirectory),
+			});
 
 			const assetsDir = getWorkerAssetsDir(root);
 			expect(fs.existsSync(path.join(assetsDir, "node_modules"))).toBe(false);
@@ -430,7 +435,11 @@ describe("writeAssets", () => {
 		fs.writeFileSync(path.join(root, "docs/guide/notes.txt"), "ignored");
 		fs.writeFileSync(path.join(root, "notes.txt"), "ignored");
 
-		await writeAssets({ root, sourceDirectory: root });
+		await writeAssets({
+			root,
+			sourceDirectory: root,
+			filter: await createAssetsCopyFilter(root),
+		});
 
 		const assetsDir = getWorkerAssetsDir(root);
 		expect(fs.readdirSync(path.join(assetsDir, "docs/guide"))).toEqual([
@@ -453,7 +462,11 @@ describe("writeAssets", () => {
 			fs.symlinkSync("not-generated", source, type);
 
 			await expect(
-				writeAssets({ root, sourceDirectory: root })
+				writeAssets({
+					root,
+					sourceDirectory: root,
+					filter: await createAssetsCopyFilter(root),
+				})
 			).rejects.toMatchObject({
 				code: "ENOENT",
 				path: source,
@@ -468,9 +481,27 @@ describe("writeAssets", () => {
 		fs.writeFileSync(path.join(root, ".assetsignore"), "/link\n");
 		fs.symlinkSync("not-generated", path.join(root, "link"), "file");
 
-		await writeAssets({ root, sourceDirectory: root });
+		await writeAssets({
+			root,
+			sourceDirectory: root,
+			filter: await createAssetsCopyFilter(root),
+		});
 
 		expect(fs.readdirSync(getWorkerAssetsDir(root))).not.toContain("link");
+	});
+
+	it("copies without interpreting .assetsignore unless given a filter", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.writeFileSync(path.join(root, ".assetsignore"), "/index.html\n");
+		fs.writeFileSync(path.join(root, "index.html"), "included");
+
+		await writeAssets({ root, sourceDirectory: root });
+
+		expect(
+			fs.readFileSync(path.join(getWorkerAssetsDir(root), "index.html"), "utf8")
+		).toBe("included");
 	});
 
 	it("preserves files already generated in the build output", async ({

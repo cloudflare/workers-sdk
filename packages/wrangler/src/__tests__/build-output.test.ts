@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { buildAndWriteContainerOutput } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -417,6 +418,7 @@ describe("wrangler build --experimental-cf-build-output", () => {
 			"public/_headers": "/* X-Test: yes",
 			"public/_redirects": "/old /new 301",
 			"public/.assetsignore": "secrets.txt",
+			"public/secrets.txt": "excluded",
 		});
 
 		await runWrangler(
@@ -435,6 +437,27 @@ describe("wrangler build --experimental-cf-build-output", () => {
 		expect(fs.readFileSync(assetsPath(".assetsignore"), "utf8")).toBe(
 			"secrets.txt"
 		);
+		expect(fs.existsSync(assetsPath("secrets.txt"))).toBe(false);
+	});
+
+	it("reports an invalid assets ignore file as a user error", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": `export default { worker: {
+				name: "${WORKER_NAME}",
+				compatibilityDate: "2026-05-18",
+			} };`,
+			"wrangler.config.ts": `export default { assetsDirectory: "./public" };`,
+			"public/index.html": "<h1>static</h1>",
+		});
+		fs.writeFileSync("public/.assetsignore", Buffer.from([0xff]));
+
+		await expect(
+			runWrangler(
+				"build --experimental-new-config --experimental-cf-build-output"
+			)
+		).rejects.toBeInstanceOf(UserError);
 	});
 
 	it("emits an assets-only Worker (no bundle, no manifest)", async ({

@@ -1,7 +1,8 @@
 ---
 "@cloudflare/autoconfig": minor
-"@cloudflare/build-output-utils": patch
+"@cloudflare/build-output-utils": minor
 "@cloudflare/cli-shared-helpers": patch
+"@cloudflare/workers-utils": minor
 "miniflare": patch
 "wrangler": patch
 ---
@@ -13,3 +14,5 @@ Projects get a local manifest and TypeScript config where needed, along with def
 For static sites that serve the project root, autoconfig adds `node_modules`, `.cloudflare`, and the new configuration and package-manager files to `.assetsignore`. Wrangler's asset watcher, local asset serving, and build output skip directories according to those rules, which you can edit to include paths you want to serve. Local dev still follows directory symlinks, but skips links that would revisit an ancestor directory.
 
 Builds do not support broken asset symlinks. A missing target fails the build unless `.assetsignore` excludes the link regardless of whether it points to a file or a directory.
+
+`writeAssets` accepts an optional filter. Wrangler uses the shared `createAssetsCopyFilter` helper to honor `.assetsignore` and preserve asset metadata in build output.

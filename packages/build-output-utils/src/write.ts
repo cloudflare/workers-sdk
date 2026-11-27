@@ -1,15 +1,6 @@
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import {
-	CF_ASSETS_IGNORE_FILENAME,
-	HEADERS_FILENAME,
-	REDIRECTS_FILENAME,
-} from "@cloudflare/workers-shared/utils/constants";
-import {
-	createAssetsIgnoreFunction,
-	InvalidAssetsIgnoreError,
-} from "@cloudflare/workers-shared/utils/helpers";
-import { removeDir, UserError } from "@cloudflare/workers-utils";
+import { removeDir } from "@cloudflare/workers-utils";
 import {
 	BUILD_OUTPUT_ROOT,
 	DEFAULT_WORKER_DIRECTORY_NAME,
@@ -41,16 +32,15 @@ export async function cleanBuildOutputDir(root: string): Promise<void> {
 export interface WriteAssetsOptions {
 	root: string;
 	sourceDirectory: string;
+	/** Return true to copy an entry, or false to omit it and its descendants. Paths are relative to the source and use forward slashes. */
+	filter?: (relativePath: string) => boolean | Promise<boolean>;
 }
 
 /**
  * Copy static assets into the Build Output Specification tree.
  *
  * Symlinks are dereferenced so the output remains portable and self-contained.
- * Broken symlinks are not supported unless excluded by `.assetsignore` as both
- * a file and a directory.
- * Files excluded by `.assetsignore` are not copied, but the ignore file and
- * other asset metadata are kept for the tools that read the output.
+ * Broken symlinks are not supported unless excluded by the filter.
  *
  * When the project root is itself the asset source, the reserved
  * `.cloudflare` directory is omitted so the nested output is not copied into
@@ -59,44 +49,19 @@ export interface WriteAssetsOptions {
 export async function writeAssets({
 	root,
 	sourceDirectory,
+	filter,
 }: WriteAssetsOptions): Promise<void> {
 	const assetsDir = getWorkerAssetsDir(root);
-	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(
-		sourceDirectory
-	).catch((error: unknown) => {
-		if (error instanceof InvalidAssetsIgnoreError) {
-			throw new UserError(error.message, {
-				telemetryMessage: "assets ignore invalid encoding",
-			});
-		}
-		throw error;
-	});
 	const copyOptions = {
 		recursive: true,
 		force: false,
 		dereference: true,
-		filter: async (source: string) => {
+		filter: (source: string) => {
 			const relative = path
 				.relative(sourceDirectory, source)
 				.split(path.sep)
 				.join("/");
-			if (
-				relative === "" ||
-				[
-					CF_ASSETS_IGNORE_FILENAME,
-					HEADERS_FILENAME,
-					REDIRECTS_FILENAME,
-				].includes(relative)
-			) {
-				return true;
-			}
-			const ignoredAsFile = assetsIgnoreFunction(relative);
-			const ignoredAsDirectory = assetsIgnoreFunction(`${relative}/`);
-			if (ignoredAsFile === ignoredAsDirectory) {
-				return !ignoredAsFile;
-			}
-			const stats = await fsp.stat(source);
-			return !(stats.isDirectory() ? ignoredAsDirectory : ignoredAsFile);
+			return relative === "" || (filter?.(relative) ?? true);
 		},
 	};
 	await fsp.mkdir(assetsDir, { recursive: true });
