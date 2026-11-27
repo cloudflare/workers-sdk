@@ -49,7 +49,7 @@ export class Hono extends Framework {
 		};
 		if ("honox" in dependencies) {
 			throw new AutoConfigFrameworkConfigurationError(
-				"cf can't set up HonoX projects automatically yet. Set up the project's build and `cloudflare.config.ts` by hand, then run cf again.",
+				"cf can't set up HonoX projects automatically yet.",
 				{ telemetryMessage: "autoconfig honox setup unsupported" }
 			);
 		}
