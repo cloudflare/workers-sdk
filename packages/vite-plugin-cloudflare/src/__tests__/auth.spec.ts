@@ -73,11 +73,12 @@ test("plugin contexts create new auth when CLOUDFLARE_API_TOKEN changes", ({
 	const logger = createLogger(createViteLogger("silent"));
 	vi.stubEnv("CLOUDFLARE_API_TOKEN", "first-token");
 	context.getCloudflareAuth("/project", logger);
+	// The same token reuses the auth
 	context.getCloudflareAuth("/project", logger);
 	expect(createCfAuth).toHaveBeenCalledOnce();
 
-	// Vite restarts with a new token after an edit to a `.env` file, and the
-	// new auth selects an account the new token can reach
+	// The token changes, such as when Vite restarts after an edit to a `.env`
+	// file, so the new auth selects an account the new token can reach
 	vi.stubEnv("CLOUDFLARE_API_TOKEN", "second-token");
 	context.getCloudflareAuth("/project", logger);
 	expect(createCfAuth).toHaveBeenCalledTimes(2);

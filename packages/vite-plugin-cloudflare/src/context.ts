@@ -36,11 +36,16 @@ export interface SharedContext {
 	configChangeCoordinator?: ConfigChangeCoordinator;
 	/** Allowed hostnames for tunnel connections */
 	tunnelHostnames: Set<string>;
-	/**
-	 * Auth instance shared by features within the same Vite project, with the
-	 * `CLOUDFLARE_API_TOKEN` it was created under.
-	 */
-	auth?: { instance: CloudflareAuth; apiToken: string | undefined };
+	/** Auth instance shared by features within the same Vite project. */
+	auth?: {
+		instance: CloudflareAuth;
+		/**
+		 * `CLOUDFLARE_API_TOKEN` when `instance` was created, to detect a change.
+		 * `instance.getAPIToken()` can't, because it returns the current token,
+		 * or the stored OAuth token when the variable isn't set.
+		 */
+		apiToken: string | undefined;
+	};
 }
 
 /** An explicitly typed additional module emitted by a Vite environment. */
