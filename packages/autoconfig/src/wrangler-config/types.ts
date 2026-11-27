@@ -2,6 +2,8 @@ export type MigrationBundler = "vite" | "wrangler";
 
 export interface WranglerConfigMigrationOptions {
 	dryRun?: boolean;
+	/** Whether to migrate even if the Git worktree is not clean */
+	force?: boolean;
 }
 
 export interface BundlerMigrationOptions {

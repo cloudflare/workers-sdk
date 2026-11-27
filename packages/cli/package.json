@@ -43,6 +43,10 @@
 			"types": "./dist/error.d.mts",
 			"import": "./dist/error.mjs"
 		},
+		"./git": {
+			"types": "./dist/git.d.mts",
+			"import": "./dist/git.mjs"
+		},
 		"./gitignore": {
 			"types": "./dist/gitignore.d.mts",
 			"import": "./dist/gitignore.mjs"

@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { ensureCleanGitWorktree } from "@cloudflare/cli-shared-helpers/git";
 import {
 	addMigrationTodos,
 	renderCloudflareConfig,
@@ -96,7 +97,7 @@ async function addTodosToCloudflareConfig(
  * {@link migrateBundler} migrates them afterwards.
  *
  * @param configPath Path to a Wrangler JSON, JSONC, or TOML configuration file.
- * @param options Write-safety controls.
+ * @param options Write-safety controls, including the Git worktree check.
  *
  * @returns The generated file path and any follow-up work left for the caller.
  */
@@ -104,7 +105,7 @@ export async function migrateWranglerConfig(
 	configPath: string,
 	options: WranglerConfigMigrationOptions = {}
 ): Promise<MigrationResult> {
-	const { dryRun = false } = options;
+	const { dryRun = false, force = false } = options;
 	const absoluteConfigPath = path.resolve(configPath);
 	const projectDirectory = path.dirname(absoluteConfigPath);
 	const cloudflareConfigPath = path.join(
@@ -113,6 +114,9 @@ export async function migrateWranglerConfig(
 	);
 
 	await assertTargetsDoNotExist([cloudflareConfigPath]);
+	if (!dryRun) {
+		await ensureCleanGitWorktree(projectDirectory, force);
+	}
 
 	const [rawConfig, secretFiles] = await Promise.all([
 		readWranglerConfig(absoluteConfigPath),

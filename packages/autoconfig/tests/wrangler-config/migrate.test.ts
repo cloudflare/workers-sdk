@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import {
 	mkdir,
 	mkdtemp,
@@ -9,13 +10,17 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
 import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { afterEach, describe, it, vi } from "vitest";
 import {
 	rewriteMigrationOutput,
 	writeMigrationOutputs,
 } from "../../src/cloudflare-config/write";
-import { migrateBundler } from "../../src/wrangler-config/migrate";
+import {
+	migrateBundler,
+	migrateWranglerConfig,
+} from "../../src/wrangler-config/migrate";
 import { migrate } from "./migrate-helpers";
 
 const temporaryDirectories: string[] = [];
@@ -1827,5 +1832,22 @@ describe("migrateWranglerConfig", () => {
 		expect(await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")).toBe(
 			existing
 		);
+	});
+
+	it("reports existing output before a dirty Git worktree", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"cloudflare.config.ts": "export default {};\n",
+			"wrangler.json": JSON.stringify({
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			}),
+		});
+		await promisify(execFile)("git", ["init", "--quiet"], { cwd });
+
+		await expect(
+			migrateWranglerConfig(path.join(cwd, "wrangler.json"))
+		).rejects.toThrow("already exists");
 	});
 });

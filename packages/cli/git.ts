@@ -112,8 +112,8 @@ async function getGitStatus(cwd: string): Promise<string | undefined> {
 }
 
 /**
- * Ensures that a codemod target is either outside Git or in a clean Git
- * worktree. The check is skipped when the safety override is enabled.
+ * Ensures that a directory about to be modified is either outside Git or in a
+ * clean Git worktree. The check is skipped when the safety override is enabled.
  *
  * @param cwd The target directory to check.
  * @param force Whether to bypass the Git worktree safety check.
@@ -133,7 +133,7 @@ export async function ensureCleanGitWorktree(
 	const status = await getGitStatus(cwd);
 	if (status && status.length > 0) {
 		throw new Error(
-			"Git worktree is not clean. Commit or stash your changes before running a codemod, or rerun with `--force` to bypass this safety check."
+			"Git worktree is not clean. Commit or stash your changes first, or rerun with `--force` to bypass this safety check."
 		);
 	}
 }

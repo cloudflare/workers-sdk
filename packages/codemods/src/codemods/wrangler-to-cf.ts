@@ -1,7 +1,6 @@
 import path from "node:path";
 import { migrateBundler, migrateWranglerConfig } from "@cloudflare/autoconfig";
 import { fileExists, filterByFileRestrictions } from "../files";
-import { ensureCleanGitWorktree } from "../git";
 import type { Codemod, CodemodContext } from "../types";
 import type {
 	BundlerMigrationOptions,
@@ -28,19 +27,11 @@ export async function migrateWranglerToCf(
 	configPath: string,
 	options: WranglerToCfMigrationOptions = {}
 ): Promise<WranglerToCfMigrationResult> {
-	const { force = false, ...migrationOptions } = options;
+	const { force, ...migrationOptions } = options;
 	const absoluteConfigPath = path.resolve(configPath);
-	const projectDirectory = path.dirname(absoluteConfigPath);
-	// The migration reports an existing cloudflare.config.ts itself, so a rerun explains why it stopped
-	if (
-		!migrationOptions.dryRun &&
-		!(await fileExists(path.join(projectDirectory, "cloudflare.config.ts")))
-	) {
-		await ensureCleanGitWorktree(projectDirectory, force);
-	}
-
 	const settings = await migrateWranglerConfig(absoluteConfigPath, {
 		dryRun: migrationOptions.dryRun,
+		force,
 	});
 	const build = await migrateBundler(absoluteConfigPath, migrationOptions);
 
