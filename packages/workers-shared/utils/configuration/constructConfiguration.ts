@@ -155,16 +155,6 @@ export function constructHeaders({
 				...(configuredRule.unset ?? []),
 				...rule.unsetHeaders,
 			];
-			// A rule's unsets are applied before its sets, so drop what earlier
-			// blocks set for a header this block unsets, or it would survive.
-			const unsetNames = new Set(
-				rule.unsetHeaders.map((name) => name.toLowerCase())
-			);
-			for (const name of Object.keys(set)) {
-				if (unsetNames.has(name.toLowerCase())) {
-					delete set[name];
-				}
-			}
 		}
 		for (const [name, value] of Object.entries(rule.headers)) {
 			const existingValue = set[name];
@@ -173,8 +163,6 @@ export function constructHeaders({
 
 		if (Object.keys(set).length) {
 			configuredRule.set = set;
-		} else {
-			delete configuredRule.set;
 		}
 
 		rules[rule.path] = configuredRule;

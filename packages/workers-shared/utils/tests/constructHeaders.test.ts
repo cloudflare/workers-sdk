@@ -43,7 +43,7 @@ test("constructHeaders combines a header name set by more than one block for a p
   Link: </a.css>; rel=preload
 
 /*
-  Link: </b.css>; rel=preload
+  lInK: </b.css>; rel=preload
 `);
 
 	expect(rules).toEqual({
@@ -53,7 +53,7 @@ test("constructHeaders combines a header name set by more than one block for a p
 	});
 });
 
-test("constructHeaders lets a later block for a path unset a header an earlier block set", ({
+test("constructHeaders keeps an earlier assignment and a later unset for the same path", ({
 	expect,
 }) => {
 	const rules = constructRules(`/report.pdf
@@ -66,13 +66,13 @@ test("constructHeaders lets a later block for a path unset a header an earlier b
 
 	expect(rules).toEqual({
 		"/report.pdf": {
-			set: { "x-robots-tag": "noindex" },
+			set: { "content-disposition": "attachment", "x-robots-tag": "noindex" },
 			unset: ["Content-Disposition"],
 		},
 	});
 });
 
-test("constructHeaders lets a later block for a path unset and replace a header an earlier block set", ({
+test("constructHeaders combines assignments when a later block also unsets the header", ({
 	expect,
 }) => {
 	const rules = constructRules(`/report.pdf
@@ -85,7 +85,7 @@ test("constructHeaders lets a later block for a path unset and replace a header 
 
 	expect(rules).toEqual({
 		"/report.pdf": {
-			set: { "content-disposition": "inline" },
+			set: { "content-disposition": "attachment, inline" },
 			unset: ["content-disposition"],
 		},
 	});

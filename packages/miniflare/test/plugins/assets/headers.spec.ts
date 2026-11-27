@@ -81,3 +81,27 @@ test("_headers applies the headers of every block when the same path appears twi
 	expect(res.headers.get("x-frame-options")).toBe("DENY");
 	expect(res.headers.get("x-content-type-options")).toBe("nosniff");
 });
+
+test("_headers applies unsets before all assignments for a repeated path", async ({
+	expect,
+}) => {
+	const res = await fetchWithHeadersFile(
+		[
+			"/*",
+			"  X-Merge: one",
+			"  X-Keep: original",
+			"",
+			"/*",
+			"  ! X-Merge",
+			"  ! X-Keep",
+			"  ! Content-Type",
+			"  x-merge: two",
+			"",
+		].join("\n")
+	);
+
+	expect(res.status).toBe(200);
+	expect(res.headers.get("x-merge")).toBe("one, two");
+	expect(res.headers.get("x-keep")).toBe("original");
+	expect(res.headers.has("content-type")).toBe(false);
+});
