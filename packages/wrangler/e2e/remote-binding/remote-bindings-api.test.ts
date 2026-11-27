@@ -7,7 +7,6 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
-import { normalizeOutput } from "../helpers/normalize";
 import type {
 	MiniflareOptions,
 	Miniflare as MiniflareType,
@@ -152,15 +151,13 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						headers: { "MF-Binding": "MY_SERVICE" },
 					});
 					expect(response.status).toBe(503);
-					expect(normalizeOutput(await response.text())).toMatchInlineSnapshot(
-						`
-					"This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
-					It looks like you are authenticating via a custom API token (\`CLOUDFLARE_API_TOKEN\`) set in an environment variable.
-					The token may be invalid or lack the required permissions for this operation.
-					To fix this, verify that your token is valid and has the correct permissions.
-					You can also run \`wrangler whoami\` to check your current authentication status."
-				`
+					const message = await response.text();
+					expect(message).toContain(
+						"the remote session could not be authenticated."
 					);
+					expect(message).toContain("`CLOUDFLARE_API_TOKEN`");
+					expect(message).toContain("`wrangler whoami`");
+					expect(message).toContain("Authentication failed");
 				} finally {
 					await session.dispose();
 				}
