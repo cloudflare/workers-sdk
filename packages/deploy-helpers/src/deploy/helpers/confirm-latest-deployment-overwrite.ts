@@ -15,6 +15,10 @@ import type { Config } from "@cloudflare/workers-utils/config";
 
 const BLANK_INPUT = "-";
 
+export type ConfirmTrafficSplitReplacement = (
+	versions: ReadonlyArray<Readonly<ApiDeployment["versions"][number]>>
+) => Promise<boolean>;
+
 /** Confirm replacement of the current deployment, preserving the public boolean API. */
 export async function confirmLatestDeploymentOverwrite(
 	config: Config,
@@ -40,13 +44,33 @@ export async function confirmLatestDeploymentOverwriteAndGetLatest(
 	accountId: string,
 	scriptName: string,
 	deployCommand: string,
-	versionsDeployCommand: string
+	versionsDeployCommand: string,
+	confirmTrafficSplitReplacement?: ConfirmTrafficSplitReplacement
 ): Promise<{
 	confirmed: boolean;
 	latestDeployment: ApiDeployment | undefined;
 }> {
+	let latest: ApiDeployment | undefined;
 	try {
-		const latest = await fetchLatestDeployment(config, accountId, scriptName);
+		latest = await fetchLatestDeployment(config, accountId, scriptName);
+	} catch (error) {
+		if (!isWorkerNotFoundError(error)) {
+			throw error;
+		}
+	}
+	if (confirmTrafficSplitReplacement) {
+		const activeVersions = latest?.versions.filter(
+			({ percentage }) => percentage > 0
+		);
+		return {
+			confirmed:
+				!activeVersions ||
+				activeVersions.length < 2 ||
+				(await confirmTrafficSplitReplacement(activeVersions)),
+			latestDeployment: latest,
+		};
+	}
+	try {
 		if (latest && latest.versions.length >= 2) {
 			const versionCache: VersionCache = new Map();
 
