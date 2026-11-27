@@ -135,7 +135,7 @@ serve({ fetch: app.fetch, port: 3000 });
 		});
 
 		await expect(configure({ dryRun: true })).rejects.toThrow(
-			"cf does not support HonoX projects yet."
+			"cf can't set up HonoX projects automatically yet."
 		);
 	});
 });

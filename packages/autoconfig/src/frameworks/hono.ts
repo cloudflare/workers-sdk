@@ -39,6 +39,7 @@ export class Hono extends Framework {
 		projectPath,
 		packageManager,
 		isWorkspaceRoot,
+		target,
 		wranglerConfig,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const packageJson = readPackageJson(projectPath);
@@ -48,8 +49,8 @@ export class Hono extends Framework {
 		};
 		if ("honox" in dependencies) {
 			throw new AutoConfigFrameworkConfigurationError(
-				"cf does not support HonoX projects yet. You can still use Wrangler to develop and deploy this project.",
-				{ telemetryMessage: "autoconfig honox unsupported for cf" }
+				"cf can't set up HonoX projects automatically yet. Set up the project's build and `cloudflare.config.ts` by hand, then run cf again.",
+				{ telemetryMessage: "autoconfig honox setup unsupported" }
 			);
 		}
 
@@ -88,7 +89,7 @@ export class Hono extends Framework {
 					incompatibleVitePlugins: honoVitePlugins.names,
 				});
 			} else {
-				createViteConfig(projectPath);
+				createViteConfig(projectPath, target);
 			}
 		}
 
