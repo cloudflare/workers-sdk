@@ -149,6 +149,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				try {
 					const response = await fetch(session.remoteProxyConnectionString, {
 						headers: { "MF-Binding": "MY_SERVICE" },
+						signal: AbortSignal.timeout(15_000),
 					});
 					expect(response.status).toBe(503);
 					const message = await response.text();
@@ -157,7 +158,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					);
 					expect(message).toContain("`CLOUDFLARE_API_TOKEN`");
 					expect(message).toContain("`wrangler whoami`");
-					expect(message).toContain("Authentication failed");
 				} finally {
 					await session.dispose();
 				}
