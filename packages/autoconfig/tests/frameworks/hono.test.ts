@@ -59,7 +59,7 @@ describe("Hono", () => {
 			expect.objectContaining({ dev: true })
 		);
 		expect(installCloudflareVitePlugin).toHaveBeenCalled();
-		expect(readFileSync("vite.config.mts", "utf8")).toContain(
+		expect(readFileSync("vite.config.ts", "utf8")).toContain(
 			"plugins: [cloudflare()]"
 		);
 	});

@@ -39,7 +39,6 @@ export class Hono extends Framework {
 		projectPath,
 		packageManager,
 		isWorkspaceRoot,
-		target,
 		wranglerConfig,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const packageJson = readPackageJson(projectPath);
@@ -89,7 +88,7 @@ export class Hono extends Framework {
 					incompatibleVitePlugins: honoVitePlugins.names,
 				});
 			} else {
-				createViteConfig(projectPath, target);
+				createViteConfig(projectPath);
 			}
 		}
 

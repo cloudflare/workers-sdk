@@ -13,9 +13,7 @@ export {
  * @param projectPath The project's path
  * @returns The project's `package.json`, or undefined if it has none
  */
-export function readPackageJson(
-	projectPath: string
-): (PackageJSON & { type?: string }) | undefined {
+export function readPackageJson(projectPath: string): PackageJSON | undefined {
 	const path = join(projectPath, "package.json");
 	try {
 		return parsePackageJSON(readFileSync(path), path);

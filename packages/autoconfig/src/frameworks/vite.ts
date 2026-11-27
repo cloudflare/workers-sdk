@@ -2,7 +2,6 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
-import { readPackageJson } from "./utils/packages";
 import {
 	assertViteConfigCanBeTransformed,
 	checkIfViteConfigUsesCloudflarePlugin,
@@ -58,7 +57,7 @@ export class Vite extends Framework {
 			if (hasViteConfig(projectPath)) {
 				transformViteConfig(projectPath);
 			} else {
-				createViteConfig(projectPath, target);
+				createViteConfig(projectPath);
 			}
 		}
 
@@ -79,24 +78,11 @@ export class Vite extends Framework {
  * scaffolded with `npm create vite@latest --template vanilla`, or a Hono app).
  *
  * The file extension (`.ts` or `.js`) is chosen based on whether the project
- * has a `tsconfig.json`. On cf, outside an ES module package it is `.mts` or `.mjs`,
- * because Vite loads a `.ts` or `.js` config there as CommonJS, which can't import the
- * ESM-only Cloudflare plugin.
- *
- * @param projectPath The project's path
- * @param target The configuration target
+ * has a `tsconfig.json`.
  */
-export function createViteConfig(
-	projectPath: string,
-	target: AutoConfigTarget
-): void {
+export function createViteConfig(projectPath: string): void {
 	const ext = usesTypescript(projectPath) ? "ts" : "js";
-	const filePath = join(
-		projectPath,
-		target === "cf" && readPackageJson(projectPath)?.type !== "module"
-			? `vite.config.m${ext}`
-			: `vite.config.${ext}`
-	);
+	const filePath = join(projectPath, `vite.config.${ext}`);
 	const content = `import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
