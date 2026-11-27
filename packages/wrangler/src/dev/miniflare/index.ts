@@ -105,6 +105,8 @@ export interface ConfigBundle {
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
+	// Hostname of the Worker's first route, for `/cdn-cgi/image/` source checks
+	routeHostname: string | undefined;
 	access: Config["access"] | undefined;
 	imageUrlTransformations:
 		| NonNullable<Config["images"]>["url_transformations"]
@@ -304,6 +306,7 @@ export async function buildMiniflareOptions(
 				cronTriggers: config.crons,
 				outboundService: config.outboundService,
 				zone: config.zone,
+				routeHostname: config.routeHostname,
 				access: config.access?.dev,
 				imageUrlTransformations: buildImageUrlTransformationsOptions(
 					config.imageUrlTransformations

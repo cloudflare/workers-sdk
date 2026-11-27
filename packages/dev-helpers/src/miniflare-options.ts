@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { createContainerDevPlan } from "@cloudflare/containers-shared";
 import {
+	getHostnameFromRoute,
 	getWranglerHiddenDirPath,
 	getZoneFromRoute,
 	UserError,
@@ -1261,6 +1262,21 @@ export function getZoneFromConfig(config: Config): string | undefined {
 	return undefined;
 }
 
+/**
+ * Gets the hostname of a normalized Wrangler config's first route. Miniflare
+ * checks same-host `/cdn-cgi/image/` sources against `allowed_origins` as if
+ * they came from it.
+ *
+ * @param config The Wrangler config.
+ * @returns The hostname, if the Worker has a route with one.
+ */
+export function getRouteHostnameFromConfig(config: Config): string | undefined {
+	const firstRoute = config.route ?? config.routes?.[0];
+	return firstRoute === undefined
+		? undefined
+		: getHostnameFromRoute(firstRoute);
+}
+
 export type SourcelessWorkerOptions = Omit<
 	V4WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
@@ -1387,6 +1403,7 @@ export function getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		zone: getZoneFromConfig(config),
+		routeHostname: getRouteHostnameFromConfig(config),
 		access: config.access?.dev,
 		imageUrlTransformations: buildImageUrlTransformationsOptions(
 			config.images?.url_transformations

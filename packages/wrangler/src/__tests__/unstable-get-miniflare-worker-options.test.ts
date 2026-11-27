@@ -89,6 +89,8 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 			// the `CF-Worker` header is the zone name that owns the Worker, not
 			// the route pattern's hostname.
 			expect(workerOptions.zone).toBe("example.com");
+			// `/cdn-cgi/image/` source checks use the route's own hostname
+			expect(workerOptions.routeHostname).toBe("foo.example.com");
 		});
 
 		it("falls back to the pattern hostname when `zone_name` is absent", ({

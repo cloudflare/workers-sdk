@@ -402,6 +402,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 	streamingTails: z.array(V4ServiceDesignatorSchema).optional(),
 	stripCfConnectingIp: z.boolean().default(true),
 	zone: z.string().optional(),
+	routeHostname: z.string().optional(),
 	/** Cloudflare Access authentication metadata exposed as `ctx.access` */
 	access: z
 		.object({
@@ -865,6 +866,7 @@ export type V4WorkerOptionsShape = {
 	streamingTails?: V4ServiceDesignator[];
 	stripCfConnectingIp?: boolean;
 	zone?: string;
+	routeHostname?: string;
 	access?: { aud: string; identity?: Record<string, unknown> };
 	imageUrlTransformations?: { enabled: boolean; allowedOrigins?: string[] };
 	unsafeBindings?: Array<{

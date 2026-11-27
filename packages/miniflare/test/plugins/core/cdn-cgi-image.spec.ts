@@ -11,7 +11,10 @@ import type { WorkerOptions } from "miniflare";
 
 // Serves a PNG for any path other than `/cdn-cgi/image/...`, which returns a
 // 418 so tests can tell if the Worker was invoked
+const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>';
+
 const WORKER_SCRIPT = `
+const SVG = ${JSON.stringify(SVG)};
 let png;
 export default {
 	async fetch(request, env) {
@@ -21,6 +24,9 @@ export default {
 		}
 		if (url.pathname.endsWith("/missing.png")) {
 			return new Response("not found", { status: 404 });
+		}
+		if (url.pathname.endsWith(".svg")) {
+			return new Response(SVG, { headers: { "content-type": "image/svg+xml" } });
 		}
 		png ??= Uint8Array.from(atob(env.PNG), (c) => c.charCodeAt(0));
 		return new Response(png, { headers: { "content-type": "image/png" } });
@@ -49,7 +55,8 @@ beforeAll(async () => {
 
 function createMiniflare(
 	urlTransformations?: UrlTransformations,
-	unsafeImageUrlTransformationsPassthrough?: boolean
+	unsafeImageUrlTransformationsPassthrough?: boolean,
+	routeHostname?: string
 ): {
 	mf: Miniflare;
 	log: TestLog;
@@ -69,6 +76,7 @@ function createMiniflare(
 					},
 					...(urlTransformations && { images: { urlTransformations } }),
 				},
+				dev: { routeHostname },
 			},
 		],
 	});
@@ -315,6 +323,51 @@ describe("/cdn-cgi/image/ local transforms", () => {
 		expect(publicRequests).toHaveLength(1);
 		expect(publicRequests[0].url).toBe(`//${origin.url.host}/img.png`);
 		expect(publicRequests[0].headers.cookie).toBe("session=secret");
+	});
+
+	test("fetches same-host sources from an HTTPS public URL with a self-signed certificate", async ({
+		expect,
+	}) => {
+		const devServer = new Miniflare({
+			https: true,
+			workers: [
+				{
+					config: {
+						name: "dev-server",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+						env: {
+							PNG: { type: "text", value: sourcePng.toString("base64") },
+						},
+					},
+				},
+			],
+		});
+		useDispose(devServer);
+		const publicUrl = await devServer.ready;
+		expect(publicUrl.protocol).toBe("https:");
+
+		const mf = new Miniflare({
+			publicUrl: publicUrl.href,
+			unsafeImageUrlTransformationsFetchViaPublicUrl: true,
+			workers: [
+				{
+					config: {
+						name: "worker",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(WORKER_SCRIPT),
+						images: { urlTransformations: { enabled: true } },
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const res = await mf.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50/img.png"
+		);
+		expect(res.status).toBe(200);
+		expect((await metadata(res)).width).toBe(50);
 	});
 
 	test("routes same-host sources within Miniflare when only publicUrl is set", async ({
@@ -588,12 +641,70 @@ describe("/cdn-cgi/image/ local transforms", () => {
 			"ERROR 9401: Transformation origin is not in allowed origins list\n"
 		);
 
-		// Allowed origins are in addition to the Worker's own zone
+		// Without a route, the Worker's production hostname isn't known
 		const sameZone = await mf.dispatchFetch(
 			"http://localhost/cdn-cgi/image/width=50/img.png"
 		);
 		expect(sameZone.status).toBe(200);
 		await sameZone.arrayBuffer();
+	});
+
+	test("checks same-host sources against allowed origins as the route hostname", async ({
+		expect,
+	}) => {
+		const notListed = createMiniflare(
+			{ enabled: true, allowedOrigins: ["images.example.com"] },
+			undefined,
+			"app.example.com"
+		).mf;
+		const denied = await notListed.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50/img.png"
+		);
+		expect(denied.status).toBe(403);
+		expect(await denied.text()).toBe(
+			"ERROR 9401: Transformation origin is not in allowed origins list\n"
+		);
+
+		const listed = createMiniflare(
+			{ enabled: true, allowedOrigins: ["app.example.com/images"] },
+			undefined,
+			"app.example.com"
+		).mf;
+		const allowed = await listed.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50/images/img.png"
+		);
+		expect(allowed.status).toBe(200);
+		expect((await metadata(allowed)).width).toBe(50);
+		const wrongPath = await listed.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50/other/img.png"
+		);
+		expect(wrongPath.status).toBe(403);
+		await wrongPath.arrayBuffer();
+
+		const sameZoneOnly = createMiniflare(
+			{ enabled: true },
+			undefined,
+			"app.example.com"
+		).mf;
+		const sameZone = await sameZoneOnly.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=50/img.png"
+		);
+		expect(sameZone.status).toBe(200);
+		await sameZone.arrayBuffer();
+	});
+
+	test("serves SVG sources unchanged", async ({ expect }) => {
+		const { mf } = createMiniflare({ enabled: true });
+
+		const res = await mf.dispatchFetch(
+			"http://localhost/cdn-cgi/image/width=5,format=png/logo.svg"
+		);
+		expect(res.status).toBe(200);
+		expect(res.headers.get("content-type")).toBe("image/svg+xml");
+		expect(res.headers.get("content-security-policy")).toBe(
+			"default-src 'none'"
+		);
+		expect(await res.text()).toBe(SVG);
 	});
 
 	test("allows any source with a wildcard allowed origin", async ({

@@ -2,13 +2,14 @@
 // Sharp-backed mock with support for only basic transforms.
 
 import { LogLevel, SharedHeaders } from "miniflare:shared";
-import { getPublicUrl } from "../shared/public-url";
 import { CoreBindings, CoreHeaders, CorePaths } from "./constants";
 import type { RequestInitCfPropertiesImage } from "@cloudflare/workers-types/experimental";
 
 export interface ImageUrlTransformationsConfig {
 	enabled: boolean;
 	allowedOrigins?: string[];
+	/** Hostname of the Worker's first route, if it has one. */
+	routeHostname?: string;
 }
 
 interface Env {
@@ -94,10 +95,7 @@ export async function handleImageTransform(
 	}
 	const { onerror, ...options } = parsed;
 
-	// The local zone isn't known, so unlike production, subdomains of the
-	// request hostname aren't considered same-zone
-	const sameZone = sourceUrl.hostname === url.hostname;
-	const authorization = authorizeSource(sourceUrl, sameZone, config);
+	const authorization = authorizeLocalSource(sourceUrl, url, config);
 	if (!authorization.authorized) {
 		return new Response(authorization.reason, { status: 403 });
 	}
@@ -122,6 +120,17 @@ export async function handleImageTransform(
 			url,
 			onerror
 		);
+	}
+
+	const contentType = originResponse.headers.get("content-type");
+	if (contentType !== null && /^image\/svg\+xml\b/i.test(contentType)) {
+		// Production serves SVG sources unchanged, ignoring the options
+		return new Response(originResponse.body, {
+			headers: {
+				"content-type": contentType,
+				"content-security-policy": "default-src 'none'",
+			},
+		});
 	}
 
 	const source = await originResponse.arrayBuffer();
@@ -180,7 +189,6 @@ async function fetchSource(
 	env: Env,
 	dispatch: DispatchFetch
 ): Promise<FetchSourceResult> {
-	let publicUrl: Promise<URL> | undefined;
 	let url = sourceUrl;
 	for (let redirects = 0; ; redirects++) {
 		const sameHost = url.host === requestUrl.host;
@@ -208,8 +216,11 @@ async function fetchSource(
 				sameHost &&
 				env[CoreBindings.IMAGE_URL_TRANSFORMATIONS_FETCH_VIA_PUBLIC_URL]
 			) {
-				publicUrl ??= getPublicUrl(env[CoreBindings.SERVICE_LOOPBACK]);
-				response = await fetchFromPublicUrl(url, headers, await publicUrl);
+				response = await fetchFromPublicUrl(
+					url,
+					headers,
+					env[CoreBindings.SERVICE_LOOPBACK]
+				);
 			} else if (sameHost) {
 				headers.set("host", url.host);
 				response = await dispatch(
@@ -245,11 +256,7 @@ async function fetchSource(
 		if (redirects >= MAX_REDIRECTS || !isHttpUrl(next)) {
 			return { ok: false, response: badRequest("Invalid redirect URL.") };
 		}
-		const authorization = authorizeSource(
-			next,
-			next.hostname === requestUrl.hostname,
-			config
-		);
+		const authorization = authorizeLocalSource(next, requestUrl, config);
 		if (!authorization.authorized) {
 			return {
 				ok: false,
@@ -264,18 +271,18 @@ async function fetchSource(
  * Fetches a same-host source image from the configured public URL, for dev
  * servers that serve files Miniflare can't see. Other same-host sources are
  * routed within Miniflare, mirroring production fetching them through the zone.
+ * The request is made from Node, which accepts the dev server's self-signed
+ * certificate when it serves HTTPS.
  */
 function fetchFromPublicUrl(
 	url: URL,
 	headers: Headers,
-	publicUrl: URL
+	loopback: Fetcher
 ): Promise<Response> {
-	// Assign the path rather than resolving it against the public URL, so a
-	// path such as `//example.com/` can't change the host
-	const target = new URL(publicUrl);
-	target.pathname = url.pathname;
-	target.search = url.search;
-	return fetch(new Request(target, { headers, redirect: "manual" }));
+	const target = new URL("http://localhost/core/image-source");
+	target.searchParams.set("pathname", url.pathname);
+	target.searchParams.set("search", url.search);
+	return loopback.fetch(target, { headers, redirect: "manual" });
 }
 
 interface ResizeError {
@@ -403,11 +410,40 @@ type AuthorizationResult =
 	| { authorized: false; reason: string };
 
 /**
- * Checks whether the source image may be transformed. Same-zone sources are
- * always allowed; `allowedOrigins` lists additional origins.
+ * Checks whether a source image may be transformed locally.
+ *
+ * Sources on the request's host are checked as if they came from the Worker's
+ * route hostname, as they would be in production. Without a route, the
+ * Worker's production hostname isn't known, so they are always allowed.
  *
  * @param sourceUrl The source image URL.
- * @param sameZone Whether the source is on the same host as the request.
+ * @param requestUrl The `/cdn-cgi/image/` request URL.
+ * @param config The Worker's URL transformation config.
+ * @returns Whether the source is allowed, and the error body if not.
+ */
+export function authorizeLocalSource(
+	sourceUrl: URL,
+	requestUrl: URL,
+	config: ImageUrlTransformationsConfig
+): AuthorizationResult {
+	if (sourceUrl.hostname !== requestUrl.hostname) {
+		return authorizeSource(sourceUrl, false, config);
+	}
+	if (config.routeHostname === undefined) {
+		return { authorized: true };
+	}
+	const routeSourceUrl = new URL(sourceUrl);
+	routeSourceUrl.hostname = config.routeHostname;
+	return authorizeSource(routeSourceUrl, true, config);
+}
+
+/**
+ * Checks whether the source image may be transformed. Without
+ * `allowedOrigins`, only same-zone sources are allowed; with it, only the
+ * listed origins are.
+ *
+ * @param sourceUrl The source image URL.
+ * @param sameZone Whether the source is in the Worker's zone.
  * @param config The Worker's URL transformation config.
  * @returns Whether the source is allowed, and the error body if not.
  */
@@ -416,12 +452,11 @@ export function authorizeSource(
 	sameZone: boolean,
 	config: ImageUrlTransformationsConfig
 ): AuthorizationResult {
-	if (sameZone) {
-		return { authorized: true };
-	}
 	const allowedOrigins = config.allowedOrigins;
 	if (allowedOrigins === undefined || allowedOrigins.length === 0) {
-		return { authorized: false, reason: "Forbidden" };
+		return sameZone
+			? { authorized: true }
+			: { authorized: false, reason: "Forbidden" };
 	}
 
 	if (allowedOrigins.some((origin) => origin.trim() === "*")) {

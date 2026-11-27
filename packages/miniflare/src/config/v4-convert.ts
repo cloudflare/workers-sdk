@@ -211,6 +211,7 @@ function convertWorkerOptions(
 	dev.unsafeEphemeralDurableObjects = worker.unsafeEphemeralDurableObjects;
 	dev.stripCfConnectingIp = worker.stripCfConnectingIp;
 	dev.zone = worker.zone;
+	dev.routeHostname = worker.routeHostname;
 	if (worker.access !== undefined) {
 		config.access = { dev: worker.access };
 	}

@@ -17,6 +17,7 @@ import {
 	getLocalExplorerEnabledFromEnv,
 	getLocalExplorerUseViteAllowedHostsFromEnv,
 	getLocalObservabilityEnabledFromEnv,
+	getWorkerRouteHostname,
 	getWorkerZone,
 } from "@cloudflare/workers-utils";
 import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
@@ -615,6 +616,7 @@ export async function getDevMiniflareOptions(
 								},
 								dev: {
 									zone: getWorkerZone(config),
+									routeHostname: getWorkerRouteHostname(config),
 									remoteProxyConnectionString:
 										remoteProxySessionData?.session
 											?.remoteProxyConnectionString,
@@ -898,6 +900,7 @@ export async function getPreviewMiniflareOptions(
 				},
 				dev: {
 					zone: getWorkerZone(config),
+					routeHostname: getWorkerRouteHostname(config),
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
 					unsafeInspectorProxy: inputInspectorPort !== false,

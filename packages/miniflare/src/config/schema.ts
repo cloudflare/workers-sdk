@@ -645,6 +645,9 @@ export const DevConfigSchema = z.strictObject({
 	// Zone to use for the CF-Worker header in outbound fetches. If not
 	// specified, defaults to `${worker-name}.example.com`
 	zone: z.string().optional(),
+	// Hostname of the Worker's first route. Same-host `/cdn-cgi/image/` sources
+	// are checked against `allowedOrigins` as if they came from it.
+	routeHostname: z.string().optional(),
 });
 
 export type DevConfig = z.input<typeof DevConfigSchema>;

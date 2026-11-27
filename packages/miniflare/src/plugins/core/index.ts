@@ -947,7 +947,10 @@ export function getGlobalServices({
 				name:
 					CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX +
 					workerOpt.config.name,
-				json: JSON.stringify(urlTransformations),
+				json: JSON.stringify({
+					...urlTransformations,
+					routeHostname: workerOpt.dev?.routeHostname,
+				}),
 			});
 		}
 	}

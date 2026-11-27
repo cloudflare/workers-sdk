@@ -103,6 +103,8 @@ export { formatTime } from "./format-time";
 export {
 	getHostFromRoute,
 	getHostFromUrl,
+	getHostnameFromRoute,
+	getWorkerRouteHostname,
 	getWorkerZone,
 	getZoneFromRoute,
 } from "./route-utils";
