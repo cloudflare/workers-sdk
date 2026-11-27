@@ -7,7 +7,7 @@ import { logger } from "../logger";
 import { RemoteSessionAuthenticationError } from "../utils/remote";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { ErrorEvent, ReloadCompleteEvent } from "./events";
+import type { ErrorEvent } from "./events";
 import type { Bundle, StartDevWorkerOptions } from "./types";
 
 export class DevEnv extends EventEmitter {
@@ -18,19 +18,12 @@ export class DevEnv extends EventEmitter {
 
 	start() {
 		this.proxy.start(this.#config);
-		this.update(this.#config);
-		if (this.#config.lazy) {
-			this.proxy.localServerReady.resolve();
-		}
 	}
 
 	update(config: StartDevWorkerOptions) {
 		this.#config = config;
 		this.proxy.pause(config);
 		this.runtime.onUpdateStart();
-		if (!config.lazy) {
-			this.connect();
-		}
 	}
 
 	private connect() {
@@ -58,15 +51,11 @@ export class DevEnv extends EventEmitter {
 		this.proxy = new ProxyController(
 			(event) => this.handleErrorEvent(event),
 			() => this.runtime.onPreviewTokenExpired(),
-			() => {
-				if (this.#config.lazy) {
-					this.connect();
-				}
-			}
+			() => this.connect()
 		);
 		this.runtime = new RemoteRuntimeController(
 			(event) => this.handleErrorEvent(event),
-			(event) => this.handleReloadComplete(event)
+			(event) => this.proxy.play(event)
 		);
 
 		this.on("error", (event: ErrorEvent) => {
@@ -75,13 +64,8 @@ export class DevEnv extends EventEmitter {
 		});
 	}
 
-	private handleReloadComplete(event: ReloadCompleteEvent) {
-		this.proxy.play(event);
-		this.emit("reloadComplete", event);
-	}
-
 	private handleErrorEvent(event: ErrorEvent): void {
-		if (this.#config.lazy && event.source === "RemoteRuntimeController") {
+		if (event.source === "RemoteRuntimeController") {
 			const { cause } = event;
 			const apiError =
 				cause instanceof RemoteSessionAuthenticationError ? cause.cause : cause;

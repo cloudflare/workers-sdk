@@ -2,21 +2,11 @@ import assert from "node:assert";
 import type { Hook, HookValues } from "@cloudflare/workers-utils";
 
 /**
- * When to proactively refresh the preview token.
+ * When to refresh the preview token on the next binding call.
  *
  * Preview tokens expire after 1 hour (hardcoded in the Workers control plane), so we retry after 50 mins.
  */
 export const PREVIEW_TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
-
-/**
- * How soon to try again after a proactive preview token refresh fails (e.g.
- * the machine is offline). A failed refresh must not give up the retry cycle
- * for good — otherwise a network outage longer than the API's own few quick
- * retries (see `retryOnAPIFailure`) permanently strands the session even
- * after connectivity returns, since nothing else re-triggers a refresh
- * attempt for a long-lived session like `getPlatformProxy()`'s.
- */
-export const PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL = 60 * 1000;
 
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {

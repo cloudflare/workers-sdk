@@ -7,12 +7,10 @@ import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
-import { normalizeOutput } from "../helpers/normalize";
 import type {
 	MiniflareOptions,
 	Miniflare as MiniflareType,
 	RemoteProxyConnectionString,
-	Response,
 } from "miniflare";
 
 const { Miniflare } = await importMiniflare();
@@ -91,15 +89,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					getMfOptions(remoteProxySession.remoteProxyConnectionString)
 				);
 
-				const response = await timedDispatchFetch(mf);
-				const responseText = await response?.text();
-
-				expect(responseText).toEqual(
-					"worker response: Hello from a remote worker"
-				);
-
-				await mf.dispose();
-				await remoteProxySession.dispose();
+				try {
+					const response = await dispatchFirstBindingCall(mf);
+					expect(await response.text()).toEqual(
+						"worker response: Hello from a remote worker"
+					);
+				} finally {
+					await Promise.all([mf.dispose(), remoteProxySession.dispose()]);
+				}
 			});
 
 			test("handles different bindings across fresh sessions with the same Worker name", async ({
@@ -133,36 +130,37 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			});
 
 			test("user provided incorrect auth data", async ({ expect }) => {
-				let error: unknown;
-				try {
-					await startRemoteProxySession(
-						{
-							MY_SERVICE: {
-								type: "service",
-								service: remoteWorkerName,
+				const session = await startRemoteProxySession(
+					{
+						MY_SERVICE: {
+							type: "service",
+							service: remoteWorkerName,
+						},
+					},
+					{
+						auth: {
+							accountId: CLOUDFLARE_ACCOUNT_ID,
+							apiToken: {
+								apiToken: "This is an incorrect API TOKEN!",
 							},
 						},
-						{
-							auth: {
-								accountId: CLOUDFLARE_ACCOUNT_ID,
-								apiToken: {
-									apiToken: "This is an incorrect API TOKEN!",
-								},
-							},
-						}
-					);
-				} catch (e) {
-					error = e;
-				}
-				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
-					`
-					"Error: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
-					It looks like you are authenticating via a custom API token (\`CLOUDFLARE_API_TOKEN\`) set in an environment variable.
-					The token may be invalid or lack the required permissions for this operation.
-					To fix this, verify that your token is valid and has the correct permissions.
-					You can also run \`wrangler whoami\` to check your current authentication status."
-				`
+					}
 				);
+				try {
+					const response = await fetch(session.remoteProxyConnectionString, {
+						headers: { "MF-Binding": "MY_SERVICE" },
+						signal: AbortSignal.timeout(15_000),
+					});
+					expect(response.status).toBe(503);
+					const message = await response.text();
+					expect(message).toContain(
+						"the remote session could not be authenticated."
+					);
+					expect(message).toContain("`CLOUDFLARE_API_TOKEN`");
+					expect(message).toContain("`wrangler whoami`");
+				} finally {
+					await session.dispose();
+				}
 			});
 		});
 
@@ -186,15 +184,14 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
 				);
 
-				const response = await timedDispatchFetch(mf);
-				const responseText = await response?.text();
-
-				expect(responseText).toEqual(
-					"worker response: Hello from a remote worker"
-				);
-
-				await mf.dispose();
-				await proxySessionData.session.dispose();
+				try {
+					const response = await dispatchFirstBindingCall(mf);
+					expect(await response.text()).toEqual(
+						"worker response: Hello from a remote worker"
+					);
+				} finally {
+					await Promise.all([mf.dispose(), proxySessionData.session.dispose()]);
+				}
 			});
 
 			test("fails on the first binding call with incorrect auth data", async ({
@@ -237,12 +234,17 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 	}
 );
 
-async function timedDispatchFetch(mf: MiniflareType): Promise<Response | null> {
+async function dispatchFirstBindingCall(mf: MiniflareType) {
+	const signal = AbortSignal.timeout(30_000);
 	try {
-		return await mf.dispatchFetch("http://localhost/", {
-			signal: AbortSignal.timeout(5000),
-		});
-	} catch {
-		return null;
+		return await mf.dispatchFetch("http://localhost/", { signal });
+	} catch (error) {
+		if (signal.aborted) {
+			throw new Error(
+				"The first remote binding call timed out after 30 seconds, including authentication and preview setup.",
+				{ cause: error }
+			);
+		}
+		throw error;
 	}
 }

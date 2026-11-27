@@ -39,7 +39,6 @@ export class ProxyWorker implements DurableObject {
 	) {}
 
 	proxyData?: ProxyData;
-	lazy = false;
 	connectionRequested = false;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
 	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
@@ -65,7 +64,6 @@ export class ProxyWorker implements DurableObject {
 		switch (event?.type) {
 			case "pause":
 				this.proxyData = undefined;
-				this.lazy = event.lazy;
 				this.connectionRequested = false;
 				this.processQueue();
 				break;
@@ -118,7 +116,6 @@ export class ProxyWorker implements DurableObject {
 		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) {
 			if (
-				this.lazy &&
 				!this.connectionRequested &&
 				(this.requestQueue.size > 0 || this.requestRetryQueue.size > 0)
 			) {

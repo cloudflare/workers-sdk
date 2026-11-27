@@ -72,7 +72,7 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			);
 			expect(startSession).toHaveBeenCalledWith(
 				pickRemoteBindings(bindings),
-				expect.objectContaining({ lazy: true, auth: testAuth })
+				expect.objectContaining({ auth: testAuth })
 			);
 		}
 	);

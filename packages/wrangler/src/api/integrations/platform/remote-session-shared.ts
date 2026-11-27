@@ -35,7 +35,6 @@ export function startSession({
 }: SessionConfig) {
 	return startRemoteProxySession(bindings, {
 		...options,
-		lazy: true,
 		auth: getDefaultRemoteBindingsAuth(accountId).hook,
 		logger,
 	});

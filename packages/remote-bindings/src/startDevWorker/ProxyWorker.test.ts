@@ -48,13 +48,11 @@ const config: StartDevWorkerOptions = {
  *
  * @param onPreviewRequest Handles requests that reach the preview.
  * @param onRequestConnection Starts the remote connection when a request arrives.
- * @param lazy Whether binding requests should start the connection on demand.
  * @returns The proxy, its error listener, and a function to point it at a preview.
  */
 async function startProxy(
 	onPreviewRequest: RequestListener,
-	onRequestConnection = vi.fn(),
-	lazy = true
+	onRequestConnection = vi.fn()
 ) {
 	const preview = createServer(onPreviewRequest);
 	preview.listen(0, "127.0.0.1");
@@ -73,16 +71,16 @@ async function startProxy(
 		onRequestConnection
 	);
 	onTestFinished(() => controller.teardown());
-	controller.start({ ...config, lazy });
+	controller.start(config);
 	const { proxyWorker, url } = await controller.ready.promise;
-	controller.pause({ ...config, lazy });
+	controller.pause(config);
 	await controller.runtimeMessageMutex.drained();
 
 	// Remote previews keep the same host across reloads; only the token changes.
 	function play(previewToken: string, refreshAt?: number) {
 		controller.play({
 			type: "reloadComplete",
-			config: { ...config, lazy },
+			config,
 			bundle: {
 				path: "proxy-worker.js",
 				entrypointSource: config.entrypointSource,
@@ -112,19 +110,6 @@ async function startProxy(
 	};
 }
 
-it("does not request a connection for an eager session", async ({ expect }) => {
-	const requestConnection = vi.fn();
-	const { proxyWorker, play } = await startProxy(
-		(_request, response) => response.end("connected"),
-		requestConnection,
-		false
-	);
-	const pending = proxyWorker.dispatchFetch("http://localhost/");
-	await play("signed-in");
-	expect(await (await pending).text()).toBe("connected");
-	expect(requestConnection).not.toHaveBeenCalled();
-});
-
 it.for(["current", "paused", "replaced", "failed"] as const)(
 	"handles expiry notifications only from the current preview: %s",
 	async (state, { expect }) => {
@@ -136,7 +121,7 @@ it.for(["current", "paused", "replaced", "failed"] as const)(
 		const pending = proxyWorker.dispatchFetch("http://localhost/");
 		const response = await oldResponse.promise;
 		if (state === "paused") {
-			controller.pause({ ...config, lazy: true });
+			controller.pause(config);
 			await controller.runtimeMessageMutex.drained();
 		} else if (state === "replaced") {
 			await play("new-preview");
@@ -172,6 +157,39 @@ it("refreshes an aging preview on the next binding request without forwarding to
 	await vi.waitFor(() => expect(requestConnection).toHaveBeenCalledOnce());
 	await play("new-preview", Date.now() + 60_000);
 	expect(await (await pending).text()).toBe("new-preview");
+});
+
+it("recovers from a failed on-demand preview refresh on the next binding request", async ({
+	expect,
+}) => {
+	const requestConnection = vi.fn();
+	const previewRequests = vi.fn();
+	const { proxyWorker, play, controller } = await startProxy(
+		(request, response) => {
+			const token = request.headers["cf-workers-preview-token"];
+			previewRequests(token);
+			response.end(token);
+		},
+		requestConnection
+	);
+	await play("old-preview", Date.now() - 1);
+	expect(requestConnection).not.toHaveBeenCalled();
+
+	const pending = proxyWorker.dispatchFetch("http://localhost/");
+	await vi.waitFor(() => expect(requestConnection).toHaveBeenCalledOnce());
+	controller.connectionFailed("Preview refresh failed");
+	const failed = await pending;
+	expect(failed.status).toBe(503);
+	expect(await failed.text()).toBe("Preview refresh failed");
+	expect(previewRequests).not.toHaveBeenCalled();
+
+	const retry = proxyWorker.dispatchFetch("http://localhost/");
+	await vi.waitFor(() => expect(requestConnection).toHaveBeenCalledTimes(2));
+	await play("new-preview", Date.now() + 60_000);
+	const recovered = await retry;
+	expect(recovered.status).toBe(200);
+	expect(await recovered.text()).toBe("new-preview");
+	expect(previewRequests.mock.calls).toEqual([["new-preview"]]);
 });
 
 it("queues concurrent binding requests behind one login and forwards them after it succeeds", async ({

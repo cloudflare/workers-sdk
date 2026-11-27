@@ -1,6 +1,5 @@
 import { describe, it, vi } from "vitest";
 import { DevEnv } from "./DevEnv";
-import type { ProxyController } from "./ProxyController";
 import type { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type { StartDevWorkerOptions } from "./types";
 
@@ -23,8 +22,7 @@ describe("DevEnv", () => {
 	it("uses the latest binding configuration when a lazy session is first called", ({
 		expect,
 	}) => {
-		const lazyConfig = { ...config, lazy: true };
-		const devEnv = new DevEnv(lazyConfig);
+		const devEnv = new DevEnv(config);
 		const onBundleComplete =
 			vi.fn<RemoteRuntimeController["onBundleComplete"]>();
 		devEnv.runtime = {
@@ -32,9 +30,9 @@ describe("DevEnv", () => {
 			onBundleComplete,
 		} as unknown as RemoteRuntimeController;
 		vi.spyOn(devEnv.proxy, "pause").mockImplementation(() => {});
-		devEnv.update(lazyConfig);
+		devEnv.update(config);
 		const bindings = { AI: { type: "ai" as const } };
-		devEnv.update({ ...lazyConfig, bindings });
+		devEnv.update({ ...config, bindings });
 		expect(onBundleComplete).not.toHaveBeenCalled();
 		devEnv.proxy.onProxyWorkerMessage({ type: "requestConnection" });
 		expect(onBundleComplete).toHaveBeenCalledOnce();
@@ -47,7 +45,7 @@ describe("DevEnv", () => {
 		function captureUpdates(devEnv: DevEnv) {
 			const onBundleComplete =
 				vi.fn<RemoteRuntimeController["onBundleComplete"]>();
-			devEnv.proxy = { pause: vi.fn() } as unknown as ProxyController;
+			vi.spyOn(devEnv.proxy, "pause").mockImplementation(() => {});
 			devEnv.runtime = {
 				onUpdateStart: vi.fn(),
 				onBundleComplete,
@@ -58,11 +56,14 @@ describe("DevEnv", () => {
 		const devEnv = new DevEnv(config);
 		const firstDevEnvUpdates = captureUpdates(devEnv);
 		devEnv.update(config);
+		devEnv.proxy.onProxyWorkerMessage({ type: "requestConnection" });
 		devEnv.update(config);
+		devEnv.proxy.onProxyWorkerMessage({ type: "requestConnection" });
 
 		const otherDevEnv = new DevEnv(config);
 		const otherDevEnvUpdates = captureUpdates(otherDevEnv);
 		otherDevEnv.update(config);
+		otherDevEnv.proxy.onProxyWorkerMessage({ type: "requestConnection" });
 
 		const [firstCall, secondCall] = firstDevEnvUpdates.mock.calls;
 		const [otherCall] = otherDevEnvUpdates.mock.calls;
