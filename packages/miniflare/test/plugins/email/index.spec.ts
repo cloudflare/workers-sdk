@@ -2211,11 +2211,12 @@ test("send() on an EmailMessage larger than 1 MiB is captured without the local 
 
 	useDispose(mf);
 
+	const originalMessageId = "<large-send@example.com>";
 	const email =
 		[
 			"From: someone <someone@sender.domain>",
 			"To: someone else <someone-else@example.com>",
-			"Message-ID: <large-send@example.com>",
+			`Message-ID: ${originalMessageId}`,
 			"MIME-Version: 1.0",
 			"Content-Type: text/plain",
 			"",
@@ -2235,15 +2236,13 @@ test("send() on an EmailMessage larger than 1 MiB is captured without the local 
 	expect(await res.json()).toEqual({
 		messageId: synthesizedMessageId(expect, "sender.domain"),
 	});
-	await vi.waitFor(() => {
-		expect(log.logsAtLevel(LogLevel.INFO)).toEqual(
-			expect.arrayContaining([
-				expect.stringContaining(
-					"send_email binding called with the following message:"
-				),
-			])
-		);
-	});
+	await expectPersistedEmail(
+		log,
+		email,
+		originalMessageId,
+		"sender.domain",
+		expect
+	);
 	expect(log.logsAtLevel(LogLevel.WARN)).not.toEqual(
 		expect.arrayContaining([expect.stringContaining("local storage row")])
 	);
