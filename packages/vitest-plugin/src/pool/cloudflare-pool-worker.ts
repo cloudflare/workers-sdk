@@ -36,6 +36,31 @@ import type {
 } from "vitest/node";
 
 /**
+ * workerd closes a WebSocket that receives a message larger than 32 MiB
+ * (`WEBSOCKET_MAX_MESSAGE_SIZE` in workerd's `api/web-socket.c++`), which takes
+ * the runner down. Cap the code inlined into one `fetchWarmModules()` reply
+ * well below that, leaving room for string escaping and the rest of the
+ * serialised message.
+ */
+const MAX_WARM_MODULES_CODE_BYTES = 16 * 1024 * 1024;
+
+interface CachedModule {
+	cached: true;
+	tmp: string;
+}
+
+function isCachedModule(module: unknown): module is CachedModule {
+	return (
+		module !== null &&
+		typeof module === "object" &&
+		"cached" in module &&
+		module.cached === true &&
+		"tmp" in module &&
+		typeof module.tmp === "string"
+	);
+}
+
+/**
  * On a filesystem-cache hit, Vitest sends `{ cached: true, tmp }` instead of
  * transformed `code`. Its worker then reads `tmp`, but workerd cannot access
  * that host path. Read it in Node and remove `cached` and `tmp` so Vitest uses
@@ -45,14 +70,7 @@ function inlineCachedModule(
 	module: unknown,
 	cacheContents: Map<string, string>
 ): unknown {
-	if (
-		module === null ||
-		typeof module !== "object" ||
-		!("cached" in module) ||
-		module.cached !== true ||
-		!("tmp" in module) ||
-		typeof module.tmp !== "string"
-	) {
+	if (!isCachedModule(module)) {
 		return module;
 	}
 
@@ -88,9 +106,24 @@ function inlineCachedModules(response: unknown): unknown {
 		return inlined;
 	}
 
+	// The map holds every module in the test files' import graphs, and a large
+	// Worker `main` (pulled in through `cloudflare:test`) can make it far bigger
+	// than workerd accepts in one message. Inline modules only up to a budget,
+	// counting each cache file once since aliases share it.
+	let inlinedBytes = 0;
 	let hasCachedModules = false;
 	const entries = Object.entries(response).flatMap(([specifier, module]) => {
 		try {
+			if (isCachedModule(module) && !cacheContents.has(module.tmp)) {
+				const size = fs.statSync(module.tmp).size;
+				if (inlinedBytes + size > MAX_WARM_MODULES_CODE_BYTES) {
+					// Omit modules over the budget: Vitest fetches each of them with
+					// its own `fetch()` call instead.
+					hasCachedModules = true;
+					return [];
+				}
+				inlinedBytes += size;
+			}
 			const inlinedModule = inlineCachedModule(module, cacheContents);
 			hasCachedModules ||= inlinedModule !== module;
 			return [[specifier, inlinedModule] as const];
