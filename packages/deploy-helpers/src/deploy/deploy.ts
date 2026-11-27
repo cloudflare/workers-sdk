@@ -37,7 +37,11 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
-import { confirmLatestDeploymentOverwriteAndGetLatest } from "./helpers/confirm-latest-deployment-overwrite";
+import {
+	confirmLatestDeploymentOverwriteAndGetLatest,
+	getActiveTrafficSplit,
+	getLatestDeploymentForOverwrite,
+} from "./helpers/confirm-latest-deployment-overwrite";
 import {
 	getContainerMetadata,
 	getContainerMetadataForRolloutSkip,
@@ -535,6 +539,24 @@ async function deployWorker(
 		});
 	} else {
 		assert(accountId, "Missing accountId");
+		async function verifyTrafficSplitHasNotChanged(accountId: string) {
+			const currentDeployment = await getLatestDeploymentForOverwrite(
+				config,
+				accountId,
+				scriptName
+			);
+			if (
+				getActiveTrafficSplit(currentDeployment) &&
+				currentDeployment?.id !== latestDeployment?.id
+			) {
+				throw new UserError(
+					`A different traffic split became active while deploying. No traffic was changed by this deploy. Rerun \`${options.deployCommand}\` to review the current rollout.`,
+					{ telemetryMessage: "deploy active traffic split changed" }
+				);
+			}
+		}
+		const shouldRecheckTrafficSplit =
+			options.confirmTrafficSplitReplacement && !props.dispatchNamespace;
 		let provisionBindingsResult:
 			| Awaited<ReturnType<typeof provisionBindings>>
 			| undefined;
@@ -612,6 +634,9 @@ async function deployWorker(
 					"code_update_strategy" in unsafeMetadata
 						? unsafeMetadata.code_update_strategy
 						: props.durableObjectsCodeUpdateStrategy;
+				if (shouldRecheckTrafficSplit) {
+					await verifyTrafficSplitHasNotChanged(accountId);
+				}
 				await createDeployment(
 					config,
 					accountId,
@@ -649,37 +674,38 @@ async function deployWorker(
 					startup_time_ms: versionResult.startup_time_ms,
 				};
 			} else {
-				const uploadResult = await retryOnAPIFailure(
-					async () =>
-						fetchResult<{
-							id: string | null;
-							etag: string | null;
-							pipeline_hash: string | null;
-							mutable_pipeline_id: string | null;
-							deployment_id: string | null;
-							startup_time_ms: number;
-							tag?: string;
-							exports_reconciliation?: ExportsReconciliationResult;
-						}>(
-							config,
-							workerUrl,
-							{
-								method: "PUT",
-								body: workerBundle,
-								headers: {
-									...exportsHeaders,
-									...(props.sendMetrics && { metricsEnabled: "true" }),
-								},
+				const uploadResult = await retryOnAPIFailure(async () => {
+					if (shouldRecheckTrafficSplit) {
+						await verifyTrafficSplitHasNotChanged(accountId);
+					}
+					return fetchResult<{
+						id: string | null;
+						etag: string | null;
+						pipeline_hash: string | null;
+						mutable_pipeline_id: string | null;
+						deployment_id: string | null;
+						startup_time_ms: number;
+						tag?: string;
+						exports_reconciliation?: ExportsReconciliationResult;
+					}>(
+						config,
+						workerUrl,
+						{
+							method: "PUT",
+							body: workerBundle,
+							headers: {
+								...exportsHeaders,
+								...(props.sendMetrics && { metricsEnabled: "true" }),
 							},
-							new URLSearchParams({
-								// pass excludeScript so the whole body of the
-								// script doesn't get included in the response
-								excludeScript: "true",
-								bindings_inherit: "strict",
-							})
-						),
-					logger
-				);
+						},
+						new URLSearchParams({
+							// pass excludeScript so the whole body of the
+							// script doesn't get included in the response
+							excludeScript: "true",
+							bindings_inherit: "strict",
+						})
+					);
+				}, logger);
 				result = uploadResult;
 				uploadedWorkerTag ??= uploadResult.tag ?? null;
 				if (uploadResult.exports_reconciliation) {
