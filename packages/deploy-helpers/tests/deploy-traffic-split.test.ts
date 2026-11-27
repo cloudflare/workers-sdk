@@ -27,6 +27,11 @@ vi.mock("../src/deploy/helpers/exports", () => ({
 	resolveExportsUploadPayload: async () => ({}),
 }));
 
+vi.mock("../src/triggers/deploy", async (importOriginal) => ({
+	...(await importOriginal<typeof import("../src/triggers/deploy")>()),
+	triggersDeploy: async () => [],
+}));
+
 const { containers: _containers, ...config } = {
 	...defaultWranglerConfig,
 	name: "worker",
@@ -161,10 +166,44 @@ describe("deploy traffic split approval", () => {
 		expect(writeOutput).not.toHaveBeenCalled();
 	});
 
-	it("confirms before running the API checks", async ({ expect }) => {
+	it("confirms before the API checks and promotes the new version when the split is unchanged", async ({
+		expect,
+	}) => {
+		const versionId = "00000000-0000-4000-8000-000000000001";
+		const deploymentPath =
+			"/accounts/account/workers/scripts/worker/deployments";
+		preUpload.mockResolvedValue({
+			aborted: false,
+			workerTag: null,
+			tags: [],
+			workerExists: true,
+		});
 		confirmTrafficSplitReplacement.mockResolvedValue(true);
-		await deploy(props, config, buildResult, options);
+		fetchResult
+			.mockResolvedValueOnce({ deployments: [split] })
+			.mockResolvedValueOnce({
+				id: versionId,
+				resources: { script: { etag: "etag" } },
+			})
+			.mockResolvedValueOnce({ deployments: [split] })
+			.mockResolvedValue({});
+		await expect(
+			deploy(props, config, buildResult, options)
+		).resolves.toMatchObject({ versionId });
 		expect(confirmTrafficSplitReplacement).toHaveBeenCalledBefore(preUpload);
+		expect(fetchResult).toHaveBeenNthCalledWith(3, config, deploymentPath);
+		expect(fetchResult).toHaveBeenNthCalledWith(4, config, deploymentPath, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				strategy: "percentage",
+				versions: [{ version_id: versionId, percentage: 100 }],
+				annotations: {},
+			}),
+		});
+		expect(writeOutput).toHaveBeenCalledWith(
+			expect.objectContaining({ version_id: versionId })
+		);
 	});
 
 	it("fails closed if confirmation rejects", async ({ expect }) => {
