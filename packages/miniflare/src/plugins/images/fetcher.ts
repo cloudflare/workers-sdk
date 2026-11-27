@@ -111,15 +111,18 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 			let outputQuality: number | undefined;
 			if (typeof rawOutputQuality === "string" && rawOutputQuality !== "") {
 				const parsedQuality = Number(rawOutputQuality);
-				if (Number.isFinite(parsedQuality)) {
-					outputQuality = resolveQuality(parsedQuality);
-				}
+				outputQuality = Number.isFinite(parsedQuality)
+					? resolveQuality(parsedQuality)
+					: resolveQuality(
+							rawOutputQuality as RequestInitCfPropertiesImage["quality"]
+						);
 			}
 
 			// Production applies EXIF orientation before any transforms.
 			// autoOrient bakes the rotation into the pixels at decode so
 			// EXIF-rotated photos (e.g. phone portraits) come out upright.
 			return runTransform(
+				sharp,
 				sharp(source, { autoOrient: true }),
 				transforms,
 				outputFormat,
@@ -190,17 +193,20 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 }
 
 async function runTransform(
-	transformer: Sharp,
+	sharp: typeof import("sharp"),
+	initialTransformer: Sharp,
 	transforms: Transform[],
 	outputFormat: string | null,
 	outputQuality?: number
 ): Promise<Response> {
-	for (const transform of transforms) {
-		if (transform.imageIndex !== undefined && transform.imageIndex !== 0) {
-			// We don't support draws, and this transform doesn't apply to the root
-			// image, so skip it
-			continue;
-		}
+	const applicableTransforms = transforms.filter(
+		(transform) =>
+			transform.imageIndex === undefined || transform.imageIndex === 0
+	);
+
+	let transformer = initialTransformer;
+	for (let i = 0; i < applicableTransforms.length; i++) {
+		const transform = applicableTransforms[i];
 
 		if (transform.rotate !== undefined) {
 			transformer.rotate(transform.rotate);
@@ -219,6 +225,22 @@ async function runTransform(
 		}
 
 		applyEffects(transformer, transform);
+
+		// Materialize lossless intermediate pixels between chained .transform()
+		// stages so Sharp does not reorder operations across stages (for example,
+		// running a later flip before an earlier gravity crop, or blur after resize).
+		if (i < applicableTransforms.length - 1) {
+			const { data, info } = await transformer
+				.raw()
+				.toBuffer({ resolveWithObject: true });
+			transformer = sharp(data, {
+				raw: {
+					width: info.width,
+					height: info.height,
+					channels: info.channels,
+				},
+			});
+		}
 	}
 
 	const qualityOpts =
@@ -382,7 +404,15 @@ function applyEffects(
 		transformer.blur(Math.min(250, Math.max(0.3, options.blur)));
 	}
 	if (typeof options.sharpen === "number" && options.sharpen > 0) {
-		transformer.sharpen({ sigma: Math.min(10, Math.max(0.3, options.sharpen)) });
+		// Keep a non-trivial Gaussian radius (sigma: 1) and scale unsharp-mask
+		// gains by the Cloudflare sharpen strength (0-10) so small values like 0.4
+		// still enhance edge contrast instead of collapsing to a 1x1 kernel.
+		const strength = Math.min(10, options.sharpen);
+		transformer.sharpen({
+			sigma: 1,
+			m1: strength,
+			m2: strength * 2,
+		});
 	}
 }
 
@@ -454,6 +484,34 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 	}
 
 	const source = await body.arrayBuffer();
+
+	if (
+		(options.width !== undefined &&
+			(typeof options.width !== "number" ||
+				!Number.isFinite(options.width) ||
+				options.width <= 0)) ||
+		(options.height !== undefined &&
+			(typeof options.height !== "number" ||
+				!Number.isFinite(options.height) ||
+				options.height <= 0)) ||
+		(options.dpr !== undefined &&
+			(typeof options.dpr !== "number" ||
+				!Number.isFinite(options.dpr) ||
+				options.dpr <= 0))
+	) {
+		return cfImageError("Invalid resize dimensions in cf.image options", 9401);
+	}
+
+	const resolvedDpr =
+		typeof options.dpr === "number" && options.dpr > 0 ? options.dpr : 1;
+	if (
+		(typeof options.width === "number" &&
+			Math.round(options.width * resolvedDpr) <= 0) ||
+		(typeof options.height === "number" &&
+			Math.round(options.height * resolvedDpr) <= 0)
+	) {
+		return cfImageError("Invalid resize dimensions in cf.image options", 9401);
+	}
 
 	try {
 		const metadata = await sharp(source).metadata();

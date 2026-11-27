@@ -120,6 +120,6 @@ async function warnLowFidelityOnce(env: Env): Promise<void> {
 	await env[CoreBindings.SERVICE_LOOPBACK].fetch("http://localhost/core/log", {
 		method: "POST",
 		headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
-		body: "Local cf.image transforms are a low-fidelity mock; only resize, rotate and format conversion are applied. Deploy to preview the full transformation.",
+		body: "Local cf.image transforms are a low-fidelity mock; only resize, rotate, flip, blur, sharpen, and format conversion are applied. Deploy to preview the full transformation.",
 	});
 }

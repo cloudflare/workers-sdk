@@ -24,6 +24,8 @@ describe("cf.image local transforms", () => {
 	let sourcePng: Buffer;
 	let sourceAvif: Buffer;
 	let sourceJpeg: Buffer;
+	let sourceTwoTone: Buffer;
+	let sourceSoftEdge: Buffer;
 	let seenVia: (string | null)[] = [];
 
 	beforeAll(async () => {
@@ -35,6 +37,54 @@ describe("cf.image local transforms", () => {
 				channels: 3,
 				background: { r: 255, g: 0, b: 0 },
 			},
+		})
+			.png()
+			.toBuffer();
+
+		// A 200x100 PNG with white top half and red bottom half for pixel-level
+		// flip/blur assertions.
+		const topHalf = await sharp({
+			create: {
+				width: 200,
+				height: 50,
+				channels: 3,
+				background: { r: 255, g: 255, b: 255 },
+			},
+		})
+			.png()
+			.toBuffer();
+		const bottomHalf = await sharp({
+			create: {
+				width: 200,
+				height: 50,
+				channels: 3,
+				background: { r: 255, g: 0, b: 0 },
+			},
+		})
+			.png()
+			.toBuffer();
+		sourceTwoTone = await sharp({
+			create: { width: 200, height: 100, channels: 3, background: "#000000" },
+		})
+			.composite([
+				{ input: topHalf, top: 0, left: 0 },
+				{ input: bottomHalf, top: 50, left: 0 },
+			])
+			.png()
+			.toBuffer();
+
+		// A 100x100 grayscale PNG with a soft vertical edge at x = 49..50 so
+		// sharpen contrast changes can be verified at low settings like 0.4.
+		const edgePixels = Buffer.alloc(100 * 100 * 3);
+		for (let y = 0; y < 100; y++) {
+			for (let x = 0; x < 100; x++) {
+				const v = x < 49 ? 100 : x === 49 ? 118 : x === 50 ? 138 : 156;
+				const idx = (y * 100 + x) * 3;
+				edgePixels[idx] = edgePixels[idx + 1] = edgePixels[idx + 2] = v;
+			}
+		}
+		sourceSoftEdge = await sharp(edgePixels, {
+			raw: { width: 100, height: 100, channels: 3 },
 		})
 			.png()
 			.toBuffer();
@@ -93,6 +143,16 @@ describe("cf.image local transforms", () => {
 								if (url.pathname === "/img.avif") {
 									return new Response(sourceAvif, {
 										headers: { "content-type": "image/avif" },
+									});
+								}
+								if (url.pathname === "/two-tone.png") {
+									return new Response(sourceTwoTone, {
+										headers: { "content-type": "image/png" },
+									});
+								}
+								if (url.pathname === "/soft-edge.png") {
+									return new Response(sourceSoftEdge, {
+										headers: { "content-type": "image/png" },
 									});
 								}
 								return new Response(sourcePng, {
@@ -280,16 +340,52 @@ describe("cf.image local transforms", () => {
 		expect(body.toString()).toContain("<svg");
 	});
 
-	test("applies flip, blur, and sharpen options", async ({ expect }) => {
-		const { res, body } = await transform({
-			width: 50,
-			flip: "hv",
-			blur: 2,
-			sharpen: 1,
-		});
+	test("fails open to source bytes with Cf-Resized err=9401 for invalid resize arguments", async ({
+		expect,
+	}) => {
+		const { res, body } = await transform({ width: -10 });
 		expect(res.status).toBe(200);
-		expect(res.headers.get("cf-resized")).toBe("internal=ok/m");
-		const meta = await sharp(body).metadata();
-		expect(meta.width).toBe(50);
+		expect(res.headers.get("cf-resized")).toBe("err=9401");
+		expect(body.equals(sourcePng)).toBe(true);
+	});
+
+	async function pixelAt(buf: Buffer, x: number, y: number) {
+		const { data, info } = await sharp(buf)
+			.raw()
+			.toBuffer({ resolveWithObject: true });
+		const idx = (y * info.width + x) * info.channels;
+		return { r: data[idx], g: data[idx + 1], b: data[idx + 2] };
+	}
+
+	test("applies flip, blur, and sharpen options with visible pixel changes", async ({
+		expect,
+	}) => {
+		// Vertical flip swaps white top half and red bottom half.
+		const flipped = await transform({ flip: "v" }, "/two-tone.png");
+		expect(flipped.res.status).toBe(200);
+		expect(flipped.res.headers.get("cf-resized")).toBe("internal=ok/m");
+		const topAfterFlip = await pixelAt(flipped.body, 100, 10);
+		const bottomAfterFlip = await pixelAt(flipped.body, 100, 90);
+		expect([topAfterFlip.r, topAfterFlip.g, topAfterFlip.b]).toEqual([
+			255, 0, 0,
+		]);
+		expect([bottomAfterFlip.r, bottomAfterFlip.g, bottomAfterFlip.b]).toEqual([
+			255, 255, 255,
+		]);
+
+		// Blur softens the sharp horizontal seam between white and red at y = 50.
+		const blurred = await transform({ blur: 5 }, "/two-tone.png");
+		expect(blurred.res.status).toBe(200);
+		const seam = await pixelAt(blurred.body, 100, 50);
+		expect(seam.r).toBe(255);
+		expect(seam.g).toBeGreaterThan(20);
+		expect(seam.g).toBeLessThan(235);
+
+		// Small positive sharpen (0.4) still increases edge contrast on a soft edge.
+		const sharpened = await transform({ sharpen: 0.4 }, "/soft-edge.png");
+		expect(sharpened.res.status).toBe(200);
+		const left = await pixelAt(sharpened.body, 49, 50);
+		const right = await pixelAt(sharpened.body, 50, 50);
+		expect(right.r - left.r).toBeGreaterThan(138 - 118);
 	});
 });
