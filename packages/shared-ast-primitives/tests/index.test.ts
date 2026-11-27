@@ -1,7 +1,15 @@
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import * as recast from "recast";
 import parser from "recast/parsers/babel";
 import { describe, test } from "vitest";
-import { mergeObjectProperties, parseJs, parseTs } from "../src/index";
+import {
+	mergeObjectProperties,
+	parseFile,
+	parseJs,
+	parseTs,
+} from "../src/index";
 
 const svelteConfigWithSpread = `import adapter from "@sveltejs/adapter-auto";
 
@@ -33,6 +41,18 @@ describe("Svelte configuration parsing", () => {
 			).toBe(svelteConfigWithSpread);
 		}
 	);
+});
+
+describe("parseFile", () => {
+	test("parses JSX in a .tsx file", ({ expect }) => {
+		const file = join(mkdtempSync(join(tmpdir(), "parse-file-")), "index.tsx");
+		writeFileSync(
+			file,
+			"const app: App = new App();\napp.get(() => <h1>Hello</h1>);\nexport default app;\n"
+		);
+
+		expect(parseFile(file)?.body.at(-1)?.type).toBe("ExportDefaultDeclaration");
+	});
 });
 
 describe("mergeObjectProperties", () => {

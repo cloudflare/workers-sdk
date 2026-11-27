@@ -122,6 +122,7 @@ describe("Vite framework", () => {
 		it("creates a vite config with the cloudflare plugin when no config file exists", async ({
 			expect,
 		}) => {
+			await writeFile("package.json", JSON.stringify({ type: "module" }));
 			const framework = new Vite({ id: "vite", name: "Vite" });
 			const result = await framework.configure(BASE_OPTIONS);
 			expect(cliPackages.installPackages).toHaveBeenCalledWith(
@@ -159,6 +160,7 @@ describe("Vite framework", () => {
 		it("uses .ts extension when the project has a tsconfig.json", async ({
 			expect,
 		}) => {
+			await writeFile("package.json", JSON.stringify({ type: "module" }));
 			await writeFile("tsconfig.json", "{}");
 
 			const framework = new Vite({ id: "vite", name: "Vite" });
@@ -166,6 +168,18 @@ describe("Vite framework", () => {
 
 			expect(existsSync("vite.config.ts")).toBe(true);
 			expect(existsSync("vite.config.js")).toBe(false);
+		});
+
+		it("uses an ES module extension outside an ES module package", async ({
+			expect,
+		}) => {
+			await writeFile("tsconfig.json", "{}");
+
+			const framework = new Vite({ id: "vite", name: "Vite" });
+			await framework.configure(BASE_OPTIONS);
+
+			expect(existsSync("vite.config.mts")).toBe(true);
+			expect(existsSync("vite.config.ts")).toBe(false);
 		});
 
 		it("transforms existing vite config instead of creating a new one", async ({
@@ -203,6 +217,7 @@ export default defineConfig({
 
 			expect(existsSync("vite.config.ts")).toBe(false);
 			expect(existsSync("vite.config.js")).toBe(false);
+			expect(existsSync("vite.config.mjs")).toBe(false);
 			expect(result.workerConfig).toEqual({
 				assets: {
 					notFoundHandling: "single-page-application",

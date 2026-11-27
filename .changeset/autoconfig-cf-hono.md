@@ -4,4 +4,4 @@
 
 Set up Hono projects for cf
 
-Previously, autoconfig refused every Hono project on cf. A Hono project that already deploys with a Wrangler configuration file now needs no setup, because the Wrangler migration brings its Worker entry point over, and one that builds with the Cloudflare Vite plugin is set up as a Vite project. A Hono project without either is still refused, now with steps to deploy it. The Wrangler target is unchanged.
+Previously, autoconfig refused every Hono project on cf. It now sets them up to build with Vite and the Cloudflare plugin, as in Hono's Workers + Vite starter: it adds Vite when the project doesn't use it, replaces Hono's own Vite dev server and build plugins, and uses the app's entry file as the Worker entry point. An entry file that doesn't export the app, such as one that starts a Node.js server, and HonoX projects are refused with a message. The Wrangler target is unchanged.
