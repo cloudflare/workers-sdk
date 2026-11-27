@@ -15,7 +15,7 @@ disable_smart_dismissal = true
 suppress_unowned_warning = true
 
 [enforcement]
-# The bot (@workers-devprod) approves PRs when all ownership rules are satisfied,
+# The bot (@ant-approval-bot) approves PRs when all ownership rules are satisfied,
 # unblocking the native GitHub CODEOWNERS requirement in branch protection.
 # The check still runs for visibility (PR comments, review requests) but does not
 # fail — enforcement is via the bot's CODEOWNERS approval only.

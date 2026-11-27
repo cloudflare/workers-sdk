@@ -1,5 +1,5 @@
 # This file exists solely for GitHub branch protection.
-# The @workers-devprod bot approves PRs when all ownership rules
+# The @ant-approval-bot account approves PRs when all ownership rules
 # (defined in .codeowners) are satisfied via Codeowners Plus.
 # Do NOT add rules here — all ownership logic lives in .codeowners.
-* @workers-devprod
+* @ant-approval-bot

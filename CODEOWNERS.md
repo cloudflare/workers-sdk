@@ -10,9 +10,11 @@ When a PR is opened, updated, or reviewed, the Codeowners Plus GitHub Action run
 
 - Posts a PR comment listing which teams need to approve
 - Requests reviews from those teams
-- When all rules are satisfied, the `@workers-devprod` bot submits an **approval review**
+- When all rules are satisfied, the `@ant-approval-bot` account submits an **approval review**
 
-The native GitHub `CODEOWNERS` file contains a single rule (`* @workers-devprod`) making the bot the sole required code owner. Branch protection requires code owner approval, so the bot's approval is the merge gate. The check itself always passes — it only provides visibility.
+The native GitHub `CODEOWNERS` file contains a single rule (`* @ant-approval-bot`) making the bot the sole required code owner. Branch protection requires code owner approval, so the bot's approval is the merge gate. The check itself always passes — it only provides visibility.
+
+`@ant-approval-bot` must never open PRs, and its PAT must not be used for anything else. GitHub treats the code owner review as satisfied when a PR's author is its only code owner, so a PR the bot opened would skip every rule in `.codeowners`. Automation that opens PRs, such as the `@workers-devprod` release PRs, uses a different account, and its PRs are evaluated like any other: release PRs touch only root-level release files, so `@cloudflare/wrangler` alone approves them.
 
 ```
 PR opened/updated/reviewed
@@ -28,13 +30,13 @@ PR opened/updated/reviewed
            ▼
 ┌──────────────────────────────────┐
 │  All rules satisfied?            │
-│  YES → @workers-devprod approves │  Bot submits approval review
+│  YES → @ant-approval-bot approves│  Bot submits approval review
 │  NO  → bot does NOT approve      │  Comment lists who still needs to approve
 └──────────┬───────────────────────┘
            │
            ▼
 ┌──────────────────────────────────┐
-│  Native GitHub CODEOWNERS        │  * @workers-devprod
+│  Native GitHub CODEOWNERS        │  * @ant-approval-bot
 │  Branch protection requires      │  Bot approval is the merge gate
 │  bot approval to merge           │
 │  ─ nice GitHub UI shows status ─ │
@@ -79,7 +81,7 @@ Key settings:
 The native GitHub `CODEOWNERS` file contains a single rule:
 
 ```
-* @workers-devprod
+* @ant-approval-bot
 ```
 
 This exists only so that GitHub branch protection can gate merging on the bot's approval. **Do not add rules to this file** — all ownership logic lives in `.codeowners`.
@@ -166,7 +168,7 @@ Codeowners Plus supports **smart dismissal** (only dismissing an approval when f
 
 The branch protection setting **"Dismiss stale pull request approvals when new commits are pushed"** must also stay **disabled**, otherwise GitHub would dismiss every approval on each push.
 
-With smart dismissal disabled, Codeowners Plus also never withdraws its own approval. To stop an earlier bot approval (for example, one given while the PR briefly had no diff) from letting a PR merge after changes that need codeowner review are pushed, the **"Dismiss Stale Bot Approval"** step in `.github/workflows/codeowners.yml` runs after every check. If Codeowners Plus reports that reviews are no longer satisfied, the step dismisses any approvals from the `@workers-devprod` account with the message "Codeowners reviews no longer satisfied". The bot approves again once the required codeowner reviews are in.
+With smart dismissal disabled, Codeowners Plus also never withdraws its own approval. To stop an earlier bot approval (for example, one given while the PR briefly had no diff) from letting a PR merge after changes that need codeowner review are pushed, the **"Dismiss Stale Bot Approval"** step in `.github/workflows/codeowners.yml` runs after every check. If Codeowners Plus reports that reviews are no longer satisfied, the step dismisses any approvals from the `@ant-approval-bot` account with the message "Codeowners reviews no longer satisfied". The bot approves again once the required codeowner reviews are in.
 
 ## Troubleshooting
 
@@ -181,13 +183,13 @@ Rules in `.codeowners` are relative to the file's directory. Check that:
 ### Bot not approving even though all reviews are in
 
 - Check that `enforcement.approval = true` in `codeowners.toml`
-- Check that the `CODEOWNERS_GITHUB_PAT` secret is a PAT owned by the `@workers-devprod` account
-- Check that `@workers-devprod` has write access to the repository
+- Check that the `CODEOWNERS_GITHUB_PAT` secret is a PAT owned by the `@ant-approval-bot` account
+- Check that `@ant-approval-bot` has write access to the repository
 - Check the workflow run logs for errors (verbose output is enabled)
 
 ### PR can't merge despite bot approval
 
-Ensure "Require review from Code Owners" is enabled in branch protection settings for the `main` branch, and that `@workers-devprod` is listed in the native `CODEOWNERS` file.
+Ensure "Require review from Code Owners" is enabled in branch protection settings for the `main` branch, and that `@ant-approval-bot` is listed in the native `CODEOWNERS` file.
 
 ## References
 
