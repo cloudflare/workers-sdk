@@ -210,4 +210,37 @@ describe("cloudflare.config.ts", () => {
 		expect(fs.existsSync(typesPath())).toBe(true);
 		expect(generateRuntimeTypesMock).toHaveBeenCalledOnce();
 	});
+
+	test("declares a module for each Worker with per-Worker modules", async ({
+		expect,
+	}) => {
+		seedWorker();
+		await resolvePluginConfig(
+			{
+				types: { includeRuntime: false },
+				experimental: { perWorkerModules: true },
+				auxiliaryWorkers: [
+					{
+						config: {
+							name: "aux-worker",
+							entrypoint: "./src/index.ts",
+							compatibilityDate: "2024-12-30",
+							env: { AUX_ONLY: { type: "text", value: "aux" } },
+						},
+					},
+				],
+			},
+			{ root },
+			viteEnv
+		);
+
+		const content = fs.readFileSync(typesPath(), "utf8");
+		expect(content).toContain(
+			'declare module "cloudflare:workers/entry-worker"'
+		);
+		expect(content).toContain('declare module "cloudflare:workers/aux-worker"');
+		expect(content).toContain(
+			'InferEnv<{ env: {"AUX_ONLY":{"type":"text","value":"aux"}} }>'
+		);
+	});
 });

@@ -111,6 +111,13 @@ interface ResolvedTypeGenerationOptions {
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
+	/**
+	 * Experimental support for importing `cloudflare:workers/<name>`, where
+	 * `<name>` is the Worker the importing code belongs to. Its `env`,
+	 * `WorkerEntrypoint` and `DurableObject` use that Worker's `env` instead of
+	 * the global `Env`. Importing another Worker's module fails the build.
+	 */
+	perWorkerModules?: boolean;
 }
 
 function normalizeTypes(
@@ -166,7 +173,10 @@ interface BaseResolvedConfig {
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
 	types: ResolvedTypeGenerationOptions;
-	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
+	experimental: Pick<
+		Experimental,
+		"headersAndRedirectsDevModeSupport" | "perWorkerModules"
+	>;
 	remoteBindings: boolean;
 	tunnel: TunnelConfig;
 	localEnv: LoadedEnv;
@@ -321,6 +331,7 @@ export async function resolvePluginConfig(
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
+			perWorkerModules: pluginConfig.experimental?.perWorkerModules,
 		},
 		localEnv,
 		devVars,
@@ -343,11 +354,14 @@ export async function resolvePluginConfig(
 
 	const configPaths = new Set<string>();
 	const validateAndAddEnvironmentName = createEnvironmentNameValidator();
+	const perWorkerModules = shared.experimental.perWorkerModules === true;
 
 	const loadedConfig = await loadCloudflareConfig({
 		root,
 		mode,
-		types,
+		// With per-Worker modules, the generated types also describe the
+		// auxiliary Workers, so they are written once those are resolved.
+		types: perWorkerModules ? { ...types, generate: false } : types,
 	});
 	if (loadedConfig) {
 		configPaths.add(loadedConfig.configPath);
@@ -356,7 +370,36 @@ export async function resolvePluginConfig(
 		}
 	}
 
-	// Type generation happens while loading the file above. The plugin-level
+	/**
+	 * Writes the generated types with a `cloudflare:workers/<name>` module for
+	 * each Worker, when per-Worker modules are enabled.
+	 *
+	 * @param configWorkerName The entry Worker's name, if it runs code.
+	 * @param auxiliaryWorkerConfigs The auxiliary Workers' configs.
+	 */
+	async function writeTypesWithWorkerModules(
+		configWorkerName: string | undefined,
+		auxiliaryWorkerConfigs: ResolvedWorkerConfig[]
+	): Promise<void> {
+		if (!perWorkerModules || !types.generate || !loadedConfig) {
+			return;
+		}
+		const fileWorkerConfig = loadedConfig.parsedConfig.worker;
+		await writeCloudflareTypes({
+			root,
+			configPath: loadedConfig.configPath,
+			includeRuntime: types.includeRuntime,
+			compatibilityDate: fileWorkerConfig.compatibilityDate,
+			compatibilityFlags: fileWorkerConfig.compatibilityFlags ?? [],
+			workerModules: {
+				configWorkerName,
+				otherWorkers: auxiliaryWorkerConfigs,
+			},
+		});
+	}
+
+	// Type generation happens while loading the file above, or once the
+	// auxiliary Workers are resolved with per-Worker modules. The plugin-level
 	// customizer is intentionally applied afterwards so generated declarations
 	// only describe `cloudflare.config.ts`.
 	const inputConfig: CloudflareConfig = loadedConfig?.parsedConfig ?? {
@@ -421,7 +464,7 @@ export async function resolvePluginConfig(
 	}
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
-		addAuxiliaryWorkers({
+		const auxiliaryWorkerConfigs = addAuxiliaryWorkers({
 			auxiliaryWorkers: pluginConfig.auxiliaryWorkers,
 			entryWorkerConfig: entryWorkerResolvedConfig.config,
 			environmentNameToWorkerMap,
@@ -429,6 +472,7 @@ export async function resolvePluginConfig(
 			validateAndAddEnvironmentName,
 			validateAndAddWorkerName,
 		});
+		await writeTypesWithWorkerModules(undefined, auxiliaryWorkerConfigs);
 		return {
 			...shared,
 			type: "assets-only",
@@ -479,7 +523,7 @@ export async function resolvePluginConfig(
 		);
 	}
 
-	addAuxiliaryWorkers({
+	const auxiliaryWorkerConfigs = addAuxiliaryWorkers({
 		auxiliaryWorkers: pluginConfig.auxiliaryWorkers,
 		entryWorkerConfig: entryWorkerResolvedConfig.config,
 		environmentNameToWorkerMap,
@@ -487,6 +531,10 @@ export async function resolvePluginConfig(
 		validateAndAddEnvironmentName,
 		validateAndAddWorkerName,
 	});
+	await writeTypesWithWorkerModules(
+		entryWorkerResolvedConfig.config.name,
+		auxiliaryWorkerConfigs
+	);
 
 	return {
 		...shared,
@@ -510,8 +558,9 @@ function addAuxiliaryWorkers(options: {
 	environmentNameToChildEnvironmentNamesMap: Map<string, string[]>;
 	validateAndAddEnvironmentName: (name: string) => void;
 	validateAndAddWorkerName: (name: string) => void;
-}): void {
+}): ResolvedWorkerConfig[] {
 	const usedDirectoryNames = new Map<string, string>();
+	const auxiliaryWorkerConfigs: ResolvedWorkerConfig[] = [];
 	for (const auxiliaryWorker of options.auxiliaryWorkers ?? []) {
 		const workerResolvedConfig = resolveNonEntryWorkerConfig({
 			config: auxiliaryWorker.config,
@@ -551,7 +600,9 @@ function addAuxiliaryWorkers(options: {
 				childEnvironmentNames
 			);
 		}
+		auxiliaryWorkerConfigs.push(workerResolvedConfig.config);
 	}
+	return auxiliaryWorkerConfigs;
 }
 
 /**
@@ -760,6 +811,7 @@ async function writeCloudflareTypes(options: {
 	includeRuntime: boolean;
 	compatibilityDate: string;
 	compatibilityFlags: string[];
+	workerModules?: Parameters<typeof generateTypes>[0]["workerModules"];
 }): Promise<void> {
 	const outputPath = path.resolve(options.root, TYPES_OUTPUT_PATH);
 	const outputDir = path.dirname(outputPath);
@@ -780,6 +832,7 @@ async function writeCloudflareTypes(options: {
 	let content = generateTypes({
 		configPath: configImportPath,
 		packageName: CONFIG_PACKAGE,
+		workerModules: options.workerModules,
 	});
 
 	if (options.includeRuntime) {

@@ -51,4 +51,46 @@ describe("generateTypes", () => {
 		}
 		expect(out).not.toContain("declare global");
 	});
+
+	it("declares no per-Worker modules by default", ({ expect }) => {
+		const out = generateTypes({ configPath: "./cloudflare.config.ts" });
+		expect(out).not.toContain("cloudflare:workers/");
+	});
+
+	it("declares a per-Worker module for each Worker in workerModules", ({
+		expect,
+	}) => {
+		const out = generateTypes({
+			configPath: "./cloudflare.config.ts",
+			packageName: "cf/config",
+			workerModules: {
+				configWorkerName: "worker-a",
+				otherWorkers: [
+					{
+						name: "worker-b",
+						env: { GREETING: { type: "text", value: "hi" } },
+					},
+				],
+			},
+		});
+		expect(out.slice(out.indexOf(`declare module "cloudflare:workers/`)))
+			.toMatchInlineSnapshot(`
+			"declare module "cloudflare:workers/worker-a" {
+				// Keeps the helper type below from being exported
+				export {};
+				type __WorkerEnv = __Env;
+				export const env: __WorkerEnv;
+				export abstract class WorkerEntrypoint<Env = __WorkerEnv, Props = {}> extends CloudflareWorkersModule.WorkerEntrypoint<Env, Props> {}
+				export abstract class DurableObject<Env = __WorkerEnv, Props = {}> extends CloudflareWorkersModule.DurableObject<Env, Props> {}
+			}
+			declare module "cloudflare:workers/worker-b" {
+				// Keeps the helper type below from being exported
+				export {};
+				type __WorkerEnv = import("cf/config").InferEnv<{ env: {"GREETING":{"type":"text","value":"hi"}} }>;
+				export const env: __WorkerEnv;
+				export abstract class WorkerEntrypoint<Env = __WorkerEnv, Props = {}> extends CloudflareWorkersModule.WorkerEntrypoint<Env, Props> {}
+				export abstract class DurableObject<Env = __WorkerEnv, Props = {}> extends CloudflareWorkersModule.DurableObject<Env, Props> {}
+			}"
+		`);
+	});
 });
