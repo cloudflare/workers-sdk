@@ -24,13 +24,6 @@ describe("local runtime bindings through Vite", () => {
 				stream: { binding: "STREAM" },
 				r2_buckets: [{ binding: "BUCKET", bucket_name: "runtime-bucket" }],
 				kv_namespaces: [{ binding: "KV", id: "runtime-kv" }],
-				realtimekit: [
-					{
-						binding: "RTK",
-						app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
-						remote: true,
-					},
-				],
 			}),
 			"index.js": `
 				import { EmailMessage } from "cloudflare:email";
@@ -110,6 +103,19 @@ describe("local runtime bindings through Vite", () => {
 	] as const)(
 		"serves $path with the released runtime behavior",
 		async ({ path, result }, { expect, onTestFinished }) => {
+			if (path === "/realtimekit") {
+				const config: Record<string, unknown> = JSON.parse(
+					await fs.readFile("wrangler.json", "utf8")
+				);
+				config.realtimekit = [
+					{
+						binding: "RTK",
+						app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+						remote: true,
+					},
+				];
+				await fs.writeFile("wrangler.json", JSON.stringify(config));
+			}
 			const server = await createServer({
 				root: process.cwd(),
 				configFile: false,

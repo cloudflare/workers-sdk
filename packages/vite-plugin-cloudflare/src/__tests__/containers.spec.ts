@@ -60,6 +60,19 @@ describe("configureContainerPull", () => {
 		);
 	});
 
+	test.for(["fedramp_high", "fedramp-high"])(
+		"uses the FedRAMP High registry API with CLOUDFLARE_COMPLIANCE_REGION=%s",
+		(region, { expect }) => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", region);
+			configureContainerPull("abc123", "my-token", {
+				compliance_region: "fedramp_high",
+			});
+			expect(OpenAPI.BASE).toBe(
+				"https://api.fed.cloudflare.com/client/v4/accounts/abc123/containers"
+			);
+		}
+	);
+
 	test("uses the staging FedRAMP High API for managed registry credentials", ({
 		expect,
 	}) => {
