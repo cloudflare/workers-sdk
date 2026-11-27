@@ -20,10 +20,6 @@ vi.mock("../../src/frameworks/utils/vite-config", () => ({
 	transformViteConfig: vi.fn(),
 }));
 
-vi.mock("../../src/frameworks/utils/vite-plugin", () => ({
-	installCloudflareVitePlugin: vi.fn(),
-}));
-
 vi.mock("../../src/frameworks/utils/packages", () => ({
 	getInstalledPackageVersion: vi.fn(),
 	isPackageInstalled: vi.fn(() => true),
@@ -459,15 +455,11 @@ describe("React Router framework configure()", () => {
 			);
 		});
 
-		it("installs isbot as a dev dependency", async ({ expect }) => {
+		it("lists isbot as a dev dependency", async ({ expect }) => {
 			const framework = createFramework("7.16.0");
-			await framework.configure(getBaseOptions());
+			const result = await framework.configure(getBaseOptions());
 
-			expect(cliPackages.installPackages).toHaveBeenCalledWith(
-				NpmPackageManager.type,
-				["isbot"],
-				expect.objectContaining({ dev: true })
-			);
+			expect(result.dependencies).toContainEqual({ name: "isbot", dev: true });
 		});
 	});
 });

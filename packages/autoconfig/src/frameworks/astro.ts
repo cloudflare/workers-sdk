@@ -7,7 +7,6 @@ import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
 import { blue, brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { runCommand } from "@cloudflare/cli-shared-helpers/command";
-import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import {
 	mergeObjectProperties,
 	transformFile,
@@ -22,7 +21,6 @@ import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
-import type { PackageManager } from "@cloudflare/workers-utils";
 
 export class Astro extends Framework {
 	override readonly supportsMode = true;
@@ -33,12 +31,13 @@ export class Astro extends Framework {
 		dryRun,
 		packageManager,
 		projectPath,
-		isWorkspaceRoot,
 		context,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const astroVersion = this.frameworkVersion;
 
 		if (target === "wrangler") {
+			// Note: before Astro 6 the Astro version can only be 5 or 4 because of the minimum version validation
+			const astroMajorVersion = semiver(astroVersion, "5.0.0") >= 0 ? 5 : 4;
 			if (!dryRun) {
 				if (semiver(astroVersion, "6.0.0") >= 0) {
 					// For Astro 6.0.0+ use the native `astro add cloudflare` command
@@ -55,16 +54,7 @@ export class Astro extends Framework {
 				} else {
 					// For older versions of Astro we need to apply manual configuration since `astro add cloudflare`
 					// tries to install the latest version of the adapter causing conflicts
-
-					// Note: here the Astro version can only be 5 or 4 because of the minimum version validation
-					const astroMajorVersion = semiver(astroVersion, "5.0.0") >= 0 ? 5 : 4;
-					await configureAstroLegacy(
-						projectPath,
-						isWorkspaceRoot,
-						packageManager,
-						astroMajorVersion,
-						context
-					);
+					configureAstroLegacy(projectPath, astroMajorVersion, context);
 				}
 
 				writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
@@ -82,6 +72,13 @@ export class Astro extends Framework {
 						},
 					},
 					buildConfig: { assetsDirectory: outputDir },
+					dependencies: [
+						{
+							name: "@astrojs/cloudflare",
+							version: astroMajorVersion === 5 ? "12" : "11",
+							dev: false,
+						},
+					],
 				};
 			}
 
@@ -323,31 +320,17 @@ function updateTsConfig(projectPath: string, context: AutoConfigContext) {
 /**
  * Configures an Astro project for Cloudflare deployment when running Astro < 6.0.0.
  * This replicates the core logic from `astro add cloudflare` command since that command
- * is not available or behaves differently in older Astro versions.
+ * is not available or behaves differently in older Astro versions. Setup installs the adapter.
  *
  * @param projectPath The path of the project
- * @param isWorkspaceRoot Whether the project is at the root of a workspace (affects package installation flags)
- * @param packageManager The package manager to use for installing dependencies
  * @param astroMajorVersion The major version of Astro (4 or 5) to determine the correct adapter version
+ * @param context The autoconfig context
  */
-async function configureAstroLegacy(
+function configureAstroLegacy(
 	projectPath: string,
-	isWorkspaceRoot: boolean,
-	packageManager: PackageManager,
 	astroMajorVersion: 4 | 5,
 	context: AutoConfigContext
-): Promise<void> {
-	const astroCloudflarePackageVersion = astroMajorVersion === 5 ? 12 : 11;
-
-	await installPackages(
-		packageManager.type,
-		[`@astrojs/cloudflare@${astroCloudflarePackageVersion}`],
-		{
-			startText: `Installing @astrojs/cloudflare adapter (version ${astroCloudflarePackageVersion})`,
-			doneText: `${brandColor("installed")} ${dim("@astrojs/cloudflare")}`,
-			isWorkspaceRoot,
-		}
-	);
+): void {
 	updateAstroConfig(projectPath, astroMajorVersion);
 	updateTsConfig(projectPath, context);
 }

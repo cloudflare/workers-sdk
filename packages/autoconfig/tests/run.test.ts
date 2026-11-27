@@ -11,7 +11,7 @@ import {
 	runInTempDir,
 	seed,
 } from "@cloudflare/workers-utils/test-helpers";
-import { describe, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { getDetailsForAutoConfig } from "../src/details";
 import { getFrameworkClassInstance } from "../src/frameworks";
 import { Framework } from "../src/frameworks/framework-class";
@@ -43,6 +43,16 @@ class ViteBuildToolFramework extends Framework {
 	}
 }
 
+class PackageListingFramework extends Framework {
+	configure(): ConfigurationResults {
+		return {
+			buildTool: "vite",
+			workerConfig: { entrypoint: "src/index.ts" },
+			dependencies: [{ name: "isbot", dev: true }],
+		};
+	}
+}
+
 class OwnAssetsDirectoryFramework extends Framework {
 	configure(): ConfigurationResults {
 		return {
@@ -65,6 +75,10 @@ class BuildCommandOverrideFramework extends Static {
 describe("runAutoConfig()", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+	// Setup installs packages with the package manager, so no test should run a real install
+	beforeEach(() => {
+		vi.spyOn(cliPackages, "installPackages").mockResolvedValue();
+	});
 
 	it("creates loadable cf config without a package.json or local cf installation", async ({
 		expect,
@@ -345,8 +359,8 @@ describe("runAutoConfig()", () => {
 	it("creates new configuration and cf scripts by default", async ({
 		expect,
 	}) => {
-		const installWrangler = vi
-			.spyOn(cliPackages, "installWrangler")
+		const installPackages = vi
+			.spyOn(cliPackages, "installPackages")
 			.mockResolvedValue();
 		const packageJson = {
 			name: "my-static-app",
@@ -397,7 +411,11 @@ describe("runAutoConfig()", () => {
 			'import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig({\n  "assetsDirectory": "public"'
 		);
 		expect(existsSync("wrangler.jsonc")).toBe(false);
-		expect(installWrangler).toHaveBeenCalledWith("npm", false);
+		expect(installPackages).toHaveBeenCalledWith("npm", ["wrangler@latest"], {
+			cwd: process.cwd(),
+			dev: true,
+			isWorkspaceRoot: false,
+		});
 		expect(context.runCommand).toHaveBeenCalledWith(
 			"npx framework build",
 			process.cwd(),
@@ -442,11 +460,12 @@ describe("runAutoConfig()", () => {
 			}
 		);
 
-		expect(installPackages).toHaveBeenCalledWith("npm", ["cf@latest"], {
-			dev: true,
-			isWorkspaceRoot: false,
-		});
-		expect(installWrangler).toHaveBeenCalledWith("npm", false);
+		expect(installPackages).toHaveBeenCalledWith(
+			"npm",
+			["cf@latest", "wrangler@latest"],
+			{ cwd: process.cwd(), dev: true, isWorkspaceRoot: false }
+		);
+		expect(installWrangler).not.toHaveBeenCalled();
 	});
 
 	it("does not reinstall an existing cf dependency", async ({ expect }) => {
@@ -480,7 +499,12 @@ describe("runAutoConfig()", () => {
 			}
 		);
 
-		expect(installPackages).not.toHaveBeenCalled();
+		expect(installPackages).toHaveBeenCalledTimes(1);
+		expect(installPackages).toHaveBeenCalledWith(
+			"npm",
+			["wrangler@latest"],
+			expect.anything()
+		);
 	});
 
 	it("does not install Wrangler when cf delegates to Vite", async ({
@@ -520,6 +544,7 @@ describe("runAutoConfig()", () => {
 		);
 
 		expect(installPackages).toHaveBeenCalledWith("npm", ["cf@latest"], {
+			cwd: process.cwd(),
 			dev: true,
 			isWorkspaceRoot: false,
 		});
@@ -529,6 +554,82 @@ describe("runAutoConfig()", () => {
 				"cf-typegen": "cf workers types",
 			},
 		});
+	});
+	it("installs the framework's packages and cf in one run", async ({
+		expect,
+	}) => {
+		const installPackages = vi
+			.spyOn(cliPackages, "installPackages")
+			.mockResolvedValue();
+		const packageJson = { name: "my-app" };
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"dist/index.html": "<h1>Hello World</h1>",
+		});
+
+		await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-app",
+				framework: new PackageListingFramework({
+					id: "static",
+					name: "Static",
+				}),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			}
+		);
+
+		expect(installPackages).toHaveBeenCalledTimes(1);
+		expect(installPackages).toHaveBeenCalledWith(
+			"npm",
+			["cf@latest", "isbot@latest"],
+			{ cwd: process.cwd(), dev: true, isWorkspaceRoot: false }
+		);
+	});
+
+	it("reports a failed install as follow-up work and skips the build", async ({
+		expect,
+	}) => {
+		vi.spyOn(cliPackages, "installPackages").mockRejectedValue(
+			new Error("network down")
+		);
+		const packageJson = { name: "my-app" };
+		await seed({
+			"package.json": JSON.stringify(packageJson),
+			"dist/index.html": "<h1>Hello World</h1>",
+		});
+		const context = createMockContext();
+
+		const summary = await runAutoConfig(
+			{
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "my-app",
+				framework: new PackageListingFramework({
+					id: "static",
+					name: "Static",
+				}),
+				buildCommand: "npm run build",
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			},
+			{ context, skipConfirmations: true }
+		);
+
+		expect(summary.followUps).toEqual([
+			expect.objectContaining({ code: "cf-install-failed", blocking: true }),
+		]);
+		expect(existsSync("cloudflare.config.ts")).toBe(true);
+		expect(context.runCommand).not.toHaveBeenCalled();
 	});
 
 	it("adds the cf-generated types to tsconfig.json", async ({ expect }) => {

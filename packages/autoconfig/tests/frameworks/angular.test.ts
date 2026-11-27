@@ -424,13 +424,9 @@ describe("Angular framework configure()", () => {
 				ANGULAR_PACKAGE_INFO,
 				context
 			);
-			await framework.configure(BASE_OPTIONS);
+			const result = await framework.configure(BASE_OPTIONS);
 
-			expect(installSpy).toHaveBeenCalledWith(
-				NpmPackageManager.type,
-				["xhr2"],
-				expect.objectContaining({ dev: true })
-			);
+			expect(result.dependencies).toEqual([{ name: "xhr2", dev: true }]);
 		});
 
 		it("skips side effects in dryRun mode", async ({ expect }) => {

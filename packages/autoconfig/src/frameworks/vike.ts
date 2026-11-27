@@ -1,13 +1,11 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
-import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import { Framework } from "./framework-class";
 import { isPackageInstalled } from "./utils/packages";
-import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import { getCloudflareVitePluginDependencies } from "./utils/vite-plugin";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -25,8 +23,7 @@ export class Vike extends Framework {
 	async configure({
 		projectPath,
 		dryRun,
-		packageManager,
-		isWorkspaceRoot,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const vikeServerIsInstalled = isPackageInstalled(
 			"vike-server",
@@ -42,24 +39,7 @@ export class Vike extends Framework {
 		}
 
 		if (!dryRun) {
-			// note: the following installation steps follow the guide in: https://vike.dev/cloudflare#get-started
-
-			await installPackages(
-				packageManager.type,
-				["vike-photon", "@photonjs/cloudflare"],
-				{
-					startText: "Installing vike-photon and @photonjs/cloudflare",
-					doneText: `${brandColor(`installed`)} photon packages`,
-					isWorkspaceRoot,
-				}
-			);
-
-			await installCloudflareVitePlugin({
-				packageManager: packageManager.type,
-				isWorkspaceRoot,
-				projectPath,
-			});
-
+			// note: the following setup steps follow the guide in: https://vike.dev/cloudflare#get-started
 			addVikePhotonToConfigFile(projectPath);
 		}
 
@@ -68,6 +48,12 @@ export class Vike extends Framework {
 			workerConfig: {
 				entrypoint: "virtual:photon:cloudflare:server-entry",
 			},
+			// The packages follow the guide in: https://vike.dev/cloudflare#get-started
+			dependencies: [
+				{ name: "vike-photon", dev: false },
+				{ name: "@photonjs/cloudflare", dev: false },
+				...getCloudflareVitePluginDependencies({ projectPath, target }),
+			],
 			packageJsonScriptsOverrides: {
 				preview: "vike build && vike preview",
 				deploy: "vike build && wrangler deploy",

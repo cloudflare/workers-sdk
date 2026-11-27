@@ -9,10 +9,7 @@ import { createMockContext } from "../helpers/mock-context";
 
 vi.mock("../../src/frameworks/utils/packages", () => ({
 	isPackageInstalled: () => false,
-}));
-
-vi.mock("../../src/frameworks/utils/vite-plugin", () => ({
-	installCloudflareVitePlugin: async () => {},
+	getInstalledPackageVersion: () => undefined,
 }));
 
 const context = createMockContext();
@@ -293,6 +290,19 @@ export default {
 			expect(result.workerConfig).toEqual({
 				entrypoint: "virtual:photon:cloudflare:server-entry",
 			});
+		});
+
+		it("lists the photon packages and the Cloudflare Vite plugin", async ({
+			expect,
+		}) => {
+			const framework = new Vike({ id: "vike", name: "Vike" });
+			const result = await framework.configure(getBaseOptions());
+
+			expect(result.dependencies).toEqual([
+				{ name: "vike-photon", dev: false },
+				{ name: "@photonjs/cloudflare", dev: false },
+				{ name: "@cloudflare/vite-plugin", dev: true },
+			]);
 		});
 
 		it("returns correct packageJsonScriptsOverrides", async ({ expect }) => {

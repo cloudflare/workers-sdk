@@ -22,6 +22,10 @@ import {
 	parseJSONC,
 } from "@cloudflare/workers-utils";
 import {
+	installPlannedDependencies,
+	planProjectDependencies,
+} from "./dependencies/install";
+import {
 	assertNonConfigured,
 	assertProjectCommandsAvailable,
 	confirmAutoConfigDetails,
@@ -45,6 +49,7 @@ import {
 } from "./tsconfig";
 import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigContext, AutoConfigTarget } from "./context";
+import type { DependencyPlan, PackageDependency } from "./dependencies/install";
 import type {
 	BuildConfig,
 	ConfigurationResults,
@@ -56,7 +61,7 @@ import type {
 	AutoConfigSummary,
 } from "./types";
 import type { WorkerConfig } from "@cloudflare/config";
-import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { PackageJSON, PackageManager } from "@cloudflare/workers-utils";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /**
@@ -189,6 +194,19 @@ export async function runAutoConfig(
 		);
 	}
 
+	const dryRunDependencyPlan =
+		target === "cf"
+			? await planProjectDependencies(
+					autoConfigDetails.projectPath,
+					getCfDependencies(
+						autoConfigDetails,
+						dryRunConfigurationResults,
+						enableTargetCliInstallation
+					),
+					{ installDependencies: true }
+				)
+			: undefined;
+
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
 		dryRunWorkerConfig,
@@ -205,7 +223,8 @@ export async function runAutoConfig(
 		enableTargetCliInstallation,
 		target,
 		context,
-		dryRunConfigurationResults.packageJsonScriptsOverrides
+		dryRunConfigurationResults.packageJsonScriptsOverrides,
+		dryRunDependencyPlan
 	);
 
 	if (
@@ -230,26 +249,10 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigDetails.packageJson && enableTargetCliInstallation) {
-		if (target === "cf") {
-			const hasCfDependency =
-				autoConfigDetails.packageJson.dependencies?.cf !== undefined ||
-				autoConfigDetails.packageJson.devDependencies?.cf !== undefined;
-			if (!hasCfDependency) {
-				await installPackages(packageManager.type, ["cf@latest"], {
-					dev: true,
-					isWorkspaceRoot,
-				});
-			}
-		} else {
-			await installWrangler(packageManager.type, isWorkspaceRoot);
-		}
-	}
-
 	if (
+		target === "wrangler" &&
 		autoConfigDetails.packageJson &&
-		target === "cf" &&
-		dryRunConfigurationResults.buildTool === "wrangler"
+		enableTargetCliInstallation
 	) {
 		await installWrangler(packageManager.type, isWorkspaceRoot);
 	}
@@ -264,6 +267,36 @@ export async function runAutoConfig(
 		packageManager,
 		context,
 	});
+
+	if (target === "cf") {
+		const dependencyPlan = await planProjectDependencies(
+			autoConfigDetails.projectPath,
+			getCfDependencies(
+				autoConfigDetails,
+				configurationResults,
+				enableTargetCliInstallation
+			),
+			{ installDependencies: true }
+		);
+		const { followUp } = await installPlannedDependencies(
+			autoConfigDetails.projectPath,
+			dependencyPlan,
+			{ dryRun: false }
+		);
+		autoConfigSummary.followUps = [
+			...dependencyPlan.followUps,
+			...(followUp ? [followUp] : []),
+		];
+		if (followUp) {
+			logger.warn(followUp.message);
+		}
+	} else {
+		await installFrameworkDependencies(
+			packageManager.type,
+			configurationResults.dependencies ?? [],
+			isWorkspaceRoot
+		);
+	}
 	const workerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
 		configurationResults.workerConfig
@@ -368,9 +401,23 @@ export async function runAutoConfig(
 		}
 	}
 
+	// A blocking follow-up means the project won't build until it's done
+	const needsAttention =
+		autoConfigSummary.followUps?.some(({ blocking }) => blocking) ?? false;
+	if (runBuild && needsAttention) {
+		logger.warn(
+			"Skipping the build until the required follow-up work is done."
+		);
+	}
+
 	// Setup can install missing packages or activate the plugin. Recheck command
 	// readiness after those changes, only when a build will actually be executed.
-	if (target === "cf" && runBuild && autoConfigDetails.commandError) {
+	if (
+		target === "cf" &&
+		runBuild &&
+		!needsAttention &&
+		autoConfigDetails.commandError
+	) {
 		const configuredDetails = await getDetailsForAutoConfig({
 			projectPath: autoConfigDetails.projectPath,
 			target,
@@ -391,7 +438,7 @@ export async function runAutoConfig(
 		}
 		autoConfigSummary.buildCommand = buildCommand;
 	}
-	if (buildCommand && runBuild) {
+	if (buildCommand && runBuild && !needsAttention) {
 		await context.runCommand(
 			buildCommand,
 			autoConfigDetails.projectPath,
@@ -400,6 +447,57 @@ export async function runAutoConfig(
 	}
 
 	return autoConfigSummary;
+}
+
+/**
+ * Lists the packages a cf project needs: cf, the framework's packages, and Wrangler when it builds with Wrangler.
+ * A project without a package.json, such as a folder of static files, gets nothing installed, as before.
+ *
+ * @param autoConfigDetails The detected project details
+ * @param configurationResults The framework's configuration results
+ * @param installCf Whether to install the cf CLI
+ * @returns The packages, for {@link planProjectDependencies}
+ */
+function getCfDependencies(
+	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject,
+	configurationResults: ConfigurationResults,
+	installCf: boolean
+): PackageDependency[] {
+	if (!autoConfigDetails.packageJson) {
+		return [];
+	}
+	return [
+		...(installCf ? [{ name: "cf", version: "latest", dev: true }] : []),
+		...(configurationResults.dependencies ?? []),
+		// wrangler.config.ts needs a recent Wrangler
+		...(configurationResults.buildTool === "wrangler"
+			? [{ name: "wrangler", dev: true }]
+			: []),
+	];
+}
+
+/**
+ * Installs a framework's packages for the Wrangler target, as the framework did before listing them.
+ *
+ * @param packageManager The package manager to install with
+ * @param dependencies The framework's packages
+ * @param isWorkspaceRoot Whether the project is a workspace root
+ */
+async function installFrameworkDependencies(
+	packageManager: PackageManager["type"],
+	dependencies: PackageDependency[],
+	isWorkspaceRoot: boolean
+): Promise<void> {
+	for (const dev of [true, false]) {
+		const packages = dependencies
+			.filter((dependency) => dependency.dev === dev)
+			.map(({ name, version }) =>
+				version === undefined ? name : `${name}@${version}`
+			);
+		if (packages.length > 0) {
+			await installPackages(packageManager, packages, { dev, isWorkspaceRoot });
+		}
+	}
 }
 
 /**
@@ -610,7 +708,8 @@ export async function buildOperationsSummary(
 	enableTargetCliInstallation: boolean,
 	target: AutoConfigTarget,
 	context: AutoConfigContext,
-	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
+	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides,
+	dependencyPlan?: DependencyPlan
 ): Promise<AutoConfigSummary> {
 	const { logger } = context;
 	logger.log("");
@@ -635,28 +734,35 @@ export async function buildOperationsSummary(
 	};
 
 	const packagesToInstall = new Set<string>();
-	if (autoConfigDetails.packageJson) {
+	if (dependencyPlan) {
+		for (const { name, version, dev } of dependencyPlan.dependencies) {
+			packagesToInstall.add(
+				`${version === "latest" ? name : `${name}@${version}`} (${dev ? "devDependency" : "dependency"})`
+			);
+		}
+		summary.followUps = dependencyPlan.followUps;
+	} else if (autoConfigDetails.packageJson) {
 		if (enableTargetCliInstallation) {
-			packagesToInstall.add(target);
+			packagesToInstall.add(`${target} (devDependency)`);
 		}
 		if (configurationResults.buildTool === "vite") {
 			packagesToInstall.add(
 				target === "cf"
-					? `@cloudflare/vite-plugin@${CF_VITE_PLUGIN_VERSION_RANGE}`
-					: "@cloudflare/vite-plugin"
+					? `@cloudflare/vite-plugin@${CF_VITE_PLUGIN_VERSION_RANGE} (devDependency)`
+					: "@cloudflare/vite-plugin (devDependency)"
 			);
 		} else if (
 			target === "cf" &&
 			configurationResults.buildTool === "wrangler"
 		) {
-			packagesToInstall.add("wrangler");
+			packagesToInstall.add("wrangler (devDependency)");
 		}
 	}
 
 	if (packagesToInstall.size > 0) {
 		logger.log("📦 Install packages:");
 		for (const packageName of packagesToInstall) {
-			logger.log(` - ${packageName} (devDependency)`);
+			logger.log(` - ${packageName}`);
 		}
 		logger.log("");
 	}
@@ -763,6 +869,16 @@ export async function buildOperationsSummary(
 			`Configuring project for ${autoConfigDetails.framework.name}`;
 
 		logger.log(`🛠️  ${summary.frameworkConfiguration}`);
+		logger.log("");
+	}
+
+	if (summary.followUps && summary.followUps.length > 0) {
+		logger.log("Follow-up work:");
+		for (const followUp of summary.followUps) {
+			logger.log(
+				` - [${followUp.blocking ? "required" : "info"}] ${followUp.message}`
+			);
+		}
 		logger.log("");
 	}
 

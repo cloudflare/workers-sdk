@@ -1,7 +1,6 @@
 import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
-import { installCloudflareVitePlugin } from "./utils/vite-plugin";
-import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
+import { getCloudflareVitePluginDependencies } from "./utils/vite-plugin";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -15,18 +14,9 @@ export class TanstackStart extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
-		packageManager,
-		isWorkspaceRoot,
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installCloudflareVitePlugin({
-				packageManager: packageManager.type,
-				isWorkspaceRoot,
-				projectPath,
-				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
-			});
-
 			transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });
 		}
 
@@ -35,6 +25,10 @@ export class TanstackStart extends Framework {
 			workerConfig: {
 				entrypoint: "@tanstack/react-start/server-entry",
 			},
+			dependencies: getCloudflareVitePluginDependencies({
+				projectPath,
+				target,
+			}),
 		};
 	}
 

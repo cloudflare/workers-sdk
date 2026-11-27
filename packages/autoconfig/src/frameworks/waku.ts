@@ -3,13 +3,12 @@ import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { updateStatus } from "@cloudflare/cli-shared-helpers";
-import { blue, brandColor } from "@cloudflare/cli-shared-helpers/colors";
-import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
+import { blue } from "@cloudflare/cli-shared-helpers/colors";
 import { transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
-import { installCloudflareVitePlugin } from "./utils/vite-plugin";
+import { getCloudflareVitePluginDependencies } from "./utils/vite-plugin";
 import type {
 	ConfigurationOptions,
 	ConfigurationResults,
@@ -23,23 +22,9 @@ export class Waku extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
-		packageManager,
-		isWorkspaceRoot,
+		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(packageManager.type, ["hono"], {
-				dev: true,
-				startText: "Installing hono dependency",
-				doneText: `${brandColor("installed")}`,
-				isWorkspaceRoot,
-			});
-
-			await installCloudflareVitePlugin({
-				packageManager: packageManager.type,
-				projectPath,
-				isWorkspaceRoot,
-			});
-
 			await createWakuServerFile(projectPath);
 			await updateWakuConfig(projectPath);
 		}
@@ -56,6 +41,10 @@ export class Waku extends Framework {
 				},
 			},
 			buildConfig: { assetsDirectory: "./dist/public" },
+			dependencies: [
+				{ name: "hono", dev: true },
+				...getCloudflareVitePluginDependencies({ projectPath, target }),
+			],
 		};
 	}
 }

@@ -1,16 +1,13 @@
 import assert from "node:assert";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
-import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { parseFile, transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
-import { installCloudflareVitePlugin } from "./utils/vite-plugin";
-import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
+import { getCloudflareVitePluginDependencies } from "./utils/vite-plugin";
 import type { AutoConfigContext } from "../context";
 import type {
 	ConfigurationOptions,
@@ -477,8 +474,6 @@ export class ReactRouter extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
-		packageManager,
-		isWorkspaceRoot,
 		context,
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
@@ -487,23 +482,9 @@ export class ReactRouter extends Framework {
 			this.frameworkVersion
 		);
 		if (!dryRun) {
-			await installCloudflareVitePlugin({
-				packageManager: packageManager.type,
-				projectPath,
-				isWorkspaceRoot,
-				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
-			});
-
 			mkdirSync("workers");
 
 			writeAppTs(useMiddlewarePattern);
-
-			await installPackages(packageManager.type, ["isbot"], {
-				dev: true,
-				startText: "Installing the isbot package",
-				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
-				isWorkspaceRoot,
-			});
 
 			writeEntryServerTsx(useMiddlewarePattern, context);
 
@@ -525,6 +506,10 @@ export class ReactRouter extends Framework {
 			workerConfig: {
 				entrypoint: "./workers/app.ts",
 			},
+			dependencies: [
+				...getCloudflareVitePluginDependencies({ projectPath, target }),
+				{ name: "isbot", dev: true },
+			],
 		};
 	}
 

@@ -12,16 +12,17 @@ import {
 import { satisfies, subset, valid, validRange } from "semver";
 import { glob } from "tinyglobby";
 import { fileExists } from "../file-exists";
-import { getWranglerUpgradeSpec, isVersionSupported } from "./wrangler-version";
-import type { MigrationBundler } from "../wrangler-config/types";
+import { createFollowUp } from "../follow-ups";
+import { CF_VITE_PLUGIN_VERSION_RANGE } from "../frameworks/utils/vite-plugin-version";
+import {
+	getWranglerUpgradeSpec,
+	isVersionSupported,
+	MINIMUM_WRANGLER_VERSION,
+} from "./wrangler-version";
+import type { MigrationFollowUp } from "../wrangler-config/types";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
 const VITE_PLUGIN = "@cloudflare/vite-plugin";
-/**
- * The Vite plugin versions that support the generated configuration: the v2
- * release candidates and every later v2 release.
- */
-export const VITE_PLUGIN_VERSION_RANGE = "^2.0.0-rc.0";
 // Managed specifiers need an installed-version check instead of range parsing.
 const MANAGED_VITE_PLUGIN_SPECIFIER =
 	/^(?:workspace:|file:|link:|portal:|catalog:)/;
@@ -289,13 +290,13 @@ function isCompatibleVitePluginRange(declaredVersion: string): boolean {
 	}
 	return (
 		validRange(declaredVersion) !== null &&
-		subset(declaredVersion, VITE_PLUGIN_VERSION_RANGE)
+		subset(declaredVersion, CF_VITE_PLUGIN_VERSION_RANGE)
 	);
 }
 
 /** Checks whether an exact version supports the generated configuration. */
 function isCompatibleVitePluginVersion(version: string): boolean {
-	return satisfies(version, VITE_PLUGIN_VERSION_RANGE, {
+	return satisfies(version, CF_VITE_PLUGIN_VERSION_RANGE, {
 		includePrerelease: true,
 	});
 }
@@ -538,16 +539,21 @@ function getChangedFiles(
 	});
 }
 
+type PackageManifestPlan =
+	| { action: "missing-manifest" | "skipped-ancestor-package" }
+	| { action: "unreadable-manifest"; reason?: string }
+	| { action: "found"; packageJson: PackageJson };
+
 /**
- * Plans cf dependency installation without modifying the project.
+ * Finds the project's own package.json, without modifying the project.
  *
- * @param projectDirectory Directory containing the Wrangler configuration.
+ * @param projectDirectory Directory containing the project.
  *
- * @returns The dependency action required by the migrated project.
+ * @returns The package.json's contents, or why the project has no package.json of its own.
  */
-export async function planCfDependencyInstallation(
+async function planPackageManifest(
 	projectDirectory: string
-): Promise<CfDependencyInstallPlan> {
+): Promise<PackageManifestPlan> {
 	const packageJsonPath = await findPackageJson(projectDirectory);
 	if (!packageJsonPath) {
 		return { action: "missing-manifest" };
@@ -557,33 +563,49 @@ export async function planCfDependencyInstallation(
 	if (packageDirectory !== projectDirectory) {
 		return { action: "skipped-ancestor-package" };
 	}
-	let packageJson: PackageJson;
 	try {
-		packageJson = await readPackageJson(packageJsonPath);
+		return {
+			action: "found",
+			packageJson: await readPackageJson(packageJsonPath),
+		};
 	} catch (error) {
 		return {
 			action: "unreadable-manifest",
 			...(error instanceof Error ? { reason: error.message } : {}),
 		};
 	}
-	if (hasCfDependency(packageJson)) {
-		return { action: "already-installed" };
-	}
-	return { action: "install" };
 }
 
 /**
- * Plans a Vite plugin upgrade when the migrated project uses Vite.
+ * Plans cf dependency installation without modifying the project.
  *
- * @param projectDirectory Directory containing the migrated Worker.
- * @param bundler Bundler selected for the migrated project.
+ * @param manifest The project's package.json, as {@link planPackageManifest} found it.
+ *
+ * @returns The dependency action required by the project.
+ */
+function planCfDependencyInstallation(
+	manifest: PackageManifestPlan
+): CfDependencyInstallPlan {
+	if (manifest.action !== "found") {
+		return manifest;
+	}
+	return hasCfDependency(manifest.packageJson)
+		? { action: "already-installed" }
+		: { action: "install" };
+}
+
+/**
+ * Plans a Vite plugin install or upgrade when the project builds with the Cloudflare Vite plugin.
+ *
+ * @param projectDirectory Directory containing the project.
+ * @param requiresVitePlugin Whether the project builds with the Cloudflare Vite plugin.
  * @returns The required plugin dependency action.
  */
 export async function planVitePluginDependencyUpgrade(
 	projectDirectory: string,
-	bundler: MigrationBundler
+	requiresVitePlugin: boolean
 ): Promise<VitePluginDependencyUpgradePlan> {
-	if (bundler !== "vite") {
+	if (!requiresVitePlugin) {
 		return { action: "none" };
 	}
 
@@ -623,7 +645,7 @@ export async function planVitePluginDependencyUpgrade(
 		dependency: {
 			dev: packageJson.dependencies?.[VITE_PLUGIN] === undefined,
 			name: VITE_PLUGIN,
-			version: VITE_PLUGIN_VERSION_RANGE,
+			version: CF_VITE_PLUGIN_VERSION_RANGE,
 		},
 	};
 }
@@ -768,4 +790,273 @@ export async function installProjectDependencies(
 		changedFiles: getChangedFiles(before, await readFiles(packageFilePaths)),
 		requiresInstall: false,
 	};
+}
+
+/** A package that a step of setup needs. */
+export interface PackageDependency {
+	name: string;
+	/** The version or range to install. The latest version when left out. */
+	version?: string;
+	dev: boolean;
+}
+
+/** What installing a project's packages will do, worked out without changing anything. */
+export interface DependencyPlan {
+	/** The packages to install. */
+	dependencies: DependencyToInstall[];
+	/** TODOs for packages that won't be installed, or that need a manual update. */
+	followUps: MigrationFollowUp[];
+	/** Whether the project needs an install before it works. */
+	requiresInstall: boolean;
+	/** Whether a package needs a manual update, which installing doesn't do. */
+	requiresManualUpdate: boolean;
+	/** Whether installing is allowed. */
+	installDependencies: boolean;
+}
+
+/** What installing a {@link DependencyPlan} did. */
+export interface DependencyInstallOutcome {
+	/** Package files that changed, or would change in a dry run. */
+	changedFiles: string[];
+	/** A TODO for the packages that couldn't be installed. */
+	followUp?: MigrationFollowUp;
+	/** Whether the project still needs an install before it works. */
+	requiresInstall: boolean;
+}
+
+function formatDependencies(packages: string[]): string {
+	const formatted = packages.map((packageName) => `\`${packageName}\``);
+	if (formatted.length < 3) {
+		return formatted.join(" and ");
+	}
+	return `${formatted.slice(0, -1).join(", ")} and ${formatted.at(-1)}`;
+}
+
+/**
+ * Plans how to give a project the packages it needs, in its own package.json, without modifying it.
+ * cf, the Cloudflare Vite plugin and Wrangler are checked against the versions cf needs. Any other
+ * package is installed only when the project doesn't declare it.
+ *
+ * @param projectDirectory Directory containing the project.
+ * @param packages The packages the project needs.
+ * @param options Whether installing is allowed. When it isn't, the packages are listed as TODOs.
+ *
+ * @returns The packages to install, and TODOs for the ones that won't be.
+ */
+export async function planProjectDependencies(
+	projectDirectory: string,
+	packages: PackageDependency[],
+	{ installDependencies }: { installDependencies: boolean }
+): Promise<DependencyPlan> {
+	if (packages.length === 0) {
+		return {
+			dependencies: [],
+			followUps: [],
+			requiresInstall: false,
+			requiresManualUpdate: false,
+			installDependencies,
+		};
+	}
+	const directory = path.resolve(projectDirectory);
+	const needsCf = packages.some(({ name }) => name === "cf");
+	const needsVitePlugin = packages.some(({ name }) => name === VITE_PLUGIN);
+	const needsWrangler = packages.some(({ name }) => name === "wrangler");
+	const otherPackages = packages.filter(
+		({ name }) => name !== "cf" && name !== VITE_PLUGIN && name !== "wrangler"
+	);
+	const [manifest, vitePlugin, wrangler] = await Promise.all([
+		planPackageManifest(directory),
+		planVitePluginDependencyUpgrade(directory, needsVitePlugin),
+		planWranglerDependencyUpgrade(directory, needsWrangler),
+	]);
+	const cf = needsCf ? planCfDependencyInstallation(manifest) : undefined;
+	const otherInstalls: DependencyToInstall[] =
+		manifest.action === "found"
+			? otherPackages
+					.filter(
+						({ name }) =>
+							manifest.packageJson.dependencies?.[name] === undefined &&
+							manifest.packageJson.devDependencies?.[name] === undefined
+					)
+					.map(({ name, version = "latest", dev }) => ({ dev, name, version }))
+			: [];
+	const dependencies: DependencyToInstall[] = [
+		...(cf?.action === "install"
+			? [{ dev: true, name: "cf", version: "latest" }]
+			: []),
+		...(vitePlugin.action === "install" ? [vitePlugin.dependency] : []),
+		...otherInstalls,
+		...(wrangler.action === "install" ? [wrangler.dependency] : []),
+	];
+
+	const missingManifestPackages = formatDependencies([
+		...(needsCf ? ["cf@latest"] : []),
+		...(needsVitePlugin
+			? [`${VITE_PLUGIN}@${CF_VITE_PLUGIN_VERSION_RANGE}`]
+			: []),
+		...otherPackages.map(({ name, version }) =>
+			version === undefined ? name : `${name}@${version}`
+		),
+	]);
+	const dependencyNames = formatDependencies(
+		dependencies
+			.filter(({ name }) => name !== "wrangler")
+			.map(({ name, version }) => `${name}@${version}`)
+	);
+	const unreadableManifest = manifest.action === "unreadable-manifest";
+	const followUps: MigrationFollowUp[] = [];
+	if (manifest.action === "missing-manifest") {
+		followUps.push(
+			createFollowUp(
+				"cf-install-missing-manifest",
+				`No package.json was found. Create or locate the package that owns this Worker, then install ${missingManifestPackages} as dev dependencies before using the generated configuration.`
+			)
+		);
+	}
+	if (manifest.action === "skipped-ancestor-package") {
+		followUps.push(
+			createFollowUp(
+				"cf-install-skipped",
+				`An ancestor package.json was found, but it was not modified because it may belong to another project. Install ${missingManifestPackages} as dev dependencies in the package that owns this Worker.`
+			)
+		);
+	}
+	if (installDependencies && manifest.action === "unreadable-manifest") {
+		const reason = manifest.reason
+			? ` Package manifest error: ${manifest.reason}`
+			: "";
+		followUps.push(
+			createFollowUp(
+				"cf-install-failed",
+				`The local package.json could not be read, so migration dependencies could not be installed automatically. Resolve the reported package.json error, then install ${missingManifestPackages} before using the generated configuration.${reason}`
+			)
+		);
+	}
+	if (
+		!installDependencies &&
+		(cf?.action === "install" ||
+			unreadableManifest ||
+			vitePlugin.action === "install" ||
+			otherInstalls.length > 0)
+	) {
+		followUps.push(
+			createFollowUp(
+				cf?.action === "install" || unreadableManifest
+					? "cf-install-disabled"
+					: vitePlugin.action === "install"
+						? "vite-plugin-install-disabled"
+						: "dependency-install-disabled",
+				`Automatic dependency installation was disabled. Install ${unreadableManifest ? missingManifestPackages : dependencyNames} before using the generated configuration.`
+			)
+		);
+	}
+	if (wrangler.action === "manual") {
+		const instruction =
+			wrangler.workspaceDependency === "incompatible"
+				? "Update the workspace Wrangler package and its lockfile while preserving the workspace dependency."
+				: wrangler.workspaceDependency === "unverified"
+					? "Verify the workspace Wrangler package version and install workspace dependencies. Update the package and lockfile if needed while preserving the workspace dependency."
+					: "Add `wrangler@latest` to the package that owns this Worker and update its lockfile.";
+		followUps.push(
+			createFollowUp(
+				"wrangler-upgrade-manual",
+				`The generated wrangler.config.ts requires Wrangler ${MINIMUM_WRANGLER_VERSION} or newer. ${instruction}`
+			)
+		);
+	}
+	if (vitePlugin.action === "manual") {
+		const instruction =
+			vitePlugin.managedDependency === "incompatible"
+				? "Update the project-managed plugin to a compatible version and refresh its lockfile while preserving the dependency specifier."
+				: "Install dependencies and verify that the project-managed plugin resolves to a compatible version. If needed, update it and refresh the lockfile while preserving the dependency specifier.";
+		followUps.push(
+			createFollowUp(
+				"vite-plugin-upgrade-manual",
+				`The Vite migration requires @cloudflare/vite-plugin ${CF_VITE_PLUGIN_VERSION_RANGE}. ${instruction}`
+			)
+		);
+	}
+	if (!installDependencies && wrangler.action === "install") {
+		followUps.push(
+			createFollowUp(
+				"wrangler-upgrade-disabled",
+				"Automatic dependency installation was disabled. Install `wrangler@latest` with your package manager before using the generated configuration."
+			)
+		);
+	}
+
+	return {
+		dependencies,
+		followUps,
+		requiresInstall:
+			dependencies.length > 0 ||
+			manifest.action !== "found" ||
+			wrangler.action === "manual" ||
+			vitePlugin.action === "manual",
+		requiresManualUpdate:
+			wrangler.action === "manual" || vitePlugin.action === "manual",
+		installDependencies,
+	};
+}
+
+/**
+ * Installs the packages a {@link DependencyPlan} lists, in one run with the project's package manager.
+ * A failed install becomes a TODO rather than an error, so the rest of setup can carry on.
+ *
+ * @param projectDirectory Directory containing the project.
+ * @param plan The plan from {@link planProjectDependencies}.
+ * @param options Whether to only report the package files that would change.
+ *
+ * @returns The package files that changed, and a TODO if any package couldn't be installed.
+ */
+export async function installPlannedDependencies(
+	projectDirectory: string,
+	plan: DependencyPlan,
+	{ dryRun }: { dryRun: boolean }
+): Promise<DependencyInstallOutcome> {
+	if (!plan.installDependencies || plan.dependencies.length === 0) {
+		return { changedFiles: [], requiresInstall: plan.requiresInstall };
+	}
+	try {
+		const result = await installProjectDependencies(
+			path.resolve(projectDirectory),
+			plan.dependencies,
+			{ dryRun }
+		);
+		return {
+			changedFiles: result.changedFiles,
+			requiresInstall: result.requiresInstall || plan.requiresManualUpdate,
+		};
+	} catch (error) {
+		if (dryRun) {
+			throw error;
+		}
+		const pendingDependencies =
+			error instanceof DependencyInstallError
+				? error.pendingDependencies
+				: plan.dependencies;
+		const reason =
+			error instanceof Error ? ` Installation failed: ${error.message}` : "";
+		const packageNames = formatDependencies(
+			pendingDependencies.map(({ name }) => name)
+		);
+		const packageSpecifiers = formatDependencies(
+			pendingDependencies.map(({ name, version }) => `${name}@${version}`)
+		);
+		return {
+			changedFiles:
+				error instanceof DependencyInstallError ? error.changedFiles : [],
+			followUp: createFollowUp(
+				pendingDependencies.some(({ name }) => name === "cf")
+					? "cf-install-failed"
+					: pendingDependencies.some(({ name }) => name === "wrangler")
+						? "wrangler-upgrade-failed"
+						: pendingDependencies.some(({ name }) => name === VITE_PLUGIN)
+							? "vite-plugin-install-failed"
+							: "dependency-install-failed",
+				`The generated configuration was written, but ${packageNames} could not be installed automatically. Install ${packageSpecifiers} with your package manager before using it.${reason}`
+			),
+			requiresInstall: true,
+		};
+	}
 }

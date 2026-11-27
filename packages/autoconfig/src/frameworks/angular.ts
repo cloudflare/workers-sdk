@@ -3,7 +3,6 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli-shared-helpers/colors";
 import { spinner } from "@cloudflare/cli-shared-helpers/interactive";
-import { installPackages } from "@cloudflare/cli-shared-helpers/packages";
 import { parseJSONC } from "@cloudflare/workers-utils";
 import semiver from "semiver";
 import dedent from "ts-dedent";
@@ -12,15 +11,12 @@ import type {
 	ConfigurationOptions,
 	ConfigurationResults,
 } from "./framework-class";
-import type { PackageManager } from "@cloudflare/workers-utils";
 
 export class Angular extends Framework {
 	async configure({
 		workerName,
 		outputDir,
 		dryRun,
-		packageManager,
-		isWorkspaceRoot,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const angularJson = parseJSONC(
 			await readFile(resolve("angular.json"), "utf8")
@@ -31,10 +27,10 @@ export class Angular extends Framework {
 			if (!dryRun) {
 				await updateAngularJson(workerName, angularJson, this.frameworkVersion);
 				await overrideServerFile();
-				await installAdditionalDependencies(packageManager, isWorkspaceRoot);
 			}
 			return {
 				buildTool: "wrangler",
+				dependencies: [{ name: "xhr2", dev: true }],
 				workerConfig: {
 					entrypoint: "./dist/server/server.mjs",
 					env: {
@@ -121,18 +117,6 @@ async function overrideServerFile() {
 		export default { fetch: reqHandler };
 		`
 	);
-}
-
-async function installAdditionalDependencies(
-	packageManager: PackageManager,
-	isWorkspaceRoot: boolean
-) {
-	await installPackages(packageManager.type, ["xhr2"], {
-		dev: true,
-		startText: "Installing additional dependencies",
-		doneText: `${brandColor("installed")}`,
-		isWorkspaceRoot,
-	});
 }
 
 type AngularJson = {

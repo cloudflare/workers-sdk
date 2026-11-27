@@ -107,6 +107,9 @@ describe("Astro framework", () => {
 				env: { ASSETS: { type: "assets" } },
 			},
 			buildConfig: { assetsDirectory: "dist" },
+			dependencies: [
+				{ name: "@astrojs/cloudflare", version: "12", dev: false },
+			],
 		});
 	});
 

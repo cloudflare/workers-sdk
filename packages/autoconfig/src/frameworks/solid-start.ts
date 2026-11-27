@@ -15,8 +15,7 @@ import {
 	getViteConfigPath,
 	transformViteConfig,
 } from "./utils/vite-config";
-import { installCloudflareVitePlugin } from "./utils/vite-plugin";
-import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
+import { getCloudflareVitePluginDependencies } from "./utils/vite-plugin";
 import type { AutoConfigContext } from "../context";
 import type {
 	ConfigurationOptions,
@@ -28,20 +27,12 @@ export class SolidStart extends Framework {
 		projectPath,
 		dryRun,
 		target,
-		packageManager,
-		isWorkspaceRoot,
 		context,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (target === "cf") {
 			// SolidStart 2 runs on Vite environments, so its `ssr` environment can run on the
 			// Cloudflare Vite plugin instead of Nitro, as SolidStart's deployment guide describes
 			if (!dryRun) {
-				await installCloudflareVitePlugin({
-					packageManager: packageManager.type,
-					isWorkspaceRoot,
-					projectPath,
-					version: CF_VITE_PLUGIN_VERSION_RANGE,
-				});
 				transformViteConfig(projectPath);
 				// SolidStart 2.2.3 and later add this exclude themselves
 				if (semiver(this.frameworkVersion, "2.2.3") < 0) {
@@ -55,6 +46,10 @@ export class SolidStart extends Framework {
 					// SolidStart resolves this alias to its server entry, wherever `appRoot` puts it
 					entrypoint: "@solidjs/start/server/entry",
 				},
+				dependencies: getCloudflareVitePluginDependencies({
+					projectPath,
+					target,
+				}),
 			};
 		}
 

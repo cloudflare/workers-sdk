@@ -4,13 +4,8 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { dedent } from "ts-dedent";
 import { describe, it, vi } from "vitest";
 import { SolidStart } from "../../src/frameworks/solid-start";
-import { installCloudflareVitePlugin } from "../../src/frameworks/utils/vite-plugin";
 import { createMockContext } from "../helpers/mock-context";
 import type { AutoConfigContext } from "../../src/context";
-
-vi.mock("../../src/frameworks/utils/vite-plugin", () => ({
-	installCloudflareVitePlugin: vi.fn(),
-}));
 
 /**
  * Configures the project in the current directory for cf.
@@ -61,11 +56,15 @@ describe("SolidStart", () => {
 		expect(result).toEqual({
 			buildTool: "vite",
 			workerConfig: { entrypoint: "@solidjs/start/server/entry" },
+			// `cloudflare()` relies on plugin v2 defaulting to the `ssr` environment
+			dependencies: [
+				{
+					name: "@cloudflare/vite-plugin",
+					version: "^2.0.0-rc.0",
+					dev: true,
+				},
+			],
 		});
-		// `cloudflare()` relies on plugin v2 defaulting to the `ssr` environment
-		expect(installCloudflareVitePlugin).toHaveBeenCalledWith(
-			expect.objectContaining({ version: "^2.0.0-rc.0" })
-		);
 		expect(readFileSync("vite.config.ts", "utf8")).toMatchInlineSnapshot(`
 			"import { defineConfig } from "vite";
 			import { solidStart } from "@solidjs/start/config";

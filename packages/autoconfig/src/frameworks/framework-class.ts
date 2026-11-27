@@ -4,6 +4,7 @@ import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import type { AutoConfigFrameworkPackageInfo, FrameworkInfo } from ".";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
+import type { PackageDependency } from "../dependencies/install";
 import type { WorkerConfig } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
@@ -127,6 +128,8 @@ export type ConfigurationResults = {
 	workerConfig: Partial<WorkerConfig> | null;
 	/** Build configuration that complements the Worker configuration. */
 	buildConfig?: BuildConfig;
+	/** Packages the framework needs. Setup installs them after the framework's changes. */
+	dependencies?: PackageDependency[];
 	// Scripts to override in the package.json. Most frameworks should not need to do this, as their default detected build command will be sufficient
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
 	// Build command to override the standard one (`npm run build` or framework's build command)

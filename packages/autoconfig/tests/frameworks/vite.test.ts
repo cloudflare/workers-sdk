@@ -124,11 +124,13 @@ describe("Vite framework", () => {
 		}) => {
 			const framework = new Vite({ id: "vite", name: "Vite" });
 			const result = await framework.configure(BASE_OPTIONS);
-			expect(cliPackages.installPackages).toHaveBeenCalledWith(
-				"npm",
-				["@cloudflare/vite-plugin@^2.0.0-rc.0"],
-				expect.anything()
-			);
+			expect(result.dependencies).toEqual([
+				{
+					name: "@cloudflare/vite-plugin",
+					version: "^2.0.0-rc.0",
+					dev: true,
+				},
+			]);
 
 			expect(existsSync("vite.config.js")).toBe(true);
 			const content = readFileSync("vite.config.js", "utf-8");
@@ -145,15 +147,16 @@ describe("Vite framework", () => {
 			expect(result.buildTool).toBe("vite");
 		});
 
-		it("installs the stable plugin for Wrangler", async ({ expect }) => {
+		it("needs the stable plugin for Wrangler", async ({ expect }) => {
 			const framework = new Vite({ id: "vite", name: "Vite" });
-			await framework.configure({ ...BASE_OPTIONS, target: "wrangler" });
+			const result = await framework.configure({
+				...BASE_OPTIONS,
+				target: "wrangler",
+			});
 
-			expect(cliPackages.installPackages).toHaveBeenCalledWith(
-				"npm",
-				["@cloudflare/vite-plugin"],
-				expect.anything()
-			);
+			expect(result.dependencies).toEqual([
+				{ name: "@cloudflare/vite-plugin", dev: true },
+			]);
 		});
 
 		it("uses .ts extension when the project has a tsconfig.json", async ({

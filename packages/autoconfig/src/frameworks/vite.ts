@@ -8,8 +8,7 @@ import {
 	hasViteConfig,
 	transformViteConfig,
 } from "./utils/vite-config";
-import { installCloudflareVitePlugin } from "./utils/vite-plugin";
-import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
+import { getCloudflareVitePluginDependencies } from "./utils/vite-plugin";
 import type { AutoConfigTarget } from "../context";
 import type {
 	ConfigurationOptions,
@@ -39,21 +38,12 @@ export class Vite extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
-		packageManager,
-		isWorkspaceRoot,
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (hasViteConfig(projectPath)) {
 			assertViteConfigCanBeTransformed(projectPath);
 		}
 		if (!dryRun) {
-			await installCloudflareVitePlugin({
-				packageManager: packageManager.type,
-				isWorkspaceRoot,
-				projectPath,
-				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
-			});
-
 			if (hasViteConfig(projectPath)) {
 				transformViteConfig(projectPath);
 			} else {
@@ -68,6 +58,10 @@ export class Vite extends Framework {
 					notFoundHandling: "single-page-application",
 				},
 			},
+			dependencies: getCloudflareVitePluginDependencies({
+				projectPath,
+				target,
+			}),
 		};
 	}
 }
