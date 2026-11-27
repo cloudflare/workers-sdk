@@ -627,6 +627,24 @@ describe("wrangler secret", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should delete a secret without prompting when --force is passed", async ({
+			expect,
+		}) => {
+			mockDeleteRequest(expect, {
+				scriptName: "script-name",
+				secretName: "the-key",
+			});
+			await runWrangler("secret delete the-key --name script-name --force");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				🌀 Deleting the secret the-key on the Worker script-name
+				✨ Success! Deleted secret the-key"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
 		it("should delete a secret which name includes special characters", async ({
 			expect,
 		}) => {

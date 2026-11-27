@@ -82,6 +82,7 @@ export const deleteCommand = createCommand({
 	},
 	behaviour: {
 		supportTemporary: true,
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 		suggestSkillsAfterHandler: true,
 	},
 	args: {
