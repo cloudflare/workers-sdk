@@ -1,8 +1,10 @@
 import { describe, it } from "vitest";
 import {
+	addMigrationTodos,
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "../../src/cloudflare-config/render";
+import { createFollowUp } from "../../src/follow-ups";
 import type { ConvertedWranglerConfig } from "../../src/wrangler-config/types";
 
 function createConvertedConfig(): ConvertedWranglerConfig {
@@ -29,6 +31,29 @@ function createConvertedConfig(): ConvertedWranglerConfig {
 }
 
 describe("configuration rendering", () => {
+	it.for([
+		["with", [createFollowUp("missing-name", "Settings TODO.")]],
+		["without", []],
+	] as const)(
+		"adds TODOs to a file %s a TODO list as if rendered together",
+		([, existingFollowUps], { expect }) => {
+			const addedFollowUps = [
+				createFollowUp("vite-tooling-config", "Build TODO with $&.", {
+					sourcePath: "dev",
+				}),
+				createFollowUp("vite-source-maps", "Guidance.", { blocking: false }),
+			];
+			const written = createConvertedConfig();
+			written.followUps = [...existingFollowUps];
+			const together = createConvertedConfig();
+			together.followUps = [...existingFollowUps, ...addedFollowUps];
+
+			expect(
+				addMigrationTodos(renderCloudflareConfig(written), addedFollowUps)
+			).toBe(renderCloudflareConfig(together));
+		}
+	);
+
 	it("renders a static Cloudflare configuration", ({ expect }) => {
 		expect(renderCloudflareConfig(createConvertedConfig())).toBe(
 			'import { defineConfig } from "cf/config";\n\n' +

@@ -1,6 +1,10 @@
 export type MigrationBundler = "vite" | "wrangler";
 
-export interface WranglerToCfMigrationOptions {
+export interface WranglerConfigMigrationOptions {
+	dryRun?: boolean;
+}
+
+export interface BundlerMigrationOptions {
 	bundler?: MigrationBundler;
 	dryRun?: boolean;
 	/** Whether to install cf and install or upgrade Vite plugin and Wrangler dependencies when needed. Required dependency changes become blocking follow-ups when false. */
@@ -15,7 +19,7 @@ export interface MigrationFollowUp {
 	sourcePath?: string;
 }
 
-export interface WranglerToCfMigrationResult {
+export interface MigrationResult {
 	changedFiles: string[];
 	followUps: MigrationFollowUp[];
 	requiresInstall: boolean;

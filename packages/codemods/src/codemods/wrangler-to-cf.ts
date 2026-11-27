@@ -1,19 +1,17 @@
 import path from "node:path";
-import { migrateWranglerConfig } from "@cloudflare/autoconfig";
+import { migrateBundler, migrateWranglerConfig } from "@cloudflare/autoconfig";
 import { fileExists, filterByFileRestrictions } from "../files";
 import { ensureCleanGitWorktree } from "../git";
 import type { Codemod, CodemodContext } from "../types";
 import type {
-	WranglerToCfMigrationOptions as MigrationOptions,
-	WranglerToCfMigrationResult,
+	BundlerMigrationOptions,
+	MigrationResult,
 } from "@cloudflare/autoconfig";
 
-export type {
-	MigrationFollowUp,
-	WranglerToCfMigrationResult,
-} from "@cloudflare/autoconfig";
+export type { MigrationFollowUp } from "@cloudflare/autoconfig";
+export type WranglerToCfMigrationResult = MigrationResult;
 
-export interface WranglerToCfMigrationOptions extends MigrationOptions {
+export interface WranglerToCfMigrationOptions extends BundlerMigrationOptions {
 	/** Whether to migrate even if the Git worktree is not clean */
 	force?: boolean;
 }
@@ -41,7 +39,22 @@ export async function migrateWranglerToCf(
 		await ensureCleanGitWorktree(projectDirectory, force);
 	}
 
-	return migrateWranglerConfig(absoluteConfigPath, migrationOptions);
+	const settings = await migrateWranglerConfig(absoluteConfigPath, {
+		dryRun: migrationOptions.dryRun,
+	});
+	const build = await migrateBundler(absoluteConfigPath, migrationOptions);
+	const followUps = [...settings.followUps, ...build.followUps];
+
+	return {
+		changedFiles: [
+			...new Set([...settings.changedFiles, ...build.changedFiles]),
+		],
+		followUps,
+		requiresInstall: build.requiresInstall,
+		status: followUps.some(({ blocking }) => blocking)
+			? "needs-intervention"
+			: "complete",
+	};
 }
 
 const DEFAULT_CONFIG_FILES = [

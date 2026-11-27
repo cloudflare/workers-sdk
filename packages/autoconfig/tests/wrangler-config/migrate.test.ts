@@ -15,7 +15,8 @@ import {
 	rewriteMigrationOutput,
 	writeMigrationOutputs,
 } from "../../src/cloudflare-config/write";
-import { migrateWranglerConfig } from "../../src/wrangler-config/migrate";
+import { migrateBundler } from "../../src/wrangler-config/migrate";
+import { migrate } from "./test-helpers";
 
 const temporaryDirectories: string[] = [];
 
@@ -102,12 +103,9 @@ describe("migrateWranglerConfig", () => {
 				}),
 			});
 
-			const result = await migrateWranglerConfig(
-				path.join(cwd, "wrangler.jsonc"),
-				{
-					bundler,
-				}
-			);
+			const result = await migrate(path.join(cwd, "wrangler.jsonc"), {
+				bundler,
+			});
 			const output = await readFile(
 				path.join(cwd, "cloudflare.config.ts"),
 				"utf8"
@@ -143,7 +141,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		const result = await migrate(path.join(cwd, "wrangler.json"));
 		const output = await readFile(
 			path.join(cwd, "cloudflare.config.ts"),
 			"utf8"
@@ -161,7 +159,7 @@ describe("migrateWranglerConfig", () => {
 
 	it("rejects unsupported bundlers", async ({ expect }) => {
 		await expect(
-			migrateWranglerConfig("wrangler.json", {
+			migrateBundler("wrangler.json", {
 				// @ts-expect-error Verifies runtime validation for JavaScript callers.
 				bundler: "esbuild",
 			})
@@ -193,7 +191,7 @@ describe("migrateWranglerConfig", () => {
 			await writeFile(path.join(cwd, "pnpm-lock.yaml"), "lockfileVersion: 9");
 		});
 
-		const result = await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		const result = await migrate(path.join(cwd, "wrangler.json"));
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"pnpm",
@@ -252,12 +250,9 @@ describe("migrateWranglerConfig", () => {
 				await writeFile(path.join(cwd, lockFile), "new lockfile");
 			});
 
-			const result = await migrateWranglerConfig(
-				path.join(cwd, "wrangler.json"),
-				{
-					bundler: "vite",
-				}
-			);
+			const result = await migrate(path.join(cwd, "wrangler.json"), {
+				bundler: "vite",
+			});
 
 			expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 				packageManager,
@@ -305,9 +300,7 @@ describe("migrateWranglerConfig", () => {
 				}),
 			});
 
-			const result = await migrateWranglerConfig(
-				path.join(cwd, "wrangler.json")
-			);
+			const result = await migrate(path.join(cwd, "wrangler.json"));
 
 			expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 			expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
@@ -347,7 +340,7 @@ describe("migrateWranglerConfig", () => {
 				}),
 			});
 
-			await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+			await migrate(path.join(cwd, "wrangler.json"));
 
 			expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
 				"npm",
@@ -392,9 +385,7 @@ describe("migrateWranglerConfig", () => {
 				}),
 			});
 
-			const result = await migrateWranglerConfig(
-				path.join(cwd, "wrangler.json")
-			);
+			const result = await migrate(path.join(cwd, "wrangler.json"));
 
 			expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 			expect(result).toMatchObject({
@@ -425,7 +416,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		const result = await migrate(path.join(cwd, "wrangler.json"));
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
 			"npm",
@@ -458,7 +449,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		await migrate(path.join(cwd, "wrangler.json"));
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
@@ -480,7 +471,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		await migrateWranglerConfig(path.join(cwd, "wrangler.json"), {
+		await migrate(path.join(cwd, "wrangler.json"), {
 			bundler: "vite",
 		});
 
@@ -503,7 +494,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		await migrate(path.join(cwd, "wrangler.json"));
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"npm",
@@ -529,12 +520,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
@@ -558,12 +546,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				dryRun: true,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			dryRun: true,
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.changedFiles).toEqual([
@@ -595,12 +580,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				installDependencies: false,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			installDependencies: false,
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
@@ -627,12 +609,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				dryRun: true,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			dryRun: true,
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.changedFiles).toEqual([
@@ -665,7 +644,7 @@ describe("migrateWranglerConfig", () => {
 			await writeFile(path.join(cwd, "bun.lock"), "lockfile");
 		});
 
-		const result = await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		const result = await migrate(path.join(cwd, "wrangler.json"));
 
 		expect(result.changedFiles).toEqual([
 			"cloudflare.config.ts",
@@ -699,10 +678,10 @@ describe("migrateWranglerConfig", () => {
 		});
 
 		const [binaryLockResult, textLockResult] = await Promise.all([
-			migrateWranglerConfig(path.join(binaryLockCwd, "wrangler.json"), {
+			migrate(path.join(binaryLockCwd, "wrangler.json"), {
 				dryRun: true,
 			}),
-			migrateWranglerConfig(path.join(textLockCwd, "wrangler.json"), {
+			migrate(path.join(textLockCwd, "wrangler.json"), {
 				dryRun: true,
 			}),
 		]);
@@ -730,10 +709,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const previewResult = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{ dryRun: true }
-		);
+		const previewResult = await migrate(path.join(cwd, "wrangler.json"), {
+			dryRun: true,
+		});
 		vi.mocked(installPackages).mockImplementationOnce(async () => {
 			await writeFile(
 				path.join(cwd, "package.json"),
@@ -752,7 +730,7 @@ describe("migrateWranglerConfig", () => {
 			);
 		});
 
-		const result = await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		const result = await migrate(path.join(cwd, "wrangler.json"));
 
 		expect(previewResult.changedFiles).toContain("npm-shrinkwrap.json");
 		expect(previewResult.changedFiles).not.toContain("package-lock.json");
@@ -780,7 +758,7 @@ describe("migrateWranglerConfig", () => {
 		const workerDirectory = path.join(cwd, "worker");
 		const rootLockFile = path.join("..", "pnpm-lock.yaml");
 
-		const previewResult = await migrateWranglerConfig(
+		const previewResult = await migrate(
 			path.join(workerDirectory, "wrangler.json"),
 			{ dryRun: true }
 		);
@@ -798,9 +776,7 @@ describe("migrateWranglerConfig", () => {
 			);
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(workerDirectory, "wrangler.json")
-		);
+		const result = await migrate(path.join(workerDirectory, "wrangler.json"));
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 			"pnpm",
@@ -820,13 +796,10 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-				installDependencies: false,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+			installDependencies: false,
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
@@ -852,13 +825,10 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-				installDependencies: false,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+			installDependencies: false,
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.requiresInstall).toBe(false);
@@ -875,12 +845,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				installDependencies: false,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			installDependencies: false,
+		});
 
 		expect(result).toMatchObject({
 			changedFiles: ["cloudflare.config.ts"],
@@ -902,10 +869,9 @@ describe("migrateWranglerConfig", () => {
 		});
 		const workerDirectory = path.join(cwd, "worker");
 
-		const result = await migrateWranglerConfig(
-			path.join(workerDirectory, "wrangler.json"),
-			{ installDependencies: false }
-		);
+		const result = await migrate(path.join(workerDirectory, "wrangler.json"), {
+			installDependencies: false,
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
@@ -936,8 +902,8 @@ describe("migrateWranglerConfig", () => {
 		]);
 
 		const [writeResult, dryRunResult] = await Promise.all([
-			migrateWranglerConfig(path.join(writeCwd, "worker/wrangler.json")),
-			migrateWranglerConfig(path.join(dryRunCwd, "worker/wrangler.json"), {
+			migrate(path.join(writeCwd, "worker/wrangler.json")),
+			migrate(path.join(dryRunCwd, "worker/wrangler.json"), {
 				dryRun: true,
 			}),
 		]);
@@ -973,8 +939,8 @@ describe("migrateWranglerConfig", () => {
 		]);
 
 		const [writeResult, dryRunResult] = await Promise.all([
-			migrateWranglerConfig(path.join(writeCwd, "wrangler.json")),
-			migrateWranglerConfig(path.join(dryRunCwd, "wrangler.json"), {
+			migrate(path.join(writeCwd, "wrangler.json")),
+			migrate(path.join(dryRunCwd, "wrangler.json"), {
 				dryRun: true,
 			}),
 		]);
@@ -1001,9 +967,9 @@ describe("migrateWranglerConfig", () => {
 			new Error("write failed")
 		);
 
-		await expect(
-			migrateWranglerConfig(path.join(cwd, "wrangler.json"))
-		).rejects.toThrow("write failed");
+		await expect(migrate(path.join(cwd, "wrangler.json"))).rejects.toThrow(
+			"write failed"
+		);
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 	});
 
@@ -1021,7 +987,7 @@ describe("migrateWranglerConfig", () => {
 			new Error("Registry unavailable.")
 		);
 
-		const result = await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		const result = await migrate(path.join(cwd, "wrangler.json"));
 
 		expect(result).toMatchObject({
 			changedFiles: ["cloudflare.config.ts"],
@@ -1066,12 +1032,9 @@ describe("migrateWranglerConfig", () => {
 			})
 			.mockRejectedValueOnce(new Error("Wrangler registry unavailable."));
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledTimes(2);
 		expect(result.changedFiles).toEqual([
@@ -1111,7 +1074,7 @@ describe("migrateWranglerConfig", () => {
 		);
 
 		await expect(
-			migrateWranglerConfig(path.join(cwd, "wrangler.json"), {
+			migrate(path.join(cwd, "wrangler.json"), {
 				bundler: "wrangler",
 			})
 		).rejects.toThrow("rewrite failed");
@@ -1140,8 +1103,8 @@ describe("migrateWranglerConfig", () => {
 		]);
 
 		const [writeResult, dryRunResult] = await Promise.all([
-			migrateWranglerConfig(path.join(writeCwd, "wrangler.json")),
-			migrateWranglerConfig(path.join(dryRunCwd, "wrangler.json"), {
+			migrate(path.join(writeCwd, "wrangler.json")),
+			migrate(path.join(dryRunCwd, "wrangler.json"), {
 				dryRun: true,
 			}),
 		]);
@@ -1186,10 +1149,8 @@ describe("migrateWranglerConfig", () => {
 			"wrangler.json": source,
 		});
 
-		const viteResult = await migrateWranglerConfig(
-			path.join(viteCwd, "wrangler.json")
-		);
-		const wranglerResult = await migrateWranglerConfig(
+		const viteResult = await migrate(path.join(viteCwd, "wrangler.json"));
+		const wranglerResult = await migrate(
 			path.join(wranglerCwd, "wrangler.json"),
 			{ bundler: "wrangler" }
 		);
@@ -1224,11 +1185,11 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const defaultResult = await migrateWranglerConfig(
+		const defaultResult = await migrate(
 			path.join(defaultCwd, "wrangler.json"),
 			{ bundler: "wrangler" }
 		);
-		const disabledResult = await migrateWranglerConfig(
+		const disabledResult = await migrate(
 			path.join(disabledCwd, "wrangler.json"),
 			{ bundler: "wrangler" }
 		);
@@ -1269,7 +1230,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(path.join(cwd, "wrangler.json"));
+		const result = await migrate(path.join(cwd, "wrangler.json"));
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
@@ -1323,12 +1284,9 @@ describe("migrateWranglerConfig", () => {
 				await writeFile(path.join(cwd, lockFile), "updated lockfile");
 			});
 
-			const result = await migrateWranglerConfig(
-				path.join(cwd, "wrangler.json"),
-				{
-					bundler: "wrangler",
-				}
-			);
+			const result = await migrate(path.join(cwd, "wrangler.json"), {
+				bundler: "wrangler",
+			});
 
 			expect(vi.mocked(installPackages)).toHaveBeenCalledWith(
 				manager,
@@ -1374,10 +1332,9 @@ describe("migrateWranglerConfig", () => {
 			await writeFile(path.join(cwd, "pnpm-lock.yaml"), "updated lockfile");
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(projectDirectory, "wrangler.json"),
-			{ bundler: "wrangler" }
-		);
+		const result = await migrate(path.join(projectDirectory, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
 			"pnpm",
@@ -1406,7 +1363,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		await migrateWranglerConfig(path.join(cwd, "wrangler.json"), {
+		await migrate(path.join(cwd, "wrangler.json"), {
 			bundler: "wrangler",
 		});
 
@@ -1432,7 +1389,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		await migrateWranglerConfig(path.join(cwd, "wrangler.json"), {
+		await migrate(path.join(cwd, "wrangler.json"), {
 			bundler: "wrangler",
 		});
 
@@ -1460,12 +1417,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.changedFiles).toEqual([
@@ -1509,7 +1463,7 @@ describe("migrateWranglerConfig", () => {
 			});
 			const projectDirectory = path.join(cwd, "apps/worker");
 
-			const result = await migrateWranglerConfig(
+			const result = await migrate(
 				path.join(projectDirectory, "wrangler.json"),
 				{ bundler: "wrangler" }
 			);
@@ -1553,12 +1507,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.changedFiles).toEqual([
@@ -1591,10 +1542,9 @@ describe("migrateWranglerConfig", () => {
 		});
 		const projectDirectory = path.join(cwd, "apps/worker");
 
-		const result = await migrateWranglerConfig(
-			path.join(projectDirectory, "wrangler.json"),
-			{ bundler: "wrangler" }
-		);
+		const result = await migrate(path.join(projectDirectory, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
@@ -1627,10 +1577,9 @@ describe("migrateWranglerConfig", () => {
 		});
 		const projectDirectory = path.join(cwd, "apps/worker");
 
-		const result = await migrateWranglerConfig(
-			path.join(projectDirectory, "wrangler.json"),
-			{ bundler: "wrangler" }
-		);
+		const result = await migrate(path.join(projectDirectory, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result).toMatchObject({
@@ -1665,12 +1614,9 @@ describe("migrateWranglerConfig", () => {
 		});
 		vi.mocked(installPackages).mockResolvedValueOnce(undefined);
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
 			"npm",
@@ -1707,12 +1653,9 @@ describe("migrateWranglerConfig", () => {
 			await writeFile(path.join(cwd, "pnpm-lock.yaml"), "wrangler 4.136.0");
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+		});
 
 		expect(vi.mocked(installPackages)).toHaveBeenCalledExactlyOnceWith(
 			"pnpm",
@@ -1745,7 +1688,7 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		await migrateWranglerConfig(path.join(cwd, "wrangler.json"), {
+		await migrate(path.join(cwd, "wrangler.json"), {
 			bundler: "wrangler",
 		});
 
@@ -1774,13 +1717,10 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-				dryRun: true,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+			dryRun: true,
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.changedFiles).toEqual([
@@ -1811,13 +1751,10 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.json"),
-			{
-				bundler: "wrangler",
-				installDependencies: false,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.json"), {
+			bundler: "wrangler",
+			installDependencies: false,
+		});
 
 		expect(vi.mocked(installPackages)).not.toHaveBeenCalled();
 		expect(result.changedFiles).toEqual([
@@ -1847,8 +1784,8 @@ describe("migrateWranglerConfig", () => {
 		});
 
 		const [authResult, entryResult] = await Promise.all([
-			migrateWranglerConfig(path.join(cwd, "workers/auth/wrangler.json")),
-			migrateWranglerConfig(path.join(cwd, "workers/entry/wrangler.json")),
+			migrate(path.join(cwd, "workers/auth/wrangler.json")),
+			migrate(path.join(cwd, "workers/entry/wrangler.json")),
 		]);
 
 		expect(authResult.changedFiles).toEqual(["cloudflare.config.ts"]);
@@ -1864,12 +1801,9 @@ describe("migrateWranglerConfig", () => {
 				'name = "example-worker"\ncompatibility_date = "2026-09-23"\n',
 		});
 
-		const result = await migrateWranglerConfig(
-			path.join(cwd, "wrangler.toml"),
-			{
-				dryRun: true,
-			}
-		);
+		const result = await migrate(path.join(cwd, "wrangler.toml"), {
+			dryRun: true,
+		});
 
 		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
 		await expect(
@@ -1887,9 +1821,9 @@ describe("migrateWranglerConfig", () => {
 			}),
 		});
 
-		await expect(
-			migrateWranglerConfig(path.join(cwd, "wrangler.json"))
-		).rejects.toThrow("already exists");
+		await expect(migrate(path.join(cwd, "wrangler.json"))).rejects.toThrow(
+			"already exists"
+		);
 		expect(await readFile(path.join(cwd, "cloudflare.config.ts"), "utf8")).toBe(
 			existing
 		);

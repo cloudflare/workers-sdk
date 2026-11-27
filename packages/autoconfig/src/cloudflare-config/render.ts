@@ -10,6 +10,9 @@ import type {
 } from "../wrangler-config/types";
 
 const IDENTIFIER_PATTERN = /^[A-Za-z_$][\w$]*$/;
+const MIGRATION_GUARD =
+	'throw new Error("Migration incomplete. Resolve every cf migrate TODO in `cloudflare.config.ts`.");';
+const CONFIG_EXPORT = "export default defineConfig(";
 
 function indent(depth: number): string {
 	return "\t".repeat(depth);
@@ -147,6 +150,18 @@ function renderInformationComment(message: string, docsUrl?: string): string {
 	return lines.join("\n");
 }
 
+function renderMigrationTodo(followUp: MigrationFollowUp): string {
+	return renderComment(
+		{
+			docsUrl: followUp.docsUrl,
+			message: followUp.sourcePath
+				? `${followUp.sourcePath}: ${followUp.message}`
+				: followUp.message,
+		},
+		0
+	).join("\n");
+}
+
 function renderMigrationGuard(followUps: MigrationFollowUp[]): string {
 	const blockingFollowUps = followUps.filter(
 		({ blocking: isBlocking }) => isBlocking
@@ -159,19 +174,41 @@ function renderMigrationGuard(followUps: MigrationFollowUp[]): string {
 		renderInformationComment(
 			"This migration needs manual work. Resolve every TODO in this file, then remove the error below."
 		),
-		...blockingFollowUps.map((followUp) =>
-			renderComment(
-				{
-					docsUrl: followUp.docsUrl,
-					message: followUp.sourcePath
-						? `${followUp.sourcePath}: ${followUp.message}`
-						: followUp.message,
-				},
-				0
-			).join("\n")
-		),
-		'throw new Error("Migration incomplete. Resolve every cf migrate TODO in `cloudflare.config.ts`.");',
+		...blockingFollowUps.map(renderMigrationTodo),
+		MIGRATION_GUARD,
 	].join("\n");
+}
+
+/**
+ * Adds blocking follow-ups to the TODO list of a generated `cloudflare.config.ts`, and starts
+ * the list if the file has none yet. Non-blocking follow-ups are left out, as when rendering.
+ *
+ * @param cloudflareConfig A `cloudflare.config.ts` written by {@link renderCloudflareConfig}.
+ * @param followUps The follow-ups to add.
+ * @returns The updated file contents.
+ */
+export function addMigrationTodos(
+	cloudflareConfig: string,
+	followUps: MigrationFollowUp[]
+): string {
+	const todos = followUps
+		.filter(({ blocking: isBlocking }) => isBlocking)
+		.map(renderMigrationTodo);
+	if (todos.length === 0) {
+		return cloudflareConfig;
+	}
+
+	// Replacer functions keep `$` in TODO messages from being read as replacement patterns
+	if (cloudflareConfig.includes(MIGRATION_GUARD)) {
+		return cloudflareConfig.replace(MIGRATION_GUARD, () =>
+			[...todos, MIGRATION_GUARD].join("\n")
+		);
+	}
+
+	return cloudflareConfig.replace(
+		CONFIG_EXPORT,
+		() => `${renderMigrationGuard(followUps)}\n\n${CONFIG_EXPORT}`
+	);
 }
 
 export function renderCloudflareConfig(

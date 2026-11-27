@@ -1,5 +1,7 @@
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import {
+	addMigrationTodos,
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "../cloudflare-config/render";
@@ -19,19 +21,15 @@ import {
 import { MINIMUM_WRANGLER_VERSION } from "../dependencies/wrangler-version";
 import { fileExists } from "../file-exists";
 import { createFollowUp } from "../follow-ups";
-import { convertWranglerConfig } from "./convert";
+import { convertWranglerBuild } from "./build";
+import { convertWranglerSettings } from "./convert";
 import { findSecretFiles, readWranglerConfig } from "./read";
 import type { DependencyToInstall } from "../dependencies/install";
 import type {
+	BundlerMigrationOptions,
 	MigrationFollowUp,
-	WranglerToCfMigrationOptions,
-	WranglerToCfMigrationResult,
-} from "./types";
-
-export type {
-	MigrationFollowUp,
-	WranglerToCfMigrationOptions,
-	WranglerToCfMigrationResult,
+	MigrationResult,
+	WranglerConfigMigrationOptions,
 } from "./types";
 
 async function assertTargetsDoNotExist(filePaths: string[]): Promise<void> {
@@ -54,18 +52,104 @@ function formatDependencies(packages: string[]): string {
 	return `${formatted.slice(0, -1).join(", ")} and ${formatted.at(-1)}`;
 }
 
+function getMigrationStatus(
+	followUps: MigrationFollowUp[]
+): MigrationResult["status"] {
+	return followUps.some(({ blocking }) => blocking)
+		? "needs-intervention"
+		: "complete";
+}
+
 /**
- * Migrates one exact Wrangler configuration file to the new cf configuration.
+ * Adds blocking follow-ups to the TODO list in `cloudflare.config.ts`. If the file can't be
+ * updated, the generated files are removed so they aren't used without their TODOs.
+ *
+ * @param cloudflareConfigPath The `cloudflare.config.ts` written by {@link migrateWranglerConfig}.
+ * @param followUps The follow-ups to add.
+ * @param createdFiles The other files this migration step created.
+ */
+async function addTodosToCloudflareConfig(
+	cloudflareConfigPath: string,
+	followUps: MigrationFollowUp[],
+	createdFiles: Iterable<string>
+): Promise<void> {
+	if (!followUps.some(({ blocking }) => blocking)) {
+		return;
+	}
+
+	try {
+		const cloudflareConfig = await readFile(cloudflareConfigPath, "utf8");
+		await rewriteMigrationOutput(
+			cloudflareConfigPath,
+			addMigrationTodos(cloudflareConfig, followUps)
+		);
+	} catch (error) {
+		await cleanupMigrationOutputs(
+			[cloudflareConfigPath, ...createdFiles],
+			error
+		);
+	}
+}
+
+/**
+ * Migrates the Worker settings of one exact Wrangler configuration file to a
+ * `cloudflare.config.ts` next to it. Build settings depend on the bundler, so
+ * {@link migrateBundler} migrates them afterwards.
+ *
+ * @param configPath Path to a Wrangler JSON, JSONC, or TOML configuration file.
+ * @param options Write-safety controls.
+ *
+ * @returns The generated file path and any follow-up work left for the caller.
+ */
+export async function migrateWranglerConfig(
+	configPath: string,
+	options: WranglerConfigMigrationOptions = {}
+): Promise<MigrationResult> {
+	const { dryRun = false } = options;
+	const absoluteConfigPath = path.resolve(configPath);
+	const projectDirectory = path.dirname(absoluteConfigPath);
+	const cloudflareConfigPath = path.join(
+		projectDirectory,
+		"cloudflare.config.ts"
+	);
+
+	await assertTargetsDoNotExist([cloudflareConfigPath]);
+
+	const [rawConfig, secretFiles] = await Promise.all([
+		readWranglerConfig(absoluteConfigPath),
+		findSecretFiles(projectDirectory),
+	]);
+	const settings = convertWranglerSettings(rawConfig, secretFiles);
+	if (!dryRun) {
+		await writeMigrationOutputs(
+			new Map([[cloudflareConfigPath, renderCloudflareConfig(settings)]])
+		);
+	}
+
+	return {
+		changedFiles: ["cloudflare.config.ts"],
+		followUps: settings.followUps,
+		requiresInstall: false,
+		status: getMigrationStatus(settings.followUps),
+	};
+}
+
+/**
+ * Migrates the build settings of one exact Wrangler configuration file for a bundler, once
+ * {@link migrateWranglerConfig} has written `cloudflare.config.ts`, and installs the packages
+ * the migrated project needs. With Wrangler, the settings go to `wrangler.config.ts`; with
+ * Vite, the ones it doesn't carry over become follow-ups. Blocking follow-ups are added to
+ * the TODO list in `cloudflare.config.ts`.
  *
  * @param configPath Path to a Wrangler JSON, JSONC, or TOML configuration file.
  * @param options Optional bundler selection and write-safety controls.
  *
- * @returns Generated file paths and any follow-up work left for the caller.
+ * @returns Changed file paths and any follow-up work left for the caller.
  */
-export async function migrateWranglerConfig(
+export async function migrateBundler(
 	configPath: string,
-	options: WranglerToCfMigrationOptions = {}
-): Promise<WranglerToCfMigrationResult> {
+	options: BundlerMigrationOptions = {}
+): Promise<MigrationResult> {
 	const {
 		bundler = "vite",
 		dryRun = false,
@@ -84,18 +168,12 @@ export async function migrateWranglerConfig(
 		"cloudflare.config.ts"
 	);
 
-	await assertTargetsDoNotExist([cloudflareConfigPath]);
-
-	const [rawConfig, secretFiles] = await Promise.all([
+	const build = convertWranglerBuild(
 		readWranglerConfig(absoluteConfigPath),
-		findSecretFiles(projectDirectory),
-	]);
-	const convertedConfig = convertWranglerConfig(
-		rawConfig,
-		bundler,
-		secretFiles
+		bundler
 	);
-	const wranglerConfig = renderWranglerConfig(convertedConfig);
+	const followUps = [...build.followUps];
+	const wranglerConfig = renderWranglerConfig(build);
 	const [cfDepPlan, wranglerDepPlan, vitePluginDepPlan] = await Promise.all([
 		planCfDependencyInstallation(projectDirectory),
 		planWranglerDependencyUpgrade(projectDirectory, wranglerConfig !== null),
@@ -123,7 +201,7 @@ export async function migrateWranglerConfig(
 			.map(({ name, version }) => `${name}@${version}`)
 	);
 	if (cfDepPlan.action === "missing-manifest") {
-		convertedConfig.followUps.push(
+		followUps.push(
 			createFollowUp(
 				"cf-install-missing-manifest",
 				`No package.json was found. Create or locate the package that owns this Worker, then install ${missingManifestPackages} as dev dependencies before using the generated configuration.`
@@ -131,7 +209,7 @@ export async function migrateWranglerConfig(
 		);
 	}
 	if (cfDepPlan.action === "skipped-ancestor-package") {
-		convertedConfig.followUps.push(
+		followUps.push(
 			createFollowUp(
 				"cf-install-skipped",
 				`An ancestor package.json was found, but it was not modified because it may belong to another project. Install ${missingManifestPackages} as dev dependencies in the package that owns this Worker.`
@@ -142,7 +220,7 @@ export async function migrateWranglerConfig(
 		const reason = cfDepPlan.reason
 			? ` Package manifest error: ${cfDepPlan.reason}`
 			: "";
-		convertedConfig.followUps.push(
+		followUps.push(
 			createFollowUp(
 				"cf-install-failed",
 				`The local package.json could not be read, so migration dependencies could not be installed automatically. Resolve the reported package.json error, then install ${missingManifestPackages} before using the generated configuration.${reason}`
@@ -155,7 +233,7 @@ export async function migrateWranglerConfig(
 			cfDepPlan.action === "unreadable-manifest" ||
 			vitePluginDepPlan.action === "install")
 	) {
-		convertedConfig.followUps.push(
+		followUps.push(
 			createFollowUp(
 				cfDepPlan.action === "install" ||
 					cfDepPlan.action === "unreadable-manifest"
@@ -172,7 +250,7 @@ export async function migrateWranglerConfig(
 				: wranglerDepPlan.workspaceDependency === "unverified"
 					? "Verify the workspace Wrangler package version and install workspace dependencies. Update the package and lockfile if needed while preserving the workspace dependency."
 					: "Add `wrangler@latest` to the package that owns this Worker and update its lockfile.";
-		convertedConfig.followUps.push(
+		followUps.push(
 			createFollowUp(
 				"wrangler-upgrade-manual",
 				`The generated wrangler.config.ts requires Wrangler ${MINIMUM_WRANGLER_VERSION} or newer. ${instruction}`
@@ -184,7 +262,7 @@ export async function migrateWranglerConfig(
 			vitePluginDepPlan.managedDependency === "incompatible"
 				? "Update the project-managed plugin to a compatible version and refresh its lockfile while preserving the dependency specifier."
 				: "Install dependencies and verify that the project-managed plugin resolves to a compatible version. If needed, update it and refresh the lockfile while preserving the dependency specifier.";
-		convertedConfig.followUps.push(
+		followUps.push(
 			createFollowUp(
 				"vite-plugin-upgrade-manual",
 				`The Vite migration requires @cloudflare/vite-plugin ${VITE_PLUGIN_VERSION_RANGE}. ${instruction}`
@@ -192,26 +270,27 @@ export async function migrateWranglerConfig(
 		);
 	}
 	if (!installDependencies && wranglerDepPlan.action === "install") {
-		convertedConfig.followUps.push(
+		followUps.push(
 			createFollowUp(
 				"wrangler-upgrade-disabled",
 				"Automatic dependency installation was disabled. Install `wrangler@latest` with your package manager before using the generated configuration."
 			)
 		);
 	}
-	const followUps = [...convertedConfig.followUps];
-	const cloudflareConfig = renderCloudflareConfig(convertedConfig);
 
-	const outputs = new Map<string, string>([
-		[cloudflareConfigPath, cloudflareConfig],
-	]);
+	const outputs = new Map<string, string>();
 	if (wranglerConfig) {
 		outputs.set(
 			path.join(projectDirectory, "wrangler.config.ts"),
 			wranglerConfig
 		);
 	}
-	const changedFiles = Array.from(outputs.keys());
+	const changedFiles = [
+		...outputs.keys(),
+		...(followUps.some(({ blocking }) => blocking)
+			? [cloudflareConfigPath]
+			: []),
+	];
 	let requiresInstall =
 		cfDepPlan.action !== "already-installed" ||
 		wranglerDepPlan.action !== "none" ||
@@ -221,6 +300,11 @@ export async function migrateWranglerConfig(
 
 	if (!dryRun) {
 		await writeMigrationOutputs(outputs);
+		await addTodosToCloudflareConfig(
+			cloudflareConfigPath,
+			followUps,
+			outputs.keys()
+		);
 	}
 	if (installDependencies && dependenciesToInstall.length > 0) {
 		let dependencyFollowUp: MigrationFollowUp | undefined;
@@ -267,19 +351,14 @@ export async function migrateWranglerConfig(
 
 		if (dependencyFollowUp) {
 			followUps.push(dependencyFollowUp);
-			const updatedCloudflareConfig = renderCloudflareConfig({
-				...convertedConfig,
-				followUps,
-			});
-			outputs.set(cloudflareConfigPath, updatedCloudflareConfig);
-			try {
-				await rewriteMigrationOutput(
-					cloudflareConfigPath,
-					updatedCloudflareConfig
-				);
-			} catch (error) {
-				await cleanupMigrationOutputs(outputs.keys(), error);
+			if (!changedFiles.includes(cloudflareConfigPath)) {
+				changedFiles.push(cloudflareConfigPath);
 			}
+			await addTodosToCloudflareConfig(
+				cloudflareConfigPath,
+				[dependencyFollowUp],
+				outputs.keys()
+			);
 		}
 	}
 
@@ -289,8 +368,6 @@ export async function migrateWranglerConfig(
 		),
 		followUps,
 		requiresInstall,
-		status: followUps.some(({ blocking }) => blocking)
-			? "needs-intervention"
-			: "complete",
+		status: getMigrationStatus(followUps),
 	};
 }
