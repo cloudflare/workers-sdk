@@ -821,6 +821,11 @@ export const Service_Which = {
 	 *
 	 */
 	DISK: 4,
+	/**
+	 * A directory of static assets, served as Cloudflare serves a Worker's `assets`.
+	 *
+	 */
+	ASSETS: 6,
 } as const;
 export type Service_Which = (typeof Service_Which)[keyof typeof Service_Which];
 /**
@@ -834,6 +839,7 @@ export class Service extends $.Struct {
 	static readonly NETWORK = Service_Which.NETWORK;
 	static readonly EXTERNAL = Service_Which.EXTERNAL;
 	static readonly DISK = Service_Which.DISK;
+	static readonly ASSETS = Service_Which.ASSETS;
 	static readonly _capnp = {
 		displayName: "Service",
 		id: "e5c88e8bb7bcb6b9",
@@ -977,11 +983,138 @@ export class Service extends $.Struct {
 		$.utils.setUint16(0, 4, this);
 		$.utils.copyFrom(value, $.utils.getPointer(1, this));
 	}
+	_adoptAssets(value: $.Orphan<AssetsService>): void {
+		$.utils.setUint16(0, 6, this);
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownAssets(): $.Orphan<AssetsService> {
+		return $.utils.disown(this.assets);
+	}
+	/**
+	 * A directory of static assets, served as Cloudflare serves a Worker's `assets`.
+	 *
+	 */
+	get assets(): AssetsService {
+		$.utils.testWhich("assets", $.utils.getUint16(0, this), 6, this);
+		return $.utils.getStruct(1, AssetsService, this);
+	}
+	_hasAssets(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initAssets(): AssetsService {
+		$.utils.setUint16(0, 6, this);
+		return $.utils.initStructAt(1, AssetsService, this);
+	}
+	get _isAssets(): boolean {
+		return $.utils.getUint16(0, this) === 6;
+	}
+	set assets(value: AssetsService) {
+		$.utils.setUint16(0, 6, this);
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
 	toString(): string {
 		return "Service_" + super.toString();
 	}
 	which(): Service_Which {
 		return $.utils.getUint16(0, this) as Service_Which;
+	}
+}
+/**
+ * Static assets, as Cloudflare serves a Worker's `assets` (wrangler's `assets` config): each
+ * request goes to the user Worker or to a file of the directory, as `run_worker_first` and the
+ * files ask. Files are looked up as each request arrives, so a change to the directory is seen
+ * at once. A directory is never an asset, nor is a file `.assetsignore` ignores, which by
+ * default are `_headers`, `_redirects` and `.assetsignore` themselves. Experimental: requires
+ * `--experimental`.
+ *
+ * A designator with no entrypoint names the router; one with the entrypoint `AssetWorker`
+ * serves files only, and is what a Worker's assets binding names.
+ *
+ */
+export class AssetsService extends $.Struct {
+	static readonly _capnp = {
+		displayName: "AssetsService",
+		id: "d1d743b2d711ca07",
+		size: new $.ObjectSize(0, 5),
+	};
+	/**
+	 * The directory. Relative paths are interpreted relative to the current directory, as a
+	 * `disk` service's are.
+	 *
+	 */
+	get path(): string {
+		return $.utils.getText(0, this);
+	}
+	set path(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	/**
+	 * JSON, every field optional: `html_handling`, `not_found_handling`, `base_path` and
+	 * `run_worker_first`, as in wrangler's `assets`; `headers`, `redirects` and `ignore`, the text
+	 * of the directory's `_headers`, `_redirects` and `.assetsignore`; `debug`, for Miniflare, which
+	 * logs and removes the header it adds to a navigation that `not_found_handling` answered.
+	 *
+	 */
+	get config(): string {
+		return $.utils.getText(1, this);
+	}
+	set config(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	_adoptUserWorker(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownUserWorker(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.userWorker);
+	}
+	/**
+	 * The user Worker, if any. Events other than HTTP requests go to it, and its compatibility flags
+	 * select assets behavior, as they do on Cloudflare.
+	 *
+	 */
+	get userWorker(): ServiceDesignator {
+		return $.utils.getStruct(2, ServiceDesignator, this);
+	}
+	_hasUserWorker(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initUserWorker(): ServiceDesignator {
+		return $.utils.initStructAt(2, ServiceDesignator, this);
+	}
+	set userWorker(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
+	}
+	get compatibilityDate(): string {
+		return $.utils.getText(3, this);
+	}
+	set compatibilityDate(value: string) {
+		$.utils.setText(3, value, this);
+	}
+	_adoptCompatibilityFlags(value: $.Orphan<$.List<string>>): void {
+		$.utils.adopt(value, $.utils.getPointer(4, this));
+	}
+	_disownCompatibilityFlags(): $.Orphan<$.List<string>> {
+		return $.utils.disown(this.compatibilityFlags);
+	}
+	/**
+	 * Without a user Worker, the compatibility date and flags that select assets behavior, compiled
+	 * as a Worker's are.
+	 *
+	 */
+	get compatibilityFlags(): $.List<string> {
+		return $.utils.getList(4, $.TextList, this);
+	}
+	_hasCompatibilityFlags(): boolean {
+		return !$.utils.isNull($.utils.getPointer(4, this));
+	}
+	_initCompatibilityFlags(length: number): $.List<string> {
+		return $.utils.initList(4, $.TextList, length, this);
+	}
+	set compatibilityFlags(value: $.List<string>) {
+		$.utils.copyFrom(value, $.utils.getPointer(4, this));
+	}
+	toString(): string {
+		return "AssetsService_" + super.toString();
 	}
 }
 /**

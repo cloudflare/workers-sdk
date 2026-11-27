@@ -6,9 +6,10 @@ import { test } from "vitest";
 import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
 import type { MiniflareOptions, WorkerDefinition } from "miniflare";
 
-test.for(["assets", "Workers Sites"] as const)(
+// Static assets have no disk service: workerd's assets service only reads.
+test.for(["Workers Sites"] as const)(
 	"%s disk service rejects writes through debug RPC",
-	async (type, { expect }) => {
+	async (_type, { expect }) => {
 		const directory = await useTmp();
 		const filePath = path.join(directory, "test.txt");
 		await fs.writeFile(filePath, "original");
@@ -27,11 +28,9 @@ test.for(["assets", "Workers Sites"] as const)(
 								return new Response(await env.__STATIC_CONTENT.get(key));
 							}
 						}`),
-						assets: type === "assets" ? { directory } : undefined,
 						env: { KV: { type: "kv", id: "writable-kv" } },
 					},
-					legacy:
-						type === "Workers Sites" ? { sitePath: directory } : undefined,
+					legacy: { sitePath: directory },
 				},
 			],
 		};
@@ -43,8 +42,7 @@ test.for(["assets", "Workers Sites"] as const)(
 		// the namespace Worker's method guard. Omitting instanceId forces TCP RPC.
 		const definition = getWorkerRegistry(registryPath)["static-worker"];
 		assert(definition);
-		const serviceName =
-			type === "assets" ? "assets:storage:static-worker" : "kv:site:storage";
+		const serviceName = "kv:site:storage";
 		const clientRegistryPath = await useTmp();
 		await fs.writeFile(
 			path.join(clientRegistryPath, "disk"),

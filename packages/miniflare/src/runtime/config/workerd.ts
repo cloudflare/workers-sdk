@@ -56,6 +56,7 @@ export type Service = {
 	| { network?: Network }
 	| { external?: ExternalServer }
 	| { disk?: DiskDirectory }
+	| { assets?: AssetsService }
 );
 
 export interface ServiceDesignator {
@@ -271,6 +272,14 @@ export interface Network {
 	allow?: string[];
 	deny?: string[];
 	tlsOptions?: TlsOptions;
+}
+
+export interface AssetsService {
+	path?: string;
+	config?: string;
+	userWorker?: ServiceDesignator;
+	compatibilityDate?: string;
+	compatibilityFlags?: string[];
 }
 
 export interface DiskDirectory {
