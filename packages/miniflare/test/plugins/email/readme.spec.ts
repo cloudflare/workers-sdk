@@ -84,3 +84,17 @@ test("README WorkerOptions reference does not list Sending Email as unsupported"
 		unsupported.filter((heading) => heading.includes("Sending Email"))
 	).toEqual([]);
 });
+
+test("README SharedOptions reference does not list Sending Email as unsupported", async ({
+	expect,
+}) => {
+	const readme = await readFile(README_PATH, "utf8");
+	const unsupported = getUnsupportedHeadings(
+		readme,
+		"### `interface SharedOptions`",
+		"### `type MiniflareOptions`"
+	);
+	expect(
+		unsupported.filter((heading) => heading.includes("Sending Email"))
+	).toEqual([]);
+});
