@@ -167,6 +167,7 @@ async function getVariant(ctx: C3Context) {
 		label: "variant",
 		options: variantsOptions,
 		defaultValue: variantsOptions[0].value,
+		acceptDefault: Boolean(ctx.args.acceptDefaults),
 	});
 
 	const selected = variantsOptions.find((variant) => variant.value === value);
