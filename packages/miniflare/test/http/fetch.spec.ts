@@ -293,6 +293,58 @@ test("fetch: returns regular response if no WebSocket response returned", async 
 	expect(res.headers.get("Content-Type")).toBe("text/html");
 	expect(await res.text()).toBe("<p>Not Found</p>");
 });
+test.for([204, 205, 304])(
+	"fetch: dispatchFetch returns a %i response to a WebSocket upgrade without crashing the process",
+	async (status, { expect }) => {
+		// A null-body status used to throw from the `ws` event, outside the
+		// promise `dispatchFetch()` returns. Run in a child so that the crash
+		// fails the test rather than the test runner.
+		const result = await promisify(execFile)(
+			process.execPath,
+			[
+				"--input-type=module",
+				"-e",
+				`
+const { Miniflare } = await import(process.argv[1]);
+const status = process.argv[2];
+const mf = new Miniflare({
+  workers: [{
+    config: {
+      name: "",
+      compatibilityDate: "2025-05-01",
+      manifest: {
+        mainModule: "index.mjs",
+        modules: {
+          "index.mjs": {
+            type: "esm",
+            contents: "export default { fetch(request) { const status = Number(new URL(request.url).searchParams.get('status')); return new Response(null, { status }); } }",
+          },
+        },
+      },
+    },
+  }],
+});
+try {
+  const res = await mf.dispatchFetch("http://localhost/?status=" + status, {
+    headers: { Upgrade: "websocket" },
+  });
+  console.log(JSON.stringify({ status: res.status, body: res.body, webSocket: res.webSocket }));
+} finally {
+  await mf.dispose();
+}
+`,
+				new URL("../../dist/src/index.js", import.meta.url).href,
+				String(status),
+			],
+			{ timeout: 20_000 }
+		);
+		expect(JSON.parse(result.stdout.trim())).toEqual({
+			status,
+			body: null,
+			webSocket: null,
+		});
+	}
+);
 test.for(["GET", "HEAD", "POST", "PUT", "DELETE", "PATCH"])(
 	"fetch: DispatchFetchDispatcher reuses connections across %s requests",
 	async (method, { expect }) => {
