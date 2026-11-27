@@ -16,7 +16,7 @@ import {
 	writeMigrationOutputs,
 } from "../../src/cloudflare-config/write";
 import { migrateBundler } from "../../src/wrangler-config/migrate";
-import { migrate } from "./test-helpers";
+import { migrate } from "./migrate-helpers";
 
 const temporaryDirectories: string[] = [];
 

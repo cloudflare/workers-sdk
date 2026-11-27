@@ -21,8 +21,7 @@ import {
 import { MINIMUM_WRANGLER_VERSION } from "../dependencies/wrangler-version";
 import { fileExists } from "../file-exists";
 import { createFollowUp } from "../follow-ups";
-import { convertWranglerBuild } from "./build";
-import { convertWranglerSettings } from "./convert";
+import { convertWranglerBuild, convertWranglerSettings } from "./convert";
 import { findSecretFiles, readWranglerConfig } from "./read";
 import type { DependencyToInstall } from "../dependencies/install";
 import type {

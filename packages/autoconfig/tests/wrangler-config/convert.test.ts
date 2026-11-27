@@ -3,8 +3,8 @@ import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "../../src/cloudflare-config/render";
-import { convertWranglerBuild } from "../../src/wrangler-config/build";
 import {
+	convertWranglerBuild,
 	convertWranglerConfig,
 	convertWranglerSettings,
 } from "../../src/wrangler-config/convert";

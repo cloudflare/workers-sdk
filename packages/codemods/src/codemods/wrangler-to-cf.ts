@@ -43,17 +43,14 @@ export async function migrateWranglerToCf(
 		dryRun: migrationOptions.dryRun,
 	});
 	const build = await migrateBundler(absoluteConfigPath, migrationOptions);
-	const followUps = [...settings.followUps, ...build.followUps];
 
 	return {
+		...build,
 		changedFiles: [
 			...new Set([...settings.changedFiles, ...build.changedFiles]),
 		],
-		followUps,
-		requiresInstall: build.requiresInstall,
-		status: followUps.some(({ blocking }) => blocking)
-			? "needs-intervention"
-			: "complete",
+		followUps: [...settings.followUps, ...build.followUps],
+		status: settings.status === "complete" ? build.status : settings.status,
 	};
 }
 

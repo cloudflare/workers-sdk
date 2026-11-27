@@ -3,7 +3,8 @@ import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { globSync } from "tinyglobby";
 import { describe, it } from "vitest";
-import { getSyntaxErrors, migrate } from "./test-helpers";
+import { migrate } from "./migrate-helpers";
+import { getSyntaxErrors } from "./test-helpers";
 import type { ExpectStatic } from "vitest";
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
