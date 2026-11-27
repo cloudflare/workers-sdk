@@ -123,6 +123,8 @@ export class Astro extends Framework {
 		}
 
 		return {
+			// The Cloudflare adapter builds with the Cloudflare Vite plugin
+			buildTool: "vite",
 			// `astro add` owns the Cloudflare configuration.
 			workerConfig: null,
 		};

@@ -249,6 +249,27 @@ describe("React Router framework configure()", () => {
 		});
 	});
 
+	describe("workers/app.ts — existing file not overwritten", () => {
+		beforeEach(async () => {
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-middleware-true.ts")
+			);
+		});
+
+		it("does not overwrite existing workers/app.ts", async ({ expect }) => {
+			const existingContent = "// existing Worker entry";
+			await mkdir(resolve("workers"), { recursive: true });
+			await writeFile(resolve("workers/app.ts"), existingContent);
+
+			const framework = createFramework("7.16.0");
+			await framework.configure(getBaseOptions());
+
+			const content = readFileSync(resolve("workers/app.ts"), "utf-8");
+			expect(content).toBe(existingContent);
+		});
+	});
+
 	describe("entry.server.tsx — existing file not overwritten", () => {
 		beforeEach(async () => {
 			await writeFile(
