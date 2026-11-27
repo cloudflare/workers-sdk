@@ -1,5 +1,14 @@
-import { NpmPackageManager } from "@cloudflare/workers-utils";
-import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import {
+	NpmPackageManager,
+	PnpmPackageManager,
+} from "@cloudflare/workers-utils";
+import {
+	mockConsoleMethods,
+	runInTempDir,
+	seed,
+} from "@cloudflare/workers-utils/test-helpers";
 import { dedent } from "ts-dedent";
 import { describe, test } from "vitest";
 import { Astro } from "../src/frameworks/astro";
@@ -19,6 +28,51 @@ const testWorkerConfig: WorkerConfig = {
 describe("autoconfig run - buildOperationsSummary()", () => {
 	const std = mockConsoleMethods();
 	const context = createMockContext();
+
+	describe("pnpm build approval preview", () => {
+		runInTempDir();
+		test("shows the workspace path and only pending approvals without writing", async ({
+			expect,
+		}) => {
+			const original = "packages: ['apps/*']\nallowBuilds: {esbuild: false}\n";
+			await seed({
+				"pnpm-workspace.yaml": original,
+				"apps/web/package.json": "{}",
+			});
+			await buildOperationsSummary(
+				{
+					workerName: "worker-name",
+					projectPath: resolve("apps/web"),
+					configured: false,
+					outputDir: "public",
+					framework: new Static({ id: "static", name: "Static" }),
+					packageJson: {},
+					packageManager: PnpmPackageManager,
+				},
+				null,
+				{},
+				{ deploy: "pnpm exec wrangler deploy" },
+				true,
+				"wrangler",
+				context
+			);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				📦 Install packages:
+				 - wrangler (devDependency)
+
+				🔨 Allow dependency build scripts in ../../pnpm-workspace.yaml:
+				 - workerd
+
+				📝 Update package.json scripts:
+				 - "deploy": "wrangler deploy"
+				 - "preview": "wrangler dev"
+				"
+			`);
+			expect(readFileSync("pnpm-workspace.yaml", "utf8")).toBe(original);
+			expect(existsSync("apps/web/pnpm-workspace.yaml")).toBe(false);
+		});
+	});
 
 	describe("interactive mode", () => {
 		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async ({
