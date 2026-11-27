@@ -22,6 +22,7 @@ import {
 	parseJSONC,
 	toValidWorkerName,
 } from "@cloudflare/workers-utils";
+import * as find from "empathic/find";
 import {
 	assertNonConfigured,
 	assertProjectCommandsAvailable,
@@ -243,7 +244,10 @@ export async function runAutoConfig(
 	if (!skipConfirmations) {
 		const newProjectFiles = [
 			scaffold?.createPackageJson && "package.json",
-			scaffold?.createTsconfig && "tsconfig.json",
+			scaffold?.createTsconfig === "required"
+				? "tsconfig.json"
+				: scaffold?.createTsconfig === "fallback" &&
+					"tsconfig.json (if the framework doesn't create one)",
 		].filter(Boolean);
 		const confirmed =
 			newProjectFiles.length > 0
@@ -371,6 +375,17 @@ export async function runAutoConfig(
 				) + "\n"
 			);
 		}
+		if (
+			scaffold?.createTsconfig === "fallback" &&
+			!usesTypescript(projectPath) &&
+			!hasProjectDependency(existingPackageJson, "typescript")
+		) {
+			await installPackages(packageManager.type, ["typescript"], {
+				cwd: projectPath,
+				dev: true,
+				isWorkspaceRoot,
+			});
+		}
 	}
 
 	if (target === "wrangler") {
@@ -403,9 +418,12 @@ export async function runAutoConfig(
 	}
 
 	if (scaffold) {
-		maybeAppendWranglerToGitIgnoreLikeFile(resolve(projectPath, ".gitignore"), {
-			additionalEntries: [".cloudflare/", "node_modules/"],
-		});
+		const gitIgnorePath = resolve(projectPath, ".gitignore");
+		if (existsSync(gitIgnorePath) || find.up(".git", { cwd: projectPath })) {
+			maybeAppendWranglerToGitIgnoreLikeFile(gitIgnorePath, {
+				additionalEntries: [".cloudflare/", "node_modules/"],
+			});
+		}
 	} else {
 		maybeAppendWranglerToGitIgnore(projectPath);
 	}
@@ -546,7 +564,7 @@ function getWorkspaceVite(
 
 type CfProjectScaffold = {
 	createPackageJson: boolean;
-	createTsconfig: boolean;
+	createTsconfig?: "required" | "fallback";
 	installVite: boolean;
 	workspaceVite?: WorkspaceVite;
 };
@@ -587,7 +605,11 @@ function getCfProjectScaffold(
 	const usesVite = buildTool === "vite";
 	return {
 		createPackageJson,
-		createTsconfig: !usesTypescript(projectPath),
+		createTsconfig: usesTypescript(projectPath)
+			? undefined
+			: workerConfig === null
+				? "fallback"
+				: "required",
 		workspaceVite: usesVite ? workspaceVite : undefined,
 		installVite:
 			usesVite &&
@@ -598,6 +620,17 @@ function getCfProjectScaffold(
 	};
 }
 
+/** Checks whether the project already declares a dependency. */
+function hasProjectDependency(
+	packageJson: PackageJSON | undefined,
+	name: string
+): boolean {
+	return (
+		name in (packageJson?.dependencies ?? {}) ||
+		name in (packageJson?.devDependencies ?? {})
+	);
+}
+
 /** Returns missing tooling dependencies not installed by the framework adapter. */
 function getCfPackagesToInstall(
 	packageJson: PackageJSON | undefined,
@@ -605,14 +638,13 @@ function getCfPackagesToInstall(
 	scaffold: CfProjectScaffold | undefined
 ): string[] {
 	const packages = [];
-	const dependencies = {
-		...packageJson?.dependencies,
-		...packageJson?.devDependencies,
-	};
-	if (enableTargetCliInstallation && !("cf" in dependencies)) {
+	if (enableTargetCliInstallation && !hasProjectDependency(packageJson, "cf")) {
 		packages.push("cf@latest");
 	}
-	if (scaffold?.createTsconfig && !("typescript" in dependencies)) {
+	if (
+		scaffold?.createTsconfig === "required" &&
+		!hasProjectDependency(packageJson, "typescript")
+	) {
 		packages.push("typescript");
 	}
 	if (scaffold?.installVite) {
@@ -970,8 +1002,13 @@ export async function buildOperationsSummary(
 		target === "cf" && workerConfig?.entrypoint
 			? getCloudflareTypesTsconfigUpdate(autoConfigDetails.projectPath)
 			: undefined;
-	if (scaffold?.createTsconfig) {
+	if (scaffold?.createTsconfig === "required") {
 		logger.log("📄 Create tsconfig.json");
+		logger.log("");
+	} else if (scaffold?.createTsconfig === "fallback") {
+		logger.log(
+			"📄 If framework setup does not create tsconfig.json, create it and install TypeScript if needed."
+		);
 		logger.log("");
 	} else if (tsconfigUpdate?.type === "update") {
 		logger.log("📝 Update tsconfig.json:");

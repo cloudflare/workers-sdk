@@ -370,7 +370,7 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
 		`);
 	});
 
-	test("should only append additional entries that are not already present as exact lines", ({
+	test("should skip additional entries covered by existing patterns without broadening directory-only entries", ({
 		expect,
 	}) => {
 		mockIgnoreFile(
@@ -383,10 +383,18 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
       !.env.example
       /functions
       .git
+      node_modules
+      .cloudflare/
     `
 		);
 		maybeAppendWranglerToGitIgnoreLikeFile("my-project/.assetsignore", {
-			additionalEntries: ["/functions", ".git", ".npmrc"],
+			additionalEntries: [
+				"/functions",
+				".git",
+				".npmrc",
+				"node_modules/",
+				".cloudflare",
+			],
 		});
 
 		expect(appendFileSyncMock.mock.calls).toMatchInlineSnapshot(`
@@ -395,6 +403,7 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
 			    "my-project/.assetsignore",
 			    "
 			.npmrc
+			.cloudflare
 			",
 			  ],
 			]
