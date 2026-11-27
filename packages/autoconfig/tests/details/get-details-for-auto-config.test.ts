@@ -126,10 +126,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 		await seed({ "cloudflare.config.ts": "export default {};" });
 		await expect(
-			details.getDetailsForAutoConfig({
-				wranglerConfigPath: "wrangler.jsonc",
-				context,
-			})
+			details.getDetailsForAutoConfig({ context })
 		).resolves.not.toHaveProperty("wranglerConfigFile");
 	});
 

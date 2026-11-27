@@ -18,6 +18,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Reads a Wrangler config file as written, without Wrangler's defaults or environment resolution.
+ *
+ * @param configPath Path to a Wrangler JSON, JSONC, or TOML configuration file.
+ *
+ * @returns The config's contents.
+ */
 export function readWranglerConfig(configPath: string): RawConfig {
 	if (
 		!configPath.endsWith(".toml") &&

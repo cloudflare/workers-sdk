@@ -41,16 +41,18 @@ it(
 	({ expect }) => {
 		const cwd = createConsumer();
 		const entry = pathToFileURL(path.join(cwd, "dist/index.mjs")).href;
-		execFileSync(
+		const output = execFileSync(
 			process.execPath,
 			[
 				"--input-type=module",
 				"-e",
 				`const api = await import(${JSON.stringify(entry)});
-await api.runCodemod("vitest:v3-to-v4", { cwd: process.cwd(), dryRun: false, force: true });`,
+await api.runCodemod("vitest:v3-to-v4", { cwd: process.cwd(), dryRun: false, force: true });
+console.log(typeof api.migrateWranglerToCf);`,
 			],
 			{ cwd, encoding: "utf8", timeout: subprocessTimeout }
 		);
+		expect(output.trim()).toBe("function");
 		expect(readFileSync(path.join(cwd, "vitest.config.ts"), "utf8")).toContain(
 			"cloudflareTest"
 		);

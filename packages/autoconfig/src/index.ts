@@ -28,6 +28,16 @@ export type {
 
 export { displayAutoConfigDetails, confirmAutoConfigDetails } from "./details";
 
+export { migrateWranglerToCf } from "./wrangler-to-cf";
+export { readWranglerConfig } from "./wrangler-to-cf/config-reader";
+export type {
+	MigrationBundler,
+	MigrationFollowUp,
+	WranglerConfigFile,
+	WranglerToCfMigrationOptions,
+	WranglerToCfMigrationResult,
+} from "./wrangler-to-cf/types";
+
 export type {
 	AutoConfigDetails,
 	AutoConfigCommandError,

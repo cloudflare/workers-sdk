@@ -166,7 +166,6 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
-	wranglerConfigPath,
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
@@ -175,11 +174,6 @@ export async function getDetailsForAutoConfig({
 	projectPath?: string;
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
-	/**
-	 * The project's Wrangler config, inside `projectPath` and relative to it. Defaults to the one at the
-	 * project root. Not used when `wranglerConfig` is passed, or when the cf target finds `cloudflare.config.ts`.
-	 */
-	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
@@ -222,9 +216,7 @@ export async function getDetailsForAutoConfig({
 	// An existing cloudflare.config.ts takes precedence, so a migrated project isn't migrated again
 	const configPathToRead =
 		wranglerConfig === undefined && !hasCloudflareConfig
-			? wranglerConfigPath !== undefined
-				? resolve(projectPath, wranglerConfigPath)
-				: findWranglerConfigFile(projectPath)
+			? findWranglerConfigFile(projectPath)
 			: undefined;
 	const wranglerConfigFile: WranglerConfigFile | undefined =
 		wranglerConfig?.configPath !== undefined

@@ -99,13 +99,13 @@ export type AutoConfigOptions = {
 	 */
 	enableTargetCliInstallation?: boolean;
 	/**
-	 * Whether autoconfig may install the target CLI and the packages a Wrangler config's migration needs
-	 * (default: true). When false, the migration lists those packages as follow-ups.
+	 * For a project with a Wrangler config on cf, whether its migration may install or upgrade the
+	 * packages it needs (default: true). When false, the migration lists them as follow-ups.
 	 */
 	installDependencies?: boolean;
 	/**
-	 * The bundler a migrated Wrangler project uses. Defaults to Vite for projects that declare
-	 * `@cloudflare/vite-plugin`, and to Wrangler for the rest.
+	 * For a project with a Wrangler config on cf, the bundler its migration targets. Defaults to the one
+	 * the project uses: Vite when it declares `@cloudflare/vite-plugin`, Wrangler otherwise.
 	 */
 	bundler?: MigrationBundler;
 };

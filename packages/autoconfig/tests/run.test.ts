@@ -778,16 +778,11 @@ describe("runAutoConfig()", () => {
 		async function setUp(options: Partial<AutoConfigOptions> = {}) {
 			const context = createMockContext();
 			return runAutoConfig(
-				await getDetailsForAutoConfig({
-					projectPath: process.cwd(),
-					wranglerConfigPath: "wrangler.jsonc",
-					context,
-				}),
+				await getDetailsForAutoConfig({ projectPath: process.cwd(), context }),
 				{
 					context,
 					runBuild: false,
 					skipConfirmations: true,
-					enableTargetCliInstallation: false,
 					...options,
 				}
 			);
@@ -843,7 +838,7 @@ describe("runAutoConfig()", () => {
 			expect(summary.frameworkConfiguration).toBeUndefined();
 		});
 
-		it("migrates a Pages project's Wrangler config, leaving its Pages settings to the user", async ({
+		it("migrates a Pages project's Wrangler config, leaving its Pages settings as a TODO", async ({
 			expect,
 		}) => {
 			await seed({
@@ -862,11 +857,11 @@ describe("runAutoConfig()", () => {
 				changedFiles: ["cloudflare.config.ts"],
 				followUps: [
 					expect.objectContaining({
-						blocking: false,
+						blocking: true,
 						sourcePath: "pages_build_output_dir",
 					}),
 				],
-				status: "complete",
+				status: "needs-intervention",
 			});
 			expect(summary.frameworkId).toBe("cloudflare-pages");
 			expect(summary.frameworkConfiguration).toBeUndefined();
