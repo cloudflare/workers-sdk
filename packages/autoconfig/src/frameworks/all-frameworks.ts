@@ -74,25 +74,19 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
 			supportsCf: true,
 			supported: true,
 		},
-		target === "cf"
-			? {
-					id: "hono",
-					name: "Hono",
-					class: Hono,
-					frameworkPackageInfo: {
-						name: "hono",
-						// cf doesn't change the Hono app, so any version works
-						minimumVersion: "0.0.0",
-						maximumKnownMajorVersion: "4",
-					},
-					supportsCf: true,
-					supported: true,
-				}
-			: {
-					id: "hono",
-					name: "Hono",
-					supported: false,
-				},
+		{
+			id: "hono",
+			name: "Hono",
+			class: Hono,
+			frameworkPackageInfo: {
+				name: "hono",
+				minimumVersion: "4.0.0",
+				maximumKnownMajorVersion: "4",
+			},
+			supportsCf: true,
+			// Only cf sets up Hono, by keeping the Worker that Wrangler already deploys
+			supported: target === "cf",
+		},
 		{
 			id: "next",
 			name: "Next.js",
@@ -288,7 +282,7 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
  * It is supported by autoconfig but, unlike all other frameworks, it doesn't have a package associated to it
  */
 type StaticFrameworkInfo = Omit<
-	Extract<FrameworkInfo, { supported: true }>,
+	Exclude<FrameworkInfo, { supported: false }>,
 	"frameworkPackageInfo"
 >;
 
