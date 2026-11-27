@@ -2774,22 +2774,19 @@ describe("Local Explorer email API", () => {
 		"retains all received emails and paginates results",
 		{ retry: 0 },
 		async ({ expect }) => {
-			for (let index = 0; index <= 200; index++) {
-				const response = await mf.dispatchFetch(
-					`${BASE_URL}/local/email/routing/send?worker=${WORKER_NAME}`,
-					{
-						method: "POST",
-						headers: { "Content-Type": "application/json" },
-						body: JSON.stringify({
-							from: "sender@example.com",
-							to: ["recipient@example.com"],
-							subject: `Retention test ${index}`,
-							text: `Message ${index}`,
-						}),
-					}
-				);
-				expect(response.status).toBe(200);
-				await response.json();
+			await clearEmailStore(mf);
+			const messageIds: string[] = [];
+			for (let index = 0; index < 201; index++) {
+				const messageId = `<retention-${index}@example.com>`;
+				await storeReceivedEmail(mf, {
+					worker: WORKER_NAME,
+					messageId,
+					subject: `Retention test ${index}`,
+					receivedAt: new Date(
+						Date.UTC(2026, 0, 1) + index * 1000
+					).toISOString(),
+				});
+				messageIds.push(messageId);
 			}
 
 			const firstPage = await expectValidResponse(
@@ -2797,28 +2794,31 @@ describe("Local Explorer email API", () => {
 				zEmailListRoutingResponse,
 				expect
 			);
-			const cursor = firstPage.result_info?.cursor;
-			expect(cursor).toEqual(expect.any(String));
+			const firstCursor = firstPage.result_info?.cursor;
+			expect(firstCursor).toEqual(expect.any(String));
 			const secondPage = await expectValidResponse(
 				await mf.dispatchFetch(
-					`${BASE_URL}/local/email/routing?per_page=100&cursor=${encodeURIComponent(String(cursor))}`
+					`${BASE_URL}/local/email/routing?per_page=100&cursor=${encodeURIComponent(String(firstCursor))}`
 				),
 				zEmailListRoutingResponse,
 				expect
 			);
+			const secondCursor = secondPage.result_info?.cursor;
+			expect(secondCursor).toEqual(expect.any(String));
 			const thirdPage = await expectValidResponse(
 				await mf.dispatchFetch(
-					`${BASE_URL}/local/email/routing?per_page=100&cursor=${encodeURIComponent(String(secondPage.result_info?.cursor))}`
+					`${BASE_URL}/local/email/routing?per_page=100&cursor=${encodeURIComponent(String(secondCursor))}`
 				),
 				zEmailListRoutingResponse,
 				expect
 			);
-			const retained = [
-				...getListResult(firstPage.result),
-				...getListResult(secondPage.result),
-				...getListResult(thirdPage.result),
-			].filter((email) => email.subject.startsWith("Retention test "));
-			expect(retained).toHaveLength(201);
+			const pages = [firstPage, secondPage, thirdPage].map(({ result }) =>
+				getListResult(result)
+			);
+			expect(pages.map((page) => page.length)).toEqual([100, 100, 1]);
+			expect(pages.flat().map(({ messageId }) => messageId)).toEqual(
+				messageIds.toReversed()
+			);
 			expect(firstPage.result_info).toMatchObject({
 				count: 100,
 				per_page: 100,
@@ -2830,18 +2830,11 @@ describe("Local Explorer email API", () => {
 				has_more: true,
 			});
 			expect(thirdPage.result_info).toMatchObject({
+				count: 1,
 				per_page: 100,
 				has_more: false,
 			});
-			expect(
-				getListResult(thirdPage.result).filter((email) =>
-					email.subject.startsWith("Retention test ")
-				)
-			).toHaveLength(1);
-			expect(getListResult(firstPage.result)[0]?.subject).toBe(
-				"Retention test 200"
-			);
-			expect(retained.at(-1)?.subject).toBe("Retention test 0");
+			expect(thirdPage.result_info?.cursor).toBeUndefined();
 		}
 	);
 
