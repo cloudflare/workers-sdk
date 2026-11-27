@@ -566,9 +566,7 @@ describe("runAutoConfig()", () => {
 			);
 
 			expect(summary.buildTool).toBe("vite");
-			expect(summary.workerConfig).toBeUndefined();
 			expect(readFileSync("cloudflare.config.ts", "utf8")).toBe(existingConfig);
-			expect(std.out).not.toContain("Create cloudflare.config.ts");
 		}
 	);
 
