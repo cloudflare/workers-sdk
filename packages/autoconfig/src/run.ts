@@ -252,7 +252,7 @@ export async function runAutoConfig(
 		const confirmed =
 			newProjectFiles.length > 0
 				? await context.dialogs.confirm(
-						`Proceed with setup and create ${newProjectFiles.join(" and ")}?`,
+						`Proceed with setup and create ${newProjectFiles.join(" and ")}${scaffold?.createTsconfig === "fallback" ? " and install TypeScript if needed" : ""}?`,
 						{ defaultValue: false, fallbackValue: true }
 					)
 				: await context.dialogs.confirm("Proceed with setup?");
@@ -377,10 +377,13 @@ export async function runAutoConfig(
 		}
 		if (
 			scaffold?.createTsconfig === "fallback" &&
-			!usesTypescript(projectPath) &&
 			!hasProjectDependency(existingPackageJson, "typescript")
 		) {
-			await installPackages(packageManager.type, ["typescript"], {
+			const typescriptPackage =
+				autoConfigDetails.framework.id === "astro"
+					? "typescript@^6"
+					: "typescript";
+			await installPackages(packageManager.type, [typescriptPackage], {
 				cwd: projectPath,
 				dev: true,
 				isWorkspaceRoot,
@@ -1007,7 +1010,7 @@ export async function buildOperationsSummary(
 		logger.log("");
 	} else if (scaffold?.createTsconfig === "fallback") {
 		logger.log(
-			"📄 If framework setup does not create tsconfig.json, create it and install TypeScript if needed."
+			"📄 After framework setup, create tsconfig.json and install TypeScript if either is still missing."
 		);
 		logger.log("");
 	} else if (tsconfigUpdate?.type === "update") {

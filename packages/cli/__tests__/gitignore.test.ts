@@ -410,6 +410,21 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
 		`);
 	});
 
+	test("preserves a later exception to an existing additional ignore rule", ({
+		expect,
+	}) => {
+		const filePath = "my-project/.gitignore";
+		mockIgnoreFile(
+			filePath,
+			".wrangler\n.dev.vars*\n!.dev.vars.example\n.env*\n!.env.example\nnode_modules\n!/node_modules/\n"
+		);
+		maybeAppendWranglerToGitIgnoreLikeFile(filePath, {
+			additionalEntries: ["node_modules/"],
+		});
+
+		expect(appendFileSyncMock).not.toHaveBeenCalled();
+	});
+
 	test("should not append an additional entry twice when it is repeated or already queued", ({
 		expect,
 	}) => {

@@ -1341,26 +1341,40 @@ describe("runAutoConfig()", () => {
 	});
 
 	it.for([
-		{ generatesTsconfig: true, declaresTypescript: false },
-		{ generatesTsconfig: false, declaresTypescript: true },
-		{ generatesTsconfig: false, declaresTypescript: false },
-	])(
-		"scaffolds TypeScript only if framework setup leaves it missing (tsconfig=$generatesTsconfig, dependency=$declaresTypescript)",
-		async ({ generatesTsconfig, declaresTypescript }, { expect }) => {
+		{
+			frameworkId: "astro",
+			generatesTsconfig: true,
+			declaresTypescript: false,
+		},
+		{ frameworkId: "next", generatesTsconfig: true, declaresTypescript: true },
+		{ frameworkId: "next", generatesTsconfig: false, declaresTypescript: true },
+		{
+			frameworkId: "next",
+			generatesTsconfig: false,
+			declaresTypescript: false,
+		},
+	] as const)(
+		"fills in missing TypeScript setup after $frameworkId setup (tsconfig=$generatesTsconfig, dependency=$declaresTypescript)",
+		async (
+			{ frameworkId, generatesTsconfig, declaresTypescript },
+			{ expect }
+		) => {
+			const version = frameworkId === "astro" ? "7.0.0" : "16.1.0";
+			const name = `${frameworkId}-app`;
 			const packageJson = {
-				name: "next-app",
-				dependencies: { next: "16.1.0" },
+				name,
+				dependencies: { [frameworkId]: version },
 			};
 			await seed({
 				"package.json": JSON.stringify(packageJson),
-				"node_modules/next/package.json": JSON.stringify({
-					name: "next",
-					version: "16.1.0",
+				[`node_modules/${frameworkId}/package.json`]: JSON.stringify({
+					name: frameworkId,
+					version,
 				}),
 			});
-			const framework = getFrameworkClassInstance("next", "cf");
-			const tsconfig = '{"extends":"./tsconfig.next.json"}\n';
-			const config = "export default { worker: { name: 'next-app' } };\n";
+			const framework = getFrameworkClassInstance(frameworkId, "cf");
+			const tsconfig = '{"compilerOptions":{"strict":true}}\n';
+			const config = `export default { worker: { name: '${name}' } };\n`;
 			const configure = framework.configure.bind(framework);
 			vi.spyOn(framework, "configure").mockImplementation(async (options) => {
 				if (options.dryRun) {
@@ -1390,9 +1404,9 @@ describe("runAutoConfig()", () => {
 				{
 					configured: false,
 					projectPath: process.cwd(),
-					workerName: "next-app",
+					workerName: name,
 					framework,
-					outputDir: ".next",
+					outputDir: frameworkId === "astro" ? "dist" : ".next",
 					packageJson,
 					packageManager: NpmPackageManager,
 				},
@@ -1400,11 +1414,11 @@ describe("runAutoConfig()", () => {
 			);
 
 			expect(context.dialogs.confirm).toHaveBeenLastCalledWith(
-				"Proceed with setup and create tsconfig.json (if the framework doesn't create one)?",
+				"Proceed with setup and create tsconfig.json (if the framework doesn't create one) and install TypeScript if needed?",
 				{ defaultValue: false, fallbackValue: true }
 			);
 			expect(std.out).toContain(
-				"If framework setup does not create tsconfig.json, create it and install TypeScript if needed."
+				"After framework setup, create tsconfig.json and install TypeScript if either is still missing."
 			);
 			expect(std.out).not.toContain("- typescript (devDependency)");
 			expect(summary.scripts).toEqual({ dev: "cf dev" });
@@ -1424,14 +1438,14 @@ describe("runAutoConfig()", () => {
 					compilerOptions: { moduleResolution: "bundler", noEmit: true },
 				});
 			}
-			const needsTypescript = !generatesTsconfig && !declaresTypescript;
+			const needsTypescript = !declaresTypescript;
 			expect(cliPackages.installPackages).toHaveBeenCalledTimes(
 				needsTypescript ? 2 : 1
 			);
 			if (needsTypescript) {
 				expect(cliPackages.installPackages).toHaveBeenLastCalledWith(
 					"npm",
-					["typescript"],
+					[frameworkId === "astro" ? "typescript@^6" : "typescript"],
 					expect.objectContaining({ cwd: process.cwd(), dev: true })
 				);
 			}

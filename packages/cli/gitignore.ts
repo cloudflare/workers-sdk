@@ -40,7 +40,8 @@ export const PROJECT_ROOT_ASSETS_IGNORE_ENTRIES = [
  * @param options
  * @param options.additionalEntries Further entries to append after the
  * Wrangler ones. An existing or queued entry without a trailing slash also
- * covers the corresponding non-negated directory-only entry.
+ * covers the corresponding non-negated directory-only entry. This checks for
+ * existing rules rather than evaluating them, so later exceptions still apply.
  * @param options.requireEnvWildcard When `true`, only an existing `.env*` line
  * counts as covering environment files. Narrower patterns such as `.env` or
  * `.env.local` would leave other variants (for example `.env.production`)
