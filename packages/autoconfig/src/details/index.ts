@@ -138,6 +138,7 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
+	wranglerConfigPath,
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
@@ -146,6 +147,8 @@ export async function getDetailsForAutoConfig({
 	projectPath?: string;
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
+	/** The project's Wrangler configuration file, when the caller already knows it (for example one with a custom name). */
+	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
@@ -286,6 +289,10 @@ export async function getDetailsForAutoConfig({
 				),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
+		wranglerConfigPath:
+			wranglerConfigPath ??
+			wranglerConfig?.configPath ??
+			findProjectWranglerConfig(projectPath),
 	};
 
 	if (configured) {
@@ -315,6 +322,19 @@ export async function getDetailsForAutoConfig({
 		configured: false,
 		isWorkspaceRoot,
 	};
+}
+
+/**
+ * Finds a Wrangler configuration file in the project folder itself, not in a parent folder
+ * such as the workspace root.
+ *
+ * @param projectPath The project folder
+ * @returns The path to the Wrangler configuration file, if the project has one
+ */
+function findProjectWranglerConfig(projectPath: string): string | undefined {
+	return ["wrangler.json", "wrangler.jsonc", "wrangler.toml"]
+		.map((fileName) => resolve(projectPath, fileName))
+		.find((filePath) => existsSync(filePath));
 }
 
 /**

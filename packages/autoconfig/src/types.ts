@@ -47,6 +47,8 @@ type AutoConfigDetailsBase = {
 	packageManager: PackageManager;
 	/** Whether the current path is at the root of a workspace */
 	isWorkspaceRoot?: boolean;
+	/** The project's own Wrangler configuration file (if any) */
+	wranglerConfigPath?: string;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<

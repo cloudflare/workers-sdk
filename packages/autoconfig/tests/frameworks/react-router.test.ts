@@ -10,6 +10,7 @@ import {
 	ReactRouter,
 } from "../../src/frameworks/react-router";
 import * as packagesUtils from "../../src/frameworks/utils/packages";
+import { installCloudflareVitePlugin } from "../../src/frameworks/utils/vite-plugin";
 import { createMockContext } from "../helpers/mock-context";
 
 function fixture(name: string): string {
@@ -249,7 +250,7 @@ describe("React Router framework configure()", () => {
 		});
 	});
 
-	describe("workers/app.ts — existing file not overwritten", () => {
+	describe("project with a Wrangler config", () => {
 		beforeEach(async () => {
 			await writeFile(
 				resolve("react-router.config.ts"),
@@ -257,16 +258,19 @@ describe("React Router framework configure()", () => {
 			);
 		});
 
-		it("does not overwrite existing workers/app.ts", async ({ expect }) => {
-			const existingContent = "// existing Worker entry";
-			await mkdir(resolve("workers"), { recursive: true });
-			await writeFile(resolve("workers/app.ts"), existingContent);
-
+		it("leaves the Worker entry and server rendering to the project", async ({
+			expect,
+		}) => {
 			const framework = createFramework("7.16.0");
-			await framework.configure(getBaseOptions());
+			await framework.configure({
+				...getBaseOptions(),
+				wranglerConfigPath: resolve("wrangler.jsonc"),
+			});
 
-			const content = readFileSync(resolve("workers/app.ts"), "utf-8");
-			expect(content).toBe(existingContent);
+			expect(existsSync(resolve("workers/app.ts"))).toBe(false);
+			expect(existsSync(resolve("app/entry.server.tsx"))).toBe(false);
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
+			expect(installCloudflareVitePlugin).toHaveBeenCalled();
 		});
 	});
 

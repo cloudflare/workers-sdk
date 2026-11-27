@@ -104,6 +104,36 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({ configured: false });
 	});
 
+	it("should report the project's own Wrangler config, not a parent folder's", async ({
+		expect,
+	}) => {
+		await seed({
+			"wrangler.jsonc": "{}",
+			"app/index.html": "<h1>Hello World</h1>",
+		});
+		const projectPath = join(process.cwd(), "app");
+
+		await expect(
+			details.getDetailsForAutoConfig({ projectPath, context })
+		).resolves.toMatchObject({ wranglerConfigPath: undefined });
+
+		await writeFile(join(projectPath, "wrangler.toml"), "");
+		await expect(
+			details.getDetailsForAutoConfig({ projectPath, context })
+		).resolves.toMatchObject({
+			wranglerConfigPath: join(projectPath, "wrangler.toml"),
+		});
+		await expect(
+			details.getDetailsForAutoConfig({
+				projectPath,
+				wranglerConfigPath: join(projectPath, "custom.jsonc"),
+				context,
+			})
+		).resolves.toMatchObject({
+			wranglerConfigPath: join(projectPath, "custom.jsonc"),
+		});
+	});
+
 	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
 		expect,
 	}) => {
