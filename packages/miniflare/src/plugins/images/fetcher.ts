@@ -15,6 +15,9 @@ type Transform = {
 	fit?: RequestInitCfPropertiesImage["fit"];
 	gravity?: RequestInitCfPropertiesImage["gravity"];
 	background?: string;
+	flip?: RequestInitCfPropertiesImage["flip"];
+	blur?: number;
+	sharpen?: number;
 };
 
 function validateTransforms(inputTransforms: unknown): Transform[] | null {
@@ -23,7 +26,14 @@ function validateTransforms(inputTransforms: unknown): Transform[] | null {
 	}
 
 	for (const transform of inputTransforms) {
-		for (const key of ["imageIndex", "rotate", "width", "height"]) {
+		for (const key of [
+			"imageIndex",
+			"rotate",
+			"width",
+			"height",
+			"blur",
+			"sharpen",
+		]) {
 			if (transform[key] !== undefined && typeof transform[key] != "number") {
 				return null;
 			}
@@ -97,13 +107,23 @@ export async function imagesLocalFetcher(request: Request): Promise<Response> {
 				);
 			}
 
+			const rawOutputQuality = data.get("output_quality");
+			let outputQuality: number | undefined;
+			if (typeof rawOutputQuality === "string" && rawOutputQuality !== "") {
+				const parsedQuality = Number(rawOutputQuality);
+				if (Number.isFinite(parsedQuality)) {
+					outputQuality = resolveQuality(parsedQuality);
+				}
+			}
+
 			// Production applies EXIF orientation before any transforms.
 			// autoOrient bakes the rotation into the pixels at decode so
 			// EXIF-rotated photos (e.g. phone portraits) come out upright.
 			return runTransform(
 				sharp(source, { autoOrient: true }),
 				transforms,
-				outputFormat
+				outputFormat,
+				outputQuality
 			);
 		} catch {
 			return badTransformsResponse;
@@ -172,7 +192,8 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 async function runTransform(
 	transformer: Sharp,
 	transforms: Transform[],
-	outputFormat: string | null
+	outputFormat: string | null,
+	outputQuality?: number
 ): Promise<Response> {
 	for (const transform of transforms) {
 		if (transform.imageIndex !== undefined && transform.imageIndex !== 0) {
@@ -196,11 +217,16 @@ async function runTransform(
 					(transform.fit === "pad" ? "#ffffff" : undefined),
 			});
 		}
+
+		applyEffects(transformer, transform);
 	}
+
+	const qualityOpts =
+		outputQuality !== undefined ? { quality: outputQuality } : {};
 
 	switch (outputFormat) {
 		case "image/avif":
-			transformer.avif();
+			transformer.avif(qualityOpts);
 			break;
 		case "image/gif":
 			return errorResponse(
@@ -209,13 +235,13 @@ async function runTransform(
 				"ERROR: GIF output is not supported in local mode"
 			);
 		case "image/jpeg":
-			transformer.jpeg();
+			transformer.jpeg(qualityOpts);
 			break;
 		case "image/png":
 			transformer.png();
 			break;
 		case "image/webp":
-			transformer.webp();
+			transformer.webp(qualityOpts);
 			break;
 		case "rgb":
 		case "rgba":
@@ -338,6 +364,28 @@ function formatToMime(format: string | undefined): string | null {
 	}
 }
 
+function applyEffects(
+	transformer: Sharp,
+	options: {
+		flip?: RequestInitCfPropertiesImage["flip"];
+		blur?: number;
+		sharpen?: number;
+	}
+): void {
+	if (options.flip === "h" || options.flip === "hv") {
+		transformer.flop();
+	}
+	if (options.flip === "v" || options.flip === "hv") {
+		transformer.flip();
+	}
+	if (typeof options.blur === "number" && options.blur > 0) {
+		transformer.blur(Math.min(250, Math.max(0.3, options.blur)));
+	}
+	if (typeof options.sharpen === "number" && options.sharpen > 0) {
+		transformer.sharpen({ sigma: Math.min(10, Math.max(0.3, options.sharpen)) });
+	}
+}
+
 function applyCfImageTransforms(
 	transformer: Sharp,
 	options: RequestInitCfPropertiesImage
@@ -367,6 +415,8 @@ function applyCfImageTransforms(
 				options.background ?? (options.fit === "pad" ? "#ffffff" : undefined),
 		});
 	}
+
+	applyEffects(transformer, options);
 }
 
 export async function cfImageLocalFetcher(request: Request): Promise<Response> {
@@ -376,7 +426,8 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 		sharp = importedSharp;
 	} catch {
 		return cfImageError(
-			"The Sharp library is not available, check your version of Node is compatible"
+			"The Sharp library is not available, check your version of Node is compatible",
+			9523
 		);
 	}
 
@@ -392,11 +443,14 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 				? (JSON.parse(optionsJson) as RequestInitCfPropertiesImage)
 				: {};
 	} catch {
-		return cfImageError("Could not parse cf.image transform request");
+		return cfImageError("Could not parse cf.image transform request", 9401);
 	}
 
 	if (!body || !(body instanceof File)) {
-		return cfImageError("Expected an image in the cf.image transform request");
+		return cfImageError(
+			"Expected an image in the cf.image transform request",
+			9401
+		);
 	}
 
 	const source = await body.arrayBuffer();
@@ -405,7 +459,7 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 		const metadata = await sharp(source).metadata();
 
 		if (metadata.format === "svg") {
-			return cfImageError("SVG inputs are not transformed in local mode");
+			return cfImageError("SVG inputs are not transformed in local mode", 9520);
 		}
 
 		if (options.format === "json") {
@@ -470,9 +524,13 @@ export async function cfImageLocalFetcher(request: Request): Promise<Response> {
 }
 
 // 422 isn't surfaced to the user, instead we fail open and return source image
-function cfImageError(message: string): Response {
+// along with the Cf-Resized error header matching production semantics.
+function cfImageError(message: string, code = 9412): Response {
 	return new Response(`cf.image local transform error: ${message}`, {
 		status: 422,
-		headers: { "content-type": "text/plain" },
+		headers: {
+			"content-type": "text/plain",
+			"cf-resized": `err=${code}`,
+		},
 	});
 }

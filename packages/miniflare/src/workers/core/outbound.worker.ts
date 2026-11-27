@@ -93,11 +93,15 @@ async function resizeImage(
 	const transformed =
 		await env[CoreBindings.SERVICE_LOOPBACK].fetch(transformRequest);
 
-	// If Sharp can't transform the image return the origin image
+	// If Sharp can't transform the image return the origin image with Cf-Resized error
 	if (!transformed.ok) {
 		const headers = new Headers(originResponse.headers);
 		headers.delete("content-encoding");
 		headers.delete("content-length");
+		const cfResized = transformed.headers.get("cf-resized");
+		if (cfResized) {
+			headers.set("cf-resized", cfResized);
+		}
 		return new Response(source, {
 			status: originResponse.status,
 			headers,

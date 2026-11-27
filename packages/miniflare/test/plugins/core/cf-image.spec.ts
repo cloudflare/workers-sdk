@@ -79,6 +79,12 @@ describe("cf.image local transforms", () => {
 										headers: { "content-type": "image/png" },
 									});
 								}
+								if (url.pathname === "/img.svg") {
+									return new Response(
+										'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>',
+										{ headers: { "content-type": "image/svg+xml" } }
+									);
+								}
 								if (url.pathname === "/img.jpg") {
 									return new Response(sourceJpeg, {
 										headers: { "content-type": "image/jpeg" },
@@ -256,12 +262,34 @@ describe("cf.image local transforms", () => {
 		expect(res.headers.get("cf-resized")).toBe(null);
 	});
 
-	test("fails open to source bytes when the image cannot be decoded", async ({
+	test("fails open to source bytes with Cf-Resized error header when the image cannot be decoded", async ({
 		expect,
 	}) => {
 		const { res, body } = await transform({ width: 50 }, "/not-an-image");
 		expect(res.status).toBe(200);
-		expect(res.headers.get("cf-resized")).toBe(null);
+		expect(res.headers.get("cf-resized")).toBe("err=9412");
 		expect(body.toString()).toBe("this is definitely not an image");
+	});
+
+	test("fails open to source bytes with Cf-Resized err=9520 for unsupported SVG inputs", async ({
+		expect,
+	}) => {
+		const { res, body } = await transform({ width: 50 }, "/img.svg");
+		expect(res.status).toBe(200);
+		expect(res.headers.get("cf-resized")).toBe("err=9520");
+		expect(body.toString()).toContain("<svg");
+	});
+
+	test("applies flip, blur, and sharpen options", async ({ expect }) => {
+		const { res, body } = await transform({
+			width: 50,
+			flip: "hv",
+			blur: 2,
+			sharpen: 1,
+		});
+		expect(res.status).toBe(200);
+		expect(res.headers.get("cf-resized")).toBe("internal=ok/m");
+		const meta = await sharp(body).metadata();
+		expect(meta.width).toBe(50);
 	});
 });

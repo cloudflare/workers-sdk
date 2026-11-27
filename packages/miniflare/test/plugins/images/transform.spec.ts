@@ -16,9 +16,13 @@ export default {
 		}
 		const transform = JSON.parse(url.searchParams.get("transform") || "{}");
 		const format = url.searchParams.get("format") || "image/png";
+		const qualityParam = url.searchParams.get("quality");
+		const outputOpts = qualityParam
+			? { format, quality: Number(qualityParam) }
+			: { format };
 		const result = await env.IMAGES.input(request.body)
 			.transform(transform)
-			.output({ format });
+			.output(outputOpts);
 		return result.response();
 	},
 };
@@ -81,12 +85,16 @@ describe("Images binding local transforms", () => {
 	async function transform(
 		transformOpts: Record<string, unknown>,
 		format = "image/png",
-		source: Buffer = sourcePng
+		source: Buffer = sourcePng,
+		quality?: number
 	) {
 		const params = new URLSearchParams({
 			transform: JSON.stringify(transformOpts),
 			format,
 		});
+		if (quality !== undefined) {
+			params.set("quality", String(quality));
+		}
 		const res = await mf.dispatchFetch(`http://localhost/?${params}`, {
 			method: "POST",
 			body: source,
@@ -270,5 +278,49 @@ describe("Images binding local transforms", () => {
 			body: source,
 		});
 		expect(await response.json()).toMatchObject({ width: 200, height: 100 });
+	});
+
+	test("flip:v flips the image vertically", async ({ expect }) => {
+		// Source has white top half and red bottom half; vertical flip swaps them.
+		const { body } = await transform({ flip: "v" });
+		const top = await pixelAt(body, 100, 10);
+		const bottom = await pixelAt(body, 100, 90);
+		expect([top.r, top.g, top.b]).toEqual([255, 0, 0]);
+		expect([bottom.r, bottom.g, bottom.b]).toEqual([255, 255, 255]);
+	});
+
+	test("blur softens the boundary between regions", async ({ expect }) => {
+		const { body } = await transform({ blur: 5 });
+		// Right at the horizontal seam (y = 50), blurring mixes white (255,255,255)
+		// and red (255,0,0) so g/b sit strictly between 0 and 255.
+		const seam = await pixelAt(body, 100, 50);
+		expect(seam.r).toBe(255);
+		expect(seam.g).toBeGreaterThan(20);
+		expect(seam.g).toBeLessThan(235);
+	});
+
+	test("sharpen applies without error", async ({ expect }) => {
+		const { res, body } = await transform({ sharpen: 2 });
+		expect(res.status).toBe(200);
+		const meta = await sharp(body).metadata();
+		expect(meta.width).toBe(200);
+		expect(meta.height).toBe(100);
+	});
+
+	test("output quality controls JPEG compression", async ({ expect }) => {
+		// Use a blurred gradient-like image so quality visibly changes JPEG size.
+		const { body: lowQ } = await transform(
+			{ blur: 10 },
+			"image/jpeg",
+			sourcePng,
+			10
+		);
+		const { body: highQ } = await transform(
+			{ blur: 10 },
+			"image/jpeg",
+			sourcePng,
+			95
+		);
+		expect(lowQ.length).toBeLessThan(highQ.length);
 	});
 });
