@@ -4,4 +4,4 @@
 
 Update Chrome DevTools to Chrome 150 (M150)
 
-Updates the Chrome DevTools frontend used by `wrangler dev` and the Cloudflare Vite plugin to the Chrome 150 (M150) release. The frontend's content security policy explicitly allows debugger connections to both `127.0.0.1` and `localhost`.
+The DevTools frontend used by `wrangler dev` and the Cloudflare Vite plugin now uses Chrome 150. Existing inspector URLs, including IPv6 loopback and secure WebSocket tunnels, remain supported.

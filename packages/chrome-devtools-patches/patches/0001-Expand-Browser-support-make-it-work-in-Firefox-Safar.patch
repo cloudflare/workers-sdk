@@ -10,6 +10,9 @@ Subject: [PATCH 1/8] Expand Browser support (make it work in Firefox & Safari)
 
 * A (vendored) custom elements polyfill for Safari
 
+* Allow both WebSocket schemes for inspector URLs. DevTools accepts explicit
+  hosts and tunnel endpoints, and CSP cannot allowlist IPv6 literals by host.
+
 Acceptance criteria:
 If updating the commit of devtools upon which these patches are based, make sure this patch:
 * Displays console.log() output with sufficient contrast in dark mode
@@ -23,7 +26,7 @@ If updating the commit of devtools upon which these patches are based, make sure
  4 files changed, 43 insertions(+), 2 deletions(-)
 
 diff --git a/front_end/entrypoint_template.html b/front_end/entrypoint_template.html
-index e778aefef2..d9c5df53b5 100644
+index e778aefef2..623992b989 100644
 --- a/front_end/entrypoint_template.html
 +++ b/front_end/entrypoint_template.html
 @@ -13,12 +13,45 @@
@@ -61,7 +64,7 @@ index e778aefef2..d9c5df53b5 100644
    http-equiv="Content-Security-Policy"
    content="default-src 'self' devtools: data:; style-src 'self' 'unsafe-inline' devtools:; object-src 'none'; script-src
 -  'self' https://chrome-devtools-frontend.appspot.com; img-src 'self' data: blob:; frame-src * data:; connect-src data: https://chromeuxreport.googleapis.com 'self' devtools: ws://127.0.0.1:*;">
-+  'sha256-AIRkz8wOl/LgmUJduw9AsUnrb94PlBpePfk0Rowm+Vo=' 'self' https://chrome-devtools-frontend.appspot.com; img-src 'self' data: blob:; frame-src * data:; connect-src data: https://chromeuxreport.googleapis.com 'self' devtools: ws://127.0.0.1:* ws://localhost:*;">
++  'sha256-AIRkz8wOl/LgmUJduw9AsUnrb94PlBpePfk0Rowm+Vo=' 'self' https://chrome-devtools-frontend.appspot.com; img-src 'self' data: blob:; frame-src * data:; connect-src data: https://chromeuxreport.googleapis.com 'self' devtools: ws: wss:;">
 +
  <meta name="referrer" content="no-referrer">
 +<script>
