@@ -700,6 +700,18 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			expect(result.framework?.name).toBe("Cloudflare Pages");
 		});
 
+		it("should detect Pages project when pages_build_output_dir is the project root", async ({
+			expect,
+		}) => {
+			const { detectedFramework } = await detectFramework(
+				process.cwd(),
+				context,
+				{ wranglerConfig: { pages_build_output_dir: "" }, target: "cf" }
+			);
+
+			expect(detectedFramework.framework.id).toBe("cloudflare-pages");
+		});
+
 		it("should detect Pages project when pages.json cache file exists", async ({
 			expect,
 		}) => {

@@ -9,6 +9,7 @@ import {
 	UserError,
 	YarnPackageManager,
 } from "@cloudflare/workers-utils";
+import { isPagesConfig } from "@cloudflare/workers-utils/config";
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import chalk from "chalk";
@@ -327,7 +328,7 @@ async function isPagesProject(
 	wranglerConfig: WranglerConfig | undefined,
 	detectedFramework?: DetectedFramework | undefined
 ): Promise<boolean> {
-	if (wranglerConfig?.pages_build_output_dir) {
+	if (wranglerConfig && isPagesConfig(wranglerConfig)) {
 		// The `pages_build_output_dir` is set only for Pages projects
 		return true;
 	}
