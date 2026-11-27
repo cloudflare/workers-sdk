@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { types } from "node:util";
 import { UserError } from "@cloudflare/workers-utils";
 import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerSource from "worker:remoteBindings/ProxyServerWorker";
@@ -91,10 +92,9 @@ export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
 	options: StartRemoteProxySessionOptions
 ): Promise<RemoteProxySession> {
-	let auth = options.auth;
-	if (typeof auth !== "function" && "then" in auth) {
-		auth = Promise.resolve(auth);
-		void auth.catch(() => {});
+	const { auth } = options;
+	if (types.isPromise(auth)) {
+		void Promise.prototype.then.call(auth, undefined, () => {});
 	}
 
 	for (const [name, binding] of Object.entries(bindings ?? {})) {

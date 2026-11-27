@@ -139,3 +139,30 @@ it("reports an auth promise rejected while idle on the first binding call", asyn
 	expect(response.status).toBe(503);
 	expect(await response.text()).toContain("Credentials unavailable");
 });
+
+it("does not subscribe to an auth thenable until the first binding call", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const then = vi.fn(() => {
+		throw new Error("Credentials unavailable");
+	});
+	const session = await startRemoteProxySession(
+		{ AI: { type: "ai" } },
+		{
+			auth: { then } as unknown as Promise<CfAccount>,
+			logger: createLogger(),
+			cliDisplayName: "Wrangler",
+		}
+	);
+	onTestFinished(() => session.dispose());
+	expect(then).not.toHaveBeenCalled();
+
+	const response = await fetch(session.remoteProxyConnectionString, {
+		headers: { "MF-Binding": "AI" },
+		signal: AbortSignal.timeout(5_000),
+	});
+	expect(response.status).toBe(503);
+	expect(await response.text()).toContain("Credentials unavailable");
+	expect(then).toHaveBeenCalledOnce();
+});
