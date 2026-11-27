@@ -88,7 +88,10 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				target: "wrangler",
 				context,
 			})
-		).resolves.toMatchObject({ configured: true });
+		).resolves.toMatchObject({
+			configured: true,
+			wranglerConfig: { configPath: "/tmp" },
+		});
 	});
 
 	it("should migrate an existing Wrangler project by default", async ({
@@ -102,6 +105,54 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				context,
 			})
 		).resolves.toMatchObject({ configured: false });
+	});
+
+	it("should report the Wrangler config the caller passes or names, or the project folder's own", async ({
+		expect,
+	}) => {
+		await seed({
+			"wrangler.jsonc": "{}",
+			"app/index.html": "<h1>Hello World</h1>",
+		});
+		const projectPath = join(process.cwd(), "app");
+
+		await expect(
+			details.getDetailsForAutoConfig({ projectPath, context })
+		).resolves.toMatchObject({ wranglerConfig: undefined });
+
+		await writeFile(
+			join(projectPath, "wrangler.toml"),
+			'main = "src/index.ts"'
+		);
+		await expect(
+			details.getDetailsForAutoConfig({ projectPath, context })
+		).resolves.toMatchObject({
+			wranglerConfig: {
+				configPath: join(projectPath, "wrangler.toml"),
+				main: "src/index.ts",
+			},
+		});
+
+		const wranglerConfigPath = join(projectPath, "custom.jsonc");
+		await writeFile(wranglerConfigPath, '{ "main": "src/custom.ts" }');
+		await expect(
+			details.getDetailsForAutoConfig({
+				projectPath,
+				// Relative to the project folder, not the current one
+				wranglerConfigPath: "custom.jsonc",
+				context,
+			})
+		).resolves.toMatchObject({
+			wranglerConfig: { configPath: wranglerConfigPath, main: "src/custom.ts" },
+		});
+
+		const wranglerConfig = {
+			configPath: wranglerConfigPath,
+			main: "src/worker.ts",
+		};
+		await expect(
+			details.getDetailsForAutoConfig({ projectPath, wranglerConfig, context })
+		).resolves.toMatchObject({ wranglerConfig });
 	});
 
 	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
@@ -660,6 +711,18 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			expect(result.configured).toBe(false);
 			expect(result.framework?.id).toBe("cloudflare-pages");
 			expect(result.framework?.name).toBe("Cloudflare Pages");
+		});
+
+		it("should detect Pages project when pages_build_output_dir is the project root", async ({
+			expect,
+		}) => {
+			const { detectedFramework } = await detectFramework(
+				process.cwd(),
+				context,
+				{ wranglerConfig: { pages_build_output_dir: "" }, target: "cf" }
+			);
+
+			expect(detectedFramework.framework.id).toBe("cloudflare-pages");
 		});
 
 		it("should detect Pages project when pages.json cache file exists", async ({

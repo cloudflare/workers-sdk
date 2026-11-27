@@ -10,6 +10,7 @@ import {
 	ReactRouter,
 } from "../../src/frameworks/react-router";
 import * as packagesUtils from "../../src/frameworks/utils/packages";
+import { installCloudflareVitePlugin } from "../../src/frameworks/utils/vite-plugin";
 import { createMockContext } from "../helpers/mock-context";
 
 function fixture(name: string): string {
@@ -246,6 +247,30 @@ describe("React Router framework configure()", () => {
 			);
 			expect(content).toContain("ServerRouter");
 			expect(content).toContain("renderToReadableStream");
+		});
+	});
+
+	describe("project with a Wrangler config", () => {
+		beforeEach(async () => {
+			await writeFile(
+				resolve("react-router.config.ts"),
+				fixture("config-middleware-true.ts")
+			);
+		});
+
+		it("leaves the Worker entry to a Wrangler config that names one", async ({
+			expect,
+		}) => {
+			const framework = createFramework("7.16.0");
+			await framework.configure({
+				...getBaseOptions(),
+				wranglerConfig: { main: "./server/worker.ts" },
+			});
+
+			expect(existsSync(resolve("workers/app.ts"))).toBe(false);
+			expect(existsSync(resolve("app/entry.server.tsx"))).toBe(false);
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
+			expect(installCloudflareVitePlugin).toHaveBeenCalled();
 		});
 	});
 

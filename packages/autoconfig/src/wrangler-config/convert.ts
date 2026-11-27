@@ -1,3 +1,4 @@
+import path from "node:path";
 import {
 	CONFIGURATION_DOCS_URL,
 	ENVIRONMENTS_DOCS_URL,
@@ -406,31 +407,63 @@ function addViteToolingFollowUp(
 	}
 }
 
+function normalizeDirectory(directory: string): string {
+	return path.posix
+		.normalize(directory.replaceAll("\\", "/"))
+		.replace(/(.)\/+$/, "$1");
+}
+
 /**
- * Reports a Wrangler assets directory, which the Vite build provides instead.
+ * Checks whether the Vite build deploys a Wrangler assets directory's files at the same URLs,
+ * going by default folder names: it's Vite's default public folder, which Vite copies into its
+ * build, or the framework's default build output folder. A folder inside the build output would
+ * move its files under a prefix.
+ *
+ * @param directory The Wrangler assets directory
+ * @param outputDir The framework's default build output folder, if known
+ * @returns Whether the Vite build deploys the directory's files
+ */
+function isDeployedByVite(directory: string, outputDir?: string): boolean {
+	const normalizedDirectory = normalizeDirectory(directory);
+	if (normalizedDirectory === "public") {
+		return true;
+	}
+	if (outputDir === undefined) {
+		return false;
+	}
+
+	return normalizedDirectory === normalizeDirectory(outputDir);
+}
+
+/**
+ * Reports a Wrangler assets directory whose files the Vite build won't deploy.
  *
  * @param source The branch's settings
  * @param sourcePrefix Where the branch is in the Wrangler config
  * @param followUps The follow-ups to add to
+ * @param outputDir The framework's default build output folder, if known
  */
 function addViteAssetsDirectoryFollowUp(
 	source: UnknownRecord,
 	sourcePrefix: string,
-	followUps: MigrationFollowUp[]
+	followUps: MigrationFollowUp[],
+	outputDir: string | undefined
 ): void {
-	const assets = getRecord(source, "assets");
-	if (assets && hasOwn(assets, "directory")) {
-		followUps.push(
-			createFollowUp(
-				"vite-assets-directory",
-				"The Wrangler assets directory was not migrated. Configure static assets in the Vite project.",
-				{
-					docsUrl: CONFIGURATION_DOCS_URL,
-					sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}assets.directory`,
-				}
-			)
-		);
+	const directory = getRecord(source, "assets")?.directory;
+	if (typeof directory !== "string" || isDeployedByVite(directory, outputDir)) {
+		return;
 	}
+
+	followUps.push(
+		createFollowUp(
+			"vite-assets-directory",
+			`Vite doesn't deploy the files in the Wrangler assets directory \`${directory}\`. Move them into Vite's public folder (\`public\` by default), or point Vite's \`publicDir\` at it.`,
+			{
+				docsUrl: CONFIGURATION_DOCS_URL,
+				sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}assets.directory`,
+			}
+		)
+	);
 }
 
 /**
@@ -443,15 +476,17 @@ function addViteAssetsDirectoryFollowUp(
 function addViteBranchFollowUps(
 	source: UnknownRecord,
 	sourcePrefix: string,
-	followUps: MigrationFollowUp[]
+	followUps: MigrationFollowUp[],
+	outputDir: string | undefined
 ): void {
-	addViteAssetsDirectoryFollowUp(source, sourcePrefix, followUps);
+	addViteAssetsDirectoryFollowUp(source, sourcePrefix, followUps, outputDir);
 	const previews = getRecord(source, "previews");
 	if (previews) {
 		addViteAssetsDirectoryFollowUp(
 			createPreviewSource(source, previews),
 			`${sourcePrefix ? `${sourcePrefix}.` : ""}previews`,
-			followUps
+			followUps,
+			outputDir
 		);
 	}
 }
@@ -628,12 +663,14 @@ export function convertWranglerSettings(
  *
  * @param rawConfig The parsed contents of a Wrangler JSON, JSONC, or TOML configuration.
  * @param bundler The bundler the project builds with.
+ * @param outputDir The framework's default build output folder, relative to the Wrangler config, if known.
  *
  * @returns The `wrangler.config.ts` branches, and follow-ups for the build settings left out.
  */
 export function convertWranglerBuild(
 	rawConfig: RawConfig,
-	bundler: MigrationBundler
+	bundler: MigrationBundler,
+	outputDir?: string
 ): ConvertedWranglerBuild {
 	const source = rawConfig as UnknownRecord;
 	const followUps: MigrationFollowUp[] = [];
@@ -681,12 +718,13 @@ export function convertWranglerBuild(
 			}
 		}
 
-		addViteBranchFollowUps(baseSource, "", followUps);
+		addViteBranchFollowUps(baseSource, "", followUps, outputDir);
 		for (const [name, environment] of environments) {
 			addViteBranchFollowUps(
 				createBranchSource(source, environment, name),
 				`env.${name}`,
-				followUps
+				followUps,
+				outputDir
 			);
 		}
 
