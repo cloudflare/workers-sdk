@@ -7,6 +7,7 @@ import { parseFile, transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
+import { readWranglerConfig } from "../wrangler-config/read";
 import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
@@ -487,6 +488,11 @@ export class ReactRouter extends Framework {
 			projectPath,
 			this.frameworkVersion
 		);
+		// A Wrangler config's `main` is the project's own Worker entry, which already renders the app
+		const existingEntrypoint =
+			wranglerConfigPath === undefined
+				? undefined
+				: readWranglerConfig(wranglerConfigPath).main;
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
@@ -495,8 +501,7 @@ export class ReactRouter extends Framework {
 				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
-			// A project with a Wrangler config already has its Worker entry and server rendering
-			if (wranglerConfigPath === undefined) {
+			if (existingEntrypoint === undefined) {
 				mkdirSync("workers");
 
 				writeAppTs(useMiddlewarePattern);
@@ -527,7 +532,7 @@ export class ReactRouter extends Framework {
 		return {
 			buildTool: "vite",
 			workerConfig: {
-				entrypoint: "./workers/app.ts",
+				entrypoint: existingEntrypoint ?? "./workers/app.ts",
 			},
 		};
 	}

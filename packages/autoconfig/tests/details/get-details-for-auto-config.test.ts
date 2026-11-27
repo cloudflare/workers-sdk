@@ -88,7 +88,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				target: "wrangler",
 				context,
 			})
-		).resolves.toMatchObject({ configured: true });
+		).resolves.toMatchObject({ configured: true, wranglerConfigPath: "/tmp" });
 	});
 
 	it("should migrate an existing Wrangler project by default", async ({
