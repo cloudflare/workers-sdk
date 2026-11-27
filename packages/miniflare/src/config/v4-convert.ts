@@ -77,6 +77,10 @@ function convertSharedOptions(options: ParsedV4MiniflareOptions) {
 		isolatedResourcePersistencePath: options.isolatedResourcePersistencePath,
 		resourceTmpPath: options.resourceTmpPath,
 		stripDisablePrettyError: options.stripDisablePrettyError,
+		unsafeImageUrlTransformationsPassthrough:
+			options.unsafeImageUrlTransformationsPassthrough,
+		unsafeImageUrlTransformationsFetchViaPublicUrl:
+			options.unsafeImageUrlTransformationsFetchViaPublicUrl,
 		telemetry: options.telemetry,
 		publicUrl: options.publicUrl,
 		containerEngine: options.containerEngine,
@@ -207,8 +211,12 @@ function convertWorkerOptions(
 	dev.unsafeEphemeralDurableObjects = worker.unsafeEphemeralDurableObjects;
 	dev.stripCfConnectingIp = worker.stripCfConnectingIp;
 	dev.zone = worker.zone;
+	dev.routeHostname = worker.routeHostname;
 	if (worker.access !== undefined) {
 		config.access = { dev: worker.access };
+	}
+	if (worker.imageUrlTransformations !== undefined) {
+		config.images = { urlTransformations: worker.imageUrlTransformations };
 	}
 
 	const options: WorkerOptions = { config };

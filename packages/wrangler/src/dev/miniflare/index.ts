@@ -13,6 +13,7 @@ import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import {
 	buildAssetOptions,
+	buildImageUrlTransformationsOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 	getDefaultProjectTmpPath,
@@ -45,6 +46,7 @@ import type { UUID } from "node:crypto";
 
 export {
 	buildAssetOptions,
+	buildImageUrlTransformationsOptions,
 	buildMiniflareBindingOptions,
 	getDefaultProjectTmpPath,
 	getIdentifier,
@@ -103,7 +105,12 @@ export interface ConfigBundle {
 	enableContainers: boolean;
 	// Zone to use for the CF-Worker header in outbound fetches
 	zone: string | undefined;
+	// Hostname of the Worker's first route, for `/cdn-cgi/image/` source checks
+	routeHostname: string | undefined;
 	access: Config["access"] | undefined;
+	imageUrlTransformations:
+		| NonNullable<Config["images"]>["url_transformations"]
+		| undefined;
 	sendMetrics: boolean | undefined;
 	// The stable, externally-reachable URL of the proxy server in front of
 	// this Miniflare instance (e.g. Wrangler's ProxyWorker URL).
@@ -299,7 +306,11 @@ export async function buildMiniflareOptions(
 				cronTriggers: config.crons,
 				outboundService: config.outboundService,
 				zone: config.zone,
+				routeHostname: config.routeHostname,
 				access: config.access?.dev,
+				imageUrlTransformations: buildImageUrlTransformationsOptions(
+					config.imageUrlTransformations
+				),
 				connectHandlers: config.connectHandlers,
 			},
 			...externalWorkers,

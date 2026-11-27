@@ -23,6 +23,19 @@ function routeSpecificity(url: URL) {
 	return hostScore * 26 + pathScore;
 }
 
+/**
+ * Gets the hostname a route serves, without any leading wildcard.
+ *
+ * @param route A route pattern, such as `*.example.com/images/*`.
+ * @returns The hostname, or `undefined` if the route matches any hostname.
+ */
+export function getRouteHostname(route: string): string | undefined {
+	const hasProtocol = /^[a-z0-9+\-.]+:\/\//i.test(route);
+	const url = new URL(hasProtocol ? route : `https://${route}`);
+	const hostname = url.hostname.replace(/^\*\.?/, "");
+	return hostname === "" ? undefined : hostname;
+}
+
 export function parseRoutes(allRoutes: Map<string, string[]>): WorkerRoute[] {
 	const routes: WorkerRoute[] = [];
 	for (const [target, targetRoutes] of allRoutes) {

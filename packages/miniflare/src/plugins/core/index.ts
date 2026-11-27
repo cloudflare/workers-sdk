@@ -41,6 +41,7 @@ import {
 } from "../r2";
 import {
 	buildRemoteProxyProps,
+	getRouteHostname,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -767,6 +768,13 @@ export interface GlobalServicesOptions {
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: ParsedWorkerOptions[];
 }
+function getFirstRouteHostname(
+	routes: string[] | undefined
+): string | undefined {
+	const route = routes?.[0];
+	return route === undefined ? undefined : getRouteHostname(route);
+}
+
 export function getGlobalServices({
 	sharedOptions,
 	loopbackSecret,
@@ -820,6 +828,18 @@ export function getGlobalServices({
 		{
 			name: CoreBindings.STRIP_DISABLE_PRETTY_ERROR,
 			json: JSON.stringify(sharedOptions.stripDisablePrettyError),
+		},
+		{
+			name: CoreBindings.IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH,
+			json: JSON.stringify(
+				!!sharedOptions.unsafeImageUrlTransformationsPassthrough
+			),
+		},
+		{
+			name: CoreBindings.IMAGE_URL_TRANSFORMATIONS_FETCH_VIA_PUBLIC_URL,
+			json: JSON.stringify(
+				!!sharedOptions.unsafeImageUrlTransformationsFetchViaPublicUrl
+			),
 		},
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
@@ -923,6 +943,24 @@ export function getGlobalServices({
 			serviceEntryBindings.push({
 				name: CoreBindings.JSON_ACCESS_BLOB_PREFIX + workerOpt.config.name,
 				json: JSON.stringify(accessBlob),
+			});
+		}
+	}
+	// Per-worker `/cdn-cgi/image/` config, keyed by worker name so the entry
+	// worker can pick the correct one after routing.
+	for (const workerOpt of allWorkerOpts ?? []) {
+		const urlTransformations = workerOpt.config.images?.urlTransformations;
+		if (urlTransformations !== undefined) {
+			serviceEntryBindings.push({
+				name:
+					CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX +
+					workerOpt.config.name,
+				json: JSON.stringify({
+					...urlTransformations,
+					routeHostname:
+						workerOpt.dev?.routeHostname ??
+						getFirstRouteHostname(allWorkerRoutes.get(workerOpt.config.name)),
+				}),
 			});
 		}
 	}

@@ -19,7 +19,7 @@ import {
 } from "@cloudflare/workflows-shared/src/introspection";
 import { $ as colors$, bold, dim, green, yellow } from "kleur/colors";
 import stoppable from "stoppable";
-import { getGlobalDispatcher, Pool } from "undici";
+import { Agent, getGlobalDispatcher, Pool } from "undici";
 import SCRIPT_DEV_REGISTRY_PROXY from "worker:core/dev-registry-proxy";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
@@ -908,6 +908,9 @@ export class Miniflare {
 	publicUrl?: string;
 	#socketPorts?: SocketPorts;
 	#runtimeDispatcher?: Dispatcher;
+	// Fetches `/cdn-cgi/image/` sources from `publicUrl`, accepting the dev
+	// server's self-signed certificate
+	#imageSourceDispatcher?: Dispatcher;
 	#dispatchConnectTcpSockets = new Set<net.Socket>();
 	#dispatchConnectDatagramSockets = new Set<dgram.Socket>();
 	#proxyClient?: ProxyClient;
@@ -967,6 +970,10 @@ export class Miniflare {
 	// Artifacts namespace, so the warning appears once per instance rather
 	// than on every `setOptions()`.
 	#warnedArtifactsEventsWithoutLocalNamespace = false;
+
+	// Keys of `/core/log` messages sent with `MF-Log-Once` that have already
+	// been logged, so embedded workers can warn once per instance
+	#loggedOnce = new Set<string>();
 
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
@@ -1295,6 +1302,48 @@ export class Miniflare {
 			}
 			res.end(getErrorMessage(error));
 		}
+	}
+
+	/**
+	 * Fetches a same-host `/cdn-cgi/image/` source image from the public URL.
+	 * The request is made from Node so a dev server's self-signed certificate
+	 * can be accepted; only the public URL is ever fetched.
+	 *
+	 * @param url in format: /core/image-source?pathname&search
+	 */
+	async #handleLoopbackImageSourceRequest(
+		request: Request,
+		url: URL
+	): Promise<Response> {
+		const publicUrl = this.publicUrl ?? this.#runtimeEntryURL?.toString();
+		if (publicUrl === undefined) {
+			return new Response("Public URL is not available.", { status: 503 });
+		}
+		// Assign the path rather than resolving it against the public URL, so a
+		// path such as `//example.com/` can't change the host
+		const target = new URL(publicUrl);
+		target.pathname = url.searchParams.get("pathname") ?? "/";
+		target.search = url.searchParams.get("search") ?? "";
+
+		const headers = new Headers(request.headers);
+		headers.delete("host");
+		this.#imageSourceDispatcher ??= new Agent({
+			connect: { rejectUnauthorized: false },
+		});
+		const res = await fetch(target, {
+			headers,
+			redirect: "manual",
+			dispatcher: this.#imageSourceDispatcher,
+		});
+		// `fetch` decodes the body, so its encoding and length no longer apply
+		const resHeaders = new Headers(res.headers);
+		resHeaders.delete("content-encoding");
+		resHeaders.delete("content-length");
+		return new Response(res.body, {
+			status: res.status,
+			statusText: res.statusText,
+			headers: resHeaders,
+		});
 	}
 
 	/**
@@ -1658,12 +1707,20 @@ export class Miniflare {
 					`Expected ${SharedHeaders.LOG_LEVEL} header to be log level, got ${level}`
 				);
 				const logLevel = level as LogLevel;
-				let message = await request.text();
-				if (!colors$.enabled) {
-					message = stripAnsi(message);
+				const onceKey = request.headers.get(SharedHeaders.LOG_ONCE);
+				if (onceKey !== null && this.#loggedOnce.has(onceKey)) {
+					response = new Response(null, { status: 204 });
+				} else {
+					if (onceKey !== null) {
+						this.#loggedOnce.add(onceKey);
+					}
+					let message = await request.text();
+					if (!colors$.enabled) {
+						message = stripAnsi(message);
+					}
+					this.#log.logWithLevel(logLevel, message);
+					response = new Response(null, { status: 204 });
 				}
-				this.#log.logWithLevel(logLevel, message);
-				response = new Response(null, { status: 204 });
 			} else if (url.pathname === "/core/remote-bindings-access-warning") {
 				// Reported by the remote-bindings proxy CLIENT worker when it sees
 				// a 403 + "Cloudflare Access" body, or a redirect to the Access login
@@ -1817,6 +1874,8 @@ export class Miniflare {
 							this.#devRegistry.instanceId,
 					},
 				});
+			} else if (url.pathname === "/core/image-source") {
+				response = await this.#handleLoopbackImageSourceRequest(request, url);
 			} else if (url.pathname === "/core/public-url") {
 				// Returns the public URL for this Miniflare instance. If a publicUrl
 				// has been set (e.g. the Vite dev server URL), use that; otherwise
@@ -4030,6 +4089,9 @@ export class Miniflare {
 		// Also close the dev-registry dispatcher (same issue as above).
 		try {
 			await this.#devRegistryDispatcher?.close();
+		} catch {}
+		try {
+			await this.#imageSourceDispatcher?.close();
 		} catch {}
 
 		await this.#stopLoopbackServer();

@@ -10,9 +10,11 @@ import {
 } from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";
+import { handleImageTransform, isImageTransformPath } from "./image-transform";
 import { matchRoutes } from "./routing";
 import { handleScheduled } from "./scheduled";
 import type { EmailStoreService } from "../email/storage";
+import type { ImageUrlTransformationsConfig } from "./image-transform";
 import type { WorkerRoute } from "./routing";
 import type { Colorize } from "kleur/colors";
 
@@ -37,6 +39,8 @@ type Env = {
 	[CoreBindings.TRIGGER_HANDLERS]: boolean;
 	[CoreBindings.LOG_REQUESTS]: boolean;
 	[CoreBindings.STRIP_DISABLE_PRETTY_ERROR]: boolean;
+	[CoreBindings.IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH]: boolean;
+	[CoreBindings.IMAGE_URL_TRANSFORMATIONS_FETCH_VIA_PUBLIC_URL]: boolean;
 } & {
 	[K in `${typeof CoreBindings.SERVICE_USER_ROUTE_PREFIX}${string}`]:
 		| Fetcher
@@ -45,6 +49,10 @@ type Env = {
 	[K in `${typeof CoreBindings.JSON_ACCESS_BLOB_PREFIX}${string}`]:
 		| { app_aud: string; jwt_claims?: Record<string, unknown> }
 		| undefined;
+} & {
+	[
+		K in `${typeof CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX}${string}`
+	]: ImageUrlTransformationsConfig | undefined;
 };
 
 const encoder = new TextEncoder();
@@ -510,8 +518,12 @@ function handleProxy(request: Request, env: Env) {
 	return stub.fetch(request);
 }
 
-export default <ExportedHandler<Env>>{
-	async fetch(request, env, ctx) {
+const handler = {
+	async fetch(
+		request: Request<unknown, IncomingRequestCfProperties>,
+		env: Env,
+		ctx: ExecutionContext
+	): Promise<Response> {
 		const startTime = Date.now();
 
 		const clientIp = request.cf?.clientIp as string;
@@ -668,6 +680,31 @@ export default <ExportedHandler<Env>>{
 				return await r2S3Service.fetch(s3Request);
 			}
 
+			if (
+				isImageTransformPath(url.pathname) &&
+				!env[CoreBindings.IMAGE_URL_TRANSFORMATIONS_PASSTHROUGH]
+			) {
+				let response = await handleImageTransform(
+					request,
+					url,
+					env[
+						`${CoreBindings.JSON_IMAGE_URL_TRANSFORMATIONS_PREFIX}${routeTarget}`
+					],
+					env,
+					ctx,
+					(sourceRequest) =>
+						handler.fetch(
+							sourceRequest as Request<unknown, IncomingRequestCfProperties>,
+							env,
+							ctx
+						)
+				);
+				if (env[CoreBindings.LOG_REQUESTS]) {
+					response = maybeLogRequest(request, response, env, ctx, startTime);
+				}
+				return response;
+			}
+
 			// Inject per-worker Cloudflare Access blob header so workerd populates ctx.access
 			const accessBlob =
 				env[`${CoreBindings.JSON_ACCESS_BLOB_PREFIX}${routeTarget}`];
@@ -691,5 +728,7 @@ export default <ExportedHandler<Env>>{
 		}
 	},
 };
+
+export default handler satisfies ExportedHandler<Env>;
 
 export { ProxyServer } from "./proxy.worker";

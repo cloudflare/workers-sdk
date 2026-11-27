@@ -402,11 +402,18 @@ const V4WorkerOptionsShapeSchema = z.object({
 	streamingTails: z.array(V4ServiceDesignatorSchema).optional(),
 	stripCfConnectingIp: z.boolean().default(true),
 	zone: z.string().optional(),
+	routeHostname: z.string().optional(),
 	/** Cloudflare Access authentication metadata exposed as `ctx.access` */
 	access: z
 		.object({
 			aud: z.string(),
 			identity: z.record(z.string(), z.unknown()).optional(),
+		})
+		.optional(),
+	imageUrlTransformations: z
+		.object({
+			enabled: z.boolean(),
+			allowedOrigins: z.array(z.string()).optional(),
 		})
 		.optional(),
 	unsafeBindings: z
@@ -718,6 +725,8 @@ export const V4SharedOptionsSchema = z.object({
 	/** Project temp directory for plugin files; relative to cwd if not absolute. */
 	resourceTmpPath: z.string().optional(),
 	stripDisablePrettyError: z.boolean().default(true),
+	unsafeImageUrlTransformationsPassthrough: z.boolean().optional(),
+	unsafeImageUrlTransformationsFetchViaPublicUrl: z.boolean().optional(),
 	telemetry: z
 		.object({
 			enabled: z.boolean().default(false),
@@ -867,7 +876,9 @@ export type V4WorkerOptionsShape = {
 	streamingTails?: V4ServiceDesignator[];
 	stripCfConnectingIp?: boolean;
 	zone?: string;
+	routeHostname?: string;
 	access?: { aud: string; identity?: Record<string, unknown> };
+	imageUrlTransformations?: { enabled: boolean; allowedOrigins?: string[] };
 	unsafeBindings?: Array<{
 		name: string;
 		type: string;
@@ -1040,6 +1051,8 @@ export type V4SharedOptions = {
 	isolatedResourcePersistencePath?: string;
 	resourceTmpPath?: string;
 	stripDisablePrettyError?: boolean;
+	unsafeImageUrlTransformationsPassthrough?: boolean;
+	unsafeImageUrlTransformationsFetchViaPublicUrl?: boolean;
 	telemetry?: { enabled?: boolean; deviceId?: string };
 	publicUrl?: string;
 	containerEngine?:

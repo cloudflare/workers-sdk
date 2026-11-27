@@ -1,5 +1,6 @@
 export const SharedHeaders = {
 	LOG_LEVEL: "MF-Log-Level",
+	LOG_ONCE: "MF-Log-Once",
 	NAMESPACE: "MF-Namespace",
 } as const;
 

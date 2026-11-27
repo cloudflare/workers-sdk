@@ -17,6 +17,7 @@ import {
 	getLocalExplorerEnabledFromEnv,
 	getLocalExplorerUseViteAllowedHostsFromEnv,
 	getLocalObservabilityEnabledFromEnv,
+	getWorkerRouteHostname,
 	getWorkerZone,
 } from "@cloudflare/workers-utils";
 import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
@@ -255,6 +256,12 @@ export async function getDevMiniflareOptions(
 				// TODO: Move this handling into Miniflare so Access is applied to the
 				// user Worker invocation without propagating through Worker boundaries.
 				access: entryWorkerConfig?.access,
+				// Requests are routed to the router, so Miniflare looks up the
+				// `/cdn-cgi/image/` config here
+				images:
+					resolvedPluginConfig.type === "assets-only"
+						? resolvedPluginConfig.config.images
+						: entryWorkerConfig?.images,
 				compatibilityDate: INTERNAL_WORKERS_COMPATIBILITY_DATE,
 				compatibilityFlags: ["enable_ctx_exports"],
 				manifest: routerWorkerManifest,
@@ -609,6 +616,7 @@ export async function getDevMiniflareOptions(
 								},
 								dev: {
 									zone: getWorkerZone(config),
+									routeHostname: getWorkerRouteHostname(config),
 									remoteProxyConnectionString:
 										remoteProxySessionData?.session
 											?.remoteProxyConnectionString,
@@ -639,6 +647,8 @@ export async function getDevMiniflareOptions(
 	const miniflareOptions: MiniflareOptions = {
 		log: logger,
 		publicUrl,
+		// Vite serves `public/` files that Miniflare can't see
+		unsafeImageUrlTransformationsFetchViaPublicUrl: true,
 		unsafeProxySharedSecret: PROXY_SHARED_SECRET,
 		logRequests: false,
 		inspectorPort:
@@ -890,6 +900,7 @@ export async function getPreviewMiniflareOptions(
 				},
 				dev: {
 					zone: getWorkerZone(config),
+					routeHostname: getWorkerRouteHostname(config),
 					remoteProxyConnectionString:
 						remoteProxySessionData?.session?.remoteProxyConnectionString,
 					unsafeInspectorProxy: inputInspectorPort !== false,

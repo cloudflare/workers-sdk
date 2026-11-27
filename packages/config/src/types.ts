@@ -618,10 +618,10 @@ export interface WorkerConfig {
 			 */
 			enabled: boolean;
 			/**
-			 * Hostnames that images may be fetched from, in addition to the
-			 * Worker's own zone, without a protocol (e.g. `"images.example.com"`
-			 * or `"*.example.com"`). Use `["*"]` to allow any origin. At most 10
-			 * entries.
+			 * Origins that images may be fetched from, e.g. `"images.example.com"`,
+			 * `"*.example.com"` or `"images.example.com/uploads/"`, without the protocol.
+			 * When set, only these origins are allowed; the Worker's own zone isn't implied.
+			 * Use `["*"]` to allow any origin. At most 10 entries.
 			 */
 			allowedOrigins?: string[];
 		};

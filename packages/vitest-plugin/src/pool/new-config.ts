@@ -4,7 +4,11 @@ import {
 	SINGLETON_BINDING_TYPES,
 } from "@cloudflare/config";
 import { createMiniflareExports } from "@cloudflare/containers-shared";
-import { formatZodError, getWorkerZone } from "@cloudflare/workers-utils";
+import {
+	formatZodError,
+	getWorkerRouteHostname,
+	getWorkerZone,
+} from "@cloudflare/workers-utils";
 import { loadDevVars, loadEnv } from "@cloudflare/workers-utils/local-env";
 import { Log, LogLevel, resolveLocalBindings } from "miniflare";
 import type {
@@ -248,6 +252,8 @@ export function mergeCloudflareConfigWorker(
 		dev: {
 			...userWorker.dev,
 			zone: userWorker.dev?.zone ?? getWorkerZone(worker),
+			routeHostname:
+				userWorker.dev?.routeHostname ?? getWorkerRouteHostname(worker),
 			remoteProxyConnectionString:
 				userRemoteProxyConnectionString ?? remoteProxyConnectionString,
 		},

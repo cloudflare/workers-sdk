@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
-import { getDockerPath } from "@cloudflare/workers-utils";
+import { getDockerPath, getHostnameFromRoute } from "@cloudflare/workers-utils";
 import {
 	configFileName,
 	createArtifactsLocalDefaultWarner,
@@ -108,6 +108,24 @@ function getZoneForCfWorkerHeader(
 		return firstRouteTrigger.zone_name;
 	}
 	return config.dev?.origin?.hostname;
+}
+
+function getRouteHostname(config: StartDevWorkerOptions): string | undefined {
+	const firstRouteTrigger = config.triggers?.find(
+		(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
+	);
+	if (firstRouteTrigger === undefined) {
+		return undefined;
+	}
+	// Keep `zone_name`, the only hostname a route such as `*/*` has
+	return getHostnameFromRoute(
+		"zone_name" in firstRouteTrigger
+			? {
+					pattern: firstRouteTrigger.pattern,
+					zone_name: firstRouteTrigger.zone_name,
+				}
+			: firstRouteTrigger.pattern
+	);
 }
 
 export async function convertToConfigBundle(
@@ -222,7 +240,9 @@ export async function convertToConfigBundle(
 		containerEngine: event.config.dev.containerEngine,
 		enableContainers: event.config.dev.enableContainers ?? true,
 		zone: getZoneForCfWorkerHeader(event.config),
+		routeHostname: getRouteHostname(event.config),
 		access: event.config.access,
+		imageUrlTransformations: event.config.imageUrlTransformations,
 		sendMetrics: event.config.sendMetrics,
 		publicUrl: event.config.dev?.server?.port
 			? buildPublicUrl({

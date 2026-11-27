@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { createContainerDevPlan } from "@cloudflare/containers-shared";
 import {
+	getHostnameFromRoute,
 	getWranglerHiddenDirPath,
 	getZoneFromRoute,
 	UserError,
@@ -1282,6 +1283,21 @@ export function getZoneFromConfig(config: Config): string | undefined {
 	return undefined;
 }
 
+/**
+ * Gets the hostname of a normalized Wrangler config's first route. Miniflare
+ * checks same-host `/cdn-cgi/image/` sources against `allowed_origins` as if
+ * they came from it.
+ *
+ * @param config The Wrangler config.
+ * @returns The hostname, if the Worker has a route with one.
+ */
+export function getRouteHostnameFromConfig(config: Config): string | undefined {
+	const firstRoute = config.route ?? config.routes?.[0];
+	return firstRoute === undefined
+		? undefined
+		: getHostnameFromRoute(firstRoute);
+}
+
 export type SourcelessWorkerOptions = Omit<
 	V4WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
@@ -1408,7 +1424,11 @@ export function getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		zone: getZoneFromConfig(config),
+		routeHostname: getRouteHostnameFromConfig(config),
 		access: config.access?.dev,
+		imageUrlTransformations: buildImageUrlTransformationsOptions(
+			config.images?.url_transformations
+		),
 		connectHandlers: config.connect.map((handler) => ({
 			protocol: handler.protocol,
 			port: handler.port,
@@ -1502,4 +1522,23 @@ function assignWorkflowEvents(
 		}
 	}
 	return assignment;
+}
+
+/**
+ * Converts the Wrangler `images.url_transformations` config to Miniflare's
+ * `imageUrlTransformations` option.
+ *
+ * @param urlTransformations The Wrangler `images.url_transformations` config.
+ * @returns The Miniflare option, or `undefined` if not configured.
+ */
+export function buildImageUrlTransformationsOptions(
+	urlTransformations: NonNullable<Config["images"]>["url_transformations"]
+): V4WorkerOptions["imageUrlTransformations"] {
+	if (urlTransformations === undefined) {
+		return undefined;
+	}
+	return {
+		enabled: urlTransformations.enabled,
+		allowedOrigins: urlTransformations.allowed_origins,
+	};
 }
