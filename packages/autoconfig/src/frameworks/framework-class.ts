@@ -108,6 +108,8 @@ export type ConfigurationOptions = {
 	packageManager: PackageManager;
 	isWorkspaceRoot: boolean;
 	context: AutoConfigContext;
+	/** The project's own Wrangler configuration file, for a project that already runs on Workers */
+	wranglerConfigPath?: string;
 };
 
 export type PackageJsonScriptsOverrides = {

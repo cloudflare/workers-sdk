@@ -293,19 +293,9 @@ function needsViteEnvAPIFutureFlag(reactRouterVersion: string): boolean {
  * Otherwise generates the traditional pattern with `AppLoadContext` module augmentation
  * and explicit `env`/`ctx` forwarding.
  *
- * If the file already exists on disk it is left untouched and a warning is logged.
- *
  * @param useMiddlewarePattern - Whether `v8_middleware` is enabled in the user's config.
- * @param context - The autoconfig context providing logger and other dependencies.
  */
-function writeAppTs(useMiddlewarePattern: boolean, context: AutoConfigContext) {
-	if (existsSync("workers/app.ts")) {
-		context.logger.warn(
-			"The file `workers/app.ts` already exists on disk, and so we're not modifying it. This may lead to deployment failures if `workers/app.ts` is not set up correctly."
-		);
-		return;
-	}
-
+function writeAppTs(useMiddlewarePattern: boolean) {
 	if (useMiddlewarePattern) {
 		writeFileSync(
 			"workers/app.ts",
@@ -491,6 +481,7 @@ export class ReactRouter extends Framework {
 		isWorkspaceRoot,
 		context,
 		target,
+		wranglerConfigPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const useMiddlewarePattern = hasV8MiddlewareFlag(
 			projectPath,
@@ -504,18 +495,21 @@ export class ReactRouter extends Framework {
 				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
-			mkdirSync("workers", { recursive: true });
+			// A project with a Wrangler config already has its Worker entry and server rendering
+			if (wranglerConfigPath === undefined) {
+				mkdirSync("workers");
 
-			writeAppTs(useMiddlewarePattern, context);
+				writeAppTs(useMiddlewarePattern);
 
-			await installPackages(packageManager.type, ["isbot"], {
-				dev: true,
-				startText: "Installing the isbot package",
-				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
-				isWorkspaceRoot,
-			});
+				await installPackages(packageManager.type, ["isbot"], {
+					dev: true,
+					startText: "Installing the isbot package",
+					doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
+					isWorkspaceRoot,
+				});
 
-			writeEntryServerTsx(useMiddlewarePattern, context);
+				writeEntryServerTsx(useMiddlewarePattern, context);
+			}
 
 			transformViteConfig(projectPath, {
 				viteEnvironmentName: "ssr",
