@@ -39,8 +39,6 @@ export class ProxyWorker implements DurableObject {
 	) {}
 
 	proxyData?: ProxyData;
-	lazy = false;
-	connectionRequested = false;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
 	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
 
@@ -65,19 +63,6 @@ export class ProxyWorker implements DurableObject {
 		switch (event?.type) {
 			case "pause":
 				this.proxyData = undefined;
-				this.lazy = event.lazy;
-				this.connectionRequested = false;
-				this.processQueue();
-				break;
-
-			case "connectionFailed":
-				this.proxyData = undefined;
-				this.connectionRequested = false;
-				for (const [, deferred] of this.getOrderedQueue()) {
-					deferred.resolve(new Response(event.message, { status: 503 }));
-				}
-				this.requestQueue.clear();
-				this.requestRetryQueue.clear();
 				break;
 
 			case "play":
@@ -101,25 +86,8 @@ export class ProxyWorker implements DurableObject {
 	}
 
 	processQueue() {
-		if (
-			this.proxyData?.refreshAt !== undefined &&
-			Date.now() >= this.proxyData.refreshAt
-		) {
-			this.proxyData = undefined;
-			this.connectionRequested = false;
-		}
 		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) {
-			if (
-				this.lazy &&
-				!this.connectionRequested &&
-				(this.requestQueue.size > 0 || this.requestRetryQueue.size > 0)
-			) {
-				this.connectionRequested = true;
-				void sendMessageToProxyController(this.env, {
-					type: "requestConnection",
-				});
-			}
 			return;
 		}
 

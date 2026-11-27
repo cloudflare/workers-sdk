@@ -49,11 +49,9 @@ export type ReadyEvent = {
 // ProxyWorker
 export type ProxyWorkerIncomingRequestBody =
 	| { type: "play"; proxyData: ProxyData }
-	| { type: "pause"; lazy: boolean }
-	| { type: "connectionFailed"; message: string };
+	| { type: "pause" };
 export type ProxyWorkerOutgoingRequestBody =
 	| { type: "error"; error: SerializedError }
-	| { type: "requestConnection" }
 	| { type: "previewTokenExpired"; proxyData: ProxyData };
 
 export type SerializedError = {
@@ -65,8 +63,6 @@ export type SerializedError = {
 export type UrlOriginParts = Pick<URL, "protocol" | "hostname" | "port">;
 
 export type ProxyData = {
-	/** Refresh a lazy preview before forwarding the next binding call after this time. */
-	refreshAt?: number;
 	userWorkerUrl: UrlOriginParts;
 	userWorkerInnerUrlOverrides?: Partial<UrlOriginParts>;
 	headers: Record<string, string>;

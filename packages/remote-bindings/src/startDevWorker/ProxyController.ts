@@ -16,7 +16,6 @@ import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
 import type {
 	ErrorEvent,
-	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
 	ReadyEvent,
@@ -35,14 +34,12 @@ export class ProxyController {
 
 	protected latestConfig?: StartDevWorkerOptions;
 	protected latestBundle?: Bundle;
-	protected latestProxyData?: ProxyData;
 
 	secret = randomUUID();
 
 	constructor(
 		private onError: (event: ErrorEvent) => void,
-		private onPreviewTokenExpired: () => void,
-		private onRequestConnection: () => void = () => {}
+		private onPreviewTokenExpired: () => void
 	) {}
 
 	protected createProxyWorker() {
@@ -184,23 +181,13 @@ export class ProxyController {
 	}
 	pause(config: StartDevWorkerOptions) {
 		this.latestConfig = config;
-		this.latestProxyData = undefined;
-		void this.sendMessageToProxyWorker({
-			type: "pause",
-			lazy: config.lazy ?? false,
-		});
-	}
-	/** Fail queued binding requests without stopping the local development server. */
-	connectionFailed(message: string) {
-		this.latestProxyData = undefined;
-		void this.sendMessageToProxyWorker({ type: "connectionFailed", message });
+		void this.sendMessageToProxyWorker({ type: "pause" });
 	}
 	play(data: ReloadCompleteEvent) {
 		this.localServerReady.resolve();
 
 		this.latestConfig = data.config;
 		this.latestBundle = data.bundle;
-		this.latestProxyData = data.proxyData;
 
 		void this.sendMessageToProxyWorker({
 			type: "play",
@@ -209,23 +196,10 @@ export class ProxyController {
 	}
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
 		switch (message.type) {
-			case "requestConnection":
-				this.onRequestConnection();
-				break;
-
-			case "previewTokenExpired": {
-				// Responses from a paused or replaced preview must not restore its bindings.
-				const currentToken =
-					this.latestProxyData?.headers["cf-workers-preview-token"];
-				if (
-					currentToken !== undefined &&
-					message.proxyData.headers["cf-workers-preview-token"] === currentToken
-				) {
-					this.onPreviewTokenExpired();
-				}
+			case "previewTokenExpired":
+				this.onPreviewTokenExpired();
 
 				break;
-			}
 			case "error":
 				this.emitErrorEvent("Error inside ProxyWorker", message.error);
 

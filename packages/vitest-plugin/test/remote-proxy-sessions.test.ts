@@ -1,18 +1,13 @@
-import fs from "node:fs/promises";
-import path from "node:path";
 import util from "node:util";
-import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it, vi } from "vitest";
 import { CloudflarePoolWorker } from "../src/pool/cloudflare-pool-worker";
 import {
 	disposeAllRemoteProxySessions,
-	parseProjectOptions,
 	remoteProxySessionsDataMap,
 } from "../src/pool/config";
 import { poolWorkerStarted } from "../src/pool/pages";
 import type { RemoteProxySessionData } from "@cloudflare/remote-bindings";
 import type { RemoteProxyConnectionString } from "miniflare";
-import type { TestProject } from "vitest/node";
 
 function fakeSessionData(dispose: () => Promise<void>): RemoteProxySessionData {
 	return {
@@ -81,54 +76,5 @@ describe("remote proxy session disposal", () => {
 		await workerB.stop();
 		expect(dispose).toHaveBeenCalledTimes(1);
 		expect(remoteProxySessionsDataMap.has(configPath)).toBe(false);
-	});
-
-	describe("projects with remote bindings disabled", () => {
-		runInTempDir();
-
-		it.for(["cloudflare.config.ts", "wrangler.jsonc"])(
-			"preserves the shared session for %s until shutdown",
-			async (configFile, { expect }) => {
-				await fs.writeFile(
-					configFile,
-					configFile === "cloudflare.config.ts"
-						? `export default { worker: {
-							name: "shared-worker", compatibilityDate: "2026-01-01",
-							env: { AI: { type: "ai" } },
-						} };`
-						: JSON.stringify({
-								name: "shared-worker",
-								compatibility_date: "2026-01-01",
-								ai: { binding: "AI" },
-							})
-				);
-				const configPath = path.resolve(configFile);
-				const dispose = vi.fn(async () => {});
-				const sessionData = fakeSessionData(dispose);
-				remoteProxySessionsDataMap.set(configPath, sessionData);
-				const project = {
-					name: "remote-bindings-disabled",
-					config: { root: process.cwd() },
-					vite: { config: { mode: "test", envDir: process.cwd() } },
-				} as unknown as TestProject;
-
-				const options = await parseProjectOptions(project, {
-					...(configFile === "cloudflare.config.ts"
-						? { config: true }
-						: { wrangler: { configPath } }),
-					remoteBindings: false,
-				});
-
-				expect(
-					options.projectWorkers?.[0].dev?.remoteProxyConnectionString
-				).toBeUndefined();
-				expect(remoteProxySessionsDataMap.get(configPath)).toBe(sessionData);
-				expect(dispose).not.toHaveBeenCalled();
-
-				await disposeAllRemoteProxySessions();
-				expect(dispose).toHaveBeenCalledOnce();
-				expect(remoteProxySessionsDataMap.size).toBe(0);
-			}
-		);
 	});
 });

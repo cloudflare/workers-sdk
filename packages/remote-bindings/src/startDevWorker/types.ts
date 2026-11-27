@@ -17,8 +17,6 @@ export type StartDevWorkerOptions = {
 	compatibilityFlags: StartDevWorkerInput["compatibilityFlags"];
 	complianceRegion: Config["compliance_region"];
 	auth: AsyncHook<CfAccount>;
-	/** Establish the remote connection only when a binding request arrives. */
-	lazy?: boolean;
 	server: {
 		hostname?: string;
 		port: number;
