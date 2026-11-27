@@ -107,7 +107,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({ configured: false });
 	});
 
-	it("should report the Wrangler config the caller passes, or the project folder's own", async ({
+	it("should report the Wrangler config the caller passes or names, or the project folder's own", async ({
 		expect,
 	}) => {
 		await seed({
@@ -133,8 +133,20 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			},
 		});
 
+		const wranglerConfigPath = join(projectPath, "custom.jsonc");
+		await writeFile(wranglerConfigPath, '{ "main": "src/custom.ts" }');
+		await expect(
+			details.getDetailsForAutoConfig({
+				projectPath,
+				wranglerConfigPath,
+				context,
+			})
+		).resolves.toMatchObject({
+			wranglerConfig: { configPath: wranglerConfigPath, main: "src/custom.ts" },
+		});
+
 		const wranglerConfig = {
-			configPath: join(projectPath, "custom.jsonc"),
+			configPath: wranglerConfigPath,
 			main: "src/worker.ts",
 		};
 		await expect(
