@@ -157,6 +157,7 @@ export async function migrateBundler(
 		bundler = "vite",
 		dryRun = false,
 		installDependencies = true,
+		outputDir,
 	} = options;
 	if (bundler !== "vite" && bundler !== "wrangler") {
 		throw new Error(
@@ -173,7 +174,8 @@ export async function migrateBundler(
 
 	const build = convertWranglerBuild(
 		readWranglerConfig(absoluteConfigPath),
-		bundler
+		bundler,
+		outputDir
 	);
 	const followUps = [...build.followUps];
 	const wranglerConfig = renderWranglerConfig(build);

@@ -199,15 +199,28 @@ describe("Wrangler environment and tooling conversion", () => {
 		).toEqual(["dependencies_instrumentation"]);
 	});
 
-	it("reports a Vite assets directory once", ({ expect }) => {
-		const result = convert({
-			assets: { directory: "public" },
-			compatibility_date: "2026-09-23",
-			name: "example-worker",
-		});
+	it.for([
+		["./static", undefined, ["vite-assets-directory"]],
+		["./public", undefined, []],
+		["./dist", "dist", []],
+		["./build/client", "build", []],
+		["./dist", undefined, ["vite-assets-directory"]],
+	] as const)(
+		"reports the Vite assets directory %s with build output %s only when Vite won't deploy it",
+		([directory, outputDir, codes], { expect }) => {
+			const source = {
+				assets: { directory },
+				compatibility_date: "2026-09-23",
+				name: "example-worker",
+			};
 
-		expect(result.codes).toEqual(["vite-assets-directory"]);
-	});
+			expect(
+				convertWranglerBuild(source, "vite", outputDir).followUps.map(
+					({ code }) => code
+				)
+			).toEqual(codes);
+		}
+	);
 
 	it("renders Wrangler tooling branches independently", ({ expect }) => {
 		const result = convert(
@@ -308,7 +321,7 @@ describe("Wrangler environment and tooling conversion", () => {
 
 	it("keeps build settings out of the Worker settings", ({ expect }) => {
 		const source = {
-			assets: { directory: "public" },
+			assets: { directory: "static" },
 			compatibility_date: "2026-09-23",
 			dev: { port: 9000 },
 			env: { production: { vars: { MODE: "production" } } },
