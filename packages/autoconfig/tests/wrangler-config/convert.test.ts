@@ -3,7 +3,11 @@ import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
 } from "../../src/cloudflare-config/render";
-import { convertWranglerConfig } from "../../src/wrangler-config/convert";
+import { convertWranglerBuild } from "../../src/wrangler-config/build";
+import {
+	convertWranglerConfig,
+	convertWranglerSettings,
+} from "../../src/wrangler-config/convert";
 import type { MigrationBundler } from "../../src/wrangler-config/types";
 
 function convert(
@@ -300,5 +304,31 @@ describe("Wrangler environment and tooling conversion", () => {
 		expect(result.cloudflareConfig).toContain(
 			"env.staging.previews.environment_custom_option"
 		);
+	});
+
+	it("keeps build settings out of the Worker settings", ({ expect }) => {
+		const source = {
+			assets: { directory: "public" },
+			compatibility_date: "2026-09-23",
+			dev: { port: 9000 },
+			env: { production: { vars: { MODE: "production" } } },
+			name: "example-worker",
+		};
+
+		expect(
+			convertWranglerSettings(source, []).followUps.map(({ code }) => code)
+		).toEqual(["environments-migrated"]);
+		expect(
+			convertWranglerBuild(source, "vite").followUps.map(({ code }) => code)
+		).toEqual([
+			"vite-mode-environment-conflict",
+			"vite-tooling-config",
+			"vite-assets-directory",
+			"vite-assets-directory",
+		]);
+		expect(convertWranglerBuild(source, "wrangler")).toMatchObject({
+			followUps: [],
+			toolingBase: expect.anything(),
+		});
 	});
 });

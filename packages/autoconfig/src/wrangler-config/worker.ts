@@ -19,7 +19,6 @@ import {
 } from "./helpers";
 import { convertTriggers } from "./triggers";
 import type {
-	MigrationBundler,
 	MigrationFollowUp,
 	OutputComment,
 	OutputObject,
@@ -90,7 +89,6 @@ function createDependenciesInstrumentationFollowUp(
 export function convertWorkerConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
-	bundler: MigrationBundler,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): OutputObject {
@@ -194,18 +192,6 @@ export function convertWorkerConfig(
 		]);
 		if (runtimeAssets.properties.length > 0) {
 			properties.push({ key: "assets", value: runtimeAssets });
-		}
-		if (bundler === "vite" && hasOwn(assets, "directory")) {
-			report(
-				createFollowUp(
-					"vite-assets-directory",
-					"The Wrangler assets directory was not migrated. Configure static assets in the Vite project.",
-					{
-						docsUrl: CONFIGURATION_DOCS_URL,
-						sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}assets.directory`,
-					}
-				)
-			);
 		}
 	}
 
@@ -389,7 +375,6 @@ export function convertWorkerConfig(
 export function convertRootConfig(
 	source: UnknownRecord,
 	sourcePrefix: string,
-	bundler: MigrationBundler,
 	imports: Set<string>,
 	followUps: MigrationFollowUp[]
 ): OutputObject {
@@ -406,13 +391,7 @@ export function convertRootConfig(
 
 	properties.push({
 		key: "worker",
-		value: convertWorkerConfig(
-			source,
-			sourcePrefix,
-			bundler,
-			imports,
-			followUps
-		),
+		value: convertWorkerConfig(source, sourcePrefix, imports, followUps),
 	});
 
 	return {

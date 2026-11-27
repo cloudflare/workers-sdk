@@ -1,7 +1,8 @@
 import { ENVIRONMENTS_DOCS_URL } from "../follow-ups";
 import type {
 	ConvertedBranch,
-	ConvertedWranglerConfig,
+	ConvertedWranglerBuild,
+	ConvertedWranglerSettings,
 	MigrationFollowUp,
 	OutputComment,
 	OutputObject,
@@ -174,7 +175,7 @@ function renderMigrationGuard(followUps: MigrationFollowUp[]): string {
 }
 
 export function renderCloudflareConfig(
-	converted: ConvertedWranglerConfig
+	converted: ConvertedWranglerSettings
 ): string {
 	const imports = [...converted.imports, "defineConfig"].sort();
 	const sections = [`import { ${imports.join(", ")} } from "cf/config";`];
@@ -208,7 +209,7 @@ export function renderCloudflareConfig(
 }
 
 export function renderWranglerConfig(
-	converted: ConvertedWranglerConfig
+	converted: ConvertedWranglerBuild
 ): string | null {
 	if (!converted.toolingBase && converted.toolingEnvironments.size === 0) {
 		return null;

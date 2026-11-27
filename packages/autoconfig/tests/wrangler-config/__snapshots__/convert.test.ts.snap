@@ -231,6 +231,18 @@ exports[`Wrangler environment and tooling conversion > reports Vite mode and too
  * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
  */
 /**
+ * TODO(@cloudflare): cf migrate: previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+ */
+/**
+ * TODO(@cloudflare): cf migrate: env.development.previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+ */
+/**
+ * TODO(@cloudflare): cf migrate: env.production.previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
+ * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
+ */
+/**
  * TODO(@cloudflare): cf migrate: env.development: The Wrangler environment \`development\` conflicts with Vite's default \`development\` mode. Rename or remap this environment before using the generated config so Vite does not select it implicitly.
  * @see https://developers.cloudflare.com/workers/wrangler/environments/
  */
@@ -243,18 +255,6 @@ exports[`Wrangler environment and tooling conversion > reports Vite mode and too
  */
 /**
  * TODO(@cloudflare): cf migrate: previews.define: Wrangler-specific tooling fields in previews were not migrated because the Vite bundler is selected: define.
- */
-/**
- * TODO(@cloudflare): cf migrate: previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
- * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
- */
-/**
- * TODO(@cloudflare): cf migrate: env.development.previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
- * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
- */
-/**
- * TODO(@cloudflare): cf migrate: env.production.previews: Preview configuration was converted to \`ctx.isPreview\` handling. Review the generated Preview branch.
- * @see https://developers.cloudflare.com/workers/wrangler/configuration/#previews
  */
 throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
@@ -330,14 +330,14 @@ export default defineConfig((ctx) => {
 });
 ",
   "codes": [
-    "vite-mode-environment-conflict",
-    "vite-mode-environment-conflict",
-    "vite-tooling-config",
-    "vite-tooling-config",
     "preview-review",
     "preview-review",
     "preview-review",
     "environments-migrated",
+    "vite-mode-environment-conflict",
+    "vite-mode-environment-conflict",
+    "vite-tooling-config",
+    "vite-tooling-config",
   ],
   "wranglerConfig": null,
 }

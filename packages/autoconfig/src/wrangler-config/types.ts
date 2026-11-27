@@ -59,11 +59,20 @@ export interface ConvertedBranch {
 	previewConfig?: OutputObject;
 }
 
-export interface ConvertedWranglerConfig {
+/** A Wrangler config's Worker settings, which don't depend on the bundler. */
+export interface ConvertedWranglerSettings {
 	base: ConvertedBranch;
 	environments: Map<string, ConvertedBranch>;
 	followUps: MigrationFollowUp[];
 	imports: Set<string>;
+}
+
+/** A Wrangler config's build settings for the bundler the project builds with. */
+export interface ConvertedWranglerBuild {
+	followUps: MigrationFollowUp[];
 	toolingBase?: ConvertedBranch;
 	toolingEnvironments: Map<string, ConvertedBranch>;
 }
+
+export type ConvertedWranglerConfig = ConvertedWranglerSettings &
+	ConvertedWranglerBuild;
