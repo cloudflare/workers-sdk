@@ -111,8 +111,8 @@ export class DevRegistry {
 		mkdirSync(this.registryPath, { recursive: true });
 
 		if (!this.watcher) {
-			const liveness = { live: true };
-			const watcher = watch(this.registryPath, {
+			this.startWatcher(
+				this.registryPath,
 				// On Windows, chokidar's default `fs.watch` backend
 				// (`ReadDirectoryChangesW`) frequently drops or delays create
 				// events for files added shortly after the watcher attaches —
@@ -120,32 +120,79 @@ export class DevRegistry {
 				// Windows so cross-process worker registrations are observed
 				// reliably. The registry directory is small, so the cost is
 				// negligible.
-				usePolling: process.platform === "win32",
-				interval: 100,
-				// `close()` does not stop a directory scan that is already in
-				// flight. When it finishes, chokidar re-enters `add()`, which sets
-				// `closed` back to false and clears paths passed to `unwatch()`, so
-				// it attaches a native watcher we can no longer reach and the
-				// process never exits. `ignored` is a user option: `add()` does not
-				// clear it, and it is consulted on every rebuilt match list, so a
-				// predicate closing over this watcher's liveness refuses that late
-				// re-attach — whether the watcher was retired by `dispose()` or by
-				// `updateRegistryPath()`.
-				ignored: () => !liveness.live,
-			}).on("all", () => {
-				this.refresh();
-			});
-			this.watcherLiveness = liveness;
-			this.watcher = watcher;
-			// Chokidar installs native watchers asynchronously during its initial
-			// scan. Wait until their closers are registered before allowing disposal.
-			this.watcherReadyPromise = new Promise((resolve) => {
-				watcher.once("ready", resolve);
-			});
+				process.platform === "win32"
+			);
 		}
 
 		assert(this.watcherReadyPromise !== undefined);
 		await this.watcherReadyPromise;
+	}
+
+	/**
+	 * Start watching the registry directory, making the new watcher the current
+	 * one.
+	 *
+	 * The platform can refuse a native watch, such as when macOS has run out of
+	 * FSEvents streams (`EMFILE`) or Linux out of inotify watches (`ENOSPC`).
+	 * Chokidar reports that as an `error` event, which would crash the process
+	 * if nothing listened for it. A native watcher that fails is replaced by a
+	 * polling one, which needs no watch handles; a polling watcher that fails is
+	 * retired with a warning.
+	 *
+	 * @param registryPath The registry directory to watch.
+	 * @param usePolling Whether to poll the directory rather than watch it natively.
+	 */
+	private startWatcher(registryPath: string, usePolling: boolean): void {
+		const liveness = { live: true };
+		const ready = Promise.withResolvers<void>();
+		const watcher = watch(registryPath, {
+			usePolling,
+			interval: 100,
+			// `close()` does not stop a directory scan that is already in
+			// flight. When it finishes, chokidar re-enters `add()`, which sets
+			// `closed` back to false and clears paths passed to `unwatch()`, so
+			// it attaches a native watcher we can no longer reach and the
+			// process never exits. `ignored` is a user option: `add()` does not
+			// clear it, and it is consulted on every rebuilt match list, so a
+			// predicate closing over this watcher's liveness refuses that late
+			// re-attach — whether the watcher was retired by `dispose()`, by
+			// `updateRegistryPath()` or after an error.
+			ignored: () => !liveness.live,
+		})
+			.on("all", () => {
+				this.refresh();
+			})
+			.on("error", (error: unknown) => {
+				// Only the current watcher is live, and a retired one has nothing
+				// left to report.
+				if (!liveness.live) {
+					return;
+				}
+				const reason = error instanceof Error ? error.message : String(error);
+				void this.retireWatcher();
+				if (usePolling) {
+					this.log.warn(
+						`Unable to watch the dev registry at ${registryPath} for changes: ${reason}\n` +
+							"Service bindings to Workers in other dev sessions will not pick up their changes."
+					);
+					ready.resolve();
+					return;
+				}
+				this.log.warn(
+					`Unable to watch the dev registry at ${registryPath} for changes: ${reason}\n` +
+						"Polling it for changes instead."
+				);
+				this.startWatcher(registryPath, true);
+				// `retireWatcher()` removed this watcher's `ready` listener, so a
+				// `watch()` still waiting on it waits for the replacement instead.
+				ready.resolve(this.watcherReadyPromise);
+			});
+		// Chokidar installs native watchers asynchronously during its initial
+		// scan. Wait until their closers are registered before allowing disposal.
+		watcher.once("ready", () => ready.resolve());
+		this.watcherLiveness = liveness;
+		this.watcher = watcher;
+		this.watcherReadyPromise = ready.promise;
 	}
 
 	/**
@@ -184,7 +231,12 @@ export class DevRegistry {
 		this.watcher = undefined;
 		this.watcherReadyPromise = undefined;
 
-		return watcher?.close();
+		const closed = watcher?.close();
+		// `close()` removes every listener, but a scan still in flight can still
+		// report an error, and an `error` event nothing listens for would crash
+		// the process.
+		watcher?.on("error", () => {});
+		return closed;
 	}
 
 	/**
