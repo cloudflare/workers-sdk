@@ -203,7 +203,8 @@ describe("Wrangler environment and tooling conversion", () => {
 		["./static", undefined, ["vite-assets-directory"]],
 		["./public", undefined, []],
 		["./dist", "dist", []],
-		["./build/client", "build", []],
+		["./build/client", "build/client/", []],
+		["./dist/docs", "dist", ["vite-assets-directory"]],
 		["./dist", undefined, ["vite-assets-directory"]],
 	] as const)(
 		"reports the Vite assets directory %s with build output %s only when Vite won't deploy it",
