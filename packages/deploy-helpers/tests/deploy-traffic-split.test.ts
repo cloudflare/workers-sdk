@@ -185,7 +185,7 @@ describe("deploy traffic split approval", () => {
 				id: versionId,
 				resources: { script: { etag: "etag" } },
 			})
-			.mockResolvedValueOnce({ deployments: [split] })
+			.mockResolvedValueOnce({ deployments: [structuredClone(split)] })
 			.mockResolvedValue({});
 		await expect(
 			deploy(props, config, buildResult, options)
