@@ -96,6 +96,8 @@ export type AutoConfigSummary = {
 	scripts: Record<string, string>;
 	workerConfig?: WorkerConfig;
 	buildConfig?: BuildConfig;
+	/** The tool the framework's setup chose for cf to build the project with. */
+	buildTool?: "vite" | "wrangler";
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
 	outputDir: string;

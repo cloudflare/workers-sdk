@@ -473,7 +473,12 @@ export async function runAutoConfig(
 		}
 	}
 
-	if (target === "cf" && workerConfig !== null) {
+	// Keep an existing cloudflare.config.ts, such as one migrated from a Wrangler config
+	if (
+		target === "cf" &&
+		workerConfig !== null &&
+		!existsSync(resolve(projectPath, "cloudflare.config.ts"))
+	) {
 		await saveCloudflareConfig(projectPath, workerConfig);
 	}
 
@@ -873,6 +878,7 @@ export async function buildOperationsSummary(
 			: {
 					workerConfig: workerConfig ?? undefined,
 					buildConfig: configurationResults.buildConfig,
+					buildTool: configurationResults.buildTool,
 				}),
 		outputDir: autoConfigDetails.outputDir,
 		frameworkId: autoConfigDetails.framework.id,
@@ -1017,7 +1023,11 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	if (target === "cf" && workerConfig) {
+	if (
+		target === "cf" &&
+		workerConfig &&
+		!existsSync(resolve(autoConfigDetails.projectPath, "cloudflare.config.ts"))
+	) {
 		logger.log("📄 Create cloudflare.config.ts:");
 		logger.log(indentFileContent(renderCloudflareConfig(workerConfig)));
 		logger.log("");

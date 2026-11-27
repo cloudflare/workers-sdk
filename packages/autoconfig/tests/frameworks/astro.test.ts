@@ -62,6 +62,7 @@ describe("Astro framework", () => {
 				false
 			);
 			expect(result).toEqual({
+				buildTool: "vite",
 				workerConfig: null,
 				createsCloudflareConfig: true,
 			});
@@ -76,6 +77,7 @@ describe("Astro framework", () => {
 		expect(cliPackages.installPackages).not.toHaveBeenCalled();
 		expect(cliCommand.runCommand).not.toHaveBeenCalled();
 		expect(result).toEqual({
+			buildTool: "vite",
 			workerConfig: null,
 			createsCloudflareConfig: true,
 		});

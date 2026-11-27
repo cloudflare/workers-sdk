@@ -1210,6 +1210,46 @@ describe("runAutoConfig()", () => {
 		);
 	});
 
+	it.for([false, true])(
+		"keeps an existing cloudflare.config.ts and reports the build tool (dry run: %s)",
+		async (dryRun, { expect }) => {
+			vi.spyOn(cliPackages, "installPackages").mockResolvedValue();
+			const existingConfig =
+				'export default { worker: { name: "migrated" } };\n';
+			const packageJson = { name: "my-vite-app" };
+			await seed({
+				"cloudflare.config.ts": existingConfig,
+				"package.json": JSON.stringify(packageJson),
+				"dist/index.html": "<h1>Hello World</h1>",
+			});
+
+			const summary = await runAutoConfig(
+				{
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "my-vite-app",
+					framework: new ViteBuildToolFramework({
+						id: "static",
+						name: "Static",
+					}),
+					outputDir: "dist",
+					packageJson,
+					packageManager: NpmPackageManager,
+				},
+				{
+					context: createMockContext(),
+					dryRun,
+					skipConfirmations: true,
+					runBuild: false,
+				}
+			);
+
+			expect(summary.buildTool).toBe("vite");
+			expect(readFileSync("cloudflare.config.ts", "utf8")).toBe(existingConfig);
+			expect(std.out).not.toContain("Create cloudflare.config.ts");
+		}
+	);
+
 	it("adds the cf-generated types to tsconfig.json", async ({ expect }) => {
 		const packageJson = { name: "my-vite-app" };
 		await seed({
