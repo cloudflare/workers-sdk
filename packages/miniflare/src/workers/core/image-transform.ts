@@ -124,7 +124,6 @@ export async function handleImageTransform(
 
 	const contentType = originResponse.headers.get("content-type");
 	if (contentType !== null && /^image\/svg\+xml\b/i.test(contentType)) {
-		// Production serves SVG sources unchanged, ignoring the options
 		return new Response(originResponse.body, {
 			headers: {
 				"content-type": contentType,
@@ -426,7 +425,7 @@ export function authorizeLocalSource(
 	requestUrl: URL,
 	config: ImageUrlTransformationsConfig
 ): AuthorizationResult {
-	if (sourceUrl.hostname !== requestUrl.hostname) {
+	if (sourceUrl.host !== requestUrl.host) {
 		return authorizeSource(sourceUrl, false, config);
 	}
 	if (config.routeHostname === undefined) {

@@ -114,9 +114,18 @@ function getRouteHostname(config: StartDevWorkerOptions): string | undefined {
 	const firstRouteTrigger = config.triggers?.find(
 		(t): t is Extract<Trigger, { type: "route" }> => t.type === "route"
 	);
-	return firstRouteTrigger === undefined
-		? undefined
-		: getHostnameFromRoute(firstRouteTrigger.pattern);
+	if (firstRouteTrigger === undefined) {
+		return undefined;
+	}
+	// Keep `zone_name`, the only hostname a route such as `*/*` has
+	return getHostnameFromRoute(
+		"zone_name" in firstRouteTrigger
+			? {
+					pattern: firstRouteTrigger.pattern,
+					zone_name: firstRouteTrigger.zone_name,
+				}
+			: firstRouteTrigger.pattern
+	);
 }
 
 export async function convertToConfigBundle(

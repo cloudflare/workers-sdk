@@ -1330,10 +1330,19 @@ export class Miniflare {
 		this.#imageSourceDispatcher ??= new Agent({
 			connect: { rejectUnauthorized: false },
 		});
-		return fetch(target, {
+		const res = await fetch(target, {
 			headers,
 			redirect: "manual",
 			dispatcher: this.#imageSourceDispatcher,
+		});
+		// `fetch` decodes the body, so its encoding and length no longer apply
+		const resHeaders = new Headers(res.headers);
+		resHeaders.delete("content-encoding");
+		resHeaders.delete("content-length");
+		return new Response(res.body, {
+			status: res.status,
+			statusText: res.statusText,
+			headers: resHeaders,
 		});
 	}
 

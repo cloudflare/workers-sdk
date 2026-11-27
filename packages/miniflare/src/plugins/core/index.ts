@@ -41,6 +41,7 @@ import {
 } from "../r2";
 import {
 	buildRemoteProxyProps,
+	getRouteHostname,
 	parseRoutes,
 	ProxyNodeBinding,
 	remoteProxyClientWorker,
@@ -767,6 +768,13 @@ export interface GlobalServicesOptions {
 	/** All worker options for building per-worker resource bindings */
 	allWorkerOpts?: ParsedWorkerOptions[];
 }
+function getFirstRouteHostname(
+	routes: string[] | undefined
+): string | undefined {
+	const route = routes?.[0];
+	return route === undefined ? undefined : getRouteHostname(route);
+}
+
 export function getGlobalServices({
 	sharedOptions,
 	loopbackSecret,
@@ -949,7 +957,9 @@ export function getGlobalServices({
 					workerOpt.config.name,
 				json: JSON.stringify({
 					...urlTransformations,
-					routeHostname: workerOpt.dev?.routeHostname,
+					routeHostname:
+						workerOpt.dev?.routeHostname ??
+						getFirstRouteHostname(allWorkerRoutes.get(workerOpt.config.name)),
 				}),
 			});
 		}
