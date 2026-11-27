@@ -197,39 +197,41 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await proxySessionData.session.dispose();
 			});
 
-			test("user provided incorrect auth data", async ({ expect }) => {
-				let error: unknown;
-				try {
-					await maybeStartOrUpdateRemoteProxySession(
-						{
-							bindings: {
-								MY_SERVICE: {
-									type: "service",
-									service: remoteWorkerName,
-									remote: true,
-								},
+			test("fails on the first binding call with incorrect auth data", async ({
+				expect,
+			}) => {
+				const proxySessionData = await maybeStartOrUpdateRemoteProxySession(
+					{
+						bindings: {
+							MY_SERVICE: {
+								type: "service",
+								service: remoteWorkerName,
+								remote: true,
 							},
 						},
-						undefined,
-						{
-							accountId: CLOUDFLARE_ACCOUNT_ID,
-							apiToken: {
-								apiToken: "This is an incorrect API TOKEN!",
-							},
-						}
-					);
-				} catch (e) {
-					error = e;
-				}
-				expect(normalizeOutput(`${error}`)).toMatchInlineSnapshot(
-					`
-					"Error: This Worker uses bindings that need to run remotely, even when developing locally, but the remote session could not be authenticated.
-					It looks like you are authenticating via a custom API token (\`CLOUDFLARE_API_TOKEN\`) set in an environment variable.
-					The token may be invalid or lack the required permissions for this operation.
-					To fix this, verify that your token is valid and has the correct permissions.
-					You can also run \`wrangler whoami\` to check your current authentication status."
-				`
+					},
+					undefined,
+					{
+						accountId: CLOUDFLARE_ACCOUNT_ID,
+						apiToken: {
+							apiToken: "This is an incorrect API TOKEN!",
+						},
+					}
 				);
+				assert(proxySessionData);
+				const { session } = proxySessionData;
+				try {
+					const response = await fetch(session.remoteProxyConnectionString, {
+						headers: { "MF-Binding": "MY_SERVICE" },
+						signal: AbortSignal.timeout(15_000),
+					});
+					expect(response.status).toBe(503);
+					expect(await response.text()).toContain(
+						"the remote session could not be authenticated."
+					);
+				} finally {
+					await session.dispose();
+				}
 			});
 		});
 	}

@@ -156,9 +156,8 @@ const optionalDefines: Record<string, string> = {
 		: {}),
 };
 
-export default defineConfig((options): UserConfig[] => [
-	{
-		entry: { cli: "src/cli.ts" },
+export default defineConfig((options): UserConfig[] => {
+	const standalone: UserConfig = {
 		platform: "node",
 		format: ["cjs"],
 		outDir: OUT_DIR,
@@ -173,19 +172,6 @@ export default defineConfig((options): UserConfig[] => [
 				alwaysBundle: [
 					/^@cloudflare\/(?!(?:workers-types|workers-utils)(?:\/|$))/,
 				],
-			},
-		},
-		dts: {
-			resolver: "tsc",
-			compilerOptions: {
-				paths: {
-					"@cloudflare/workflows-shared/src/types": [
-						"../workflows-shared/src/types",
-					],
-					"@cloudflare/workers-shared/utils/types": [
-						"../workers-shared/utils/types",
-					],
-				},
 			},
 		},
 		// wrangler's published entry points expect `cli.js` / `cli.d.ts`, not
@@ -203,12 +189,10 @@ export default defineConfig((options): UserConfig[] => [
 			),
 			...optionalDefines,
 		},
-		plugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
 		outputOptions: (outputOptions, _format, { cjsDts }) => ({
 			...outputOptions,
 			keepNames: !cjsDts,
-			// Emit a single `cli.js` bundle (inlining dynamic imports) to match the
-			// published CLI layout.
+			// Keep each CommonJS entry in its own bundle without shared chunks.
 			inlineDynamicImports: true,
 		}),
 		inputOptions(inputOptions, _format, { cjsDts }) {
@@ -232,16 +216,45 @@ export default defineConfig((options): UserConfig[] => [
 				},
 			};
 		},
-	},
-	{
-		entry: {
-			"experimental-config": "src/experimental-config.ts",
+	};
+	return [
+		{
+			...standalone,
+			entry: { cli: "src/cli.ts" },
+			plugins: [embedWorkersPlugin({ isWatch: !!options.watch })],
+			dts: {
+				resolver: "tsc",
+				compilerOptions: {
+					paths: {
+						"@cloudflare/workflows-shared/src/types": [
+							"../workflows-shared/src/types",
+						],
+						"@cloudflare/workers-shared/utils/types": [
+							"../workers-shared/utils/types",
+						],
+					},
+				},
+			},
 		},
-		platform: "node",
-		outDir: OUT_DIR,
-		clean: false,
-		tsconfig: "tsconfig.experimental-config.json",
-		dts: true,
-		deps: { dts: { alwaysBundle: ["@cloudflare/config"] } },
-	},
-]);
+		{
+			...standalone,
+			entry: {
+				"platform-proxy-remote-session":
+					"src/api/integrations/platform/remote-session-entry.ts",
+			},
+			clean: false,
+			dts: false,
+		},
+		{
+			entry: {
+				"experimental-config": "src/experimental-config.ts",
+			},
+			platform: "node",
+			outDir: OUT_DIR,
+			clean: false,
+			tsconfig: "tsconfig.experimental-config.json",
+			dts: true,
+			deps: { dts: { alwaysBundle: ["@cloudflare/config"] } },
+		},
+	];
+});

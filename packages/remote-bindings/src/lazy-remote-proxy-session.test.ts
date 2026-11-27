@@ -1,5 +1,7 @@
+import { ErrorAuthServerUnreachable } from "@cloudflare/workers-auth";
 import { UserError } from "@cloudflare/workers-utils";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
+import { fetch } from "undici";
 import { it, vi } from "vitest";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import { createDeferred } from "./startDevWorker/utils";
@@ -84,4 +86,40 @@ it("starts login on the first AI call and keeps unrelated requests available whi
 	const retried = await mf.dispatchFetch("http://localhost/ai");
 	expect(retried.status).toBe(503);
 	expect(auth).toHaveBeenCalledTimes(2);
+});
+
+it("reports an unreachable OAuth refresh endpoint without marking the failure definitive", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const auth = vi.fn(() => {
+		throw new ErrorAuthServerUnreachable("OAuth endpoint unavailable", {
+			telemetryMessage: "test oauth endpoint unavailable",
+		});
+	});
+	const session = await startRemoteProxySession(
+		{ AI: { type: "ai" } },
+		{
+			lazy: true,
+			auth,
+			cliDisplayName: "Wrangler",
+			logger: {
+				loggerLevel: "none",
+				debug: vi.fn(),
+				log: vi.fn(),
+				info: vi.fn(),
+				warn: vi.fn(),
+				error: vi.fn(),
+				console: vi.fn(),
+			},
+		}
+	);
+	onTestFinished(() => session.dispose());
+	const response = await fetch(session.remoteProxyConnectionString, {
+		headers: { "MF-Binding": "AI" },
+		signal: AbortSignal.timeout(5_000),
+	});
+	expect(response.status).toBe(503);
+	expect(response.headers.has("mf-remote-session-error")).toBe(false);
+	expect(await response.text()).toContain("OAuth endpoint unavailable");
 });

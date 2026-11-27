@@ -41,32 +41,25 @@ function createTestSession() {
 }
 
 describe("maybeStartOrUpdateRemoteProxySession", () => {
-	it.for<{ bindings: Record<string, Binding>; lazy: boolean }>([
-		{ bindings: { AI: { type: "ai" } }, lazy: true },
-		{ bindings: { AI: { type: "ai", remote: true } }, lazy: true },
+	it.for<Record<string, Binding>>([
+		{ AI: { type: "ai" } },
+		{ AI: { type: "ai", remote: true } },
 		{
-			bindings: {
-				VECTORS: { type: "vectorize", index_name: "search", remote: true },
-			},
-			lazy: true,
+			VECTORS: { type: "vectorize", index_name: "search", remote: true },
+		},
+		{ KV: { type: "kv_namespace", id: "kv", remote: true } },
+		{ DB: { type: "hyperdrive", id: "db", remote: true } },
+		{
+			ORDERS: { type: "k2", stream: "orders" },
+			DB: { type: "hyperdrive", id: "db", remote: false },
 		},
 		{
-			bindings: {
-				AI: { type: "ai" },
-				ORDERS: { type: "k2", stream: "orders" },
-			},
-			lazy: true,
-		},
-		{
-			bindings: {
-				AI: { type: "ai" },
-				KV: { type: "kv_namespace", id: "kv", remote: true },
-			},
-			lazy: false,
+			ORDERS: { type: "k2", stream: "orders" },
+			KV: { type: "kv_namespace", id: "kv", remote: true },
 		},
 	])(
-		"defers the connection only for remote-only resources (%j)",
-		async ({ bindings, lazy }, { expect }) => {
+		"defers the connection for any remote bindings (%j)",
+		async (bindings, { expect }) => {
 			const startSession = vi
 				.fn<typeof startRemoteProxySession>()
 				.mockResolvedValue(createTestSession());
@@ -78,13 +71,62 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 				startSession
 			);
 			expect(startSession).toHaveBeenCalledWith(
-				bindings,
-				expect.objectContaining({ lazy, auth: testAuth })
+				pickRemoteBindings(bindings),
+				expect.objectContaining({ lazy: true, auth: testAuth })
 			);
 		}
 	);
 
-	it("restarts when adding a local-capable remote binding requires an eager connection", async ({
+	it("reuses the lazy session when remote Hyperdrive is added or removed", async ({
+		expect,
+	}) => {
+		const startSession = vi.fn<typeof startRemoteProxySession>(async () =>
+			createTestSession()
+		);
+		const context: RemoteBindingsContext = {
+			cliDisplayName: "Wrangler",
+			logger: createTestLogger(),
+		};
+		const bindings = {
+			KV: { type: "kv_namespace", id: "kv", remote: true },
+		} satisfies Record<string, Binding>;
+		const withHyperdrive = {
+			...bindings,
+			DB: { type: "hyperdrive", id: "db", remote: true },
+		} satisfies Record<string, Binding>;
+		const first = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings },
+			undefined,
+			testAuth,
+			context,
+			startSession
+		);
+		const added = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings: withHyperdrive },
+			first,
+			testAuth,
+			context,
+			startSession
+		);
+		const removed = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings },
+			added,
+			testAuth,
+			context,
+			startSession
+		);
+		expect(added?.session).toBe(first?.session);
+		expect(removed?.session).toBe(first?.session);
+		expect(first?.session.dispose).not.toHaveBeenCalled();
+		expect(startSession).toHaveBeenCalledOnce();
+		expect(first?.session.updateBindings).toHaveBeenNthCalledWith(
+			1,
+			withHyperdrive
+		);
+		expect(first?.session.updateBindings).toHaveBeenNthCalledWith(2, bindings);
+	});
+
+	it("reuses a session when replacing a remote-only binding with a local-capable remote binding", async ({
 		expect,
 	}) => {
 		const startSession = vi
@@ -101,28 +143,22 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 			context,
 			startSession
 		);
-		const removed = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: {} },
+		const bindings = {
+			KV: { type: "kv_namespace" as const, id: "kv", remote: true },
+		};
+		const next = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings },
 			first,
 			testAuth,
 			context,
 			startSession
 		);
-		expect(removed?.session).toBe(first?.session);
-		const next = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: { KV: { type: "kv_namespace", id: "kv", remote: true } } },
-			removed,
-			testAuth,
-			context,
-			startSession
+		expect(first?.session.dispose).not.toHaveBeenCalled();
+		expect(next?.session).toBe(first?.session);
+		expect(first?.session.updateBindings).toHaveBeenCalledExactlyOnceWith(
+			bindings
 		);
-		expect(first?.session.dispose).toHaveBeenCalledOnce();
-		expect(next?.session).not.toBe(first?.session);
-		expect(startSession).toHaveBeenCalledTimes(2);
-		expect(startSession).toHaveBeenLastCalledWith(
-			expect.anything(),
-			expect.objectContaining({ lazy: false })
-		);
+		expect(startSession).toHaveBeenCalledOnce();
 	});
 	it.for([undefined, true])(
 		"selects K2 bindings for remote development with remote=%s",
@@ -242,7 +278,12 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		const startSession = vi.fn<typeof startRemoteProxySession>();
 
 		const result = await maybeStartOrUpdateRemoteProxySession(
-			{ bindings: {} },
+			{
+				bindings: {
+					LOCAL: { type: "kv_namespace", id: "local", remote: false },
+					DEFAULT: { type: "kv_namespace", id: "default" },
+				},
+			},
 			undefined,
 			testAuth,
 			{ cliDisplayName: "Wrangler", logger: createTestLogger() },

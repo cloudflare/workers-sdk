@@ -147,7 +147,7 @@ if (isWindows) {
 		});
 	});
 
-	describe("remote bindings without actually establishing a remote connection", () => {
+	describe("remote bindings with an invalid account ID", () => {
 		const projectPath = seed("remote-bindings-config-account-id", {
 			pm: "pnpm",
 		});
@@ -156,6 +156,15 @@ if (isWindows) {
 			expect,
 		}) => {
 			const proc = await runLongLived("pnpm", "dev", projectPath);
+			const url = await waitForReady(proc);
+			expect(await (await fetch(url)).text()).toBe("Hello world");
+			expect(proc.stderr).not.toContain(
+				"/accounts/not-a-valid-account-id-abc/"
+			);
+			expect(
+				(await fetch(`${url}/remote`, { signal: AbortSignal.timeout(20_000) }))
+					.ok
+			).toBe(false);
 			await vi.waitFor(
 				async () => {
 					expect(proc.stderr).toMatch(
@@ -177,18 +186,27 @@ if (isWindows) {
 		});
 
 		describe.each(commands)('with "%s" command', (command) => {
-			test("exit with a non zero error code and log an error", async ({
+			test("fails the binding request and keeps serving local requests", async ({
 				expect,
 			}) => {
 				const proc = await runLongLived("pnpm", command, projectPath);
+				const url = await waitForReady(proc);
 
-				expect(await proc.exitCode).not.toBe(0);
-				expect(proc.stderr).toContain(
-					"R2 bucket 'non-existent-r2-bucket' not found. Verify the bucket exists in your account and that the bucket_name in your configuration is correct. [code: 10085]"
-				);
-				expect(proc.stderr).toMatch(
-					/Error: Failed to start the remote proxy session\./
-				);
+				expect(proc.stderr).not.toContain("Could not connect remote bindings");
+				expect(
+					(
+						await fetch(`${url}/remote`, {
+							signal: AbortSignal.timeout(20_000),
+						})
+					).ok
+				).toBe(false);
+				await vi.waitFor(() => {
+					expect(proc.stderr).toContain(
+						"R2 bucket 'non-existent-r2-bucket' not found. Verify the bucket exists in your account and that the bucket_name in your configuration is correct. [code: 10085]"
+					);
+					expect(proc.stderr).toContain("Could not connect remote bindings");
+				});
+				expect(await (await fetch(url)).text()).toBe("Hello");
 			});
 		});
 	});
@@ -234,6 +252,11 @@ describe.skipIf(isWindows)(
 				CLOUDFLARE_API_KEY: undefined,
 				CLOUDFLARE_EMAIL: undefined,
 			});
+			const url = await waitForReady(proc);
+			expect(
+				(await fetch(`${url}/remote`, { signal: AbortSignal.timeout(20_000) }))
+					.ok
+			).toBe(false);
 
 			// as opposed to hitting the OAuth path, which would indicate that the profile did not register
 			await vi.waitFor(

@@ -180,7 +180,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 			);
 
 			// This should only include logs from the user Wrangler session (i.e. a single list of attached bindings, and only one ready message).
-			// AI is a remote-only binding, so its remote session connects lazily on the first call without logging "Establishing remote connection...".
 			await waitFor(() =>
 				expect(normalizeOutput(worker.currentOutput)).toEqual(dedent`
 					Your Worker has access to the following bindings:
@@ -214,6 +213,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				});
 
 				const worker = helper.runLongLived("wrangler dev");
+				const { url } = await worker.waitForReady();
+				await fetchText(url, 15_000);
 
 				// The error appears only after the remote proxy session validates
 				// the binding against the Cloudflare API, so use the longer timeout.
@@ -243,6 +244,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				});
 
 				const worker = helper.runLongLived("wrangler dev");
+				const { url } = await worker.waitForReady();
+				await fetchText(url, 15_000);
 
 				// The error appears only after the remote proxy session validates
 				// the binding against the Cloudflare API, so use the longer timeout.
@@ -305,9 +308,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 					`wrangler dev -c wrangler.json -c ${localTest}/wrangler.json`
 				);
 
-				// Multi-worker with remote bindings on both workers requires two
-				// serialised remote proxy sessions (API calls) before "Ready on"
-				// can appear, so give it more time than the default 15s.
 				const { url } = await worker.waitForReady(30_000);
 
 				await expect(fetchText(url)).resolves.toMatchInlineSnapshot(`

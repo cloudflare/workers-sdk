@@ -1,5 +1,9 @@
 import { execSync } from "node:child_process";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { once } from "node:events";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
 	afterAll,
 	assert,
@@ -12,6 +16,7 @@ import {
 import { getPlatformProxy } from "wrangler";
 import type { KVNamespace } from "@cloudflare/workers-types/experimental";
 import type { DispatchFetch, Response } from "miniflare";
+import type { AddressInfo } from "node:net";
 import type { ExpectStatic } from "vitest";
 
 type Fetcher = { fetch: DispatchFetch };
@@ -213,43 +218,6 @@ if (auth) {
 				vi.stubEnv("CLOUDFLARE_API_TOKEN", auth.CLOUDFLARE_API_TOKEN);
 			});
 
-			test("usage with a wrangler config file with an invalid account id", async ({
-				expect,
-			}) => {
-				mkdirSync("./.tmp/config-with-invalid-account-id", { recursive: true });
-
-				writeFileSync(
-					"./.tmp/config-with-invalid-account-id/wrangler.json",
-					JSON.stringify(
-						{
-							name: "get-platform-proxy-fixture-test",
-							account_id: "NOT a valid account id",
-							compatibility_date: "2025-06-01",
-							services: [
-								{
-									binding: "MY_WORKER",
-									service: remoteWorkerName,
-									remote: true,
-								},
-							],
-						},
-						undefined,
-						2
-					),
-					"utf8"
-				);
-
-				await expect(
-					getPlatformProxy<{
-						MY_WORKER: Fetcher;
-					}>({
-						configPath: "./.tmp/config-with-invalid-account-id/wrangler.json",
-					})
-				).rejects.toMatchInlineSnapshot(
-					`[Error: Failed to start the remote proxy session. Error reloading remote server: Invalid account ID "NOT a valid account id" set in your Wrangler configuration file. Account IDs may only contain alphanumeric characters, hyphens, and underscores.]`
-				);
-			});
-
 			test("usage with a wrangler config file with a valid account id", async ({
 				expect,
 				onTestFinished,
@@ -295,6 +263,166 @@ if (auth) {
 } else {
 	test.skip("getPlatformProxy - remote bindings (no auth credentials)");
 }
+
+test.for(["service", "hyperdrive"] as const)(
+	"getPlatformProxy validates the configured account ID for remote %s",
+	async (binding, { expect }) => {
+		const directory = mkdtempSync(
+			join(tmpdir(), "platform-proxy-invalid-account-")
+		);
+		const configPath = join(directory, "wrangler.json");
+		try {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "not-used-for-an-invalid-account");
+			writeFileSync(
+				configPath,
+				JSON.stringify({
+					name: "get-platform-proxy-fixture-test",
+					account_id: "NOT a valid account id",
+					compatibility_date: "2025-06-01",
+					...(binding === "service"
+						? {
+								services: [
+									{
+										binding: "MY_WORKER",
+										service: remoteWorkerName,
+										remote: true,
+									},
+								],
+							}
+						: {
+								hyperdrive: [
+									{ binding: "DB", id: "a".repeat(32), remote: true },
+								],
+							}),
+				})
+			);
+			const proxy = getPlatformProxy<{ MY_WORKER: Fetcher }>({
+				configPath,
+				persist: false,
+			});
+			const accountError =
+				'Invalid account ID "NOT a valid account id" set in your Wrangler configuration file.';
+			try {
+				if (binding === "hyperdrive") {
+					const startupError = await proxy.then(
+						() => undefined,
+						(error: unknown) => error
+					);
+					expect(startupError).toBeInstanceOf(Error);
+					expect(startupError).toHaveProperty(
+						"message",
+						expect.stringContaining(accountError)
+					);
+					return;
+				}
+				const response = await (
+					await proxy
+				).env.MY_WORKER.fetch("http://example.com", {
+					signal: AbortSignal.timeout(5_000),
+				});
+				expect(response.status).toBe(503);
+				expect(await response.text()).toContain(accountError);
+			} finally {
+				await proxy.then(
+					({ dispose }) => dispose(),
+					() => {}
+				);
+			}
+		} finally {
+			vi.unstubAllEnvs();
+			rmSync(directory, { recursive: true, force: true });
+		}
+	}
+);
+
+test.for([
+	{
+		status: 400,
+		code: 10000,
+		message: "Token cannot create an edge preview for this account",
+	},
+	{ status: 403, code: 9999, message: "Account access denied" },
+	{ status: 404, code: 9999, message: "Account not found" },
+	{ status: 503, code: 9999, message: "Workers subdomain lookup unavailable" },
+])(
+	"getPlatformProxy handles remote Hyperdrive startup API errors ($status)",
+	async ({ status, code, message }, { expect }) => {
+		const directory = mkdtempSync(
+			join(tmpdir(), "platform-proxy-api-rejection-")
+		);
+		const configPath = join(directory, "wrangler.json");
+		const requested = vi.fn();
+		const server = createServer((request, response) => {
+			requested(request.url);
+			if (status === 503 && request.url?.endsWith("/subdomain/edge-preview")) {
+				response
+					.writeHead(200, { "Content-Type": "application/json" })
+					.end(JSON.stringify({ success: true, result: { token: "preview" } }));
+				return;
+			}
+			response
+				.writeHead(status, { "Content-Type": "application/json" })
+				.end(JSON.stringify({ success: false, errors: [{ code, message }] }));
+		});
+		try {
+			server.listen(0, "127.0.0.1");
+			await once(server, "listening");
+			vi.stubEnv(
+				"CLOUDFLARE_API_BASE_URL",
+				`http://127.0.0.1:${(server.address() as AddressInfo).port}/client/v4`
+			);
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "mock-token");
+			writeFileSync(
+				configPath,
+				JSON.stringify({
+					name: "get-platform-proxy-fixture-test",
+					account_id: "a".repeat(32),
+					compatibility_date: "2025-06-01",
+					hyperdrive: [{ binding: "DB", id: "b".repeat(32), remote: true }],
+					kv_namespaces: [{ binding: "LOCAL_KV", id: "c".repeat(32) }],
+				})
+			);
+			const proxy = getPlatformProxy<{ LOCAL_KV: KVNamespace }>({
+				configPath,
+				persist: false,
+			});
+			if (status === 503) {
+				const { env, dispose } = await proxy;
+				try {
+					await env.LOCAL_KV.put("key", "value");
+					expect(await env.LOCAL_KV.get("key")).toBe("value");
+					expect(
+						requested.mock.calls
+							.map(([url]) => url)
+							.filter((url) => url?.endsWith("/workers/subdomain")).length
+					).toBeGreaterThan(1);
+				} finally {
+					await dispose();
+				}
+				return;
+			}
+			const startupError = await proxy.then(
+				async ({ dispose }) => {
+					await dispose();
+				},
+				(error: unknown) => error
+			);
+			expect(startupError).toBeInstanceOf(Error);
+			expect(startupError).toHaveProperty(
+				"message",
+				expect.stringContaining(message)
+			);
+			expect(requested).toHaveBeenCalledExactlyOnceWith(
+				expect.stringMatching(/\/subdomain\/edge-preview$/)
+			);
+		} finally {
+			vi.unstubAllEnvs();
+			server.closeAllConnections();
+			await new Promise<void>((resolve) => server.close(() => resolve()));
+			rmSync(directory, { recursive: true, force: true });
+		}
+	}
+);
 
 /**
  * Polls a remote Worker until it responds with the expected status text.

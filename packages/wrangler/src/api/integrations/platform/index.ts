@@ -25,10 +25,9 @@ import {
 } from "../../../dev/miniflare-options";
 import { logger } from "../../../logger";
 import { dedent } from "../../../utils/dedent";
-import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import type { RemoteProxySession } from "../../remoteBindings";
+import { startPlatformProxyRemoteSession } from "./remote-session";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type { AssetsOptions, Binding } from "@cloudflare/workers-utils";
 import type {
@@ -118,7 +117,10 @@ export type GetPlatformProxyOptions = {
 	 */
 	persist?: boolean | { path: string };
 	/**
-	 * Whether remote bindings should be enabled or not (defaults to `true`)
+	 * Whether remote bindings should be enabled or not (defaults to `true`).
+	 * Remote bindings on Node.js inherit environment variables when
+	 * the proxy is created. Set any auth environment variables before calling
+	 * `getPlatformProxy()`, or create a new proxy after changing them.
 	 */
 	remoteBindings?: boolean;
 };
@@ -192,40 +194,41 @@ export async function getPlatformProxy<
 		);
 	}
 
-	let remoteProxySession: RemoteProxySession | undefined = undefined;
-	if (config.configPath && options.remoteBindings !== false) {
-		remoteProxySession = (
-			(await maybeStartOrUpdateRemoteProxySession({
-				path: config.configPath,
-				environment: env,
-			})) ?? {}
-		).session;
-	}
-
-	const miniflareOptions = await getMiniflareOptionsFromConfig({
-		config,
-		options,
-		remoteProxyConnectionString:
-			remoteProxySession?.remoteProxyConnectionString,
-	});
-
-	const mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
-
-	const bindings: Env = await mf.getBindings();
-
-	const cf = await mf.getCf();
-	deepFreeze(cf);
-
-	return {
-		env: bindings,
-		cf: cf as CfProperties,
-		ctx: new ExecutionContext(),
-		caches: new CacheStorage(),
-		dispose: async () => {
+	const remoteProxySession =
+		config.configPath && options.remoteBindings !== false
+			? await startPlatformProxyRemoteSession(config)
+			: undefined;
+	let mf: Miniflare | undefined;
+	const dispose = async () => {
+		try {
 			await remoteProxySession?.dispose();
-			await mf.dispose();
-		},
+		} finally {
+			await mf?.dispose();
+		}
 	};
+	try {
+		const miniflareOptions = await getMiniflareOptionsFromConfig({
+			config,
+			options,
+			remoteProxyConnectionString:
+				remoteProxySession?.remoteProxyConnectionString,
+		});
+		mf = new Miniflare(convertV4MiniflareOptions(miniflareOptions));
+		const bindings: Env = await mf.getBindings();
+		const cf = await mf.getCf();
+		deepFreeze(cf);
+
+		return {
+			env: bindings,
+			cf: cf as CfProperties,
+			ctx: new ExecutionContext(),
+			caches: new CacheStorage(),
+			dispose,
+		};
+	} catch (error) {
+		await dispose().catch(() => {});
+		throw error;
+	}
 }
 
 /**

@@ -31,6 +31,7 @@ import { validateAccountId } from "../account-id";
 import { createCredentialStorageContext } from "../credential-store";
 import { getAuthFromEnv } from "../credentials";
 import { getCloudflareAccountIdFromEnv as getAccountIdFromEnv } from "../env-vars";
+import { ErrorAuthServerUnreachable } from "../errors";
 import { createOAuthFlow } from "../flow";
 import { DEFAULT_TEMPORARY_ACCOUNT_FLAG } from "../temporary";
 import { AuthenticationError } from "./authentication-error";
@@ -691,9 +692,12 @@ ${accounts
 					{ telemetryMessage: "user auth missing api token non interactive" }
 				);
 			} else if (result.reason === "token-refresh-unreachable") {
-				throw new UserError(NOT_LOGGED_IN_ERROR_BODIES[result.reason], {
-					telemetryMessage: "user auth token refresh unreachable",
-				});
+				throw new ErrorAuthServerUnreachable(
+					NOT_LOGGED_IN_ERROR_BODIES[result.reason],
+					{
+						telemetryMessage: "user auth token refresh unreachable",
+					}
+				);
 			} else {
 				// didn't login, let's just quit
 				throw new UserError("Did not login, quitting...", {

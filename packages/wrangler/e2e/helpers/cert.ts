@@ -57,8 +57,8 @@ export function generateLeafCertificate(
 	return { certificate: pemLeafCert, privateKey: pemLeafKey };
 }
 
-// Generate self signed X509 CA root certificate
-export function generateRootCaCert() {
+/** Generate a self-signed X.509 root CA certificate, optionally valid for a test server IP. */
+export function generateRootCaCert(ipAddress?: string) {
 	// Create a key pair (private and public keys)
 	const keyPair = forge.pki.rsa.generateKeyPair(2048);
 
@@ -96,6 +96,9 @@ export function generateRootCaCert() {
 			digitalSignature: true,
 			cRLSign: true,
 		},
+		...(ipAddress
+			? [{ name: "subjectAltName", altNames: [{ type: 7, ip: ipAddress }] }]
+			: []),
 	]);
 
 	// Self-sign the certificate with the private key

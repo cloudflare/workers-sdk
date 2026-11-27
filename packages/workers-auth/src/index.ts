@@ -114,3 +114,4 @@ export type {
 } from "./credential-store";
 
 export { AuthenticationError } from "./core/authentication-error";
+export { ErrorAuthServerUnreachable } from "./errors";

@@ -74,7 +74,14 @@ export class ProxyWorker implements DurableObject {
 				this.proxyData = undefined;
 				this.connectionRequested = false;
 				for (const [, deferred] of this.getOrderedQueue()) {
-					deferred.resolve(new Response(event.message, { status: 503 }));
+					deferred.resolve(
+						new Response(event.message, {
+							status: 503,
+							headers: event.definitive
+								? { "mf-remote-session-error": "definitive" }
+								: undefined,
+						})
+					);
 				}
 				this.requestQueue.clear();
 				this.requestRetryQueue.clear();

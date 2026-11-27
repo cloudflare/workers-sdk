@@ -4,7 +4,6 @@ import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli-shared-helpers";
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
-import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
 import {
@@ -510,8 +509,8 @@ import {
 	authDeleteCommand,
 	authListCommand,
 } from "./user/profiles";
-import { noProxy, proxy } from "./utils/constants";
 import { logDidYouMean } from "./utils/did-you-mean";
+import { configureHttpProxy } from "./utils/http-proxy";
 import { getDebugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -569,14 +568,7 @@ import type { ReadConfigCommandArgs } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
-if (proxy) {
-	setGlobalDispatcher(
-		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
-	);
-	logger.warn(
-		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
-	);
-}
+configureHttpProxy();
 
 function redactEventCode(argv: string[]): string[] {
 	return argv.map((arg, index) => {

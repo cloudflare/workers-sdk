@@ -5,8 +5,34 @@ import { newWebSocketRpcSession } from "capnweb";
 import { Miniflare } from "miniflare";
 import { test, vi } from "vitest";
 import { HyperdriveProxyController } from "../../../src/plugins/hyperdrive/hyperdrive-proxy";
-import { singleModuleManifest } from "../../test-shared";
+import { singleModuleManifest, useServer } from "../../test-shared";
 import { useRemoteProxyServer } from "./helpers";
+
+test("retries a transient session response and leaves a local bridge available", async ({
+	expect,
+}) => {
+	const respond = vi.fn();
+	const { http } = await useServer((_request, response) => {
+		respond();
+		response.writeHead(503).end("Preview temporarily unavailable");
+	});
+	const controller = new HyperdriveProxyController();
+	try {
+		const port = await controller.createRemoteTcpBridge({
+			name: "hyperdrive:0:DB",
+			bindingName: "DB",
+			bindingId: "db",
+			remoteProxyConnectionString: http,
+		});
+		expect(respond).toHaveBeenCalledTimes(3);
+		expect(controller.getRemoteBridgePort("hyperdrive:0:DB")).toBe(port);
+		expect(
+			controller.getRemoteConnectionString("hyperdrive:0:DB")
+		).toBeUndefined();
+	} finally {
+		controller.dispose();
+	}
+});
 
 test("disposal cancels startup during retry backoff", async ({ expect }) => {
 	const { edge, url } = await useRemoteProxyServer();

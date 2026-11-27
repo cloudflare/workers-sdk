@@ -61,7 +61,9 @@ jobs:
 
       # The repository check above builds the packages before these checks run.
       - name: Check Wrangler build output
-        run: node -r esbuild-register tools/test/check-built-entry-points.ts wrangler
+        run: |
+          pnpm --filter wrangler pack --out "$RUNNER_TEMP/wrangler.tgz"
+          node -r esbuild-register tools/test/check-built-entry-points.ts wrangler "$RUNNER_TEMP/wrangler.tgz"
 
       - name: Check Vite plugin build output
         run: node -r esbuild-register tools/test/check-built-entry-points.ts vite-plugin-cloudflare

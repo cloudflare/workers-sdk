@@ -22,7 +22,16 @@ Tools for helping with CI
 - `e2e/runIndividualE2EFiles.ts` - Used to shard the e2e tests into separately cache-able Turbo runs, which helps with flakey tests.
 
 - `test/check-built-entry-points.ts` - Checks that the built Wrangler and Vite plugin declarations resolve in a temporary consumer project. Also checks that Wrangler's CLI and experimental config entry points load in Node.
-  CI runs the checks after building. Locally, run `pnpm run build --filter=wrangler --filter=@cloudflare/vite-plugin`, then `node -r esbuild-register tools/test/check-built-entry-points.ts <wrangler|vite-plugin-cloudflare>` for the package you want to check.
+  CI runs the checks after building. Locally, run `pnpm run build --filter=wrangler --filter=@cloudflare/vite-plugin`, then run the check for the package you want:
+
+  ```sh
+  # Wrangler: check the packaged runtime as well as the built declarations.
+  pnpm --filter wrangler pack --out "${TMPDIR:-/tmp}/wrangler.tgz"
+  node -r esbuild-register tools/test/check-built-entry-points.ts wrangler "${TMPDIR:-/tmp}/wrangler.tgz"
+
+  # Vite plugin: no tarball needed.
+  node -r esbuild-register tools/test/check-built-entry-points.ts vite-plugin-cloudflare
+  ```
 
 - `test/run-test-file.ts` - Used by in VS Code configuration to launch a debug session to run a single test file.
 
