@@ -16,17 +16,17 @@ If updating the commit of devtools upon which these patches are based, make sure
 * Allows devtools to load in Safari (loading with _any_ UI is sufficent to check whether this has worked)
 * Supports viewing a list of requests in the network panel in Firefox (without the patches here this goes very obviously wrong)
 ---
- front_end/entrypoint_template.html            | 39 ++++++++++++++++++-
- front_end/entrypoints/js_app/js_app.ts        |  3 ++
- front_end/ui/dom_extension/DOMExtension.ts    |  2 +-
- .../legacy/components/data_grid/DataGrid.ts   |  5 +++
- 4 files changed, 47 insertions(+), 2 deletions(-)
+ front_end/entrypoint_template.html                 | 35 +++++++++++++++++++++-
+ front_end/entrypoints/js_app/js_app.ts             |  3 ++
+ front_end/ui/dom_extension/DOMExtension.ts         |  2 +-
+ .../ui/legacy/components/data_grid/DataGrid.ts     |  5 ++++
+ 4 files changed, 43 insertions(+), 2 deletions(-)
 
 diff --git a/front_end/entrypoint_template.html b/front_end/entrypoint_template.html
-index e778aefef2..cdf7049337 100644
+index e778aefef2..d9c5df53b5 100644
 --- a/front_end/entrypoint_template.html
 +++ b/front_end/entrypoint_template.html
-@@ -13,12 +13,49 @@
+@@ -13,12 +13,45 @@
        background-color: rgb(41 42 45);
      }
    }
@@ -56,16 +56,12 @@ index e778aefef2..cdf7049337 100644
 +  .-theme-with-dark-background .platform-mac {
 +    --override-text-color: rgb(189 198 207);
 +  }
-+
-+  .cm-editor + .cm-editor {
-+    display: none;
-+  }
  </style>
  <meta
    http-equiv="Content-Security-Policy"
    content="default-src 'self' devtools: data:; style-src 'self' 'unsafe-inline' devtools:; object-src 'none'; script-src
 -  'self' https://chrome-devtools-frontend.appspot.com; img-src 'self' data: blob:; frame-src * data:; connect-src data: https://chromeuxreport.googleapis.com 'self' devtools: ws://127.0.0.1:*;">
-+  'sha256-AIRkz8wOl/LgmUJduw9AsUnrb94PlBpePfk0Rowm+Vo=' 'self' https://chrome-devtools-frontend.appspot.com; img-src 'self' data: blob:; frame-src * data:; connect-src data: https://chromeuxreport.googleapis.com 'self' devtools: ws://127.0.0.1:*;">
++  'sha256-AIRkz8wOl/LgmUJduw9AsUnrb94PlBpePfk0Rowm+Vo=' 'self' https://chrome-devtools-frontend.appspot.com; img-src 'self' data: blob:; frame-src * data:; connect-src data: https://chromeuxreport.googleapis.com 'self' devtools: ws://127.0.0.1:* ws://localhost:*;">
 +
  <meta name="referrer" content="no-referrer">
 +<script>
