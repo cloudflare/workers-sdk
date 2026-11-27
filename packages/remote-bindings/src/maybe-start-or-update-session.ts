@@ -70,7 +70,12 @@ export type RemoteBindingsContext = {
 	logger: RemoteBindingsLogger;
 };
 
-/** Potentially starts or updates a remote proxy session. */
+/**
+ * Potentially starts or updates a remote proxy session.
+ *
+ * When the credentials change, the existing session is disposed only once its
+ * replacement is ready, so it stays live if this throws.
+ */
 export async function maybeStartOrUpdateRemoteProxySession(
 	workerConfigObject: WorkerConfigObject,
 	preExistingRemoteProxySessionData: RemoteProxySessionData | null | undefined,
@@ -101,17 +106,29 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
 	if (!authSameAsBefore) {
-		if (preExistingRemoteProxySessionData?.session) {
-			await preExistingRemoteProxySessionData.session.dispose();
-		}
-
-		remoteProxySession = await startSession(remoteBindings, {
+		// Start the replacement before disposing the existing session. Callers
+		// keep their session data when this throws (for example, when the new
+		// credentials fail), so that session must stay live for a later call with
+		// the original credentials to reuse.
+		const replacement = await startSession(remoteBindings, {
 			workerName: workerConfigObject.name,
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
 			auth: hook,
 			logger: context.logger,
 		});
+		await replacement.ready;
+		try {
+			await preExistingRemoteProxySessionData?.session?.dispose();
+		} catch (error) {
+			// Throwing now would leak the replacement and leave the caller with the
+			// session it failed to dispose.
+			context.logger.debug(
+				"Failed to dispose the replaced remote proxy session:",
+				error
+			);
+		}
+		remoteProxySession = replacement;
 	} else {
 		const remoteBindingsAreSameAsBefore = deepStrictEqual(
 			remoteBindings,

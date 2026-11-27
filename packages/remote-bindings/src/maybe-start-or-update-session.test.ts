@@ -294,4 +294,129 @@ describe("maybeStartOrUpdateRemoteProxySession", () => {
 		expect(first?.session.dispose).toHaveBeenCalled();
 		expect(startSession).toHaveBeenCalledTimes(2);
 	});
+
+	it("keeps the session live when a key change fails, so a revert reuses it", async ({
+		expect,
+	}) => {
+		const original = createTestSession();
+		const startSession = vi
+			.fn<typeof startRemoteProxySession>()
+			.mockResolvedValueOnce(original)
+			.mockRejectedValueOnce(
+				new Error("Failed to start the remote proxy session.")
+			);
+		const workerConfig = {
+			bindings: {
+				KV: { type: "kv_namespace" as const, id: "kv", remote: true },
+			},
+		};
+		const context: RemoteBindingsContext = {
+			cliDisplayName: "Wrangler",
+			logger: createTestLogger(),
+		};
+
+		const started = await maybeStartOrUpdateRemoteProxySession(
+			workerConfig,
+			undefined,
+			{ hook: testAuth, key: "account-a" },
+			context,
+			startSession
+		);
+		expect(started?.session).toBe(original);
+
+		// Callers keep their session data when the call throws
+		await expect(
+			maybeStartOrUpdateRemoteProxySession(
+				workerConfig,
+				started,
+				{ hook: testAuth, key: "malformed-account" },
+				context,
+				startSession
+			)
+		).rejects.toThrow("Failed to start the remote proxy session.");
+		expect(original.dispose).not.toHaveBeenCalled();
+
+		const reverted = await maybeStartOrUpdateRemoteProxySession(
+			workerConfig,
+			started,
+			{ hook: testAuth, key: "account-a" },
+			context,
+			startSession
+		);
+		expect(reverted?.session).toBe(original);
+		expect(original.dispose).not.toHaveBeenCalled();
+		expect(original.updateBindings).not.toHaveBeenCalled();
+		expect(startSession).toHaveBeenCalledTimes(2);
+	});
+
+	it("disposes the replaced session once its replacement is ready", async ({
+		expect,
+	}) => {
+		const steps: string[] = [];
+		const previous = createTestSession();
+		previous.dispose.mockImplementation(async () => {
+			steps.push("dispose previous");
+		});
+		const startSession = vi.fn<typeof startRemoteProxySession>(async () => {
+			steps.push("start replacement");
+			return {
+				...createTestSession(),
+				ready: new Promise<void>((resolve) =>
+					setTimeout(() => {
+						steps.push("replacement ready");
+						resolve();
+					})
+				),
+			};
+		});
+		const remoteBindings = {
+			KV: { type: "kv_namespace" as const, id: "kv", remote: true },
+		};
+
+		const result = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings: remoteBindings },
+			{ session: previous, remoteBindings, authKey: "account-a" },
+			{ hook: testAuth, key: "account-b" },
+			{ cliDisplayName: "Wrangler", logger: createTestLogger() },
+			startSession
+		);
+
+		expect(result?.session).not.toBe(previous);
+		expect(steps).toEqual([
+			"start replacement",
+			"replacement ready",
+			"dispose previous",
+		]);
+	});
+
+	it("returns the replacement when the replaced session fails to dispose", async ({
+		expect,
+	}) => {
+		const previous = createTestSession();
+		const disposeError = new Error("teardown failed");
+		previous.dispose.mockRejectedValue(disposeError);
+		const replacement = createTestSession();
+		const startSession = vi
+			.fn<typeof startRemoteProxySession>()
+			.mockResolvedValue(replacement);
+		const logger = createTestLogger();
+		const remoteBindings = {
+			KV: { type: "kv_namespace" as const, id: "kv", remote: true },
+		};
+
+		const result = await maybeStartOrUpdateRemoteProxySession(
+			{ bindings: remoteBindings },
+			{ session: previous, remoteBindings, authKey: "account-a" },
+			{ hook: testAuth, key: "account-b" },
+			{ cliDisplayName: "Wrangler", logger },
+			startSession
+		);
+
+		expect(result?.session).toBe(replacement);
+		expect(result?.authKey).toBe("account-b");
+		expect(logger.debug).toHaveBeenCalledWith(
+			expect.stringContaining("Failed to dispose"),
+			disposeError
+		);
+	});
 });
