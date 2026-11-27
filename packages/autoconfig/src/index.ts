@@ -28,6 +28,13 @@ export type {
 
 export { displayAutoConfigDetails, confirmAutoConfigDetails } from "./details";
 
+export { migrateWranglerConfig } from "./wrangler-config/migrate";
+export type {
+	MigrationFollowUp,
+	WranglerToCfMigrationOptions,
+	WranglerToCfMigrationResult,
+} from "./wrangler-config/types";
+
 export type {
 	AutoConfigDetails,
 	AutoConfigCommandError,

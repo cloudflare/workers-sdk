@@ -1,3 +1,4 @@
+import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "../follow-ups";
 import {
 	getRecord,
 	getRecords,
@@ -5,8 +6,7 @@ import {
 	hasOwn,
 	isRecord,
 	type UnknownRecord,
-} from "./converter-helpers";
-import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
+} from "./helpers";
 import type { MigrationFollowUp } from "./types";
 
 interface MigrationLocation {

@@ -1,4 +1,10 @@
 import {
+	DURABLE_OBJECT_EXPORTS_DOCS_URL,
+	createFollowUp,
+	followUpToComment,
+} from "../follow-ups";
+import { WORKFLOW_SETTINGS, isLocalWorkflow } from "./exports";
+import {
 	call,
 	getRecord,
 	getRecords,
@@ -8,13 +14,7 @@ import {
 	optionsFromRecord,
 	toOutputValue,
 	type UnknownRecord,
-} from "./converter-helpers";
-import { WORKFLOW_SETTINGS, isLocalWorkflow } from "./exports";
-import {
-	DURABLE_OBJECT_EXPORTS_DOCS_URL,
-	createFollowUp,
-	followUpToComment,
-} from "./follow-ups";
+} from "./helpers";
 import type { MigrationFollowUp, OutputObject, OutputValue } from "./types";
 
 /** Written in place of a legacy pipeline name, which isn't a stream ID. */

@@ -1,4 +1,4 @@
-import { ENVIRONMENTS_DOCS_URL } from "./follow-ups";
+import { ENVIRONMENTS_DOCS_URL } from "../follow-ups";
 import type {
 	ConvertedBranch,
 	ConvertedWranglerConfig,
@@ -6,7 +6,7 @@ import type {
 	OutputComment,
 	OutputObject,
 	OutputValue,
-} from "./types";
+} from "../wrangler-config/types";
 
 const IDENTIFIER_PATTERN = /^[A-Za-z_$][\w$]*$/;
 

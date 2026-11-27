@@ -1,4 +1,10 @@
+import {
+	CONFIGURATION_DOCS_URL,
+	createFollowUp,
+	followUpToComment,
+} from "../follow-ups";
 import { convertBindings } from "./bindings";
+import { convertExports } from "./exports";
 import {
 	addProperty,
 	camelObject,
@@ -10,13 +16,7 @@ import {
 	optionsFromRecord,
 	toOutputValue,
 	type UnknownRecord,
-} from "./converter-helpers";
-import { convertExports } from "./exports";
-import {
-	CONFIGURATION_DOCS_URL,
-	createFollowUp,
-	followUpToComment,
-} from "./follow-ups";
+} from "./helpers";
 import { convertTriggers } from "./triggers";
 import type {
 	MigrationBundler,

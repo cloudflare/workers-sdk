@@ -2,13 +2,13 @@ import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, it } from "vitest";
 import {
-	KNOWN_FIELDS,
-	convertWranglerConfig,
-} from "../../src/codemods/wrangler-to-cf/config-converter";
-import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
-} from "../../src/codemods/wrangler-to-cf/config-renderer";
+} from "../../src/cloudflare-config/render";
+import {
+	KNOWN_FIELDS,
+	convertWranglerConfig,
+} from "../../src/wrangler-config/convert";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 const BASE_CONFIG = {

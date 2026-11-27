@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { vitestCodemods } from "./codemods/vitest";
-import { wranglerToCfCodemod } from "./codemods/wrangler-to-cf/codemod";
+import { wranglerToCfCodemod } from "./codemods/wrangler-to-cf";
 import { ensureCleanGitWorktree } from "./git";
 import type { Codemod, CodemodContext, CodemodResult } from "./types";
 

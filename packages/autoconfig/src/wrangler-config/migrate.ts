@@ -1,18 +1,13 @@
 import path from "node:path";
-import { fileExists } from "../../files";
-import { ensureCleanGitWorktree } from "../../git";
-import { convertWranglerConfig } from "./config-converter";
-import { findSecretFiles, readWranglerConfig } from "./config-reader";
 import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
-} from "./config-renderer";
+} from "../cloudflare-config/render";
 import {
 	cleanupMigrationOutputs,
 	rewriteMigrationOutput,
 	writeMigrationOutputs,
-} from "./file-writer";
-import { createFollowUp } from "./follow-ups";
+} from "../cloudflare-config/write";
 import {
 	DependencyInstallError,
 	installProjectDependencies,
@@ -20,9 +15,13 @@ import {
 	planVitePluginDependencyUpgrade,
 	planWranglerDependencyUpgrade,
 	VITE_PLUGIN_VERSION_RANGE,
-} from "./install-dependencies";
-import { MINIMUM_WRANGLER_VERSION } from "./wrangler-version";
-import type { DependencyToInstall } from "./install-dependencies";
+} from "../dependencies/install";
+import { MINIMUM_WRANGLER_VERSION } from "../dependencies/wrangler-version";
+import { fileExists } from "../file-exists";
+import { createFollowUp } from "../follow-ups";
+import { convertWranglerConfig } from "./convert";
+import { findSecretFiles, readWranglerConfig } from "./read";
+import type { DependencyToInstall } from "../dependencies/install";
 import type {
 	MigrationFollowUp,
 	WranglerToCfMigrationOptions,
@@ -63,14 +62,13 @@ function formatDependencies(packages: string[]): string {
  *
  * @returns Generated file paths and any follow-up work left for the caller.
  */
-export async function migrateWranglerToCf(
+export async function migrateWranglerConfig(
 	configPath: string,
 	options: WranglerToCfMigrationOptions = {}
 ): Promise<WranglerToCfMigrationResult> {
 	const {
 		bundler = "vite",
 		dryRun = false,
-		force = false,
 		installDependencies = true,
 	} = options;
 	if (bundler !== "vite" && bundler !== "wrangler") {
@@ -87,9 +85,6 @@ export async function migrateWranglerToCf(
 	);
 
 	await assertTargetsDoNotExist([cloudflareConfigPath]);
-	if (!dryRun) {
-		await ensureCleanGitWorktree(projectDirectory, force);
-	}
 
 	const [rawConfig, secretFiles] = await Promise.all([
 		readWranglerConfig(absoluteConfigPath),

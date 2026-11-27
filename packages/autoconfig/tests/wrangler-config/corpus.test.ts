@@ -3,7 +3,7 @@ import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { globSync } from "tinyglobby";
 import { describe, it } from "vitest";
-import { migrateWranglerToCf } from "../../src";
+import { migrateWranglerConfig } from "../../src/wrangler-config/migrate";
 import { getSyntaxErrors } from "./test-helpers";
 import type { ExpectStatic } from "vitest";
 
@@ -66,9 +66,8 @@ describe("Wrangler configuration corpus", () => {
 				);
 				await writeFile(targetConfigPath, source);
 
-				const result = await migrateWranglerToCf(targetConfigPath, {
+				const result = await migrateWranglerConfig(targetConfigPath, {
 					bundler,
-					force: true,
 				});
 				const cloudflareConfigPath = path.join(
 					projectDirectory,

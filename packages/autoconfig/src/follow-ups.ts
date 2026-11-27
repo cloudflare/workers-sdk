@@ -1,4 +1,4 @@
-import type { MigrationFollowUp, OutputComment } from "./types";
+import type { MigrationFollowUp, OutputComment } from "./wrangler-config/types";
 
 export const CONFIGURATION_DOCS_URL = `https://developers.cloudflare.com/workers/wrangler/configuration/`;
 export const DURABLE_OBJECT_EXPORTS_DOCS_URL = `https://developers.cloudflare.com/workers/runtime-apis/context/#exports`;

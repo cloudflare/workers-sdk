@@ -1,6 +1,6 @@
 import { describe, it } from "vitest";
-import { convertWranglerConfig } from "../../src/codemods/wrangler-to-cf/config-converter";
-import { renderCloudflareConfig } from "../../src/codemods/wrangler-to-cf/config-renderer";
+import { renderCloudflareConfig } from "../../src/cloudflare-config/render";
+import { convertWranglerConfig } from "../../src/wrangler-config/convert";
 import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 const streamId = "0123456789abcdef0123456789abcdef";

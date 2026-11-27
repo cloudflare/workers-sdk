@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`migrateWranglerToCf > keeps transferred Durable Objects blocked until their transfer status is reviewed 1`] = `
+exports[`migrateWranglerConfig > keeps transferred Durable Objects blocked until their transfer status is reviewed 1`] = `
 "import { defineConfig, exports } from "cf/config";
 
 /**
@@ -28,7 +28,7 @@ export default defineConfig({
 "
 `;
 
-exports[`migrateWranglerToCf > migrates Durable Object history without manual intervention with vite 1`] = `
+exports[`migrateWranglerConfig > migrates Durable Object history without manual intervention with vite 1`] = `
 "import { bindings, defineConfig, exports } from "cf/config";
 
 export default defineConfig({
@@ -59,7 +59,7 @@ export default defineConfig({
 "
 `;
 
-exports[`migrateWranglerToCf > migrates Durable Object history without manual intervention with wrangler 1`] = `
+exports[`migrateWranglerConfig > migrates Durable Object history without manual intervention with wrangler 1`] = `
 "import { bindings, defineConfig, exports } from "cf/config";
 
 export default defineConfig({

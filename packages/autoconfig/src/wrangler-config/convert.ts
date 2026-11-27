@@ -1,14 +1,4 @@
 import {
-	addProperty,
-	camelObject,
-	getRecord,
-	hasOwn,
-	isRecord,
-	optionsFromRecord,
-	toOutputValue,
-	type UnknownRecord,
-} from "./converter-helpers";
-import {
 	CONFIGURATION_DOCS_URL,
 	ENVIRONMENTS_DOCS_URL,
 	PREVIEWS_DOCS_URL,
@@ -17,8 +7,18 @@ import {
 	createFollowUp,
 	deduplicateFollowUps,
 	followUpToComment,
-} from "./follow-ups";
-import { convertRootConfig } from "./worker-config";
+} from "../follow-ups";
+import {
+	addProperty,
+	camelObject,
+	getRecord,
+	hasOwn,
+	isRecord,
+	optionsFromRecord,
+	toOutputValue,
+	type UnknownRecord,
+} from "./helpers";
+import { convertRootConfig } from "./worker";
 import type {
 	ConvertedBranch,
 	ConvertedWranglerConfig,

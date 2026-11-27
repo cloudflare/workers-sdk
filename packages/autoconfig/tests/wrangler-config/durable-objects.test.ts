@@ -1,8 +1,8 @@
 import { describe, it } from "vitest";
-import { convertWranglerConfig } from "../src/codemods/wrangler-to-cf/config-converter";
-import { renderCloudflareConfig } from "../src/codemods/wrangler-to-cf/config-renderer";
-import { inferDurableObjectExports } from "../src/codemods/wrangler-to-cf/durable-object-exports";
-import type { MigrationFollowUp } from "../src/codemods/wrangler-to-cf/types";
+import { renderCloudflareConfig } from "../../src/cloudflare-config/render";
+import { convertWranglerConfig } from "../../src/wrangler-config/convert";
+import { inferDurableObjectExports } from "../../src/wrangler-config/durable-objects";
+import type { MigrationFollowUp } from "../../src/wrangler-config/types";
 
 function infer(source: Record<string, unknown>, sourcePrefix = "") {
 	const followUps: MigrationFollowUp[] = [];

@@ -1,3 +1,4 @@
+import { createFollowUp } from "../follow-ups";
 import {
 	call,
 	camelObject,
@@ -8,8 +9,7 @@ import {
 	isRecord,
 	optionsFromRecord,
 	type UnknownRecord,
-} from "./converter-helpers";
-import { createFollowUp } from "./follow-ups";
+} from "./helpers";
 import type { MigrationFollowUp, OutputProperty, OutputValue } from "./types";
 
 export function convertTriggers(
