@@ -185,7 +185,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			"cloudflare.config.ts": "export default {};",
 			"package.json": JSON.stringify({
 				scripts: { build: "cf build", dev: "cf dev" },
-				dependencies: { hono: "4", vite: "8" },
+				dependencies: { "@shopify/hydrogen": "2026.1.0", vite: "8" },
 			}),
 			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
 		});
@@ -194,7 +194,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
 			configured: true,
-			framework: { id: "hono" },
+			framework: { id: "hydrogen" },
 			buildCommand: undefined,
 			devCommand: undefined,
 			packageManager: { type: "npm" },

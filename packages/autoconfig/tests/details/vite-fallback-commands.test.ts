@@ -113,7 +113,10 @@ export default { plugins: [cloudflare()] };`,
 		const binary = await seedProject();
 		await seed({
 			"package.json": JSON.stringify({
-				dependencies: { hono: "4", "@cloudflare/vite-plugin": "beta" },
+				dependencies: {
+					"@shopify/hydrogen": "2026.1.0",
+					"@cloudflare/vite-plugin": "beta",
+				},
 				scripts: { dev: "cf dev", build: "cf build" },
 			}),
 		});
@@ -230,10 +233,7 @@ export default { plugins: [cloudflare()] };`,
 		);
 	});
 
-	it.for([
-		["hono", "hono", "4"],
-		["hydrogen", "@shopify/hydrogen", "2026.1.0"],
-	] as const)(
+	it.for([["hydrogen", "@shopify/hydrogen", "2026.1.0"]] as const)(
 		"does not auto-configure unsupported %s through Vite",
 		async ([id, pkg, version], { expect }) => {
 			await seedProject();

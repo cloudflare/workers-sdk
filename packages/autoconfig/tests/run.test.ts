@@ -266,8 +266,8 @@ describe("runAutoConfig()", () => {
 				{
 					configured: false,
 					projectPath: process.cwd(),
-					workerName: "hono-app",
-					framework: getFrameworkClassInstance("hono", "cf"),
+					workerName: "hydrogen-app",
+					framework: getFrameworkClassInstance("hydrogen", "cf"),
 					outputDir: "dist",
 					packageManager: NpmPackageManager,
 				},
@@ -278,7 +278,7 @@ describe("runAutoConfig()", () => {
 				}
 			)
 		).rejects.toThrow(
-			'The detected framework ("Hono") cannot be automatically configured.'
+			'The detected framework ("Hydrogen") cannot be automatically configured.'
 		);
 	});
 

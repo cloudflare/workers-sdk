@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { Hono } from "./hono";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
 import { Qwik } from "./qwik";
@@ -73,11 +74,25 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
 			supportsCf: true,
 			supported: true,
 		},
-		{
-			id: "hono",
-			name: "Hono",
-			supported: false,
-		},
+		target === "cf"
+			? {
+					id: "hono",
+					name: "Hono",
+					class: Hono,
+					frameworkPackageInfo: {
+						name: "hono",
+						// cf doesn't change the Hono app, so any version works
+						minimumVersion: "0.0.0",
+						maximumKnownMajorVersion: "4",
+					},
+					supportsCf: true,
+					supported: true,
+				}
+			: {
+					id: "hono",
+					name: "Hono",
+					supported: false,
+				},
 		{
 			id: "next",
 			name: "Next.js",
