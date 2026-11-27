@@ -93,14 +93,18 @@ async function resizeImage(
 	const transformed =
 		await env[CoreBindings.SERVICE_LOOPBACK].fetch(transformRequest);
 
-	// If Sharp can't transform the image return the origin image
+	// If Sharp can't transform the image return the origin image with Cf-Resized error
 	if (!transformed.ok) {
-		const headers = new Headers(originResponse.headers);
-		headers.delete("content-encoding");
-		headers.delete("content-length");
+		const responseHeaders = new Headers(originResponse.headers);
+		responseHeaders.delete("content-encoding");
+		responseHeaders.delete("content-length");
+		const cfResized = transformed.headers.get("cf-resized");
+		if (cfResized) {
+			responseHeaders.set("cf-resized", cfResized);
+		}
 		return new Response(source, {
 			status: originResponse.status,
-			headers,
+			headers: responseHeaders,
 		});
 	}
 
@@ -116,6 +120,6 @@ async function warnLowFidelityOnce(env: Env): Promise<void> {
 	await env[CoreBindings.SERVICE_LOOPBACK].fetch("http://localhost/core/log", {
 		method: "POST",
 		headers: { [SharedHeaders.LOG_LEVEL]: LogLevel.WARN.toString() },
-		body: "Local cf.image transforms are a low-fidelity mock; only resize, rotate and format conversion are applied. Deploy to preview the full transformation.",
+		body: "Local cf.image transforms are a low-fidelity mock; only resize, rotate, flip, blur, sharpen, and format conversion are applied. Deploy to preview the full transformation.",
 	});
 }

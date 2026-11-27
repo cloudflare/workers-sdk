@@ -14,11 +14,24 @@ export default {
 		if (url.pathname === "/info") {
 			return Response.json(await env.IMAGES.info(request.body));
 		}
-		const transform = JSON.parse(url.searchParams.get("transform") || "{}");
+		const transformParam = JSON.parse(url.searchParams.get("transform") || "{}");
+		const transforms = Array.isArray(transformParam)
+			? transformParam
+			: [transformParam];
 		const format = url.searchParams.get("format") || "image/png";
-		const result = await env.IMAGES.input(request.body)
-			.transform(transform)
-			.output({ format });
+		const qualityParam = url.searchParams.get("quality");
+		const parsedQuality = qualityParam !== null ? Number(qualityParam) : NaN;
+		const outputOpts = qualityParam
+			? {
+					format,
+					quality: Number.isFinite(parsedQuality) ? parsedQuality : qualityParam,
+				}
+			: { format };
+		let pipeline = env.IMAGES.input(request.body);
+		for (const step of transforms) {
+			pipeline = pipeline.transform(step);
+		}
+		const result = await pipeline.output(outputOpts);
 		return result.response();
 	},
 };
@@ -79,14 +92,18 @@ describe("Images binding local transforms", () => {
 	afterAll(() => mf.dispose());
 
 	async function transform(
-		transformOpts: Record<string, unknown>,
+		transformOpts: Record<string, unknown> | Record<string, unknown>[],
 		format = "image/png",
-		source: Buffer = sourcePng
+		source: Buffer = sourcePng,
+		quality?: number | string
 	) {
 		const params = new URLSearchParams({
 			transform: JSON.stringify(transformOpts),
 			format,
 		});
+		if (quality !== undefined) {
+			params.set("quality", String(quality));
+		}
 		const res = await mf.dispatchFetch(`http://localhost/?${params}`, {
 			method: "POST",
 			body: source,
@@ -270,5 +287,99 @@ describe("Images binding local transforms", () => {
 			body: source,
 		});
 		expect(await response.json()).toMatchObject({ width: 200, height: 100 });
+	});
+
+	test("flip:v flips the image vertically", async ({ expect }) => {
+		// Source has white top half and red bottom half; vertical flip swaps them.
+		const { body } = await transform({ flip: "v" });
+		const top = await pixelAt(body, 100, 10);
+		const bottom = await pixelAt(body, 100, 90);
+		expect([top.r, top.g, top.b]).toEqual([255, 0, 0]);
+		expect([bottom.r, bottom.g, bottom.b]).toEqual([255, 255, 255]);
+	});
+
+	test("blur softens the boundary between regions", async ({ expect }) => {
+		const { body } = await transform({ blur: 5 });
+		// Right at the horizontal seam (y = 50), blurring mixes white (255,255,255)
+		// and red (255,0,0) so g/b sit strictly between 0 and 255.
+		const seam = await pixelAt(body, 100, 50);
+		expect(seam.r).toBe(255);
+		expect(seam.g).toBeGreaterThan(20);
+		expect(seam.g).toBeLessThan(235);
+	});
+
+	test("chained crop then flip preserves transform order", async ({
+		expect,
+	}) => {
+		// Source has white top half and red bottom half. Cropping the top 20px first
+		// and then flipping vertically must yield an all-white strip, whereas running
+		// flip before gravity crop would yield red.
+		const { body } = await transform([
+			{ width: 200, height: 20, fit: "cover", gravity: "top" },
+			{ flip: "v" },
+		]);
+		const center = await pixelAt(body, 100, 10);
+		expect([center.r, center.g, center.b]).toEqual([255, 255, 255]);
+	});
+
+	test("sharpen enhances edge contrast even at low strength", async ({
+		expect,
+	}) => {
+		const edgePixels = Buffer.alloc(100 * 100 * 3);
+		for (let y = 0; y < 100; y++) {
+			for (let x = 0; x < 100; x++) {
+				const v = x < 49 ? 100 : x === 49 ? 118 : x === 50 ? 138 : 156;
+				const idx = (y * 100 + x) * 3;
+				edgePixels[idx] = edgePixels[idx + 1] = edgePixels[idx + 2] = v;
+			}
+		}
+		const softEdge = await sharp(edgePixels, {
+			raw: { width: 100, height: 100, channels: 3 },
+		})
+			.png()
+			.toBuffer();
+
+		const { res, body } = await transform(
+			{ sharpen: 0.4 },
+			"image/png",
+			softEdge
+		);
+		expect(res.status).toBe(200);
+		const left = await pixelAt(body, 49, 50);
+		const right = await pixelAt(body, 50, 50);
+		expect(right.r - left.r).toBeGreaterThan(138 - 118);
+	});
+
+	test("output quality controls JPEG compression for numeric and named presets", async ({
+		expect,
+	}) => {
+		// Use a blurred gradient-like image so quality visibly changes JPEG size.
+		const { body: lowQ } = await transform(
+			{ blur: 10 },
+			"image/jpeg",
+			sourcePng,
+			10
+		);
+		const { body: highQ } = await transform(
+			{ blur: 10 },
+			"image/jpeg",
+			sourcePng,
+			95
+		);
+		expect(lowQ.length).toBeLessThan(highQ.length);
+
+		const { body: presetLow } = await transform(
+			{ blur: 10 },
+			"image/jpeg",
+			sourcePng,
+			"low"
+		);
+		const { body: presetHigh } = await transform(
+			{ blur: 10 },
+			"image/jpeg",
+			sourcePng,
+			"high"
+		);
+		expect(presetLow.length).toBeLessThan(presetHigh.length);
 	});
 });
