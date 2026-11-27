@@ -473,12 +473,7 @@ export async function runAutoConfig(
 		}
 	}
 
-	// Keep an existing cloudflare.config.ts, such as one migrated from a Wrangler config
-	if (
-		target === "cf" &&
-		workerConfig !== null &&
-		!existsSync(resolve(projectPath, "cloudflare.config.ts"))
-	) {
+	if (target === "cf" && workerConfig !== null) {
 		await saveCloudflareConfig(projectPath, workerConfig);
 	}
 
@@ -771,7 +766,8 @@ export async function saveWranglerJsonc(
 }
 
 /**
- * Writes the Worker configuration used by `cf`.
+ * Writes the Worker configuration used by `cf`, unless the project already has one, such as
+ * one migrated from a Wrangler config.
  *
  * @param projectPath The project directory
  * @param workerConfig The Worker configuration to write
@@ -780,10 +776,12 @@ async function saveCloudflareConfig(
 	projectPath: string,
 	workerConfig: WorkerConfig
 ): Promise<void> {
-	await writeFile(
-		resolve(projectPath, "cloudflare.config.ts"),
-		renderCloudflareConfig(workerConfig)
-	);
+	const configPath = resolve(projectPath, "cloudflare.config.ts");
+	if (existsSync(configPath)) {
+		return;
+	}
+
+	await writeFile(configPath, renderCloudflareConfig(workerConfig));
 }
 
 /**
@@ -870,19 +868,13 @@ export async function buildOperationsSummary(
 		target === "wrangler"
 			? getWranglerConfig(workerConfig, configurationResults)
 			: null;
-	// Setup keeps an existing cloudflare.config.ts, such as one migrated from a Wrangler config
-	const keepsCloudflareConfig =
-		target === "cf" &&
-		existsSync(resolve(autoConfigDetails.projectPath, "cloudflare.config.ts"));
 
 	const summary: AutoConfigSummary = {
 		scripts: {},
 		...(target === "wrangler"
 			? { wranglerConfig: wranglerConfig ?? undefined }
 			: {
-					workerConfig: keepsCloudflareConfig
-						? undefined
-						: (workerConfig ?? undefined),
+					workerConfig: workerConfig ?? undefined,
 					buildConfig: configurationResults.buildConfig,
 					buildTool: configurationResults.buildTool,
 				}),
@@ -1029,7 +1021,7 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	if (target === "cf" && workerConfig && !keepsCloudflareConfig) {
+	if (target === "cf" && workerConfig) {
 		logger.log("📄 Create cloudflare.config.ts:");
 		logger.log(indentFileContent(renderCloudflareConfig(workerConfig)));
 		logger.log("");
