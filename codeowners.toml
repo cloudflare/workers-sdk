@@ -15,11 +15,14 @@ disable_smart_dismissal = true
 suppress_unowned_warning = true
 
 [enforcement]
-# The bot (@workers-devprod) approves PRs when all ownership rules are satisfied,
-# unblocking the native GitHub CODEOWNERS requirement in branch protection.
-# The check still runs for visibility (PR comments, review requests) but does not
-# fail — enforcement is via the bot's CODEOWNERS approval only.
-approval = true
+# Enforcement lives in .github/workflows/codeowners.yml, which acts on this check's
+# result. Once all ownership rules are satisfied it approves as @workers-devprod,
+# unblocking the native GitHub CODEOWNERS requirement in branch protection. On a PR
+# that @workers-devprod authored, which needs no code owner approval, it fails the
+# check instead.
+# Codeowners Plus's own approval stays off: it errors on a PR its account authored,
+# because GitHub refuses an approval of your own PR.
+approval = false
 fail_check = false
 
 [admin_bypass]

@@ -72,3 +72,30 @@ jobs:
               -f message="Codeowners reviews no longer satisfied" -f event=DISMISS
             echo "Dismissed approval ${review_id} from ${bot_login}"
           done
+
+      # codeowners.toml turns off Codeowners Plus's own approval, which errors on
+      # a PR its account authored, so the bot approves here instead.
+      - name: "Approve When Codeowner Reviews Are Satisfied"
+        if: ${{ steps.codeowners.outcome == 'success' && fromJSON(steps.codeowners.outputs.data).success && github.event.pull_request.user.login != 'workers-devprod' }}
+        env:
+          GH_TOKEN: "${{ secrets.CODEOWNERS_GITHUB_PAT }}"
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          bot_login=$(gh api user --jq .login)
+          review_ids=$(gh api --paginate "repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
+            --jq ".[] | select(.state == \"APPROVED\" and .user.login == \"${bot_login}\") | .id")
+          if [ -z "$review_ids" ]; then
+            gh api --method POST "repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
+              -f event=APPROVE -f body="Codeowners reviews satisfied"
+            echo "Approved as ${bot_login}"
+          fi
+
+      # GitHub counts a PR's author as having approved as a code owner, so a PR
+      # the bot authored merges without its approval. The ruleset for main
+      # requires this check, which gates those PRs instead.
+      - name: "Fail Bot-Authored PR Without Codeowner Reviews"
+        if: ${{ steps.codeowners.outcome == 'success' && !fromJSON(steps.codeowners.outputs.data).success && github.event.pull_request.user.login == 'workers-devprod' }}
+        run: |
+          echo "::error::Codeowners reviews not satisfied"
+          exit 1

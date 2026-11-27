@@ -12,7 +12,7 @@ When a PR is opened, updated, or reviewed, the Codeowners Plus GitHub Action run
 - Requests reviews from those teams
 - When all rules are satisfied, the `@workers-devprod` bot submits an **approval review**
 
-The native GitHub `CODEOWNERS` file contains a single rule (`* @workers-devprod`) making the bot the sole required code owner. Branch protection requires code owner approval, so the bot's approval is the merge gate. The check itself always passes — it only provides visibility.
+The native GitHub `CODEOWNERS` file contains a single rule (`* @workers-devprod`) making the bot the sole required code owner. Branch protection requires code owner approval, so the bot's approval is the merge gate. The check itself passes and only provides visibility, except on a [PR the bot authored](#pr-authored-by-workers-devprod).
 
 ```
 PR opened/updated/reviewed
@@ -70,7 +70,7 @@ Key settings:
 | `ignore`                   | Directories excluded from ownership checks (e.g. `.changeset`, `fixtures`) |
 | `detailed_reviewers`       | Show per-file owner breakdown in PR comments                               |
 | `suppress_unowned_warning` | Don't warn about files with no owner                                       |
-| `enforcement.approval`     | When `true`, the bot approves PRs that satisfy all rules                   |
+| `enforcement.approval`     | When `true`, Codeowners Plus approves PRs itself. Off: the workflow does   |
 | `enforcement.fail_check`   | When `true`, the GHA check fails if rules aren't satisfied                 |
 | `admin_bypass.enabled`     | Allow admins to bypass by approving with "Codeowners Bypass" text          |
 
@@ -113,6 +113,12 @@ All three teams must approve: `@cloudflare/wrangler` + `@cloudflare/d1` + `@clou
 ### Changeset release PR
 
 The automated changeset release PR modifies `CHANGELOG.md` and `package.json` files across packages. These files are explicitly owned by `@cloudflare/wrangler` only (via `**/CHANGELOG.md` and `**/package.json` rules), and the `-shared` package AND rules use `*/**` patterns that exclude root-level files. This means only wrangler team approval is needed for releases.
+
+### PR authored by `@workers-devprod`
+
+Example: an automated fix opened from the bot's account.
+
+GitHub counts a PR's author as having approved as a code owner, so a PR the bot authored never needs its approval, and the bot cannot approve its own PR. The **"Run Codeowners Plus"** check gates these PRs instead: it fails until every owning team has approved, and the ruleset for `main` requires it. Changeset release PRs are skipped, as only wrangler team approval is needed for releases.
 
 ### PR touches ignored paths only
 
@@ -180,7 +186,7 @@ Rules in `.codeowners` are relative to the file's directory. Check that:
 
 ### Bot not approving even though all reviews are in
 
-- Check that `enforcement.approval = true` in `codeowners.toml`
+- Check that the **"Approve When Codeowner Reviews Are Satisfied"** step ran in the workflow run
 - Check that the `CODEOWNERS_GITHUB_PAT` secret is a PAT owned by the `@workers-devprod` account
 - Check that `@workers-devprod` has write access to the repository
 - Check the workflow run logs for errors (verbose output is enabled)
