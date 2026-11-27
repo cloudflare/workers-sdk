@@ -1,6 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils/errors";
 import { startContainerBuild } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
+import { dockerImageInspect } from "./inspect";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
@@ -180,6 +181,10 @@ export async function prepareContainerImagesForDev(args: {
 				},
 			});
 			await build.ready;
+			await dockerImageInspect(dockerPath, {
+				imageTag: options.image_tag,
+				formatString: "{{ .Id }}",
+			});
 
 			onContainerImagePreparationEnd({
 				containerOptions: options,
@@ -201,6 +206,12 @@ export async function prepareContainerImagesForDev(args: {
 			});
 			const pullResult = await pull.ready;
 			aborted ||= pullResult.aborted;
+			if (!aborted) {
+				await dockerImageInspect(dockerPath, {
+					imageTag: options.image_tag,
+					formatString: "{{ .Id }}",
+				});
+			}
 			onContainerImagePreparationEnd({
 				containerOptions: options,
 			});
