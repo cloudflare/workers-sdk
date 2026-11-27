@@ -12,6 +12,9 @@ import type { UndiciHeaders } from "undici/types/dispatcher";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
 
+// https://fetch.spec.whatwg.org/#null-body-status
+const nullBodyStatuses = new Set([101, 103, 204, 205, 304]);
+
 export async function fetch(
 	input: RequestInfo,
 	init?: RequestInit | Request
@@ -79,7 +82,15 @@ export async function fetch(
 		});
 		ws.once("unexpected-response", (_, req) => {
 			const headers = convertUndiciHeadersToStandard(req.headers);
-			const response = new Response(req, {
+			// `Response` throws if given a body with a null body status, and a throw
+			// here would escape `responsePromise` and crash the process
+			const nullBody =
+				req.statusCode !== undefined && nullBodyStatuses.has(req.statusCode);
+			if (nullBody) {
+				// Nothing will read the message, so drain it to release the socket
+				req.resume();
+			}
+			const response = new Response(nullBody ? null : req, {
 				status: req.statusCode,
 				headers,
 			});
