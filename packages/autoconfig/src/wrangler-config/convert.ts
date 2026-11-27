@@ -414,14 +414,14 @@ function normalizeDirectory(directory: string): string {
 }
 
 /**
- * Checks whether the Vite build deploys a Wrangler assets directory's files at the same URLs:
- * it's Vite's default public folder, which Vite copies into its build, the project's build
- * output folder, or the `client` folder inside it, where the Cloudflare Vite plugin writes
- * client assets by default. Another folder inside the build output would move its files under
- * a prefix.
+ * Checks whether the Vite build deploys a Wrangler assets directory's files at the same URLs,
+ * going by default folder names: it's Vite's default public folder, which Vite copies into its
+ * build, the framework's default build output folder, or the `client` folder inside it, where
+ * the Cloudflare Vite plugin writes client assets by default. Another folder inside the build
+ * output would move its files under a prefix.
  *
  * @param directory The Wrangler assets directory
- * @param outputDir The folder the project's build writes to, if known
+ * @param outputDir The framework's default build output folder, if known
  * @returns Whether the Vite build deploys the directory's files
  */
 function isDeployedByVite(directory: string, outputDir?: string): boolean {
@@ -446,7 +446,7 @@ function isDeployedByVite(directory: string, outputDir?: string): boolean {
  * @param source The branch's settings
  * @param sourcePrefix Where the branch is in the Wrangler config
  * @param followUps The follow-ups to add to
- * @param outputDir The folder the project's build writes to, if known
+ * @param outputDir The framework's default build output folder, if known
  */
 function addViteAssetsDirectoryFollowUp(
 	source: UnknownRecord,
@@ -668,7 +668,7 @@ export function convertWranglerSettings(
  *
  * @param rawConfig The parsed contents of a Wrangler JSON, JSONC, or TOML configuration.
  * @param bundler The bundler the project builds with.
- * @param outputDir The folder the project's build writes to, relative to the Wrangler config, if known.
+ * @param outputDir The framework's default build output folder, relative to the Wrangler config, if known.
  *
  * @returns The `wrangler.config.ts` branches, and follow-ups for the build settings left out.
  */
