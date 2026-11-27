@@ -1,4 +1,6 @@
 import assert from "node:assert";
+import { pipeline, Transform } from "node:stream";
+import zlib from "node:zlib";
 import * as undici from "undici";
 import NodeWebSocket from "ws";
 import { CoreHeaders, DeferredPromise } from "../workers";
@@ -8,9 +10,15 @@ import { coupleWebSocket, WebSocketPair } from "./websocket";
 import type { RequestInfo, RequestInit } from "./request";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type http from "node:http";
+import type { Readable, TransformCallback } from "node:stream";
 import type { UndiciHeaders } from "undici/types/dispatcher";
 
 const ignored = ["transfer-encoding", "connection", "keep-alive", "expect"];
+
+// Statuses whose responses have no body, which `undici.fetch()` doesn't decode
+const nullBodyStatuses = [101, 204, 205, 304];
+// `undici.fetch()` rejects responses with more content codings than this
+const maxContentEncodings = 5;
 
 export async function fetch(
 	input: RequestInfo,
@@ -79,7 +87,21 @@ export async function fetch(
 		});
 		ws.once("unexpected-response", (_, req) => {
 			const headers = convertUndiciHeadersToStandard(req.headers);
-			const response = new Response(req, {
+			// `ws` passes the body through as sent, but `undici.fetch()` decodes
+			// it, and callers such as `dispatchFetch()` rely on that
+			let body: Readable;
+			try {
+				body = decodeResponseBody(
+					req,
+					req.statusCode,
+					headers.get("Content-Encoding")
+				);
+			} catch (error) {
+				req.destroy();
+				responsePromise.reject(new TypeError("fetch failed", { cause: error }));
+				return;
+			}
+			const response = new Response(body, {
 				status: req.statusCode,
 				headers,
 			});
@@ -92,6 +114,117 @@ export async function fetch(
 		dispatcher: requestInit?.dispatcher,
 	});
 	return new Response(response.body, response);
+}
+
+/**
+ * Decodes a response body according to its `Content-Encoding`, as
+ * `undici.fetch()` does for the bodies of the responses it returns:
+ * https://github.com/nodejs/undici/blob/v7.30.2/lib/web/fetch/index.js#L2221-L2270
+ *
+ * @param body The response body, as received
+ * @param status The response's status
+ * @param contentEncoding The response's `Content-Encoding` header
+ * @returns The decoded body, or `body` itself if it can't or needn't be decoded
+ * @throws If the response has more content codings than `undici.fetch()` allows
+ */
+function decodeResponseBody(
+	body: Readable,
+	status: number | undefined,
+	contentEncoding: string | null
+): Readable {
+	if (
+		contentEncoding === null ||
+		(status !== undefined && nullBodyStatuses.includes(status))
+	) {
+		return body;
+	}
+	// "All content-coding values are case-insensitive"
+	const codings = contentEncoding.toLowerCase().split(",");
+	if (codings.length > maxContentEncodings) {
+		throw new Error(
+			`too many content-encodings in response: ${codings.length}, maximum allowed is ${maxContentEncodings}`
+		);
+	}
+	// Codings are listed in the order they were applied, so undo the last first
+	const decoders: Transform[] = [];
+	for (let i = codings.length - 1; i >= 0; i--) {
+		const coding = codings[i].trim();
+		if (coding === "gzip" || coding === "x-gzip") {
+			decoders.push(
+				zlib.createGunzip({
+					flush: zlib.constants.Z_SYNC_FLUSH,
+					finishFlush: zlib.constants.Z_SYNC_FLUSH,
+				})
+			);
+		} else if (coding === "deflate") {
+			decoders.push(new InflateStream());
+		} else if (coding === "br") {
+			decoders.push(
+				zlib.createBrotliDecompress({
+					flush: zlib.constants.BROTLI_OPERATION_FLUSH,
+					finishFlush: zlib.constants.BROTLI_OPERATION_FLUSH,
+				})
+			);
+		} else if (
+			coding === "zstd" &&
+			typeof zlib.createZstdDecompress === "function"
+		) {
+			decoders.push(
+				zlib.createZstdDecompress({
+					flush: zlib.constants.ZSTD_e_continue,
+					finishFlush: zlib.constants.ZSTD_e_end,
+				})
+			);
+		} else {
+			// Leave a body with a coding we can't decode as it is
+			return body;
+		}
+	}
+	if (decoders.length === 0) {
+		return body;
+	}
+	// An error destroys the last decoder, which surfaces it to the body's reader
+	pipeline([body, ...decoders], () => {});
+	return decoders[decoders.length - 1];
+}
+
+/**
+ * Inflates a `deflate` body, whether or not it has a zlib header, as servers
+ * send either: https://github.com/nodejs/undici/blob/v7.30.2/lib/web/fetch/util.js#L1240-L1274
+ */
+class InflateStream extends Transform {
+	#inflate?: zlib.Inflate | zlib.InflateRaw;
+
+	_transform(
+		chunk: Buffer,
+		encoding: BufferEncoding,
+		callback: TransformCallback
+	) {
+		if (this.#inflate === undefined) {
+			if (chunk.length === 0) {
+				callback();
+				return;
+			}
+			const options = {
+				flush: zlib.constants.Z_SYNC_FLUSH,
+				finishFlush: zlib.constants.Z_SYNC_FLUSH,
+			};
+			// A zlib header's compression method is always 8 (deflate)
+			this.#inflate =
+				(chunk[0] & 0x0f) === 0x08
+					? zlib.createInflate(options)
+					: zlib.createInflateRaw(options);
+			this.#inflate.on("data", (data: Buffer) => this.push(data));
+			this.#inflate.on("end", () => this.push(null));
+			this.#inflate.on("error", (error) => this.destroy(error));
+		}
+		this.#inflate.write(chunk, encoding, callback);
+	}
+
+	_final(callback: (error?: Error | null) => void) {
+		this.#inflate?.end();
+		callback();
+	}
 }
 
 export type DispatchFetch = (
