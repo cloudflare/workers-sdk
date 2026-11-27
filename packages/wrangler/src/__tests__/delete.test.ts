@@ -162,6 +162,28 @@ describe("delete", () => {
 		`);
 	});
 
+	it("should warn when multiple environments are configured and none is specified", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({
+			name: "my-script",
+			env: {
+				staging: {},
+				production: {},
+			},
+		});
+		mockConfirm({
+			text: `Are you sure you want to delete my-script? This action cannot be undone.`,
+			result: false,
+		});
+
+		await runWrangler("delete");
+
+		expect(std.warn).toContain(
+			"Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the delete command."
+		);
+	});
+
 	it('shouldn\'t delete when the user says "no"', async ({ expect }) => {
 		mockConfirm({
 			text: `Are you sure you want to delete xyz? This action cannot be undone.`,

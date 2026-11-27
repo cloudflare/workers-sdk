@@ -263,6 +263,10 @@ export const secretDeleteCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
+		force: {
+			describe: "Skip confirmation prompt",
+			type: "boolean",
+		},
 	},
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
@@ -284,9 +288,10 @@ export const secretDeleteCommand = createCommand({
 		const accountId = await requireAuth(config);
 
 		if (
-			await confirm(
+			args.force ||
+			(await confirm(
 				`Are you sure you want to permanently delete the secret ${args.key} on the Worker ${scriptName}?`
-			)
+			))
 		) {
 			logger.log(
 				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}`
