@@ -10,6 +10,7 @@ import {
 	parsePackageJSON,
 	readFileSync,
 } from "@cloudflare/workers-utils";
+import { isPagesConfig } from "@cloudflare/workers-utils/config";
 import {
 	AutoConfigDetectionError,
 	AutoConfigFrameworkConfigurationError,
@@ -179,7 +180,7 @@ export async function getDetailsForAutoConfig({
 		// If a real Wrangler config has been found the project is already configured for Workers
 		wranglerConfig?.configPath &&
 		// Unless `pages_build_output_dir` is set, since that indicates that the project is a Pages one instead
-		!wranglerConfig.pages_build_output_dir
+		!isPagesConfig(wranglerConfig)
 	) {
 		return {
 			configured: true,
