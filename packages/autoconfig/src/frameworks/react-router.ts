@@ -487,8 +487,6 @@ export class ReactRouter extends Framework {
 			projectPath,
 			this.frameworkVersion
 		);
-		// A Wrangler config's `main` is the project's own Worker entry, which already renders the app
-		const existingEntrypoint = wranglerConfig?.main;
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,
@@ -497,7 +495,8 @@ export class ReactRouter extends Framework {
 				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
-			if (existingEntrypoint === undefined) {
+			// A Wrangler config's `main` is the project's own Worker entry, which already renders the app
+			if (wranglerConfig?.main === undefined) {
 				mkdirSync("workers");
 
 				writeAppTs(useMiddlewarePattern);
@@ -529,7 +528,7 @@ export class ReactRouter extends Framework {
 		return {
 			buildTool: "vite",
 			workerConfig: {
-				entrypoint: existingEntrypoint ?? "./workers/app.ts",
+				entrypoint: "./workers/app.ts",
 			},
 		};
 	}

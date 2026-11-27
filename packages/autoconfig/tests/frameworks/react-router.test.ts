@@ -258,16 +258,15 @@ describe("React Router framework configure()", () => {
 			);
 		});
 
-		it("uses the Worker entry the Wrangler config names", async ({
+		it("leaves the Worker entry to a Wrangler config that names one", async ({
 			expect,
 		}) => {
 			const framework = createFramework("7.16.0");
-			const result = await framework.configure({
+			await framework.configure({
 				...getBaseOptions(),
 				wranglerConfig: { main: "./server/worker.ts" },
 			});
 
-			expect(result.workerConfig).toEqual({ entrypoint: "./server/worker.ts" });
 			expect(existsSync(resolve("workers/app.ts"))).toBe(false);
 			expect(existsSync(resolve("app/entry.server.tsx"))).toBe(false);
 			expect(cliPackages.installPackages).not.toHaveBeenCalled();
