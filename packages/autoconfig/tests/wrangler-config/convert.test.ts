@@ -204,7 +204,6 @@ describe("Wrangler environment and tooling conversion", () => {
 		["./public", undefined, []],
 		["./dist", "dist", []],
 		["./build/client", "build/client/", []],
-		["./dist/client", "dist", []],
 		["./dist/docs", "dist", ["vite-assets-directory"]],
 		["./dist", undefined, ["vite-assets-directory"]],
 	] as const)(
