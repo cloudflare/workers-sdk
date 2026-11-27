@@ -3,8 +3,6 @@ import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 
-const execFileAsync = promisify(execFile);
-
 /**
  * Checks whether a failed Git command indicates that its working directory is
  * outside a Git worktree.
@@ -84,7 +82,9 @@ async function hasGitMetadata(cwd: string): Promise<boolean> {
  */
 async function getGitStatus(cwd: string): Promise<string | undefined> {
 	try {
-		const { stdout } = await execFileAsync(
+		// Bound on use rather than on import, so importing this module (e.g. through
+		// autoconfig) doesn't touch `child_process`, which some test suites mock
+		const { stdout } = await promisify(execFile)(
 			"git",
 			["status", "--porcelain=v1", "--untracked-files=normal"],
 			{
