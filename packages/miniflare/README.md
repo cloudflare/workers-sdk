@@ -487,7 +487,22 @@ parameter in module format Workers.
   `writeDataPoint()` calls are discarded. If `remoteProxyConnectionString` is
   set, they are written to the remote dataset instead.
 
-#### Sending Email, Vectorize and Workers for Platforms
+#### Sending Email
+
+- `email?: { send_email?: { name: string; destination_address?: string; allowed_destination_addresses?: string[]; allowed_sender_addresses?: string[]; remoteProxyConnectionString?: RemoteProxyConnectionString }[] }`
+
+  Array of Email Sending bindings, each injected into this Worker under its
+  `name`. `destination_address` and `allowed_destination_addresses` are mutually
+  exclusive. Locally, `send()` calls are simulated rather than delivered: the
+  sender and `to` recipients are checked against the configured restrictions,
+  and `send()` resolves with a generated message ID. The message is then logged
+  in the background, and written to the temporary directory (see
+  `resourceTmpPath`): an `EmailMessage` as an `.eml` file, and a message
+  builder's text, HTML and attachments, if any, as separate files. If
+  `remoteProxyConnectionString` is set, messages are sent through the remote
+  binding instead.
+
+#### Vectorize and Workers for Platforms
 
 _Not yet supported_
 
@@ -706,7 +721,7 @@ Options shared between all Workers/"nanoservices".
   logs). Falls back to a subdirectory of Miniflare's own temporary directory if
   not set.
 
-#### Sending Email, Vectorize, Workers AI and Workers for Platforms
+#### Vectorize, Workers AI and Workers for Platforms
 
 _Not yet supported_
 
