@@ -193,7 +193,7 @@ async function runInfo(transformer: Sharp): Promise<Response> {
 }
 
 async function runTransform(
-	sharp: typeof import("sharp"),
+	sharp: (typeof import("sharp"))["default"],
 	initialTransformer: Sharp,
 	transforms: Transform[],
 	outputFormat: string | null,
