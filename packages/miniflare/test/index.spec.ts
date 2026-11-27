@@ -5712,3 +5712,52 @@ test("Miniflare: dispatchFetch() replays a known-length body after HTTP 421", as
 	expect(res.headers.get("location")).toBeNull();
 	expect(await res.text()).toBe("body={}");
 });
+
+test("Miniflare: dispatchFetch() decodes a compressed WebSocket upgrade rejection", async ({
+	expect,
+}) => {
+	// https://github.com/cloudflare/workers-sdk/issues/17224
+	const body = JSON.stringify({ error: "denied" });
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`export default {
+			fetch() {
+				return new Response(${JSON.stringify(body)}, {
+					status: 401,
+					headers: {
+						"Content-Encoding": "gzip",
+						"Content-Type": "application/json",
+					},
+				});
+			}
+		}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	// Without `Upgrade`, `dispatchFetch()` decodes the body and moves
+	// `Content-Encoding` to `MF-Content-Encoding`
+	let res = await mf.dispatchFetch("http://localhost/", {
+		headers: { "Accept-Encoding": "gzip" },
+	});
+	expect(res.status).toBe(401);
+	expect(await res.text()).toBe(body);
+	expect(res.headers.get("MF-Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe(null);
+
+	// A rejected WebSocket upgrade should be decoded the same way
+	res = await mf.dispatchFetch("http://localhost/", {
+		headers: { Upgrade: "websocket", "Accept-Encoding": "gzip" },
+	});
+	expect(res.status).toBe(401);
+	expect(res.webSocket).toBe(null);
+	expect(await res.text()).toBe(body);
+	expect(res.headers.get("MF-Content-Encoding")).toBe("gzip");
+	expect(res.headers.get("Content-Encoding")).toBe(null);
+});
