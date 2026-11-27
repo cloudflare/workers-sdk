@@ -155,7 +155,10 @@ if (isWindows) {
 		test("for connection to remote bindings during dev the accountId in cloudflare.config.ts is used", async ({
 			expect,
 		}) => {
-			const proc = await runLongLived("pnpm", "dev", projectPath);
+			const proc = await runLongLived("pnpm", "dev", projectPath, {
+				// `CLOUDFLARE_ACCOUNT_ID` takes precedence over the configured `accountId`
+				CLOUDFLARE_ACCOUNT_ID: undefined,
+			});
 			await vi.waitFor(
 				async () => {
 					expect(proc.stderr).toMatch(
@@ -233,6 +236,8 @@ describe.skipIf(isWindows)(
 				CLOUDFLARE_API_TOKEN: undefined,
 				CLOUDFLARE_API_KEY: undefined,
 				CLOUDFLARE_EMAIL: undefined,
+				// `CLOUDFLARE_ACCOUNT_ID` takes precedence over the configured `accountId`
+				CLOUDFLARE_ACCOUNT_ID: undefined,
 			});
 
 			// as opposed to hitting the OAuth path, which would indicate that the profile did not register
