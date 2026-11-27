@@ -626,8 +626,8 @@ async function executeListWorkflowInstances(
  * with idFromString() to address the existing DO, then calls
  * getInstanceMetadata() and readLogs() via RPC.
  *
- * Safe because the Engine DO has no alarms and its constructor is
- * idempotent (CREATE TABLE IF NOT EXISTS).
+ * Safe because the Engine DO's constructor is idempotent (CREATE TABLE IF
+ * NOT EXISTS) and its alarm only resumes an instance that is still running.
  */
 export async function getWorkflowInstanceDetails(
 	c: AppContext,

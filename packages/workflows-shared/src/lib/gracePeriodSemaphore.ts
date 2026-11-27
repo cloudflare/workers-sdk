@@ -43,9 +43,7 @@ export class GracePeriodSemaphore {
 		}
 		// when the counter goes from 0 to 1 - we can safely reject the previous grace period
 		if (this.#counter == 0) {
-			this.latestGracePeriodTimestamp = undefined;
-			this.latestGracePeriodAbortController?.abort();
-			this.latestGracePeriodAbortController = undefined;
+			this.cancelGracePeriod();
 		}
 		this.#counter += 1;
 	}
@@ -123,10 +121,14 @@ export class GracePeriodSemaphore {
 		this.#waitingSteps = [];
 	}
 
-	dispose() {
+	cancelGracePeriod() {
 		this.latestGracePeriodTimestamp = undefined;
 		this.latestGracePeriodAbortController?.abort();
 		this.latestGracePeriodAbortController = undefined;
+	}
+
+	dispose() {
+		this.cancelGracePeriod();
 
 		// Reject all waiting step promises so they stop blocking
 		for (const promise of this.#waitingSteps) {
