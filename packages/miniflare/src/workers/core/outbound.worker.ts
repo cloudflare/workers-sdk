@@ -95,16 +95,16 @@ async function resizeImage(
 
 	// If Sharp can't transform the image return the origin image with Cf-Resized error
 	if (!transformed.ok) {
-		const headers = new Headers(originResponse.headers);
-		headers.delete("content-encoding");
-		headers.delete("content-length");
+		const responseHeaders = new Headers(originResponse.headers);
+		responseHeaders.delete("content-encoding");
+		responseHeaders.delete("content-length");
 		const cfResized = transformed.headers.get("cf-resized");
 		if (cfResized) {
-			headers.set("cf-resized", cfResized);
+			responseHeaders.set("cf-resized", cfResized);
 		}
 		return new Response(source, {
 			status: originResponse.status,
-			headers,
+			headers: responseHeaders,
 		});
 	}
 
