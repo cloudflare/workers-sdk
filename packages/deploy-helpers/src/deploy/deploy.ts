@@ -539,10 +539,10 @@ async function deployWorker(
 		});
 	} else {
 		assert(accountId, "Missing accountId");
-		async function verifyTrafficSplitHasNotChanged(accountId: string) {
+		async function verifyTrafficSplitHasNotChanged(targetAccountId: string) {
 			const currentDeployment = await getLatestDeploymentForOverwrite(
 				config,
-				accountId,
+				targetAccountId,
 				scriptName
 			);
 			if (
