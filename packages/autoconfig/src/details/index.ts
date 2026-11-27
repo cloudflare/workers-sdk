@@ -140,17 +140,20 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig: providedWranglerConfig,
+	wranglerConfigPath,
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
 }: {
 	/** The path to the project, defaults to cwd. */
 	projectPath?: string;
-	/**
-	 * The project's Wrangler configuration, if the caller has already read it (for example one
-	 * with a custom name). Otherwise detection reads the one in the project folder, if any.
-	 */
+	/** The project's Wrangler configuration, if the caller has already read it. */
 	wranglerConfig?: WranglerConfig;
+	/**
+	 * The project's Wrangler configuration file, for example one with a custom name. Without a
+	 * `wranglerConfig`, detection reads this file, or else the one in the project folder, if any.
+	 */
+	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
@@ -173,7 +176,10 @@ export async function getDetailsForAutoConfig({
 	const hasCloudflareConfig =
 		target === "cf" && existsSync(resolve(projectPath, CLOUDFLARE_CONFIG_FILE));
 	const wranglerConfig =
-		providedWranglerConfig ?? readProjectWranglerConfig(projectPath);
+		providedWranglerConfig ??
+		(wranglerConfigPath === undefined
+			? readProjectWranglerConfig(projectPath)
+			: readWranglerConfigFile(wranglerConfigPath));
 
 	if (
 		target === "wrangler" &&
@@ -326,6 +332,16 @@ export async function getDetailsForAutoConfig({
 }
 
 /**
+ * Reads a Wrangler configuration file, keeping its path.
+ *
+ * @param configPath The Wrangler configuration file
+ * @returns The Wrangler configuration with its file's path
+ */
+function readWranglerConfigFile(configPath: string): WranglerConfig {
+	return { ...readWranglerConfig(configPath), configPath };
+}
+
+/**
  * Reads the Wrangler configuration file in the project folder itself, not one in a parent
  * folder such as the workspace root.
  *
@@ -341,7 +357,7 @@ function readProjectWranglerConfig(
 
 	return configPath === undefined
 		? undefined
-		: { ...readWranglerConfig(configPath), configPath };
+		: readWranglerConfigFile(configPath);
 }
 
 /**
