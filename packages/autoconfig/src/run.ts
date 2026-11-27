@@ -155,7 +155,7 @@ export async function runAutoConfig(
 			dryRun: true,
 			packageManager,
 			context,
-			wranglerConfigPath: autoConfigDetails.wranglerConfigPath,
+			wranglerConfig: autoConfigDetails.wranglerConfig,
 		});
 	const dryRunWorkerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
@@ -264,7 +264,7 @@ export async function runAutoConfig(
 		dryRun: false,
 		packageManager,
 		context,
-		wranglerConfigPath: autoConfigDetails.wranglerConfigPath,
+		wranglerConfig: autoConfigDetails.wranglerConfig,
 	});
 	const workerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,

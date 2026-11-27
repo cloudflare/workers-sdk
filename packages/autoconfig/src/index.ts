@@ -40,6 +40,7 @@ export type {
 } from "./wrangler-config/types";
 
 export type {
+	WranglerConfig,
 	AutoConfigDetails,
 	AutoConfigCommandError,
 	AutoConfigDetailsForConfiguredProject,

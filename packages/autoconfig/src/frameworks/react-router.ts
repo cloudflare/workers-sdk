@@ -7,7 +7,6 @@ import { parseFile, transformFile } from "@cloudflare/shared-ast-primitives";
 import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
-import { readWranglerConfig } from "../wrangler-config/read";
 import { Framework } from "./framework-class";
 import { transformViteConfig } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
@@ -482,17 +481,14 @@ export class ReactRouter extends Framework {
 		isWorkspaceRoot,
 		context,
 		target,
-		wranglerConfigPath,
+		wranglerConfig,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const useMiddlewarePattern = hasV8MiddlewareFlag(
 			projectPath,
 			this.frameworkVersion
 		);
 		// A Wrangler config's `main` is the project's own Worker entry, which already renders the app
-		const existingEntrypoint =
-			wranglerConfigPath === undefined
-				? undefined
-				: readWranglerConfig(wranglerConfigPath).main;
+		const existingEntrypoint = wranglerConfig?.main;
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
 				packageManager: packageManager.type,

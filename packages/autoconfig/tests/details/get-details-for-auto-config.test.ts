@@ -88,7 +88,10 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				target: "wrangler",
 				context,
 			})
-		).resolves.toMatchObject({ configured: true, wranglerConfigPath: "/tmp" });
+		).resolves.toMatchObject({
+			configured: true,
+			wranglerConfig: { configPath: "/tmp" },
+		});
 	});
 
 	it("should migrate an existing Wrangler project by default", async ({
@@ -104,7 +107,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({ configured: false });
 	});
 
-	it("should report the project's own Wrangler config, not a parent folder's", async ({
+	it("should report the Wrangler config the caller passes, or the project folder's own", async ({
 		expect,
 	}) => {
 		await seed({
@@ -115,23 +118,28 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 		await expect(
 			details.getDetailsForAutoConfig({ projectPath, context })
-		).resolves.toMatchObject({ wranglerConfigPath: undefined });
+		).resolves.toMatchObject({ wranglerConfig: undefined });
 
-		await writeFile(join(projectPath, "wrangler.toml"), "");
+		await writeFile(
+			join(projectPath, "wrangler.toml"),
+			'main = "src/index.ts"'
+		);
 		await expect(
 			details.getDetailsForAutoConfig({ projectPath, context })
 		).resolves.toMatchObject({
-			wranglerConfigPath: join(projectPath, "wrangler.toml"),
+			wranglerConfig: {
+				configPath: join(projectPath, "wrangler.toml"),
+				main: "src/index.ts",
+			},
 		});
+
+		const wranglerConfig = {
+			configPath: join(projectPath, "custom.jsonc"),
+			main: "src/worker.ts",
+		};
 		await expect(
-			details.getDetailsForAutoConfig({
-				projectPath,
-				wranglerConfigPath: join(projectPath, "custom.jsonc"),
-				context,
-			})
-		).resolves.toMatchObject({
-			wranglerConfigPath: join(projectPath, "custom.jsonc"),
-		});
+			details.getDetailsForAutoConfig({ projectPath, wranglerConfig, context })
+		).resolves.toMatchObject({ wranglerConfig });
 	});
 
 	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({

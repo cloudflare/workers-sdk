@@ -18,6 +18,9 @@ export type AutoConfigCommandError = {
 	message: string;
 };
 
+/** A Wrangler configuration as written in its file, with the file's path */
+export type WranglerConfig = RawConfig & { configPath?: string };
+
 type AutoConfigDetailsBase = {
 	/** The name of the worker */
 	workerName: string;
@@ -45,8 +48,8 @@ type AutoConfigDetailsBase = {
 	packageManager: PackageManager;
 	/** Whether the current path is at the root of a workspace */
 	isWorkspaceRoot?: boolean;
-	/** The project's own Wrangler configuration file (if any) */
-	wranglerConfigPath?: string;
+	/** The project's Wrangler configuration (if any) */
+	wranglerConfig?: WranglerConfig;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<
