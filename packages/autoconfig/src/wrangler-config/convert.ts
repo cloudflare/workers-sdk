@@ -415,8 +415,10 @@ function normalizeDirectory(directory: string): string {
 
 /**
  * Checks whether the Vite build deploys a Wrangler assets directory's files at the same URLs:
- * it's Vite's default public folder, which Vite copies into its build, or the project's build
- * output folder itself. A folder inside the build output would move its files under a prefix.
+ * it's Vite's default public folder, which Vite copies into its build, the project's build
+ * output folder, or the `client` folder inside it, where the Cloudflare Vite plugin writes
+ * client assets by default. Another folder inside the build output would move its files under
+ * a prefix.
  *
  * @param directory The Wrangler assets directory
  * @param outputDir The folder the project's build writes to, if known
@@ -431,7 +433,11 @@ function isDeployedByVite(directory: string, outputDir?: string): boolean {
 		return false;
 	}
 
-	return normalizedDirectory === normalizeDirectory(outputDir);
+	const normalizedOutputDir = normalizeDirectory(outputDir);
+	return (
+		normalizedDirectory === normalizedOutputDir ||
+		normalizedDirectory === `${normalizedOutputDir}/client`
+	);
 }
 
 /**
