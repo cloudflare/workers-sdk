@@ -116,7 +116,11 @@ export {
 	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
 	INTROSPECT_SQLITE_METHOD,
 } from "./core";
-export type { CompiledModuleRule, GlobalServicesOptions } from "./core";
+export type {
+	CompiledModuleRule,
+	GlobalServicesOptions,
+	TracedServices,
+} from "./core";
 export type {
 	ContainerPrivileges,
 	ContainerPrivilegesCache,
