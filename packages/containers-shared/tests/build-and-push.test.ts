@@ -28,11 +28,11 @@ import type { BuiltContainerImage, BuiltImage } from "../src/build";
 import type { CompleteAccountCustomer } from "../src/client";
 import type { ContainerNormalizedConfig } from "../src/types";
 import type {
-	Config,
 	FetchPagedListResultFetcher,
 	FetchResultFetcher,
 	Logger,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 vi.mock("node:child_process");
 
@@ -96,7 +96,7 @@ function createBuildArgs() {
 	};
 }
 
-function createFakeChildProcess(args: string[]): ChildProcess {
+function createFakeChildProcess(args: string[], exitCode = 0): ChildProcess {
 	const child = new EventEmitter() as ChildProcess;
 	const stdout = new EventEmitter();
 	const stderr = new EventEmitter();
@@ -119,8 +119,8 @@ function createFakeChildProcess(args: string[]): ChildProcess {
 		if (args[0] === "image" && args[1] === "inspect") {
 			stdout.emit("data", inspectOutputs.shift() ?? "");
 		}
-		child.emit("exit", 0);
-		child.emit("close", 0);
+		child.emit("exit", exitCode);
+		child.emit("close", exitCode);
 	});
 
 	return child;
@@ -250,6 +250,56 @@ describe("buildCommand", () => {
 		]);
 	});
 
+	it("allows opting into zstd compression", async () => {
+		vi.stubEnv("WRANGLER_CONTAINER_IMAGE_COMPRESSION", "zstd");
+		vi.mocked(execFileSync).mockReturnValueOnce(
+			'[["driver-type","io.containerd.snapshotter.v1"]]'
+		);
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await buildCommand({
+			PATH: dir,
+			tag: args.tag,
+			pathToDocker: "docker",
+			push: false,
+		});
+		expectSpawnWith([
+			"build",
+			"--output",
+			"type=docker,oci-mediatypes=true,compression=zstd,compression-level=3,force-compression=true",
+			"-t",
+			"test-app:tag",
+			"--platform",
+			"linux/amd64",
+			"--provenance=false",
+			"-f",
+			"-",
+			dir,
+		]);
+	});
+
+	it("rejects zstd compression with Docker's classic image store", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_CONTAINER_IMAGE_COMPRESSION", "zstd");
+		vi.mocked(execFileSync).mockReturnValueOnce('[["driver-type","overlay2"]]');
+		const { dir, args } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: args.tag,
+				pathToDocker: "docker",
+				push: false,
+			})
+		).rejects.toThrow(
+			"Zstd compression requires Docker's containerd image store. Enable the containerd image store or unset WRANGLER_CONTAINER_IMAGE_COMPRESSION."
+		);
+		expect(spawn).not.toHaveBeenCalled();
+	});
+
 	it("tags and pushes new images, returning the pushed digest", async ({
 		expect,
 	}) => {
@@ -295,6 +345,42 @@ describe("buildCommand", () => {
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
 		]);
 	});
+
+	it.for([0, 1])(
+		"only cleans the source tag after a successful push (exit code %s)",
+		async (exitCode, { expect }) => {
+			vi.mocked(spawn).mockImplementation((_dockerPath, args) =>
+				createFakeChildProcess(
+					Array.from(args ?? []),
+					args?.[0] === "push" ? exitCode : 0
+				)
+			);
+			const push = pushImageIfChanged({
+				pathToDocker: "docker",
+				sourceTag: "test-app:tag",
+				targetTag: "test-app:tag",
+				accountId: "some-account-id",
+				containerConfig: dockerfileContainer,
+				cleanupSourceTag: true,
+			});
+
+			if (exitCode === 0) {
+				await expect(push).resolves.toHaveProperty("remoteDigest");
+				expectSpawnWith(["image", "rm", "test-app:tag"]);
+				const commands = vi.mocked(spawn).mock.calls.map(([, args]) => args);
+				expect(commands.findIndex((args) => args?.[0] === "push")).toBeLessThan(
+					commands.findIndex(
+						(args) => args?.[0] === "image" && args[1] === "rm"
+					)
+				);
+			} else {
+				await expect(push).rejects.toThrow(
+					"Docker command exited with code: 1"
+				);
+				expectNoSpawnWith(["image", "rm", "test-app:tag"]);
+			}
+		}
+	);
 
 	it("skips pushing when the remote digest already exists", async ({
 		expect,
@@ -600,7 +686,7 @@ describe("deploy container image build and push", () => {
 			TEST_LOCAL_TAG,
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 		]);
-		expectSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
+		expectNoSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
 		expectSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
@@ -616,13 +702,6 @@ describe("deploy container image build and push", () => {
 						`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 					])
 			);
-		const cleanupCallIndex = vi
-			.mocked(spawn)
-			.mock.calls.findIndex(
-				([, args]) =>
-					JSON.stringify(args) ===
-					JSON.stringify(["image", "rm", TEST_LOCAL_TAG])
-			);
 		const pushCallIndex = vi
 			.mocked(spawn)
 			.mock.calls.findIndex(
@@ -633,9 +712,42 @@ describe("deploy container image build and push", () => {
 						`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
 					])
 			);
-		expect(tagCallIndex).toBeLessThan(cleanupCallIndex);
-		expect(cleanupCallIndex).toBeLessThan(pushCallIndex);
+		expect(tagCallIndex).toBeLessThan(pushCallIndex);
+		expect(builtImage.localTagCleaned).toBeUndefined();
+
+		await cleanupBuiltImages([builtImage], "docker");
+		expectSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
 		expect(builtImage.localTagCleaned).toBe(true);
+	});
+
+	it("retains a built image when its remote digest already exists", async ({
+		expect,
+	}) => {
+		const builtImage: BuiltContainerImage = {
+			container: dockerfileContainer,
+			localTag: TEST_LOCAL_TAG,
+		};
+		const digest = `${getCloudflareContainerRegistry()}/some-account-id/test-app@sha256:${"a".repeat(64)}`;
+		inspectOutputs = [JSON.stringify([digest]), "53387881 2"];
+		vi.mocked(execFileSync).mockReturnValue(
+			JSON.stringify({ Descriptor: { digest: `sha256:${"a".repeat(64)}` } })
+		);
+
+		await expect(
+			pushBuiltContainerImage(
+				builtImage,
+				"Galaxy-Class",
+				"docker",
+				"some-account-id"
+			)
+		).resolves.toEqual({ remoteDigest: digest });
+
+		expectNoSpawnWith(["image", "rm", TEST_LOCAL_TAG]);
+		expectNoSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:Galaxy`,
+		]);
+		expect(builtImage.localTagCleaned).toBeUndefined();
 	});
 
 	it("cleans up built deployment images that were not pushed", async ({
@@ -858,6 +970,52 @@ describe("buildCommand arguments", () => {
 		]);
 	});
 
+	it("builds for linux/arm64", async ({ expect }) => {
+		const { dir } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: "test-app:tag",
+				pathToDocker: "docker",
+				push: false,
+				platform: "linux/arm64",
+			})
+		).resolves.toBeUndefined();
+
+		expectSpawnWith([
+			"build",
+			"--load",
+			"-t",
+			"test-app:tag",
+			"--platform",
+			"linux/arm64",
+			"--provenance=false",
+			"-f",
+			"-",
+			dir,
+		]);
+	});
+
+	it("rejects unsupported platforms", async ({ expect }) => {
+		const { dir } = createBuildArgs();
+		tempDirs.push(dir);
+
+		await expect(
+			buildCommand({
+				PATH: dir,
+				tag: "test-app:tag",
+				pathToDocker: "docker",
+				push: false,
+				platform: "linux/386",
+			})
+		).rejects.toThrow(
+			'Unsupported platform: Platform "linux/386" is unsupported. Please use "linux/amd64" or "linux/arm64" instead.'
+		);
+		expect(spawn).not.toHaveBeenCalled();
+	});
+
 	it("falls back to WRANGLER_DOCKER_BIN when no Docker path is provided", async ({
 		expect,
 	}) => {
@@ -960,15 +1118,31 @@ describe("pushCommand", () => {
 		]);
 	});
 
-	it("rejects unsupported image platforms", async ({ expect }) => {
+	it("pushes linux/arm64 images", async () => {
 		inspectOutputs = ["linux/arm64"];
+
+		await pushCommand(
+			{ TAG: "test-app:tag", pathToDocker: "docker" },
+			"some-account-id"
+		);
+
+		expectSpawnWith([
+			"push",
+			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,
+		]);
+	});
+
+	it("rejects unsupported image platforms", async ({ expect }) => {
+		inspectOutputs = ["linux/386"];
 
 		await expect(
 			pushCommand(
 				{ TAG: "test-app:tag", pathToDocker: "docker" },
 				"some-account-id"
 			)
-		).rejects.toThrow("Unsupported platform");
+		).rejects.toThrow(
+			"Unsupported platform: Image platform (linux/386) is not linux/amd64 or linux/arm64"
+		);
 		expectNoSpawnWith([
 			"push",
 			`${getCloudflareContainerRegistry()}/some-account-id/test-app:tag`,

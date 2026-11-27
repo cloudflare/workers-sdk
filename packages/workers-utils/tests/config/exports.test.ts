@@ -1,4 +1,4 @@
-import { isLiveDurableObjectExport } from "@cloudflare/workers-utils";
+import { isLiveDurableObjectExport } from "@cloudflare/workers-utils/config";
 import { describe, test } from "vitest";
 import { partitionExports } from "../../src/config/exports";
 import type {

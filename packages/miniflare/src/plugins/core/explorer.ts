@@ -12,7 +12,7 @@ import { CoreBindings } from "../../workers";
 import { D1_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/d1/constants";
 import { KV_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/kv/constants";
 import { R2_LOCAL_ENTRY_SERVICE_NAME } from "../../workers/r2/constants";
-import { getFlagshipService } from "../flagship";
+import { getFlagshipExplorerService } from "../flagship";
 import {
 	getEnvBindingsOfType,
 	getTriggersOfType,
@@ -120,6 +120,10 @@ export function getExplorerServices(
 				{},
 				sharedOptions
 			),
+		},
+		{
+			name: CoreBindings.SERVICE_FLAGSHIP,
+			service: getFlagshipExplorerService(sharedOptions),
 		},
 		{
 			name: CoreBindings.SERVICE_KV,
@@ -237,15 +241,6 @@ export function getExplorerServices(
 		}
 	}
 
-	// Bind each locally simulated Flagship app's binding worker, so the
-	// explorer can read and write its flag store through the admin API.
-	for (const flagshipInfo of Object.values(bindingIdMap.flagship)) {
-		explorerBindings.push({
-			name: flagshipInfo.binding,
-			service: getFlagshipService(flagshipInfo.appId, sharedOptions),
-		});
-	}
-
 	return [
 		// Disk service for serving explorer UI assets
 		{
@@ -298,7 +293,6 @@ export function constructExplorerBindingMap(
 			if (existing === undefined) {
 				IDToBindingName.flagship[appId] = {
 					appId,
-					binding: `EXPLORER_FLAGSHIP_${appId}`,
 					bindings: [bindingName],
 				} satisfies FlagshipBindingInfo;
 			} else {

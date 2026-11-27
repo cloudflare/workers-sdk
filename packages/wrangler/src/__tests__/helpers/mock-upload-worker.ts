@@ -20,12 +20,14 @@ import type { NonVersionedScriptSettings } from "../../versions/api";
 import type {
 	AssetConfigMetadata,
 	CfWorkerInit,
-	DurableObjectCodeUpdateStrategy,
 	ExportsReconciliationResult,
-	RawConfig,
-	RawEnvironment,
 	WorkerMetadata,
 } from "@cloudflare/workers-utils";
+import type {
+	DurableObjectCodeUpdateStrategy,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils/config";
 import type { HttpResponseResolver } from "msw";
 
 /** Create a mock handler for the request to upload a worker script. */
@@ -50,6 +52,8 @@ export function mockUploadWorkerRequest(
 		 * envelope alongside the success response so deploy.ts can render it.
 		 */
 		mockUploadReturnsExportsReconciliation?: ExportsReconciliationResult;
+		/** Version ID returned by either the legacy upload or versions API. */
+		mockUploadReturnsVersionId?: string;
 		expectedTailConsumers?: CfWorkerInit["tail_consumers"];
 		expectedUnsafeMetaData?: Record<string, unknown>;
 		expectedCapnpSchema?: string;
@@ -76,6 +80,7 @@ export function mockUploadWorkerRequest(
 		expectedDeploymentMessage?: string;
 		expectedDurableObjectsCodeUpdateStrategy?: DurableObjectCodeUpdateStrategy;
 		expectedBindingsInherit?: "strict";
+		expectedScriptApiDate?: string | null;
 	} = {}
 ) {
 	const handleUpload: HttpResponseResolver = async ({ params, request }) => {
@@ -102,6 +107,11 @@ export function mockUploadWorkerRequest(
 		}
 		if (expectedDispatchNamespace) {
 			expect(params.dispatchNamespace).toEqual(expectedDispatchNamespace);
+		}
+		if (options.expectedScriptApiDate !== undefined) {
+			expect(request.headers.get("Cloudflare-Workers-Script-Api-Date")).toEqual(
+				options.expectedScriptApiDate
+			);
 		}
 
 		// eslint-disable-next-line @typescript-eslint/no-deprecated -- formData() is the standard Web API; only deprecated on undici's server-side types
@@ -209,7 +219,7 @@ export function mockUploadWorkerRequest(
 					pipeline_hash: "hash9999",
 					mutable_pipeline_id: "mutableId",
 					tag: "sample-tag",
-					deployment_id: "Galaxy-Class",
+					deployment_id: options.mockUploadReturnsVersionId ?? "Galaxy-Class",
 					startup_time_ms: 100,
 					...(mockUploadReturnsExportsReconciliation && {
 						exports_reconciliation: mockUploadReturnsExportsReconciliation,
@@ -220,7 +230,7 @@ export function mockUploadWorkerRequest(
 
 		return HttpResponse.json(
 			createFetchResult({
-				id: "Galaxy-Class",
+				id: options.mockUploadReturnsVersionId ?? "Galaxy-Class",
 				startup_time_ms: 100,
 				resources: {
 					script: {

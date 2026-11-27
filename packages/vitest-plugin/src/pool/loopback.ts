@@ -78,13 +78,13 @@ export async function listDurableObjectIds(
 		return new Response(null, { status: 405 });
 	}
 
-	const bindingName = url.searchParams.get("binding_name");
-	if (bindingName === null) {
+	const className = url.searchParams.get("class_name");
+	if (className === null) {
 		return new Response(null, { status: 400 });
 	}
 
 	const workerName = url.searchParams.get("worker_name") ?? undefined;
-	const ids = await mf.listDurableObjectIds(bindingName, workerName);
+	const ids = await mf.listDurableObjectIds(className, workerName);
 	return Response.json(ids);
 }
 

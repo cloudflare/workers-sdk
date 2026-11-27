@@ -1052,7 +1052,7 @@ describe("WorkflowBinding", () => {
 			const originalReceiveEvent = enginePrototype.receiveEvent;
 			const receiveEventSpy = vi.spyOn(enginePrototype, "receiveEvent");
 			onTestFinished(() => receiveEventSpy.mockRestore());
-			receiveEventSpy.mockImplementation(function (event) {
+			receiveEventSpy.mockImplementation(function (this: Engine, event) {
 				const result = originalReceiveEvent.call(this, event);
 				return Object.assign(result, {
 					[Symbol.dispose]: disposeSpy,
@@ -1287,7 +1287,7 @@ describe("WorkflowHandle", () => {
 					{
 						retries: {
 							limit: 3,
-							delay: () => "2 seconds",
+							delay: () => "2 seconds" as const,
 							backoff: "linear",
 						},
 						timeout: "30 seconds",
@@ -1419,7 +1419,6 @@ describe("WorkflowHandle", () => {
 			const engineStub = env.ENGINE.get(env.ENGINE.idFromName(id));
 
 			setTestWorkflowCallback(async (_event, step) => {
-				// @ts-expect-error -- rollback options are not in workers-types yet
 				await step.do("rollback subscription step", async () => "step output", {
 					rollback: async () => {},
 					rollbackConfig: {

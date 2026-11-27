@@ -59,3 +59,46 @@ test(
 		expect(await result.exitCode).toBe(0);
 	}
 );
+
+test(
+	"unhandled rejection after a handler has answered is reported without hanging",
+	{ timeout: 45_000 },
+	async ({ expect, seed, vitestRun }) => {
+		await seed({
+			"vitest.config.mts": dedent`
+				import { cloudflareTest } from "@cloudflare/vitest-plugin";
+				export default {
+					plugins: [cloudflareTest({ main: "./index.ts", miniflare: { compatibilityDate: "2025-12-02", compatibilityFlags: ["nodejs_compat"] } })],
+					test: { testTimeout: 30_000 }
+				};
+			`,
+			// The runtime cancels the socket when the request ends, so its pending
+			// read rejects after the handler has answered. A rejection raised
+			// before then, or from `fetch()` or a timer, doesn't reproduce this.
+			"index.ts": dedent`
+				import { connect } from "cloudflare:sockets";
+				export default {
+					async fetch() {
+						const socket = connect("127.0.0.1:1");
+						void socket.readable.getReader().read().catch(() => {
+							throw new Error("expected-unhandled-error");
+						});
+						await socket.opened.catch(() => {});
+						return new Response();
+					}
+				}
+			`,
+			"index.test.ts": dedent`
+				import { SELF } from "cloudflare:test";
+				import { it } from "vitest";
+				it("sends request", async ({ expect }) => {
+					const response = await SELF.fetch("https://example.com");
+					expect(response.ok).toBe(true);
+				});
+			`,
+		});
+		const result = await vitestRun();
+		expect(await result.exitCode).not.toBe(0);
+		expect(result.stderr).toMatch("expected-unhandled-error");
+	}
+);

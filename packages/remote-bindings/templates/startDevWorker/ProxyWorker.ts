@@ -39,6 +39,8 @@ export class ProxyWorker implements DurableObject {
 	) {}
 
 	proxyData?: ProxyData;
+	lazy = false;
+	connectionRequested = false;
 	requestQueue = new Map<Request, DeferredPromise<Response>>();
 	requestRetryQueue = new Map<Request, DeferredPromise<Response>>();
 
@@ -63,6 +65,19 @@ export class ProxyWorker implements DurableObject {
 		switch (event?.type) {
 			case "pause":
 				this.proxyData = undefined;
+				this.lazy = event.lazy;
+				this.connectionRequested = false;
+				this.processQueue();
+				break;
+
+			case "connectionFailed":
+				this.proxyData = undefined;
+				this.connectionRequested = false;
+				for (const [, deferred] of this.getOrderedQueue()) {
+					deferred.resolve(new Response(event.message, { status: 503 }));
+				}
+				this.requestQueue.clear();
+				this.requestRetryQueue.clear();
 				break;
 
 			case "play":
@@ -86,8 +101,25 @@ export class ProxyWorker implements DurableObject {
 	}
 
 	processQueue() {
+		if (
+			this.proxyData?.refreshAt !== undefined &&
+			Date.now() >= this.proxyData.refreshAt
+		) {
+			this.proxyData = undefined;
+			this.connectionRequested = false;
+		}
 		const { proxyData } = this; // store proxyData at the moment this function was called
 		if (proxyData === undefined) {
+			if (
+				this.lazy &&
+				!this.connectionRequested &&
+				(this.requestQueue.size > 0 || this.requestRetryQueue.size > 0)
+			) {
+				this.connectionRequested = true;
+				void sendMessageToProxyController(this.env, {
+					type: "requestConnection",
+				});
+			}
 			return;
 		}
 
@@ -151,14 +183,13 @@ export class ProxyWorker implements DurableObject {
 					// to catch only network errors, use the 2nd param of the fetch.then()
 
 					// we have crossed an async boundary, so proxyData may have changed
-					// if proxyData.userWorkerUrl has changed, it means there is a new downstream UserWorker
-					// and that this error is stale since it was for a request to the old UserWorker
-					// so here we construct a newUserWorkerUrl so we can compare it to the (old) userWorkerUrl
-					const newUserWorkerUrl =
-						this.proxyData && urlFromParts(this.proxyData.userWorkerUrl);
+					// if a `pause` or `play` arrived since this request was sent, the error is stale
+					// since it was for a request to the old preview.
+					// Compare proxyData itself rather than URLs: each `play` sets a new object,
+					// while remote previews keep the same host and only change the preview token.
 
 					// only report errors if the downstream proxy has NOT changed
-					if (userWorkerUrl.href === newUserWorkerUrl?.href) {
+					if (this.proxyData === proxyData) {
 						void sendMessageToProxyController(this.env, {
 							type: "error",
 							error: {
@@ -175,12 +206,9 @@ export class ProxyWorker implements DurableObject {
 					// if the request can be retried (subset of idempotent requests which have no body), requeue it
 					else if (request.method === "GET" || request.method === "HEAD") {
 						this.requestRetryQueue.set(request, deferredResponse);
-						// we would only end up here if the downstream UserWorker is chang*ing*
-						// i.e. we are in a `pause`d state and expecting a `play` message soon
-						// this request will be processed (retried) when the `play` message arrives
-						// for that reason, we do not need to call `this.processQueue` here
-						// (but, also, it can't hurt to call it since it bails when
-						// in a `pause`d state i.e. `this.proxyData` is undefined)
+						// A replacement preview may already be ready when the old fetch fails.
+						// Drain immediately; processQueue waits if the proxy is still paused.
+						this.processQueue();
 					}
 
 					// if the request cannot be retried, respond with 503 Service Unavailable

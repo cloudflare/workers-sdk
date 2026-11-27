@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import * as vm from "node:vm";
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
@@ -55,6 +56,22 @@ globalThis.BroadcastChannel = class {
 	onmessage: ((event: unknown) => void) | null = null;
 	onmessageerror: ((event: unknown) => void) | null = null;
 } as unknown as typeof BroadcastChannel;
+
+// workerd intentionally throws from `AsyncLocalStorage#disable()`. Vitest 5.1+
+// calls it after mock factories finish (to stop a Node.js 22 slowdown), so every
+// `vi.mock()` with a factory would fail with "asyncLocalStorage.disable() is not
+// implemented". Vitest only calls it once no factory is pending, when the store has
+// nothing active to clear, so skipping the call is equivalent. Keep workerd's
+// behaviour when a store is active, since ignoring `disable()` there would
+// silently leave the store in place.
+const originalDisable = AsyncLocalStorage.prototype.disable;
+AsyncLocalStorage.prototype.disable = function disable(
+	this: AsyncLocalStorage<unknown>
+) {
+	if (this.getStore() !== undefined) {
+		originalDisable.call(this);
+	}
+};
 
 let cwd: string | undefined;
 process.cwd = () => {
@@ -155,15 +172,6 @@ function isDifferentIOContextError(e: unknown) {
 	return (
 		e instanceof Error &&
 		e.message.startsWith("Cannot perform I/O on behalf of a different") // "request" or "Durable Object"
-	);
-}
-
-function isUserConsoleLogResponse(response: unknown): boolean {
-	return (
-		typeof response === "object" &&
-		response !== null &&
-		"m" in response &&
-		response.m === "onUserConsoleLog"
 	);
 }
 
@@ -352,25 +360,44 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const v8CoverageEvaluators = new WeakSet<ModuleEvaluator>();
 
 		poolSocket.accept();
-		// Sending over the runner's WebSocket from another Durable Object requires
-		// I/O that cannot complete if that object's input gate breaks. Buffer console
-		// messages and flush them on the next successful post from the runner's
-		// context instead. In practice Vitest always sends further RPC messages
-		// (e.g. task updates/results) from the runner once execution returns to it,
-		// so buffered logs are flushed; there's no guarantee for logs emitted with
-		// nothing following, but dropping them is preferable to hanging teardown.
-		const pendingConsoleLogs: unknown[] = [];
-		const sendPendingConsoleLogs = () => {
-			while (pendingConsoleLogs.length > 0) {
-				poolSocket.send(structuredSerializableStringify(pendingConsoleLogs[0]));
-				pendingConsoleLogs.shift();
+		// Sending over the runner's WebSocket from another I/O context (a handler
+		// reached through `SELF`, a user Durable Object, a queue consumer, ...)
+		// fails. Buffer those messages and flush them from the runner's context
+		// instead: on the next successful post, and on a timer created here, in the
+		// runner's own context, because Vitest awaits every RPC call it made
+		// (`rpcDone()`) before it posts a file's result and a buffered call
+		// only settles once the message is sent — a message with nothing from the
+		// runner following it (a queue batch consumed as the file ends, a
+		// `waitUntil()` callback) would otherwise leave the run waiting on itself.
+		// The other context cannot resend from the runner reliably: an object
+		// whose input gate broke never completes that request (#14180), and
+		// neither does a handler that already answered, such as one whose socket
+		// read rejects as its request ends (#16829).
+		const pendingMessages: unknown[] = [];
+		const sendPendingMessages = () => {
+			while (pendingMessages.length > 0) {
+				poolSocket.send(structuredSerializableStringify(pendingMessages[0]));
+				pendingMessages.shift();
 			}
 		};
-
+		const pendingMessagesFlushInterval = setInterval(() => {
+			if (pendingMessages.length === 0) {
+				return;
+			}
+			try {
+				sendPendingMessages();
+			} catch (error) {
+				clearInterval(pendingMessagesFlushInterval);
+				__console.error("Error flushing messages from the runner:", error);
+			}
+		}, 50);
+		poolSocket.addEventListener("close", () => {
+			clearInterval(pendingMessagesFlushInterval);
+		});
 		init({
 			post: (response) => {
 				try {
-					sendPendingConsoleLogs();
+					sendPendingMessages();
 					poolSocket.send(structuredSerializableStringify(response));
 				} catch (error) {
 					// If the user called `console.log()` or similar from inside an
@@ -378,24 +405,11 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					// from inside their own Durable Object, Vitest will try to send an
 					// RPC message from a non-`RunnerObject` I/O context. We'd still like
 					// to send the message, so if we detect a cross-DO I/O error we
-					// resend from the runner object.
+					// buffer it for the runner object to send.
 					// (Dynamic `import()` cross-DO errors are handled separately by the
 					// onModuleRunner transport patch below — see #12924.)
 					if (isDifferentIOContextError(error)) {
-						if (isUserConsoleLogResponse(response)) {
-							pendingConsoleLogs.push(response);
-							return;
-						}
-						const promise = runInRunnerObject(() => {
-							poolSocket.send(structuredSerializableStringify(response));
-						}).catch((e) => {
-							__console.error(
-								"Error sending to pool inside runner:",
-								e,
-								response
-							);
-						});
-						registerHandlerAndGlobalWaitUntil(promise);
+						pendingMessages.push(response);
 					} else {
 						__console.error("Error sending to pool:", error, response);
 					}

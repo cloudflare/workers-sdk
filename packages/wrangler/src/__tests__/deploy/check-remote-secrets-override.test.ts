@@ -3,7 +3,7 @@ import { assert, describe, it } from "vitest";
 import { checkRemoteSecretsOverride } from "../../deploy/check-remote-secrets-override";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { createFetchResult, msw } from "../helpers/msw";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function mockSecrets(secrets: string[]) {
 	msw.use(

@@ -12,6 +12,26 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runWrangler } from "../../helpers/run-wrangler";
 import type * as StartDevWorkerApi from "../../../api/startDevWorker";
 
+// Lets a test simulate a slow initial scan: a config watcher created while
+// `initialScanDelayMs` is set only starts watching, and only becomes ready,
+// that long after it is created.
+const chokidarMock = vi.hoisted(() => ({ initialScanDelayMs: 0 }));
+vi.mock("chokidar", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("chokidar")>();
+	return {
+		...actual,
+		watch: (...[paths, options]: Parameters<typeof actual.watch>) => {
+			const delay = chokidarMock.initialScanDelayMs;
+			if (delay === 0) {
+				return actual.watch(paths, options);
+			}
+			const watcher = new actual.FSWatcher(options);
+			setTimeout(() => watcher.add(paths), delay);
+			return watcher;
+		},
+	};
+});
+
 // Declaration-level pins for the exported input chain: a fresh object
 // literal gets excess-property checking, which fails to compile if any of
 // these signatures regresses to the base `StartDevWorkerInput` (the
@@ -60,6 +80,7 @@ describe("ConfigController", () => {
 		await controller.teardown();
 		logger.debug("teardown complete");
 		logger.resetLoggerLevel();
+		chokidarMock.initialScanDelayMs = 0;
 	});
 
 	it("uses the effective registry for runtime config and the initial bindings display", async ({
@@ -696,5 +717,44 @@ describe("ConfigController", () => {
 			).length;
 
 		expect(warningCount).toBe(1);
+	});
+
+	it("should notice config changes made as soon as the previous one is applied", async ({
+		expect,
+	}) => {
+		vi.stubEnv("WRANGLER_CI_DISABLE_CONFIG_WATCHING", "false");
+		chokidarMock.initialScanDelayMs = 500;
+		const writeConfig = (edit: string) =>
+			seed({
+				"wrangler.toml": dedent /* toml */ `
+					name = "my-worker"
+					main = "src/index.js"
+					compatibility_date = "2024-06-01"
+
+					[vars]
+					EDIT = "${edit}"
+				`,
+			});
+		const configUpdateFor = (edit: string) =>
+			bus.waitFor(
+				"configUpdate",
+				(e) =>
+					e.config.bindings?.EDIT?.type === "plain_text" &&
+					e.config.bindings.EDIT.value === edit
+			);
+		await seed({ "src/index.js": "export default {}" });
+		await writeConfig("0");
+
+		const initial = configUpdateFor("0");
+		await controller.set({ config: "./wrangler.toml" });
+		await initial;
+
+		// Each write lands right after the previous one has been applied, so it
+		// is only noticed if the config file is being watched by then.
+		for (const edit of ["1", "2", "3"]) {
+			const update = configUpdateFor(edit);
+			await writeConfig(edit);
+			await expect(update).resolves.toBeDefined();
+		}
 	});
 });

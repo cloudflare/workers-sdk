@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import { experimental_readRawConfig } from "@cloudflare/workers-utils";
+import { experimental_readRawConfig } from "@cloudflare/workers-utils/config";
 import {
 	runInTempDir,
 	writeWranglerConfig,

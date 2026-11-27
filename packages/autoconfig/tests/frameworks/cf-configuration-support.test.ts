@@ -9,7 +9,6 @@ const WRANGLER_ONLY_FRAMEWORKS = [
 	"angular",
 	"nuxt",
 	"qwik",
-	"solid-start",
 	"svelte-kit",
 	"vike",
 	"waku",
@@ -19,7 +18,7 @@ describe("cf framework configuration support", () => {
 	it.for(WRANGLER_ONLY_FRAMEWORKS)(
 		"rejects %s projects with Wrangler guidance",
 		(id, { expect }) => {
-			const framework = getFrameworkClassInstance(id);
+			const framework = getFrameworkClassInstance(id, "cf");
 
 			expect(() => validateFrameworkTargetSupport(framework, "cf")).toThrow(
 				`cf does not support ${framework.name} projects yet. You can still use Wrangler to develop and deploy this project.`
@@ -30,7 +29,7 @@ describe("cf framework configuration support", () => {
 	it.for(WRANGLER_ONLY_FRAMEWORKS)(
 		"allows %s projects when targeting Wrangler",
 		(id, { expect }) => {
-			const framework = getFrameworkClassInstance(id);
+			const framework = getFrameworkClassInstance(id, "wrangler");
 
 			expect(() =>
 				validateFrameworkTargetSupport(framework, "wrangler")
@@ -42,11 +41,12 @@ describe("cf framework configuration support", () => {
 		"astro",
 		"next",
 		"react-router",
+		"solid-start",
 		"static",
 		"tanstack-start",
 		"vite",
 	] as const)("allows %s projects when targeting cf", (id, { expect }) => {
-		const framework = getFrameworkClassInstance(id);
+		const framework = getFrameworkClassInstance(id, "cf");
 
 		expect(() => validateFrameworkTargetSupport(framework, "cf")).not.toThrow();
 	});

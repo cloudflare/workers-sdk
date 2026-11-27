@@ -18,11 +18,12 @@
 	},
 	"dependencies": {
 		"@hono/zod-validator": "^0.8.0",
-		"hono": "^4.12.5",
+		"hono": "^4.13.11",
 		"zod": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

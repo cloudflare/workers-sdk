@@ -47,6 +47,8 @@ export interface Rule {
 	rollout?: Rollout;
 }
 
+export type FlagMetadata = Record<string, boolean | string | number>;
+
 export interface FlagInput {
 	key: string;
 	description?: string | null;
@@ -54,11 +56,15 @@ export interface FlagInput {
 	default_variation: string;
 	variations: Record<string, unknown>;
 	rules: Rule[];
+	/** `null` or an empty object clears the metadata. */
+	metadata?: FlagMetadata | null;
 }
 
 export interface Flag extends FlagInput {
 	type: FlagType;
 	updated_at: string;
+	/** Omitted when the flag has no metadata. */
+	metadata?: FlagMetadata;
 }
 
 export interface FlagChanges {
@@ -67,12 +73,27 @@ export interface FlagChanges {
 	default_variation?: string;
 	variations?: Record<string, unknown>;
 	rules?: Rule[];
+	/** Omit to keep the current metadata; `null` or an empty object clears it. */
+	metadata?: FlagMetadata | null;
 }
 
 const FLAG_KEY_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
 
+const MAX_METADATA_ENTRIES = 32;
+const MAX_METADATA_KEY_LENGTH = 64;
+const MAX_METADATA_BYTES = 2 * 1024;
+const RESERVED_METADATA_KEYS = new Set([
+	"__proto__",
+	"constructor",
+	"prototype",
+]);
+
 export function flagNotFoundMessage(flagKey: string): string {
 	return `Flag '${flagKey}' not found`;
+}
+
+export function flagConflictMessage(flagKey: string): string {
+	return `Flag '${flagKey}' already exists`;
 }
 
 const OPERATORS = new Set<Operator>([
@@ -308,6 +329,10 @@ export function validateFlagInput(
 		);
 	}
 
+	if (input.metadata !== undefined && input.metadata !== null) {
+		validateMetadata(key, input.metadata);
+	}
+
 	const priorities = new Set<number>();
 	for (const rule of input.rules) {
 		if (!isRecord(rule)) {
@@ -380,7 +405,47 @@ export function validateFlagInput(
 	}
 }
 
+/** Applies production's limits on flag metadata. */
+function validateMetadata(key: string, metadata: unknown): void {
+	if (!isRecord(metadata)) {
+		throw new Error(`Flag '${key}' metadata must be an object`);
+	}
+	const entries = Object.entries(metadata);
+	if (entries.length > MAX_METADATA_ENTRIES) {
+		throw new Error(
+			`Flag '${key}' metadata must have ${MAX_METADATA_ENTRIES} or fewer entries`
+		);
+	}
+	for (const [name, value] of entries) {
+		if (
+			name === "" ||
+			name.length > MAX_METADATA_KEY_LENGTH ||
+			RESERVED_METADATA_KEYS.has(name)
+		) {
+			throw new Error(`Flag '${key}' has an invalid metadata key '${name}'`);
+		}
+		if (
+			typeof value !== "boolean" &&
+			typeof value !== "string" &&
+			(typeof value !== "number" || !Number.isFinite(value))
+		) {
+			throw new Error(
+				`Flag '${key}' metadata '${name}' must be a boolean, string, or number`
+			);
+		}
+	}
+	if (
+		new TextEncoder().encode(JSON.stringify(metadata)).byteLength >
+		MAX_METADATA_BYTES
+	) {
+		throw new Error(
+			`Flag '${key}' metadata exceeds the ${MAX_METADATA_BYTES} byte limit`
+		);
+	}
+}
+
 export function toStoredFlag(input: FlagInput): Flag {
+	const { metadata } = input;
 	return {
 		key: input.key,
 		description: input.description ?? null,
@@ -391,5 +456,6 @@ export function toStoredFlag(input: FlagInput): Flag {
 		rules: [...input.rules].sort((a, b) => a.priority - b.priority),
 		type: getFlagType(input.variations),
 		updated_at: new Date().toISOString(),
+		...(metadata && Object.keys(metadata).length > 0 ? { metadata } : {}),
 	};
 }

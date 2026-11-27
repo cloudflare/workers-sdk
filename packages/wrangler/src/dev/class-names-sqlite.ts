@@ -1,1 +1,1 @@
-export { getDurableObjectClassNameToUseSQLiteMap } from "@cloudflare/workers-utils";
+export { getDurableObjectClassNameToUseSQLiteMap } from "@cloudflare/workers-utils/config";

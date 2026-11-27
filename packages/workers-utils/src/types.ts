@@ -1,6 +1,7 @@
 import type { ApiCredentials } from "./cfetch";
 import type { Config } from "./config";
 import type {
+	ArtifactsEventTrigger,
 	CustomDomainRoute,
 	ContainerApp,
 	ContainerEngine,
@@ -13,6 +14,7 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "./config/environment";
+import type { NodeJSCompatMode } from "./node-compat";
 import type {
 	CfAIBinding,
 	CfAgentMemory,
@@ -27,6 +29,7 @@ import type {
 	CfExports,
 	CfDurableObjectMigrations,
 	CfFlagship,
+	CfRealtimeKit,
 	CfHelloWorld,
 	CfHyperdrive,
 	CfImagesBinding,
@@ -35,6 +38,7 @@ import type {
 	CfMediaBinding,
 	CfMTlsCertificate,
 	CfModule,
+	CfOidcToken,
 	CfPipeline,
 	CfK2Binding,
 	CfPlacement,
@@ -57,7 +61,10 @@ import type {
 	CfScriptFormat,
 	CfUnsafe,
 } from "./worker";
-import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type {
+	AssetConfig,
+	RouterConfig,
+} from "@cloudflare/workers-shared/utils/types";
 import type { MockAgent } from "undici";
 
 export type Json =
@@ -190,6 +197,11 @@ export type WorkerMetadataBinding =
 			app_id: string;
 	  }
 	| {
+			type: "realtimekit";
+			name: string;
+			app_id: string;
+	  }
+	| {
 			type: "ratelimit";
 			name: string;
 			namespace_id: string;
@@ -207,11 +219,23 @@ export type WorkerMetadataBinding =
 			name: string;
 	  }
 	| {
+			type: "oidc_token";
+			name: string;
+			audience: string;
+			alg?: "ES256" | "RS256";
+	  }
+	| {
 			type: "logfwdr";
 			name: string;
 			destination: string;
 	  }
 	| { type: "assets"; name: string };
+
+export type WorkerUploadMetadataBinding =
+	| Exclude<WorkerMetadataBinding, { type: "d1" }>
+	| (Omit<Extract<WorkerMetadataBinding, { type: "d1" }>, "id"> & {
+			database_id: string;
+	  });
 
 export type AssetConfigMetadata = {
 	html_handling?: AssetConfig["html_handling"];
@@ -280,7 +304,7 @@ type WorkerMetadataPut = {
 	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	exports?: CfExports;
 	capnp_schema?: string;
-	bindings: WorkerMetadataBinding[];
+	bindings: WorkerUploadMetadataBinding[];
 	keep_bindings?: (
 		| WorkerMetadataBinding["type"]
 		| "secret_text"
@@ -391,10 +415,10 @@ export type ServiceMetadataRes = {
 		environment: string;
 		created_on: string;
 		modified_on: string;
-		script: {
+		script?: {
 			id: string;
 			tag: string;
-			tags: string[];
+			tags: string[] | null;
 			etag: string;
 			handlers: string[];
 			modified_on: string;
@@ -411,7 +435,7 @@ export type ServiceMetadataRes = {
 			placement_mode?: "smart";
 			tail_consumers?: TailConsumer[];
 			observability?: Observability;
-		};
+		} | null;
 	};
 	created_on: string;
 	modified_on: string;
@@ -457,7 +481,8 @@ export type Trigger =
 	| ({ type: "route" } & CustomDomainRoute)
 	| { type: "cron"; cron: string }
 	| ({ type: "queue-consumer" } & Omit<QueueConsumer, "type">)
-	| ({ type: "connect" } & ConnectHandler);
+	| ({ type: "connect" } & ConnectHandler)
+	| { type: "artifacts-event"; event: ArtifactsEventTrigger };
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
 	? Omit<T, K>
@@ -510,10 +535,12 @@ export type Binding =
 	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
 	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
 	| ({ type: "flagship" } & BindingOmit<CfFlagship>)
+	| ({ type: "realtimekit" } & BindingOmit<CfRealtimeKit>)
 	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
 	| ({ type: "vpc_network" } & BindingOmit<CfVpcNetwork>)
+	| ({ type: "oidc_token" } & BindingOmit<CfOidcToken>)
 	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" }
@@ -542,8 +569,7 @@ export type AsyncHook<T extends HookValues, Args extends unknown[] = []> =
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
-// Duplicate of Miniflare's NodeJSCompatMode to keep workers-utils from depending on Miniflare.
-export type NodeJSCompatMode = "als" | "v1" | "v2" | null;
+export type { NodeJSCompatMode } from "./node-compat";
 
 export interface StartDevWorkerInput {
 	/** The name of the worker. */

@@ -571,20 +571,19 @@ export const CORE_PLUGIN: Plugin = {
 		const observabilityEnabled =
 			sharedOptions.unsafeObservability === true &&
 			dev?.unsafeRegisterWorker !== false;
-		const tailConsumers = observabilityEnabled
+		const streamingTailConsumers = observabilityEnabled
 			? [
-					...(config.tailConsumers ?? []),
+					...(config.experimental?.streamingTailConsumers ?? []),
 					// Pass the worker's name to the collector via binding props. workerd
 					// doesn't populate the tail onset's `scriptName` locally, so this is
 					// how the collector attributes each captured invocation to its worker
 					// (each worker streams to the collector with its own props).
 					{
 						worker: OBSERVABILITY_COLLECTOR_SERVICE_NAME,
-						streaming: true,
 						props: { worker: config.name },
 					},
 				]
-			: (config.tailConsumers ?? []);
+			: (config.experimental?.streamingTailConsumers ?? []);
 		// workerd rejects a compatibility flag that the compatibility date already
 		// enables by default ("does not need to be specified anymore"), which
 		// would stop the worker starting up. Strip them per service rather than on
@@ -635,12 +634,12 @@ export const CORE_PLUGIN: Plugin = {
 					sharedOptions.unsafeModuleFallbackService !== undefined
 						? `${loopbackHost}:${loopbackPort}`
 						: undefined,
-				tails: tailConsumers
-					.filter((consumer) => !consumer.streaming)
-					.map<ServiceDesignator>(getTailServiceDesignator),
-				streamingTails: tailConsumers
-					.filter((consumer) => consumer.streaming)
-					.map<ServiceDesignator>(getTailServiceDesignator),
+				tails: (config.tailConsumers ?? []).map<ServiceDesignator>(
+					getTailServiceDesignator
+				),
+				streamingTails: streamingTailConsumers.map<ServiceDesignator>(
+					getTailServiceDesignator
+				),
 				containerEngine,
 				...(config.access?.dev
 					? {
@@ -788,6 +787,10 @@ export function getGlobalServices({
 	const serviceEntryBindings: Worker_Binding[] = [
 		WORKER_BINDING_SERVICE_LOOPBACK, // For converting stack-traces to pretty-error pages
 		{ name: CoreBindings.JSON_ROUTES, json: JSON.stringify(routes) },
+		{
+			name: CoreBindings.JSON_CDN_CGI_ALLOWED_HOSTS,
+			json: JSON.stringify(sharedOptions.unsafeCdnCgiAllowedHosts ?? []),
+		},
 		{
 			name: CoreBindings.TRIGGER_HANDLERS,
 			json: JSON.stringify(!!sharedOptions.unsafeTriggerHandlers),
@@ -1221,7 +1224,7 @@ function getContainerEgressInterceptorImage(): string {
  * @param engineOrSocketPath Either a full engine config or a unix socket
  * @returns The container engine, defaulting to the default docker socket located on linux/macOS at `unix:///var/run/docker.sock`
  */
-function getContainerEngine(
+export function getContainerEngine(
 	engineOrSocketPath: Worker_ContainerEngine | string | undefined
 ): Worker_ContainerEngine {
 	if (!engineOrSocketPath) {
@@ -1261,4 +1264,3 @@ export * from "./proxy";
 export * from "./constants";
 export * from "./modules";
 export { kCurrentWorker } from "../../config/schema";
-export * from "./node-compat";

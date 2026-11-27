@@ -27,7 +27,7 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 	);
 	await fs.writeFile(
 		path.join(tmp, "extensions.cnf"),
-		"subjectAltName=DNS:localhost\nbasicConstraints=critical,CA:FALSE\nextendedKeyUsage=serverAuth\n"
+		"subjectAltName=DNS:localhost,IP:127.0.0.1\nbasicConstraints=critical,CA:FALSE\nextendedKeyUsage=serverAuth\n"
 	);
 	childProcess.execSync(
 		"openssl x509 -req -in cert.csr -CA ca.pem -CAkey ca-key.pem -CAcreateserial -days 30 -out cert.pem -extfile extensions.cnf",
@@ -44,14 +44,14 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async ({ expect }) => {
 	});
 	const stoppableServer = stoppable(server, /* grace */ 0);
 	const url = await new Promise<string>((resolve) => {
-		server.listen(0, () => {
+		server.listen(0, "127.0.0.1", () => {
 			onTestFinished(() => {
 				return new Promise((resolve, reject) =>
 					stoppableServer.stop((err) => (err ? reject(err) : resolve()))
 				);
 			});
 			const port = (server.address() as AddressInfo).port;
-			resolve(`https://localhost:${port}`);
+			resolve(`https://127.0.0.1:${port}`);
 		});
 	});
 

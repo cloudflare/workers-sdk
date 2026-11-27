@@ -26,11 +26,8 @@ export default {
 
 						await page.goto(url); // change to your target URL
 
-						await page.evaluate(() => {
-							const paragraph = document.querySelector("p");
-							if (paragraph) {
-								paragraph.textContent = "New paragraph text set by Puppeteer!";
-							}
+						await page.$eval("p", (paragraph) => {
+							paragraph.textContent = "New paragraph text set by Puppeteer!";
 						});
 
 						const pText = await page.$eval("p", (el) => el.textContent.trim());
@@ -49,6 +46,9 @@ export default {
 						.then((sessions) =>
 							sessions.find((s) => s.sessionId === sessionId)
 						);
+					if (!sessionInfo) {
+						throw new Error(`Browser session ${sessionId} not found`);
+					}
 					return new Response(
 						sessionInfo.connectionId
 							? "Browser not disconnected"
@@ -57,13 +57,16 @@ export default {
 				}
 			}
 
-			let img = await env.BROWSER_KV_DEMO.get(url, { type: "arrayBuffer" });
+			let img: ArrayBuffer | Uint8Array | null = await env.BROWSER_KV_DEMO.get(
+				url,
+				{ type: "arrayBuffer" }
+			);
 			if (img === null) {
 				const browser = await puppeteer.launch(env.MYBROWSER);
 				try {
 					const page = await browser.newPage();
 					await page.goto(url);
-					img = (await page.screenshot()) as Buffer;
+					img = await page.screenshot();
 					await env.BROWSER_KV_DEMO.put(url, img, {
 						expirationTtl: 60 * 60 * 24,
 					});

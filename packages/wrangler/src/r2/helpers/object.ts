@@ -1,9 +1,8 @@
+import { FatalError, UserError } from "@cloudflare/workers-utils";
 import {
 	bucketFormatMessage,
-	FatalError,
 	isValidR2BucketName,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import prettyBytes from "pretty-bytes";
 import { fetchR2Objects } from "../../cfetch/internal";
@@ -11,7 +10,8 @@ import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../../dev/miniflare";
 import { MAX_UPLOAD_SIZE_BYTES } from "../constants";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { Readable } from "node:stream";
 import type { ReadableStream } from "node:stream/web";

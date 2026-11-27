@@ -17,7 +17,7 @@ test.skipIf(!isBuild)(
 	"the build output does not include react development code (such is tree-shaken away)",
 	async ({ expect }) => {
 		const outputJs = readFileSync(
-			"./.cloudflare/output/v0/workers/default/bundle/index.js",
+			"./.cloudflare/output/v1/workers/default/bundle/index.js",
 			"utf8"
 		);
 		expect(outputJs).not.toContain("react-dom.development.js");

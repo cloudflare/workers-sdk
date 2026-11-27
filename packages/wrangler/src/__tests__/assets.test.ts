@@ -7,7 +7,7 @@ import {
 	NonExistentAssetsDirError,
 	getAssetsOptions,
 } from "../assets";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Creates a minimal Config object sufficient for `getAssetsOptions`.

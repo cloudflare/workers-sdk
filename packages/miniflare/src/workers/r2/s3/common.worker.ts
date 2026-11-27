@@ -1,5 +1,6 @@
 import { Buffer } from "node:buffer";
-import { XMLBuilder, XMLParser } from "fast-xml-parser";
+import XMLBuilder from "fast-xml-builder";
+import { XMLParser } from "fast-xml-parser";
 import type { R2S3Bindings, S3Credentials } from "../constants";
 import type { Context } from "hono";
 

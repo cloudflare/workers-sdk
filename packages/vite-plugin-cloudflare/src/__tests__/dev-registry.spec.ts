@@ -72,12 +72,16 @@ test.for(["default", "relative override", "absolute override"])(
 			logLevel: "silent",
 			plugins: [
 				cloudflare({
-					config: {
-						name: "registry-client",
-						entrypoint: "./index.ts",
-						compatibilityDate: "2024-12-30",
-						env: { SERVICE: { type: "worker", worker: "registry-target" } },
-					},
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						worker: {
+							...loadedConfig.worker,
+							name: "registry-client",
+							entrypoint: "./index.ts",
+							compatibilityDate: "2024-12-30",
+							env: { SERVICE: { type: "worker", worker: "registry-target" } },
+						},
+					}),
 					inspectorPort: false,
 					persistState: false,
 					types: { generate: false },

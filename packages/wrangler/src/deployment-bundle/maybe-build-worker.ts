@@ -14,12 +14,14 @@ import { loadSourceMaps } from "./source-maps";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type {
 	CfModule,
-	Config,
-	DurableObjectBindings,
 	EphemeralDirectory,
 	Entry,
-	WorkflowBinding,
 } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "@cloudflare/workers-utils/config";
 
 /**
  * The subset of merged config/args needed to build (bundle) a Worker.
@@ -69,9 +71,17 @@ export type BuildProps = {
 	metafile: string | boolean | undefined;
 };
 
+/**
+ * Build (bundle) a Worker.
+ *
+ * @param options.sourceMapDirectory The directory the Worker's source maps will
+ * be written to. Without it, they are prepared for upload. See
+ * {@link loadSourceMaps}.
+ */
 export async function buildWorker(
 	props: BuildProps,
-	config: Config
+	config: Config,
+	{ sourceMapDirectory }: { sourceMapDirectory?: string } = {}
 ): Promise<WorkerBuildResult> {
 	const nodejsCompatMode = validateNodeCompatMode(
 		props.compatibilityDate,
@@ -218,6 +228,7 @@ export async function buildWorker(
 			? undefined
 			: loadSourceMaps(main, modules, bundle, {
 					strict: uploadSourceMaps === true,
+					sourceMapDirectory,
 				});
 
 	return {

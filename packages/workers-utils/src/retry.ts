@@ -7,17 +7,35 @@ const MAX_ATTEMPTS = 3;
 // Cap how long we'll block on a `Retry-After` header before failing fast.
 const MAX_RETRY_AFTER_MS = 60_000;
 
+const WORKER_VERSION_NOT_FOUND_CODE = 100146;
+const VERSION_NOT_READABLE_INITIAL_BACKOFF_MS = 500;
+const VERSION_NOT_READABLE_ATTEMPTS = 6;
+
+/**
+ * Runs `action`, retrying transient Cloudflare API failures (5xx, 429, timeouts and network errors).
+ *
+ * @param action - The API call to run.
+ * @param logger - Logs each retry.
+ * @param backoff - Milliseconds to wait before the first retry; each later retry waits a second longer.
+ * @param attempts - Maximum number of times to run `action`.
+ * @param abortSignal - Aborts the wait between attempts.
+ * @param isAlsoRetryable - Treats further errors as transient, e.g. API error codes for eventually consistent reads.
+ * @returns The result of the first successful attempt.
+ */
 export async function retryOnAPIFailure<T>(
 	action: () => T | Promise<T>,
 	logger: Logger,
 	backoff = 0,
 	attempts = MAX_ATTEMPTS,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	isAlsoRetryable?: (err: unknown) => boolean
 ): Promise<T> {
 	try {
 		return await action();
 	} catch (err) {
-		if (err instanceof APIError) {
+		if (isAlsoRetryable?.(err)) {
+			// Retry below.
+		} else if (err instanceof APIError) {
 			// 429 is special-cased here rather than folded into isRetryable(),
 			// since other callers rely on that meaning "5xx".
 			if (!err.isRetryable() && err.status !== 429) {
@@ -69,7 +87,44 @@ export async function retryOnAPIFailure<T>(
 			logger,
 			backoff + 1000,
 			attempts - 1,
-			abortSignal
+			abortSignal,
+			isAlsoRetryable
 		);
 	}
+}
+
+/**
+ * Reads a Worker version that is known to exist, retrying while the API reports it as not found.
+ *
+ * Reads of a just-uploaded version can alternate between found and not found for a few seconds,
+ * so this retries not-found reads for up to about 12 seconds. Other transient failures are retried
+ * as in `retryOnAPIFailure`, including any `Retry-After` wait the API asks for.
+ *
+ * @param read - Reads the Worker version.
+ * @param logger - Logs each retry.
+ * @returns The result of the first successful read.
+ */
+export function retryWhileVersionNotReadable<T>(
+	read: () => Promise<T>,
+	logger: Logger
+): Promise<T> {
+	let loggedRetry = false;
+	return retryOnAPIFailure(
+		read,
+		logger,
+		VERSION_NOT_READABLE_INITIAL_BACKOFF_MS,
+		VERSION_NOT_READABLE_ATTEMPTS,
+		undefined,
+		(err) => {
+			const notFound =
+				err instanceof APIError && err.code === WORKER_VERSION_NOT_FOUND_CODE;
+			if (notFound && !loggedRetry) {
+				loggedRetry = true;
+				logger.info(
+					"The Cloudflare API reports the Worker version as not found. Versions can take a few seconds to become readable after an upload, so retrying for up to 12 seconds..."
+				);
+			}
+			return notFound;
+		}
+	);
 }

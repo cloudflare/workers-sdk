@@ -28,7 +28,7 @@ const context = createMockContext();
 function createNextJs(nextVersion: string): NextJs {
 	vi.mocked(getInstalledPackageVersion).mockReturnValue(nextVersion);
 	const framework = new NextJs({ id: "next", name: "Next.js" });
-	const packageInfo = getFrameworkPackageInfo("next");
+	const packageInfo = getFrameworkPackageInfo("next", "cf");
 	if (!packageInfo) {
 		throw new Error("Missing Next.js package info");
 	}
@@ -80,7 +80,7 @@ describe("Next.js framework configure()", () => {
 			expect(runCommand).toHaveBeenCalledWith(
 				[
 					"npx",
-					"vinext@^1.3.0",
+					"vinext@^1.4.6",
 					"init",
 					"--platform=cloudflare",
 					"--cdn-cache=none",
@@ -110,7 +110,7 @@ describe("Next.js framework configure()", () => {
 			);
 
 			expect(vi.mocked(runCommand).mock.calls[0]?.[0]).toEqual(
-				expect.arrayContaining(["pnpm", "dlx", "vinext@^1.3.0", "init"])
+				expect.arrayContaining(["pnpm", "dlx", "vinext@^1.4.6", "init"])
 			);
 			expect(results.buildCommandOverride).toBe("pnpm vite build");
 		});
@@ -139,7 +139,7 @@ describe("Next.js framework configure()", () => {
 			const results = await framework.configure(getOptions("cf"));
 
 			expect(vi.mocked(runCommand).mock.calls[0]?.[0]).toEqual(
-				expect.arrayContaining(["npx", "vinext@^1.3.0", "init"])
+				expect.arrayContaining(["npx", "vinext@^1.4.6", "init"])
 			);
 			expect(results.buildTool).toBe("vite");
 			expect(framework.configurationDescription).toBe(
@@ -155,7 +155,7 @@ describe("Next.js framework configure()", () => {
 			await framework.configure(getOptions("cf"));
 
 			expect(vi.mocked(runCommand).mock.calls[0]?.[0]).toContain(
-				"vinext@^1.3.0"
+				"vinext@^1.4.6"
 			);
 		});
 

@@ -1,7 +1,8 @@
 import { beforeEach, describe, it, vi } from "vitest";
 import { initDeployHelpersContext } from "../../../shared/context";
 import { validateRoutes } from "../validate-routes";
-import type { AssetsOptions, Route } from "@cloudflare/workers-utils";
+import type { AssetsOptions } from "@cloudflare/workers-utils";
+import type { Route } from "@cloudflare/workers-utils/config";
 
 const warn = vi.fn();
 

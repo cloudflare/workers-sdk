@@ -5,7 +5,6 @@ import PostalMime from "postal-mime";
 import {
 	captureRawForBodyRow,
 	MAX_PRODUCTION_EMAIL_BYTES,
-	RAW_EMAIL,
 	stripEmailHeader,
 } from "../email/capture";
 import {
@@ -259,6 +258,7 @@ export async function handleEmail(
 				raw: deliveredEmailBody,
 				rawSize: deliveredEmailRaw.byteLength,
 				headers: incomingEmailHeaders,
+				canBeForwarded: true,
 				setReject: (reason: string): void => {
 					ctx.waitUntil(
 						logEmailToLoopback(
@@ -317,7 +317,7 @@ export async function handleEmail(
 					}
 					let validatedReply: { raw: Uint8Array; messageId: string };
 					let replySender: string;
-					if (RAW_EMAIL in replyMessage) {
+					if ("raw" in replyMessage) {
 						const rawReply = replyMessage as MiniflareEmailMessage;
 						validatedReply = await validateReply(parsedIncomingEmail, rawReply);
 						replySender = rawReply.from;

@@ -1,6 +1,8 @@
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
-import getPort from "get-port";
+import { GitRelay } from "./git-relay";
+import type { SocketPorts } from "../../runtime";
 import type { Log } from "../../shared";
 import type { GitSidecar } from "./git-sidecar";
 
@@ -9,15 +11,28 @@ export interface LocalArtifactsBackend {
 	port: number;
 }
 
+export interface LocalArtifactsBackendOptions {
+	namespace?: string;
+	portFile?: string;
+	socketName?: string;
+}
+
+interface Backend extends LocalArtifactsBackend {
+	relay: GitRelay;
+	socketName?: string;
+}
+
 // Node binding proxies make synchronous calls. The Git backend must run on
 // another thread, otherwise those calls prevent it from answering workerd.
 export class ArtifactsController {
-	#backends = new Map<string, Promise<LocalArtifactsBackend>>();
+	#backends = new Map<string, Promise<Backend>>();
 	// Keep the old roots alive until workerd accepts the replacement config.
 	#activeRoots = new Set<string>();
 	#pendingRoots?: Set<string>;
+	// Every open Git listener, including those of backends still starting.
+	#relays = new Set<GitRelay>();
 
-	constructor(private readonly getLog?: () => Pick<Log, "warn">) {}
+	constructor(private readonly getLog?: () => Pick<Log, "info" | "warn">) {}
 
 	beginUpdate(): void {
 		if (this.#pendingRoots) {
@@ -26,7 +41,11 @@ export class ArtifactsController {
 		this.#pendingRoots = new Set();
 	}
 
-	async commitUpdate(): Promise<void> {
+	/**
+	 * @param socketPorts The ports the new workerd bound its sockets to, which
+	 * each namespace's Git listener forwards to.
+	 */
+	async commitUpdate(socketPorts?: Pick<SocketPorts, "get">): Promise<void> {
 		const roots = this.#pendingRoots;
 		if (!roots) {
 			throw new Error("No Artifacts runtime update to commit");
@@ -34,6 +53,24 @@ export class ArtifactsController {
 		this.#pendingRoots = undefined;
 		this.#activeRoots = roots;
 		await this.#closeExcept(roots);
+		for (const root of roots) {
+			const backend = await this.#backends.get(root)?.catch(() => undefined);
+			if (backend?.socketName !== undefined) {
+				backend.relay.setRuntimePort(socketPorts?.get(backend.socketName));
+			}
+		}
+	}
+
+	/**
+	 * Stops forwarding Git connections, until the next `commitUpdate()`. Call it
+	 * before anything stops workerd, or once it has crashed: another process
+	 * could take the port its Git socket had, and be sent the next request's
+	 * token.
+	 */
+	detachRuntime(): void {
+		for (const relay of this.#relays) {
+			relay.setRuntimePort(undefined);
+		}
 	}
 
 	async abortUpdate(): Promise<void> {
@@ -44,7 +81,17 @@ export class ArtifactsController {
 		await this.#closeExcept(this.#activeRoots);
 	}
 
-	get(root: string): Promise<LocalArtifactsBackend> {
+	/**
+	 * @param root Git storage directory for one namespace.
+	 * @param options.namespace Prints the namespace's Git remote prefix.
+	 * @param options.portFile Reuses the Git port recorded here, if it's free.
+	 * @param options.socketName The workerd socket Git connections are forwarded
+	 * to, once `commitUpdate()` gives its port.
+	 */
+	get(
+		root: string,
+		options: LocalArtifactsBackendOptions = {}
+	): Promise<LocalArtifactsBackend> {
 		root = path.resolve(root);
 		if (!this.#pendingRoots) {
 			throw new Error("Artifacts backend requested outside runtime update");
@@ -52,7 +99,7 @@ export class ArtifactsController {
 		this.#pendingRoots.add(root);
 		let backend = this.#backends.get(root);
 		if (!backend) {
-			backend = this.#start(root, () => {
+			backend = this.#start(root, options, () => {
 				if (this.#backends.get(root) === backend) {
 					this.#backends.delete(root);
 				}
@@ -69,9 +116,38 @@ export class ArtifactsController {
 
 	async #start(
 		root: string,
+		{ namespace, portFile, socketName }: LocalArtifactsBackendOptions,
 		onExit: () => void
-	): Promise<LocalArtifactsBackend> {
-		const port = await getPort({ host: "127.0.0.1" });
+	): Promise<Backend> {
+		const relay = await listenForGit(portFile);
+		this.#relays.add(relay);
+		try {
+			return await this.#startSidecar(
+				root,
+				relay,
+				namespace,
+				socketName,
+				onExit
+			);
+		} catch (error) {
+			await this.#closeRelay(relay);
+			throw error;
+		}
+	}
+
+	async #startSidecar(
+		root: string,
+		relay: GitRelay,
+		namespace: string | undefined,
+		socketName: string | undefined,
+		onExit: () => void
+	): Promise<Backend> {
+		const { port } = relay;
+		if (namespace !== undefined) {
+			this.getLog?.().info(
+				`Local Artifacts Git remotes for namespace "${namespace}": http://127.0.0.1:${port}/git/${namespace}/<repo>.git`
+			);
+		}
 		// __dirname is dist/src in the bundled Miniflare entry point.
 		const worker = new Worker(
 			path.join(__dirname, "plugins/artifacts/git-sidecar.js"),
@@ -79,12 +155,15 @@ export class ArtifactsController {
 		);
 		try {
 			const endpoint = await waitForSidecarReady(worker);
+			const closeRelay = () => this.#closeRelay(relay);
 			let stopping = false;
 			worker.on("error", () => {
 				this.getLog?.().warn("Local Artifacts Git backend failed");
 			});
 			worker.once("exit", (code) => {
 				onExit();
+				// Frees the port for the backend that replaces this one.
+				void closeRelay();
 				if (!stopping) {
 					this.getLog?.().warn(
 						`Local Artifacts Git backend exited (${code}). Restart the dev server or reload its configuration to reconnect.`
@@ -93,6 +172,8 @@ export class ArtifactsController {
 			});
 			return {
 				port,
+				relay,
+				socketName,
 				sidecar: {
 					...endpoint,
 					async close() {
@@ -112,6 +193,7 @@ export class ArtifactsController {
 						});
 						worker.postMessage("close");
 						await exited;
+						await closeRelay();
 					},
 				},
 			};
@@ -119,6 +201,11 @@ export class ArtifactsController {
 			await worker.terminate();
 			throw error;
 		}
+	}
+
+	async #closeRelay(relay: GitRelay): Promise<void> {
+		this.#relays.delete(relay);
+		await relay.close();
 	}
 
 	async #closeExcept(roots: Set<string>): Promise<void> {
@@ -146,6 +233,35 @@ export class ArtifactsController {
 		this.#activeRoots.clear();
 		await this.#closeExcept(this.#activeRoots);
 	}
+}
+
+/**
+ * Clones keep their `origin` URL, so listen on the port this storage directory
+ * had last time. Fall back to any free port if another process now holds it.
+ */
+async function listenForGit(portFile: string | undefined): Promise<GitRelay> {
+	if (portFile === undefined) {
+		return GitRelay.listen();
+	}
+	const previous = Number.parseInt(
+		await readFile(portFile, "utf8").catch(() => ""),
+		10
+	);
+	const relay = await GitRelay.listen(
+		Number.isInteger(previous) && previous > 0 && previous < 65536
+			? previous
+			: undefined
+	);
+	try {
+		if (relay.port !== previous) {
+			await mkdir(path.dirname(portFile), { recursive: true });
+			await writeFile(portFile, `${relay.port}\n`);
+		}
+	} catch (error) {
+		await relay.close();
+		throw error;
+	}
+	return relay;
 }
 
 type SidecarStartupMessage =

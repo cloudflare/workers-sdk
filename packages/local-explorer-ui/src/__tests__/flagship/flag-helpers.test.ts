@@ -14,8 +14,10 @@ import {
 	validateFlagKey,
 	validateRuleDrafts,
 } from "../../components/flagship/flag-helpers";
-import type { FlagshipRule } from "../../api";
-import type { VariationDraft } from "../../components/flagship/flag-helpers";
+import type {
+	FlagshipRule,
+	VariationDraft,
+} from "../../components/flagship/flag-helpers";
 
 function first<T>(values: T[]): T {
 	const [value] = values;
@@ -333,6 +335,45 @@ describe("rule drafts", () => {
 						operator: "in",
 						value: ["a,b", "c", "d"],
 					},
+				],
+				logical_operator: "AND",
+			},
+		]);
+	});
+
+	test("keeps an untouched null value when editing another condition", ({
+		expect,
+	}) => {
+		const draft = first(
+			ruleDraftsFrom(
+				[
+					{
+						conditions: [
+							{ attribute: "country", operator: "equals", value: null },
+							{ attribute: "tier", operator: "equals", value: "paid" },
+						],
+						priority: 1,
+						serve_variation: "on",
+					},
+				],
+				variationIdByName
+			)
+		);
+		const edited = {
+			...draft,
+			conditions: draft.conditions.map((condition) =>
+				condition.attribute === "tier"
+					? { ...condition, value: "free", valueEdited: true }
+					: condition
+			),
+		};
+		expect(
+			ruleDraftsToRules([edited], variationNameById)[0]?.conditions
+		).toEqual([
+			{
+				clauses: [
+					{ attribute: "country", operator: "equals", value: null },
+					{ attribute: "tier", operator: "equals", value: "free" },
 				],
 				logical_operator: "AND",
 			},

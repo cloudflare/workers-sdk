@@ -94,6 +94,8 @@ export interface AiSearchNamespaceBinding extends AiSearchNamespaceBindingOption
 export interface AnalyticsEngineDatasetBindingOptions {
 	/** The name of this dataset to write to. */
 	name?: string;
+	/** Options that only apply during local development. */
+	dev?: BindingDevOptions;
 }
 
 /**
@@ -143,14 +145,18 @@ export interface BrowserBinding extends BrowserBindingOptions {
 	type: "browser";
 }
 
-export interface AnalyticsSQLBindingOptions {
+export interface AnalyticsSqlBindingOptions {
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
 
-/** An Analytics SQL binding. */
-export interface AnalyticsSQLBinding extends AnalyticsSQLBindingOptions {
-	type: "analytics";
+/**
+ * An Analytics SQL binding.
+ *
+ * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#analytics-sql
+ */
+export interface AnalyticsSqlBinding extends AnalyticsSqlBindingOptions {
+	type: "analytics-sql";
 }
 
 export interface D1BindingOptions {
@@ -158,6 +164,8 @@ export interface D1BindingOptions {
 	id?: string;
 	/** The name of this D1 database. */
 	name?: string;
+	/** The jurisdiction where an automatically provisioned D1 database will be created. */
+	jurisdiction?: string;
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
@@ -247,6 +255,18 @@ export interface FlagshipBindingOptions {
 /** Binding to a Flagship feature-flag service. */
 export interface FlagshipBinding extends FlagshipBindingOptions {
 	type: "flagship";
+}
+
+export interface RealtimeKitBindingOptions {
+	/** The ID of the RealtimeKit app to bind to. */
+	id: string;
+	/** RealtimeKit has no local simulator. Set remote to true to use the remote app during development. */
+	dev?: BindingDevOptions;
+}
+
+/** Binding to a RealtimeKit app. */
+export interface RealtimeKitBinding extends RealtimeKitBindingOptions {
+	type: "realtime-kit";
 }
 
 export interface HyperdriveBindingOptions {
@@ -359,15 +379,23 @@ export interface MtlsCertificateBinding extends MtlsCertificateBindingOptions {
 }
 
 export interface PipelineBindingOptions {
-	/** Name of the Pipeline to bind. */
-	name: string;
+	/**
+	 * The ID of the Pipelines stream to write to
+	 */
+	streamId: string;
+	/** @deprecated Renamed to `streamId`, which takes the stream's ID rather than its name. */
+	name?: never;
 	/** Options that only apply during local development. */
 	dev?: BindingDevOptions;
 }
 
 export interface K2BindingOptions {
-	/** The ID of the K2 stream. */
-	stream: string;
+	/**
+	 * The ID of the K2 stream to write to
+	 */
+	id: string;
+	/** @deprecated Renamed to `id`. */
+	stream?: never;
 	/** Always uses the real stream in development. Set remote to true to suppress the usage warning; false is unsupported. */
 	dev?: BindingDevOptions;
 }
@@ -643,6 +671,18 @@ export interface VpcServiceBinding extends VpcServiceBindingOptions {
 	type: "vpc-service";
 }
 
+export interface OidcTokenBindingOptions {
+	/** The `aud` claim of every token the binding issues: 1 to 2048 printable ASCII characters, with no whitespace. */
+	audience: string;
+	/** The JWS algorithm that signs the tokens. Defaults to ES256; use RS256 for verifiers that only accept RS256. */
+	alg?: "ES256" | "RS256";
+}
+
+/** Binding that issues short-lived OpenID Connect tokens for the Worker's identity, for one audience. */
+export interface OidcTokenBinding extends OidcTokenBindingOptions {
+	type: "oidc-token";
+}
+
 export interface WorkerBindingOptions<
 	TWorker extends WorkerReference = WorkerReference,
 	TExportName extends WorkerEntrypointExportName<TWorker> | undefined =
@@ -759,8 +799,12 @@ export interface Bindings {
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#browser-rendering
 	 */
 	browser(options?: BrowserBindingOptions): BrowserBinding;
-	/** An Analytics binding. */
-	analytics(options?: AnalyticsSQLBindingOptions): AnalyticsSQLBinding;
+	/**
+	 * Binding to Analytics SQL.
+	 *
+	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#analytics-sql
+	 */
+	analyticsSql(options?: AnalyticsSqlBindingOptions): AnalyticsSqlBinding;
 	/**
 	 * Binding to a D1 database.
 	 *
@@ -789,6 +833,8 @@ export interface Bindings {
 	): DurableObjectBinding<TWorker, TExportName>;
 	/** Binding to a Flagship feature-flag service. */
 	flagship(options?: FlagshipBindingOptions): FlagshipBinding;
+	/** Binding to a RealtimeKit app. */
+	realtimeKit(options: RealtimeKitBindingOptions): RealtimeKitBinding;
 	/**
 	 * Binding to a Hyperdrive configuration.
 	 *
@@ -832,6 +878,8 @@ export interface Bindings {
 	): TypedPipelineBinding<TRecord>;
 	/** A producer binding to a K2 stream created using the Dashboard or API. */
 	k2(options: K2BindingOptions): K2Binding;
+	/** Binding that issues short-lived OpenID Connect tokens for the Worker's identity, for one audience. */
+	oidcToken(options: OidcTokenBindingOptions): OidcTokenBinding;
 	/**
 	 * Producer binding to a Cloudflare Queue.
 	 *
@@ -934,7 +982,7 @@ export const bindings = {
 	artifacts: (options) => ({ type: "artifacts", ...options }),
 	assets: () => ({ type: "assets" }),
 	browser: (options) => ({ type: "browser", ...options }),
-	analytics: (options) => ({ type: "analytics", ...options }),
+	analyticsSql: (options) => ({ type: "analytics-sql", ...options }),
 	d1: (options) => ({ type: "d1", ...options }),
 	dispatchNamespace: (options) => ({
 		type: "dispatch-namespace",
@@ -942,6 +990,7 @@ export const bindings = {
 	}),
 	durableObject: (options) => ({ type: "durable-object", ...options }),
 	flagship: (options) => ({ type: "flagship", ...options }),
+	realtimeKit: (options) => ({ type: "realtime-kit", ...options }),
 	hyperdrive: (options) => ({ type: "hyperdrive", ...options }),
 	images: (options) => ({ type: "images", ...options }),
 	json: (value) => ({ type: "json", value }),
@@ -951,6 +1000,7 @@ export const bindings = {
 	mtlsCertificate: (options) => ({ type: "mtls-certificate", ...options }),
 	pipeline: (options) => ({ type: "pipeline", ...options }),
 	k2: (options) => ({ type: "k2", ...options }),
+	oidcToken: (options) => ({ type: "oidc-token", ...options }),
 	queue: (options) => ({ type: "queue", ...options }),
 	rateLimit: (options) => ({ type: "rate-limit", ...options }),
 	r2: (options) => ({ type: "r2", ...options }),

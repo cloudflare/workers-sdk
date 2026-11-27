@@ -8,12 +8,14 @@ import {
 } from "@cloudflare/deploy-helpers";
 import { logger } from "@cloudflare/deploy-helpers/context";
 import { describe, it, vi } from "vitest";
-import type { Config, Logger } from "@cloudflare/workers-utils";
+import type { Logger } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 describe("context singleton", () => {
 	// Verifies that both package entry points (. and ./context) share the same
-	// context module. This only holds if tsup's splitting is enabled — if it's
-	// disabled, each entry bundles its own copy and this test will fail.
+	// context module. This relies on the bundler code-splitting the shared
+	// context into a common chunk (always enabled in tsdown) — otherwise each
+	// entry bundles its own copy and this test will fail.
 	it("init from main entry propagates to context entry", ({ expect }) => {
 		const mockLogger = { debug: () => {}, log: () => {} };
 

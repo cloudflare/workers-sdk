@@ -7,7 +7,8 @@ import type {
 	InstanceTriggerName,
 	WorkflowInstanceRestartFrom,
 } from "./types";
-import type { Config, Logger } from "@cloudflare/workers-utils";
+import type { Logger } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Returns the logger to pass to `retryOnAPIFailure`.

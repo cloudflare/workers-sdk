@@ -127,6 +127,13 @@ export interface CliDescriptor {
 	fileFormat: FileFormat;
 
 	/**
+	 * Whether an account selected from the current credentials is persisted in
+	 * the config cache for later invocations. When disabled, the selection is
+	 * retained only for the lifetime of the auth instance. Defaults to `false`.
+	 */
+	persistAccountSelection?: boolean;
+
+	/**
 	 * Filename prefix for the cached account selection in the config cache
 	 * (e.g. `"wrangler-account"` → `wrangler-account.json`). Always JSON.
 	 */
@@ -140,9 +147,9 @@ export interface CliDescriptor {
 	cacheNamespace?: string;
 
 	/**
-	 * Label for the CLI's config file, used in "set `account_id` in your <file>"
-	 * hints. A getter so it can reflect runtime config state (wrangler resolves
-	 * this from `configFileName(undefined)`).
+	 * Label for the CLI's account config file, used in account ID guidance. A
+	 * getter so it can reflect runtime config state (wrangler resolves this from
+	 * `configFileName(undefined)`).
 	 */
 	getConfigFileLabel: () => string;
 

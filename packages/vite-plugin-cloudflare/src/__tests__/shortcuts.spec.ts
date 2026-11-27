@@ -121,7 +121,10 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 		return () => removeDirSync(tempDir);
 	});
 
-	async function createMockContext(options?: { auxiliaryWorker?: boolean }) {
+	async function createMockContext(options?: {
+		auxiliaryWorker?: boolean;
+		remoteBindings?: boolean;
+	}) {
 		const mockContext = new PluginContext({
 			restartingDevServerCount: 0,
 			tunnelHostnames: new Set(),
@@ -130,6 +133,7 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 			await resolvePluginConfig(
 				{
 					types: { generate: false },
+					remoteBindings: options?.remoteBindings,
 					auxiliaryWorkers: options?.auxiliaryWorker
 						? [
 								{
@@ -339,6 +343,28 @@ describe.skipIf(!satisfiesMinimumViteVersion("7.2.7"))("shortcuts", () => {
 			})
 		);
 	});
+
+	test.for([
+		{ remoteBindings: true, remoteBindingsDisabled: false },
+		{ remoteBindings: false, remoteBindingsDisabled: true },
+	])(
+		"prints bindings with remoteBindings=$remoteBindings",
+		async ({ remoteBindings, remoteBindingsDisabled }, { expect }) => {
+			const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");
+			vi.mocked(printBindings).mockClear();
+			addShortcuts(mockServer, await createMockContext({ remoteBindings }));
+
+			const { customShortcuts } = mockBindCLIShortcuts.mock.calls[0]?.[0] ?? {};
+			await customShortcuts
+				?.find((shortcut) => shortcut.key === "b")
+				?.action?.(mockServer);
+
+			expect(printBindings).toHaveBeenCalledWith(
+				expect.anything(),
+				expect.objectContaining({ remoteBindingsDisabled })
+			);
+		}
+	);
 
 	test("registers explorer shortcut with correct URL", async ({ expect }) => {
 		const mockBindCLIShortcuts = vi.spyOn(mockServer, "bindCLIShortcuts");

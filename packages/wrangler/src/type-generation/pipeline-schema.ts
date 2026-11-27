@@ -4,7 +4,7 @@ import { getAPIToken } from "../user";
 import { toPascalCase } from "./helpers";
 import { escapeTypeScriptString, isValidIdentifier } from "./index";
 import type { SchemaField, Stream } from "../pipelines/types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * Maximum nesting depth for struct/list types to prevent stack overflow

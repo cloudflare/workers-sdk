@@ -1,7 +1,10 @@
-import { convertConfigToBindings } from "@cloudflare/workers-utils";
+import { convertConfigToBindings } from "@cloudflare/workers-utils/config";
 import type { StartDevWorkerOptions } from ".";
 import type { AdditionalDevProps } from "../../dev";
-import type { Config, ConfigBindingFieldName } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	ConfigBindingFieldName,
+} from "@cloudflare/workers-utils/config";
 
 export function convertConfigBindingsToStartWorkerBindings(
 	configBindings: Partial<Pick<Config, ConfigBindingFieldName>>

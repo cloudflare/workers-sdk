@@ -1193,6 +1193,78 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
+			it("falls back to the script subdomain when the newly uploaded Worker is not found", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+				const getScriptSubdomain = vi.fn(() =>
+					HttpResponse.json(
+						createFetchResult({ enabled: true, previews_enabled: true })
+					)
+				);
+				msw.use(
+					http.get("*/accounts/some-account-id/workers/workers/test-name", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 10007,
+									message: "This Worker does not exist on your account.",
+								},
+							]),
+							{ status: 404 }
+						)
+					),
+					http.get(
+						"*/accounts/some-account-id/workers/scripts/test-name/subdomain",
+						getScriptSubdomain
+					)
+				);
+
+				await runWrangler("deploy ./index");
+
+				expect(getScriptSubdomain).toHaveBeenCalledTimes(1);
+				expect(std.out).toContain(
+					"https://test-name.test-sub-domain.workers.dev"
+				);
+				expect(std.out).toContain("Current Version ID: Galaxy-Class");
+			});
+
+			it.for([null, undefined])(
+				"recovers an interrupted first deploy when script is %s",
+				async (script, { expect }) => {
+					writeWranglerConfig();
+					writeWorkerSource();
+					const lookupSubdomain = vi.fn(() =>
+						HttpResponse.json(
+							createFetchResult({ subdomain: "test-sub-domain" })
+						)
+					);
+					msw.use(
+						http.get("*/accounts/:accountId/workers/services/:scriptName", () =>
+							HttpResponse.json(
+								createFetchResult({
+									default_environment: { environment: "production", script },
+								})
+							)
+						),
+						http.get("*/accounts/:accountId/workers/subdomain", lookupSubdomain)
+					);
+					mockUploadWorkerRequest({
+						useOldUploadApi: true,
+						expectedEntry: () => expect(lookupSubdomain).toHaveBeenCalled(),
+					});
+
+					await runWrangler("deploy ./index");
+
+					expect(std.out).toContain("Uploaded test-name");
+					expect(std.out).toContain("Current Version ID: Galaxy-Class");
+				}
+			);
+
 			it("uploads a new Worker when granular auth prevents the account subdomain lookup", async ({
 				expect,
 			}) => {

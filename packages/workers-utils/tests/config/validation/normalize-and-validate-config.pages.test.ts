@@ -1,7 +1,10 @@
 import path from "node:path";
-import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
+import { normalizeAndValidateConfig } from "@cloudflare/workers-utils/config";
 import { assert, beforeEach, describe, it, vi } from "vitest";
-import type { RawConfig, RawEnvironment } from "@cloudflare/workers-utils";
+import type {
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils/config";
 
 describe("normalizeAndValidateConfig() - Pages configuration", () => {
 	let pagesRawConfig: RawConfig = {};

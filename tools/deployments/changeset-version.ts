@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 import { SemVer } from "semver";
@@ -20,7 +20,6 @@ const DEPENDENCY_FIELDS = [
 interface NpmPrereleaseConfig {
 	tag: string;
 	numbered: boolean;
-	numberPrefix?: "v";
 }
 
 interface PackageJSON {
@@ -61,6 +60,7 @@ interface CorrectVersionReferencesOptions {
 	packagePath: string;
 	versionAfterChangesets: string;
 	nextVersion: string;
+	workspaceRoot?: string;
 }
 
 function getPkg(filePath: string): PackageJSON {
@@ -96,18 +96,7 @@ export function getNpmPrereleaseConfig(
 		typeof numbered === "boolean",
 		`Invalid ${pkg.name} npmPrerelease numbered value`
 	);
-	// Vite plugin v2 betas were previously published as `2.0.0-beta.sha-*`.
-	// Temporarily start its Changesets releases at `2.0.0-beta.v.0`; `v` sorts
-	// after `sha-*`. Remove this special case once v2 is stable.
-	const numberPrefix =
-		pkg.name === "@cloudflare/vite-plugin" && tag === "beta" && numbered
-			? "v"
-			: undefined;
-	return {
-		tag,
-		numbered,
-		...(numberPrefix === undefined ? {} : { numberPrefix }),
-	};
+	return { tag, numbered };
 }
 
 function appendPrerelease(
@@ -115,9 +104,7 @@ function appendPrerelease(
 	config: NpmPrereleaseConfig,
 	number: number
 ): string {
-	const prefix =
-		config.numberPrefix === undefined ? "" : `.${config.numberPrefix}`;
-	const suffix = config.numbered ? `${prefix}.${number}` : "";
+	const suffix = config.numbered ? `.${number}` : "";
 	return `${coreVersion}-${config.tag}${suffix}`;
 }
 
@@ -127,8 +114,7 @@ function appendPrerelease(
  * but it does not preserve either of the prerelease policies we support:
  *
  * - Numbered prereleases keep their original core version and increment the
- *   suffix: `2.0.0-beta.0` -> `2.0.0-beta.1`. Vite plugin v2 temporarily uses
- *   `2.0.0-beta.v.0` -> `2.0.0-beta.v.1` instead.
+ *   suffix: `2.0.0-beta.0` -> `2.0.0-beta.1`.
  * - Unnumbered prereleases increment the patch instead:
  *   `5.20261006.1-beta` -> `5.20261006.2-beta`.
  *
@@ -273,21 +259,38 @@ function getPackagesBeforeVersioning(): PreviousPackage[] {
 	return packages;
 }
 
+/** Reconciles manifests and changelogs after applying custom release versions. */
 export function correctVersionReferences({
 	packageName,
 	packagePath,
 	versionAfterChangesets,
 	nextVersion,
+	workspaceRoot = rootPath,
 }: CorrectVersionReferencesOptions): void {
 	// Changesets has already updated the affected manifests and changelogs. Limit
 	// corrections to those files instead of scanning and rewriting the workspace.
-	const changedPathsBuffer = execSync("git ls-files --modified", {
-		cwd: rootPath,
+	const modifiedPaths = execFileSync("git", ["ls-files", "--modified", "-z"], {
+		cwd: workspaceRoot,
+		encoding: "utf8",
 	});
-	console.log("Checking modified files...");
-	const changedPaths = changedPathsBuffer.toString().trim().split("\n");
+	const newChangelogPaths = execFileSync(
+		"git",
+		[
+			"ls-files",
+			"--others",
+			"--exclude-standard",
+			"-z",
+			"--",
+			":(glob)**/CHANGELOG.md",
+		],
+		{ cwd: workspaceRoot, encoding: "utf8" }
+	);
+	console.log("Checking modified files and new changelogs...");
+	const changedPaths = (modifiedPaths + newChangelogPaths)
+		.split("\0")
+		.filter(Boolean);
 	for (const relativeChangedPath of changedPaths) {
-		const changedPath = resolve(rootPath, relativeChangedPath);
+		const changedPath = resolve(workspaceRoot, relativeChangedPath);
 		const name = basename(changedPath);
 		if (name === "package.json") {
 			console.log("Updating dependencies in", changedPath);

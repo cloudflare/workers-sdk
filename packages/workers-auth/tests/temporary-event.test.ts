@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, it, vi } from "vitest";
 import {
 	createTemporaryPreviewAccount,
 	getOrCreateTemporaryPreviewAccount,
@@ -97,6 +97,44 @@ describe("temporary event accounts", () => {
 			previewAccount
 		);
 		expect(createBody).not.toHaveProperty("eventCode");
+	});
+
+	it("sends custom API headers on challenge and account creation requests", async ({
+		expect,
+	}) => {
+		vi.stubEnv(
+			"CLOUDFLARE_API_HEADERS",
+			'{"X-Custom-Header":"value","Authorization":"custom-token"}'
+		);
+		const requests: Request[] = [];
+		msw.use(
+			http.post(/\/provisioning\/previews(?:\/challenge)?$/, ({ request }) => {
+				requests.push(request);
+				return HttpResponse.json({
+					result: request.url.endsWith("/challenge")
+						? {
+								challengeToken: "challenge-token",
+								seed: Buffer.alloc(32, 1).toString("base64url"),
+								k: 2,
+								g: 2,
+							}
+						: previewAccount,
+				});
+			})
+		);
+
+		await expect(createTemporaryPreviewAccount(silentLogger)).resolves.toEqual(
+			previewAccount
+		);
+		expect(requests.map(({ url }) => url)).toEqual([
+			`${PREVIEWS_URL}/challenge`,
+			PREVIEWS_URL,
+		]);
+		for (const request of requests) {
+			expect(request.headers.get("x-custom-header")).toBe("value");
+			expect(request.headers.get("authorization")).toBe("custom-token");
+			expect(request.headers.get("content-type")).toBe("application/json");
+		}
 	});
 
 	it("names the consuming CLI in unsupported challenge errors", async ({

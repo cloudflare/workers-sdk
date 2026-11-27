@@ -6,10 +6,8 @@ import {
 	isDockerfileContainerConfig,
 	verifyDockerInstalled,
 } from "@cloudflare/containers-shared";
-import {
-	getDockerPath,
-	getResolvedDurableObjectContainerApps,
-} from "@cloudflare/workers-utils";
+import { getDockerPath } from "@cloudflare/workers-utils";
+import { getResolvedDurableObjectContainerApps } from "@cloudflare/workers-utils/config";
 import type {
 	BuildArgs,
 	BuiltContainerImage,
@@ -22,7 +20,7 @@ import type {
 import type {
 	Config,
 	DurableObjectContainerImage,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export async function buildDeployContainerImages(
 	props: Pick<DeployProps, "containers" | "containersRollout" | "dryRun">

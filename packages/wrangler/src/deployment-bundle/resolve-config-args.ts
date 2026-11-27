@@ -5,7 +5,8 @@ import { getScriptName } from "../utils/getScriptName";
 import { applyZoneArgsToRoutes } from "./route-zone-args";
 import type { triggersDeployCommand } from "../triggers";
 import type { RouteZoneArgs } from "./route-zone-args";
-import type { AssetsOptions, Config, Route } from "@cloudflare/workers-utils";
+import type { AssetsOptions } from "@cloudflare/workers-utils";
+import type { Config, Route } from "@cloudflare/workers-utils/config";
 
 export { validateRoutes } from "@cloudflare/deploy-helpers";
 

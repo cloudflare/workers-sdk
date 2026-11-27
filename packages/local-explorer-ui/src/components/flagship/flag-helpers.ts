@@ -1,8 +1,20 @@
 import type {
 	FlagshipBaseCondition,
-	FlagshipCondition,
-	FlagshipRule,
+	FlagshipJsonValue,
+	FlagshipRule as FlagshipApiRule,
 } from "../../api";
+
+export type { FlagshipBaseCondition };
+
+// The public schema bounds nesting with one named type per level; the editor
+// works on the recursive shape.
+export type FlagshipCondition =
+	| FlagshipBaseCondition
+	| { clauses: FlagshipCondition[]; logical_operator: "AND" | "OR" };
+
+export type FlagshipRule = Omit<FlagshipApiRule, "conditions"> & {
+	conditions: FlagshipCondition[];
+};
 
 export type FlagType = "boolean" | "string" | "number" | "json";
 
@@ -30,7 +42,7 @@ export interface RuleConditionDraft {
 	joinOperator: "AND" | "OR";
 	operator: FlagshipOperator;
 	originalOperator?: FlagshipOperator;
-	originalValue?: unknown;
+	originalValue?: FlagshipJsonValue;
 	originalValueText?: string;
 	value: string;
 	valueEdited: boolean;
@@ -160,9 +172,12 @@ function baseCondition(condition: RuleConditionDraft): FlagshipBaseCondition {
 	const unchanged =
 		condition.originalOperator === condition.operator &&
 		condition.originalValueText === condition.value;
-	let value: unknown = rawValue;
+	let value: FlagshipJsonValue = rawValue;
 	if (unchanged) {
-		value = condition.originalValue;
+		value =
+			condition.originalValue === undefined
+				? rawValue
+				: condition.originalValue;
 	} else if (condition.operator === "in" || condition.operator === "not_in") {
 		value = rawValue
 			.split("\n")
@@ -183,7 +198,7 @@ function baseCondition(condition: RuleConditionDraft): FlagshipBaseCondition {
 		condition.originalValue !== null
 	) {
 		try {
-			value = JSON.parse(rawValue) as unknown;
+			value = JSON.parse(rawValue) as FlagshipJsonValue;
 		} catch {
 			value = rawValue;
 		}
@@ -698,7 +713,7 @@ export function validateFlagKey(
 export function parseVariationValue(
 	type: FlagType,
 	raw: string
-): { ok: true; value: unknown } | { ok: false; error: string } {
+): { ok: true; value: FlagshipJsonValue } | { ok: false; error: string } {
 	if (type === "boolean") {
 		if (raw === "true") {
 			return { ok: true, value: true };
@@ -716,7 +731,7 @@ export function parseVariationValue(
 	}
 	if (type === "json") {
 		try {
-			const value = JSON.parse(raw) as unknown;
+			const value = JSON.parse(raw) as FlagshipJsonValue;
 			if (typeof value !== "object" || value === null) {
 				return { ok: false, error: "JSON values must be objects or arrays." };
 			}
@@ -732,7 +747,7 @@ type ContextValueType = "boolean" | "json" | "null" | "number" | "string";
 
 export function parseContextValue(raw: string): {
 	type: ContextValueType;
-	value: unknown;
+	value: FlagshipJsonValue;
 } {
 	const trimmed = raw.trim();
 	if (trimmed === "") {
@@ -747,9 +762,9 @@ export function parseContextValue(raw: string): {
 	if (!parsable) {
 		return { type: "string", value: raw };
 	}
-	let parsed: unknown;
+	let parsed: FlagshipJsonValue;
 	try {
-		parsed = JSON.parse(trimmed);
+		parsed = JSON.parse(trimmed) as FlagshipJsonValue;
 	} catch {
 		return { type: "string", value: raw };
 	}

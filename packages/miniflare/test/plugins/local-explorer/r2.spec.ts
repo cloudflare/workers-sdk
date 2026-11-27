@@ -67,7 +67,7 @@ describe("R2 API", () => {
 				])
 			);
 			expect(data.result_info).toMatchObject({
-				count: 2,
+				total_count: 2,
 			});
 		});
 	});
@@ -137,6 +137,57 @@ describe("R2 API", () => {
 			expect(data.result_info?.delimited).toEqual(
 				expect.arrayContaining(["dir1/", "dir2/"])
 			);
+		});
+
+		test("only returns objects after start_after", async ({ expect }) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+			await r2.put("start-after/a.txt", "a");
+			await r2.put("start-after/b.txt", "b");
+			await r2.put("start-after/c.txt", "c");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/r2/buckets/test-bucket/objects?prefix=start-after/&start_after=start-after/a.txt`
+			);
+
+			const data = await expectValidResponse(
+				response,
+				zR2BucketListObjectsResponse,
+				expect
+			);
+			expect(data.result?.map((obj) => obj.key)).toEqual([
+				"start-after/b.txt",
+				"start-after/c.txt",
+			]);
+		});
+
+		test("paginates with cursor after start_after", async ({ expect }) => {
+			const r2 = await mf.getR2Bucket("TEST_BUCKET");
+			await r2.put("start-after-page/a.txt", "a");
+			await r2.put("start-after-page/b.txt", "b");
+			await r2.put("start-after-page/c.txt", "c");
+			const listUrl = `${BASE_URL}/r2/buckets/test-bucket/objects?prefix=start-after-page/&start_after=start-after-page/a.txt&per_page=1`;
+
+			const firstPage = await expectValidResponse(
+				await mf.dispatchFetch(listUrl),
+				zR2BucketListObjectsResponse,
+				expect
+			);
+			expect(firstPage.result?.map((obj) => obj.key)).toEqual([
+				"start-after-page/b.txt",
+			]);
+			const cursor = firstPage.result_info?.cursor;
+			expect(cursor).toBeDefined();
+
+			const secondPage = await expectValidResponse(
+				await mf.dispatchFetch(
+					`${listUrl}&cursor=${encodeURIComponent(cursor ?? "")}`
+				),
+				zR2BucketListObjectsResponse,
+				expect
+			);
+			expect(secondPage.result?.map((obj) => obj.key)).toEqual([
+				"start-after-page/c.txt",
+			]);
 		});
 
 		test("addresses an unlisted bucket", async ({ expect }) => {

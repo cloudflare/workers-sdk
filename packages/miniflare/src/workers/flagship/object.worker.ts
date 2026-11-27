@@ -121,6 +121,8 @@ export class FlagshipObject extends DurableObject {
 			default_variation: changes.default_variation ?? current.default_variation,
 			variations: changes.variations ?? current.variations,
 			rules: changes.rules ?? current.rules,
+			metadata:
+				changes.metadata === undefined ? current.metadata : changes.metadata,
 		};
 		return this.#validateAndWrite(next, changes.rules === undefined);
 	}

@@ -8,13 +8,13 @@ import {
 } from "../shared/context";
 import { getZoneForRoute } from "./zones";
 import type { TriggerDeployment } from "../shared/types";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type {
-	ComplianceConfig,
 	CustomDomainRoute,
 	Route,
 	ZoneIdRoute,
 	ZoneNameRoute,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
 

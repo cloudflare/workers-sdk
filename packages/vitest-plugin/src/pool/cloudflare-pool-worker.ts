@@ -23,6 +23,7 @@ import type {
 	WorkersPoolOptions,
 	WorkersPoolOptionsWithDefines,
 } from "./config";
+import type { Logger } from "@cloudflare/workers-utils";
 import type {
 	Miniflare,
 	MessageEvent as MiniflareMessageEvent,
@@ -124,7 +125,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 			| WorkersPoolOptions
 			| ((
 					ctx: WorkerPoolOptionsContext
-			  ) => Promise<WorkersPoolOptions> | WorkersPoolOptions)
+			  ) => Promise<WorkersPoolOptions> | WorkersPoolOptions),
+		private readonly logger: Logger
 	) {
 		assertCompatibleVitestVersion(options.project.vitest);
 	}
@@ -149,7 +151,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 
 		this.parsedPoolOptions = await parseProjectOptions(
 			this.options.project,
-			resolvedPoolOptions
+			resolvedPoolOptions,
+			this.logger
 		);
 		this.main = maybeGetResolvedMainPath(
 			this.options.project,
@@ -199,7 +202,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 		const wasLastWorker = poolWorkerStopped();
 
 		// Remote proxy sessions are shared by all pool workers using the same
-		// Wrangler config, and consecutive workers overlap, so only dispose them
+		// config file, and consecutive workers overlap, so only dispose them
 		// once the last worker stops.
 		if (wasLastWorker) {
 			await disposeAllRemoteProxySessions().catch((err) => {

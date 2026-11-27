@@ -10,7 +10,7 @@ import * as esModuleLexer from "es-module-lexer";
 import { parseModuleFallbackRequest, Response } from "miniflare";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { ENCODED_PATH_PREFIX } from "../shared/module-path";
-import { isFileNotFoundError } from "./helpers";
+import { isFileNotFoundError, realPackagePath } from "./helpers";
 import type {
 	Request,
 	V2ModuleFallbackRequest,
@@ -108,16 +108,15 @@ function getParentPaths(filePath: string): string[] {
 
 const dirPathTypeModuleCache = new Map<string, boolean>();
 function isWithinTypeModuleContext(filePath: string): boolean {
-	const parentPaths = getParentPaths(filePath);
-
-	for (const parentPath of parentPaths) {
+	// Walk from the nearest directory outwards. The nearest `package.json` decides
+	// the answer, so a cached answer for a farther ancestor must not be used until
+	// every nearer directory has been checked for its own `package.json`.
+	for (const parentPath of getParentPaths(filePath)) {
 		const cache = dirPathTypeModuleCache.get(parentPath);
 		if (cache !== undefined) {
 			return cache;
 		}
-	}
 
-	for (const parentPath of parentPaths) {
 		try {
 			const pkgPath = posixPath.join(parentPath, "package.json");
 			const pkgJson = fs.readFileSync(pkgPath, "utf8");
@@ -125,9 +124,10 @@ function isWithinTypeModuleContext(filePath: string): boolean {
 			const maybeModulePath = pkg.module
 				? posixPath.join(parentPath, pkg.module)
 				: "";
-			const cache = pkg.type === "module" || maybeModulePath === filePath;
-			dirPathTypeModuleCache.set(parentPath, cache);
-			return cache;
+			const isTypeModule =
+				pkg.type === "module" || maybeModulePath === filePath;
+			dirPathTypeModuleCache.set(parentPath, isTypeModule);
+			return isTypeModule;
 		} catch (e: unknown) {
 			if (!isFileNotFoundError(e)) {
 				throw e;
@@ -382,7 +382,12 @@ async function viteResolve(
 		return id;
 	}
 
-	return trimViteVersionHash(resolved.id);
+	const id = trimViteVersionHash(resolved.id);
+	// The plugin's `resolveId` hook skips `require()` calls, so map ids here.
+	// Mapping an id that the hook already mapped changes nothing.
+	return vite.environments.ssr.config.resolve.preserveSymlinks
+		? realPackagePath(id)
+		: id;
 }
 
 const wasmModuleSuffix = ".wasm?module";
@@ -440,7 +445,22 @@ async function resolve(
 		return filePath;
 	}
 
-	return viteResolve(vite, specifier, referrer, method === "require");
+	return viteResolve(
+		vite,
+		specifier,
+		getViteReferrer(specifier, referrer),
+		method === "require"
+	);
+}
+
+// The runner's main module is the virtual `/index.mjs`. Vite can't find that
+// file, so it would resolve the runner's imports from the project root, which
+// may not see `vitest`, or may see a different version. Resolve Vitest's entry
+// points from this package instead, like the pool's own `vitest` imports.
+function getViteReferrer(specifier: string, referrer: string): string {
+	return vitestNativeEntrySpecifiers.has(specifier)
+		? ensurePosixLikePath(__filename)
+		: referrer;
 }
 
 // `workerd` resolves a non-prefixed specifier by joining it to the referrer's
@@ -922,7 +942,7 @@ async function resolveV2(
 	const resolved = await viteResolve(
 		vite,
 		specifier,
-		modulePathToViteId(referrer),
+		getViteReferrer(specifier, modulePathToViteId(referrer)),
 		method === "require"
 	);
 	if (/^\/?(node|cloudflare|workerd):/.test(resolved)) {

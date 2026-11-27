@@ -17,6 +17,8 @@ const packages = {
 	"fixtures/node-env": "@fixture/node-env",
 	"packages/workers-auth": "@cloudflare/workers-auth",
 	"packages/create-cloudflare": "create-cloudflare",
+	"packages/vite-plugin-cloudflare": "@cloudflare/vite-plugin",
+	"packages/vitest-plugin": "@cloudflare/vitest-plugin",
 };
 
 interface Task {
@@ -183,7 +185,9 @@ describe("Turbo test cache inputs", () => {
 			expect(hashes(after, "build")).toEqual(hashes(before, "build"));
 			const testsBefore = hashes(before, "test:ci");
 			const testsAfter = hashes(after, "test:ci");
-			expect(Object.keys(testsAfter)).toHaveLength(4);
+			expect(Object.keys(testsAfter)).toHaveLength(
+				Object.keys(packages).length
+			);
 			for (const [task, hash] of Object.entries(testsAfter)) {
 				expect(hash, task).not.toBe(testsBefore[task]);
 			}
@@ -193,7 +197,7 @@ describe("Turbo test cache inputs", () => {
 	it("hashes the Node.js runtime version", ({ expect }) => {
 		const before = hashes(plan(), "test:ci");
 		const after = hashes(plan("v22.23.1"), "test:ci");
-		expect(Object.keys(after)).toHaveLength(4);
+		expect(Object.keys(after)).toHaveLength(Object.keys(packages).length);
 		for (const [task, hash] of Object.entries(after)) {
 			expect(hash, task).not.toBe(before[task]);
 		}

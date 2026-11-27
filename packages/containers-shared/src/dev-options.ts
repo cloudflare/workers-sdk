@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import {
@@ -5,7 +6,7 @@ import {
 	isDockerfile,
 	isDurableObjectContainerApp,
 	resolveContainerClassName,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { resolveInputContainerImage } from "./input-container-image";
 import { getDevContainerImageName } from "./knobs";
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
@@ -15,12 +16,12 @@ import type {
 	ContainerDevRuntimeOptions,
 } from "./types";
 import type {
-	ParsedInputContainerConfig,
-	ParsedInputWorkerConfig,
-	ParsedOutputContainerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedContainerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 type CreateContainerDevPlanOptions = {
 	containers: Config["containers"];
@@ -32,8 +33,22 @@ type CreateContainerDevPlanOptions = {
 type NamedContainerDevOptions = ContainerDevOptions & { image_name: string };
 
 type ContainerPlanExports =
-	| ParsedInputWorkerConfig["exports"]
-	| ParsedOutputWorkerConfig["exports"];
+	| ParsedWorkerConfig["exports"]
+	| ParsedBuildOutputWorkerConfig["exports"];
+
+/**
+ * A Worker export of parsed `cloudflare.config.ts` or Build Output
+ * configuration as Miniflare takes it: a Durable Object class's Container is
+ * the runtime options of its prepared images instead of the Container's name.
+ */
+type MiniflareWorkerExport =
+	NonNullable<ContainerPlanExports>[string] extends infer WorkerExport
+		? WorkerExport extends { type: "durable-object"; storage: unknown }
+			? Omit<WorkerExport, "container"> & {
+					container: ContainerDevRuntimeOptions | undefined;
+				}
+			: WorkerExport
+		: never;
 
 type ContainerPlanDefinition<TImage> =
 	| {
@@ -222,8 +237,8 @@ export function createContainerDevPlan(
  * @throws If a linked Container is missing or image preparation has no build ID.
  */
 export function createContainerDevPlanForCfConfig(options: {
-	containers: ParsedInputContainerConfig[];
-	exports: ParsedInputWorkerConfig["exports"];
+	containers: ParsedContainerConfig[];
+	exports: ParsedWorkerConfig["exports"];
 	root: string;
 	containerBuildId?: string;
 }): ContainerDevPlan | undefined {
@@ -275,8 +290,8 @@ export function createContainerDevPlanForCfConfig(options: {
  * @throws If Build Output omits a Container referenced by a Worker export.
  */
 export function createContainerPreviewPlanForCfConfig(options: {
-	containers: ParsedOutputContainerConfig[];
-	exports: ParsedOutputWorkerConfig["exports"];
+	containers: ParsedBuildOutputContainerConfig[];
+	exports: ParsedBuildOutputWorkerConfig["exports"];
 }): ContainerDevPlan | undefined {
 	return createContainerPlanForCfConfig({
 		containers: options.containers,
@@ -300,6 +315,40 @@ export function createContainerPreviewPlanForCfConfig(options: {
 			};
 		},
 	});
+}
+
+/**
+ * Replaces the Container names on the Durable Object exports of parsed
+ * `cloudflare.config.ts` or Build Output configuration with the runtime
+ * options of the Containers' prepared images.
+ *
+ * @param options - Worker exports and the runtime options of their Container plan.
+ * @returns Exports accepted by Miniflare's native Worker config schema.
+ * @throws If a Container-backed Durable Object export has no runtime options.
+ */
+export function createMiniflareExports(options: {
+	exports: ContainerPlanExports;
+	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions> | undefined;
+}): Record<string, MiniflareWorkerExport> {
+	const workerExports: Record<string, MiniflareWorkerExport> = {};
+	for (const [name, workerExport] of Object.entries(options.exports ?? {})) {
+		if (workerExport.type === "durable-object" && "storage" in workerExport) {
+			const containerName =
+				"container" in workerExport ? workerExport.container : undefined;
+			const container =
+				containerName === undefined
+					? undefined
+					: options.containerRuntimeOptions?.get(name);
+			assert(
+				containerName === undefined || container !== undefined,
+				`Expected runtime options for Container-backed Durable Object export "${name}".`
+			);
+			workerExports[name] = { ...workerExport, container };
+		} else {
+			workerExports[name] = workerExport;
+		}
+	}
+	return workerExports;
 }
 
 function createContainerPlanForCfConfig<TImage>(options: {

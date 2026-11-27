@@ -34,7 +34,7 @@ import type {
 } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions } from "@cloudflare/workers-utils";
 import type { EphemeralDirectory } from "@cloudflare/workers-utils";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 type SharedArgs = HandlerArgs<typeof sharedDeployVersionsArgs>;
 
@@ -147,7 +147,7 @@ export async function mergeDeployConfigArgs(
 		? applyZoneArgsToRoutes(args.routes, args)
 		: (config.routes ?? (config.route ? [config.route] : []));
 	const normalizedContainerConfig = await getNormalizedContainerOptions(
-		config,
+		{ ...config, name: shared.name },
 		{
 			containersRollout: args.containersRollout,
 			dryRun: shared.dryRun,

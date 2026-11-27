@@ -2,7 +2,7 @@ import path from "node:path";
 import {
 	experimental_readRawConfig,
 	type RawConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { glob } from "tinyglobby";
 
 const SECRET_FILE_PATTERNS = [

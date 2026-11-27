@@ -24,16 +24,32 @@ describe("Pages Functions", async () => {
 		expect(text).toContain("Hello, world!");
 	});
 
-	it("doesn't escape out of the build output directory", async ({ expect }) => {
-		let response = await fetch(`http://${ip}:${port}/..%2fpackage.json`);
-		let text = await response.text();
-		expect(text).toContain("Hello, world!");
+	it.for([
+		"/..%2fpackage.json",
+		"/other-path%2f..%2f..%2fpackage.json",
+		"/..%2fpublic-neighbor/message.txt",
+		"/%2e%2e%2fpublic-neighbor%2fmessage.txt",
+		"/nested%2f..%2f..%2fpublic-neighbor/message.txt",
+		"/%2e%2e%2fpublic.txt",
+		"/%2e%2e%5cpublic-neighbor%5cmessage.txt",
+		"/%2e%2e%5cpublic.txt",
+	])(
+		"keeps %s inside the build output directory",
+		async (pathname, { expect }) => {
+			const response = await fetch(`http://${ip}:${port}${pathname}`);
+			expect(response.status).toBe(200);
+			expect(await response.text()).toContain("Hello, world!");
+		}
+	);
 
-		response = await fetch(
-			`http://${ip}:${port}/other-path%2f..%2f..%2fpackage.json`
+	it("serves an asset whose filename starts with two dots", async ({
+		expect,
+	}) => {
+		const response = await fetch(`http://${ip}:${port}/..notes.txt`);
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe(
+			"An asset inside the output directory.\n"
 		);
-		text = await response.text();
-		expect(text).toContain("Hello, world!");
 	});
 
 	it("doesn't redirect to protocol-less URLs", async ({ expect }) => {

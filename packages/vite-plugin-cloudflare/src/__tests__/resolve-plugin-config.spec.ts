@@ -2,14 +2,14 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
-import { CLI_DISPLAY_NAME_ENV_VAR } from "../build-output-env";
 import { resolvePluginConfig } from "../plugin-config";
 import type {
 	AssetsOnlyResolvedConfig,
 	PluginConfig,
+	CloudflareConfig,
+	WorkerConfig,
 	WorkersResolvedConfig,
 } from "../plugin-config";
-import type { InputWorkerConfig } from "@cloudflare/config";
 
 const { readBuildOutputPreviewMock } = vi.hoisted(() => ({
 	readBuildOutputPreviewMock: vi.fn(),
@@ -76,8 +76,8 @@ describe("resolvePluginConfig", () => {
 
 	function createAuxiliaryWorkerConfig(
 		name: string,
-		overrides: Partial<InputWorkerConfig> = {}
-	): InputWorkerConfig {
+		overrides: Partial<WorkerConfig> = {}
+	): WorkerConfig {
 		return {
 			name,
 			entrypoint: "./src/aux.ts",
@@ -120,21 +120,6 @@ describe("resolvePluginConfig", () => {
 			resolvePluginConfig({}, { root }, buildEnv)
 		).resolves.toMatchObject({ type: "workers" });
 	});
-
-	test.for([
-		["Wrangler", undefined],
-		["cf", "cf"],
-	] as const)(
-		"uses %s for caller-specific messages",
-		async ([expected, caller], { expect }) => {
-			vi.stubEnv(CLI_DISPLAY_NAME_ENV_VAR, caller);
-			writeEntryConfig();
-
-			const result = await resolvePluginConfig({}, { root }, buildEnv);
-
-			expect(result.cliDisplayName).toBe(expected);
-		}
-	);
 
 	test("sets the config context from CLOUDFLARE_PREVIEW_BUILD", async ({
 		expect,
@@ -223,7 +208,15 @@ describe("resolvePluginConfig", () => {
 
 		const result = (await resolvePluginConfig(
 			{
-				config: { compatibilityDate: "2025-02-02" },
+				config(loadedConfig) {
+					return {
+						...loadedConfig,
+						worker: {
+							...loadedConfig.worker,
+							compatibilityDate: "2025-02-02",
+						},
+					};
+				},
 				auxiliaryWorkers: [
 					{
 						viteEnvironment: { name: "auxiliary" },
@@ -249,16 +242,22 @@ describe("resolvePluginConfig", () => {
 		expect(auxiliary?.directoryName).toBe("entry-worker-auxiliary-2025-02-02");
 	});
 
-	test("resolves an entry Worker config customizer result", async ({
+	test("uses the returned configuration without merging the loaded configuration", async ({
 		expect,
 	}) => {
 		writeEntryConfig({ compatibilityFlags: ["nodejs_compat"] });
 		const result = (await resolvePluginConfig(
 			{
-				config: (workerConfig) => ({
-					name: `customized-${workerConfig.name}`,
-					compatibilityFlags: ["global_fetch_strictly_public"],
-				}),
+				config(loadedConfig) {
+					return {
+						...loadedConfig,
+						worker: {
+							...loadedConfig.worker,
+							name: `customized-${loadedConfig.worker.name}`,
+							compatibilityFlags: ["global_fetch_strictly_public"],
+						},
+					};
+				},
 			},
 			{ root },
 			buildEnv
@@ -266,28 +265,203 @@ describe("resolvePluginConfig", () => {
 
 		const entryWorker = result.environmentNameToWorkerMap.get("ssr");
 		expect(entryWorker?.config.name).toBe("customized-entry-worker");
-		expect(entryWorker?.config.compatibilityFlags).toEqual(
-			expect.arrayContaining(["nodejs_compat", "global_fetch_strictly_public"])
-		);
+		expect(entryWorker?.config.compatibilityFlags).toEqual([
+			"global_fetch_strictly_public",
+		]);
 	});
 
-	test("resolves an in-place entry Worker config customization", async ({
+	test("customizes account settings, Containers, and the entry Worker together", async ({
 		expect,
 	}) => {
-		writeEntryConfig();
-		const result = (await resolvePluginConfig(
-			{
-				config(workerConfig) {
-					workerConfig.compatibilityDate = "2025-06-01";
-				},
+		const originalConfig: CloudflareConfig = {
+			accountId: "original-account",
+			worker: {
+				name: "entry-worker",
+				entrypoint: "./src/index.ts",
+				compatibilityDate: "2024-12-30",
 			},
+			containers: [
+				{
+					name: "original-container",
+					image: { reference: "docker.io/cloudflare/hello-world:latest" },
+					maxInstances: 1,
+				},
+			],
+		};
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			`export default ${JSON.stringify(originalConfig)};`
+		);
+		const customize = vi.fn(
+			(loadedConfig: CloudflareConfig): CloudflareConfig => {
+				return {
+					...loadedConfig,
+					accountId: "customized-account",
+					complianceRegion: "fedramp-high",
+					containers: [
+						...(loadedConfig.containers ?? []),
+						{
+							name: "customized-container",
+							image: { reference: "docker.io/cloudflare/hello-world:latest" },
+							maxInstances: 2,
+						},
+					],
+					worker: {
+						...loadedConfig.worker,
+						exports: {
+							CustomContainer: {
+								type: "durable-object",
+								storage: "sqlite",
+								container: "customized-container",
+							},
+						},
+					},
+				};
+			}
+		);
+		const result = (await resolvePluginConfig(
+			{ config: customize },
 			{ root },
 			buildEnv
 		)) as WorkersResolvedConfig;
 
+		expect(customize).toHaveBeenCalledExactlyOnceWith(originalConfig);
+		expect(result.settings).toEqual({
+			accountId: "customized-account",
+			complianceRegion: "fedramp-high",
+		});
+		expect(result.containers.map(({ name }) => name)).toEqual([
+			"original-container",
+			"customized-container",
+		]);
 		expect(
-			result.environmentNameToWorkerMap.get("ssr")?.config.compatibilityDate
-		).toBe("2025-06-01");
+			result.environmentNameToWorkerMap.get("ssr")?.config.exports
+		).toEqual({
+			CustomContainer: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: "customized-container",
+			},
+		});
+	});
+
+	test("validates customized Container configuration", async ({ expect }) => {
+		writeEntryConfig();
+		await expect(
+			resolvePluginConfig(
+				{
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: [
+							{ name: "invalid", image: { reference: "" }, maxInstances: 1 },
+						],
+					}),
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow(/containers/);
+	});
+
+	describe.each([buildEnv, { mode: "development", command: "serve" as const }])(
+		"customized Container relationships during $command",
+		(viteEnv) => {
+			test.for([
+				{
+					name: "duplicate Container names",
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: [
+							...(loadedConfig.containers ?? []),
+							...(loadedConfig.containers ?? []),
+						],
+					}),
+					error: /Container names must be unique/,
+				},
+				{
+					name: "removing a linked Container",
+					config: (loadedConfig) => ({ ...loadedConfig, containers: [] }),
+					error: /referenced Container "api" is not included/,
+				},
+				{
+					name: "renaming a linked Container without updating its reference",
+					config: (loadedConfig) => ({
+						...loadedConfig,
+						containers: (loadedConfig.containers ?? []).map((container) => ({
+							...container,
+							name: "renamed-api",
+						})),
+					}),
+					error: /referenced Container "api" is not included/,
+				},
+				{
+					name: "linking multiple Durable Objects to the same Container",
+					config(loadedConfig) {
+						return {
+							...loadedConfig,
+							worker: {
+								...loadedConfig.worker,
+								exports: {
+									...loadedConfig.worker.exports,
+									Other: {
+										type: "durable-object",
+										storage: "sqlite",
+										container: "api",
+									},
+								},
+							},
+						};
+					},
+					error: /already referenced by `worker.exports.Api`/,
+				},
+			] satisfies {
+				name: string;
+				config: NonNullable<PluginConfig["config"]>;
+				error: RegExp;
+			}[])("rejects $name", async ({ config, error }, { expect }) => {
+				fs.writeFileSync(
+					path.join(root, "cloudflare.config.ts"),
+					[
+						"import { defineConfig, defineContainer, exports as workerExports } from '@cloudflare/config';",
+						"const api = defineContainer({ name: 'api', image: { dockerfile: './Dockerfile' } });",
+						"export default defineConfig({",
+						"  containers: [api],",
+						"  worker: {",
+						"    name: 'entry-worker', entrypoint: './src/index.ts', compatibilityDate: '2024-12-30',",
+						"    exports: { Api: workerExports.durableObject({ storage: 'sqlite', container: api }) },",
+						"  },",
+						"});",
+					].join("\n")
+				);
+				await expect(
+					resolvePluginConfig(
+						{ config, types: { generate: false } },
+						{ root },
+						viteEnv
+					)
+				).rejects.toMatchObject({
+					issues: expect.arrayContaining([
+						expect.objectContaining({ message: expect.stringMatching(error) }),
+					]),
+				});
+			});
+		}
+	);
+
+	test("requires a Worker in the customized configuration", async ({
+		expect,
+	}) => {
+		writeEntryConfig();
+		await expect(
+			resolvePluginConfig(
+				{
+					// @ts-expect-error Verify runtime validation for callers that bypass the required Worker type.
+					config: (loadedConfig) => ({ ...loadedConfig, worker: undefined }),
+				},
+				{ root },
+				buildEnv
+			)
+		).rejects.toThrow("The customized configuration must define a `worker`.");
 	});
 
 	test("resolves entry and auxiliary Workers configured only in Vite", async ({
@@ -297,7 +471,12 @@ describe("resolvePluginConfig", () => {
 		writeSource("src/aux.ts");
 		const result = await resolvePluginConfig(
 			{
-				config: { entrypoint: "./src/index.ts" },
+				config(loadedConfig) {
+					return {
+						...loadedConfig,
+						worker: { ...loadedConfig.worker, entrypoint: "./src/index.ts" },
+					};
+				},
 				auxiliaryWorkers: [
 					{ config: createAuxiliaryWorkerConfig("viteOnlyWorker") },
 				],
@@ -635,23 +814,23 @@ describe("resolvePluginConfig", () => {
 		fs.mkdirSync(envDir);
 		fs.writeFileSync(
 			path.join(envDir, ".env.production"),
-			"CLOUDFLARE_VITE_FORCE_LOCAL=true\nCLOUDFLARE_ACCOUNT_ID=test-account-id"
+			"CLOUDFLARE_ACCOUNT_ID=test-account-id"
 		);
 		fs.writeFileSync(
 			path.join(envDir, ".dev.vars.production"),
 			"CLOUDFLARE_ACCOUNT_ID=from-dev-vars"
 		);
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
 		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 
 		const result = await resolvePluginConfig(
-			{ remoteBindings: true },
+			{},
 			{ root, envDir: "environment" },
 			buildEnv
 		);
 
-		expect(result.remoteBindings).toBe(false);
-		expect(result.localEnv.values.CLOUDFLARE_VITE_FORCE_LOCAL).toBe("true");
+		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBe(
+			"test-account-id"
+		);
 		expect(result.devVars?.CLOUDFLARE_ACCOUNT_ID).toBe("from-dev-vars");
 		expect(process.env.CLOUDFLARE_ACCOUNT_ID).toBe("test-account-id");
 	});
@@ -660,17 +839,18 @@ describe("resolvePluginConfig", () => {
 		writeEntryConfig();
 		fs.writeFileSync(
 			path.join(root, ".env.production"),
-			"CLOUDFLARE_VITE_FORCE_LOCAL=true"
+			"CLOUDFLARE_ACCOUNT_ID=test-account-id"
 		);
-		vi.stubEnv("CLOUDFLARE_VITE_FORCE_LOCAL", undefined);
+
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
 
 		const result = await resolvePluginConfig(
-			{ remoteBindings: true },
+			{},
 			{ root, envDir: false },
 			buildEnv
 		);
 
-		expect(result.remoteBindings).toBe(true);
+		expect(result.localEnv.values.CLOUDFLARE_ACCOUNT_ID).toBeUndefined();
 	});
 
 	test("rejects duplicate Vite environment names", async ({ expect }) => {
@@ -857,6 +1037,51 @@ describe("resolvePluginConfig", () => {
 		expect(result.type).toBe("preview");
 		expect(result.localEnv.values.PREVIEW_MODE_VALUE).toBe("build-mode");
 		expect(result.devVars?.PREVIEW_SECRET).toBe("build-mode");
+		if (result.type === "preview") {
+			expect(result.mode).toBe("staging");
+		}
+	});
+
+	test("preview loads local env without a mode when Build Output records none", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(path.join(root, ".env"), "PREVIEW_MODE_VALUE=no-mode");
+		fs.writeFileSync(
+			path.join(root, ".env.production"),
+			"PREVIEW_MODE_VALUE=preview-mode"
+		);
+		fs.writeFileSync(path.join(root, ".dev.vars"), "PREVIEW_SECRET=no-mode");
+		fs.writeFileSync(
+			path.join(root, ".dev.vars.production"),
+			"PREVIEW_SECRET=preview-mode"
+		);
+		readBuildOutputPreviewMock.mockResolvedValue({
+			rootConfig: { buildContext: { isPreview: false } },
+			containers: [],
+			workers: [
+				{
+					config: {
+						name: "preview-worker",
+						compatibilityDate: "2024-12-30",
+					},
+					assetsDir: undefined,
+					bundle: undefined,
+				},
+			],
+		});
+
+		const result = await resolvePluginConfig(
+			{} satisfies PluginConfig,
+			{ root },
+			{ mode: "production", command: "serve", isPreview: true }
+		);
+
+		expect(result.type).toBe("preview");
+		expect(result.localEnv.values.PREVIEW_MODE_VALUE).toBe("no-mode");
+		expect(result.devVars?.PREVIEW_SECRET).toBe("no-mode");
+		if (result.type === "preview") {
+			expect(result.mode).toBeUndefined();
+		}
 	});
 
 	test("preview uses all Workers read from Build Output", async ({

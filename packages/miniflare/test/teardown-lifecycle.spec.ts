@@ -1,12 +1,14 @@
 import childProcess from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
-import { Miniflare, ProxyClient } from "miniflare";
+import { DeferredPromise, LogLevel, Miniflare, ProxyClient } from "miniflare";
 import { afterEach, test, vi } from "vitest";
 import { WebSocketServer } from "ws";
-import { singleModuleManifest } from "./test-shared";
+import { singleModuleManifest, TestLog } from "./test-shared";
 
-async function createReadyMiniflare(): Promise<Miniflare> {
+async function createReadyMiniflare(log?: TestLog): Promise<Miniflare> {
 	const mf = new Miniflare({
+		log,
 		workers: [
 			{
 				config: {
@@ -43,6 +45,64 @@ function findKilledWorkerd(
 
 afterEach(() => {
 	vi.restoreAllMocks();
+});
+
+test("Miniflare: dispose waits for temporary directory removal", async ({
+	expect,
+}) => {
+	const mf = await createReadyMiniflare();
+	const removalStarted = new DeferredPromise<void>();
+	const releaseRemoval = new DeferredPromise<void>();
+	const originalRm = fs.promises.rm;
+	const rm = vi
+		.spyOn(fs.promises, "rm")
+		.mockImplementationOnce(async (...args) => {
+			removalStarted.resolve();
+			await releaseRemoval;
+			await originalRm(...args);
+		});
+	let disposed = false;
+	const disposePromise = mf.dispose().then(() => {
+		disposed = true;
+	});
+
+	try {
+		await removalStarted;
+		expect(rm.mock.calls[0]?.[0]).toEqual(
+			expect.stringMatching(/[\\/]miniflare-[a-f0-9]{32}$/)
+		);
+		// Flush the remaining disposal microtasks: fire-and-forget removal would
+		// let disposal finish while the filesystem operation is still blocked.
+		await new Promise<void>((resolve) => setImmediate(resolve));
+		expect(disposed).toBe(false);
+
+		releaseRemoval.resolve();
+		await disposePromise;
+		expect(disposed).toBe(true);
+	} finally {
+		releaseRemoval.resolve();
+		await disposePromise;
+		rm.mockRestore();
+	}
+});
+
+test("Miniflare: dispose logs temporary directory removal failures and continues cleanup", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+	const mf = await createReadyMiniflare(log);
+	const error = new Error("EBUSY: resource busy or locked");
+	const rm = vi.spyOn(fs.promises, "rm").mockRejectedValueOnce(error);
+
+	try {
+		await expect(mf.dispose()).resolves.toBeUndefined();
+		expect(log.logsAtLevel(LogLevel.DEBUG)).toContain(
+			`Unable to remove temporary directory: ${String(error)}`
+		);
+	} finally {
+		rm.mockRestore();
+		await mf.dispose();
+	}
 });
 
 test("Miniflare: dispose requests workerd termination while proxy cleanup is pending", async ({

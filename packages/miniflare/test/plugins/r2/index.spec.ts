@@ -24,7 +24,6 @@ import type {
 	R2Bucket,
 	R2Conditional,
 	R2ListOptions,
-	R2Object,
 	R2ObjectBody,
 } from "@cloudflare/workers-types/experimental";
 import type { MiniflareOptions, ReplaceWorkersTypes } from "miniflare";
@@ -518,7 +517,7 @@ test("put: stores only if passes onlyIf", async ({ expect }) => {
 	};
 	const fail = async (cond: R2Conditional) => {
 		const object = await r2.put("key", "2", { onlyIf: cond });
-		expect(object as R2Object | null).toBe(null);
+		expect(object).toBe(null);
 		expect(await (await r2.get("key"))?.text()).toBe("1");
 		// No `reset()` as we've just checked we didn't update anything
 	};
@@ -541,7 +540,7 @@ test("put: stores only if passes onlyIf", async ({ expect }) => {
 
 	// Check non-existent key with failed condition
 	const object = await r2.put("no-key", "2", { onlyIf: { etagMatches: etag } });
-	expect(object as R2Object | null).toBe(null);
+	expect(object).toBe(null);
 });
 test("put: validates metadata size", async ({ expect }) => {
 	const { r2 } = ctx;
@@ -792,6 +791,16 @@ test("list: lists keys with startAfter and limit (where startAfter doesn't match
 			["key1", "key2"],
 			["key3", "key4"],
 		],
+	});
+});
+test("list: paginates with startAfter and cursor using UTF-8 key order", async ({
+	expect,
+}) => {
+	// "Ａ" (U+FF21) sorts after emoji in UTF-16 but before them in UTF-8
+	await testList(expect, {
+		keys: ["Ａ", "📷", "📸"],
+		options: { startAfter: "Ａ", limit: 1 },
+		pages: [["📷"], ["📸"]],
 	});
 });
 test("list: accepts long prefix", async ({ expect }) => {

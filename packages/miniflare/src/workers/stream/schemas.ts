@@ -131,7 +131,8 @@ export type DownloadRow = {
 };
 
 export function rowToStreamVideo(row: VideoRow, entryUrl: URL): StreamVideo {
-	const placeholderUrl = `https://customer-placeholder.cloudflarestream.com/${row.id}`;
+	const customerCode = "placeholder";
+	const placeholderUrl = `https://customer-${customerCode}.cloudflarestream.com/${row.id}`;
 	const videoUrl = `${entryUrl.origin}${CorePaths.STREAM_VIDEO}/${row.id}/watch`;
 	return {
 		id: row.id,
@@ -167,6 +168,7 @@ export function rowToStreamVideo(row: VideoRow, entryUrl: URL): StreamVideo {
 		liveInputId: row.live_input_id,
 		clippedFromId: row.clipped_from_id,
 		publicDetails: null,
+		customerCode,
 	};
 }
 

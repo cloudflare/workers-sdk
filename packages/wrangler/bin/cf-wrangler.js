@@ -18,7 +18,7 @@ const verb = argv[0];
 const verbHandlers = {
 	dev: {
 		parse: parseCfWranglerArgs,
-		run: runCfWranglerDevFromArgs,
+		run: runCfWranglerDev,
 	},
 	build: {
 		parse: parseCfWranglerBuildArgs,
@@ -54,79 +54,3 @@ verbHandler
 		process.stderr.write(`${(err && err.stack) || err}\n`);
 		process.exit(1);
 	});
-
-function runCfWranglerDevFromArgs(parsedArgs) {
-	return runCfWranglerDev(createDevOptions(parsedArgs));
-}
-
-function createDevOptions(parsedArgs) {
-	// Build wrangler dev's full (yargs-derived) options object. Every field
-	// must be present; we set the four accepted flags, force cf's new config
-	// format, and otherwise use `wrangler dev`'s defaults.
-	return {
-		_: [],
-		$0: "",
-		env: parsedArgs.mode,
-		port: parsedArgs.port,
-		host: parsedArgs.host,
-		local: parsedArgs.local,
-		remote: false,
-		latest: true,
-		noBundle: false,
-		testScheduled: false,
-		processEntrypoint: false,
-		experimentalAutoCreate: false,
-		experimentalNewConfig: true,
-		types: false,
-		disableDevRegistry: false,
-		config: undefined,
-		script: undefined,
-		name: undefined,
-		accountId: undefined,
-		forceLocal: undefined,
-		compatibilityDate: undefined,
-		compatibilityFlags: undefined,
-		ip: undefined,
-		inspectorPort: undefined,
-		inspectorIp: undefined,
-		v: undefined,
-		cwd: undefined,
-		localProtocol: undefined,
-		httpsKeyPath: undefined,
-		httpsCertPath: undefined,
-		assets: undefined,
-		site: undefined,
-		siteInclude: undefined,
-		siteExclude: undefined,
-		persist: undefined,
-		persistTo: undefined,
-		routes: undefined,
-		localUpstream: undefined,
-		upstreamProtocol: undefined,
-		var: undefined,
-		define: undefined,
-		alias: undefined,
-		jsxFactory: undefined,
-		jsxFragment: undefined,
-		tsconfig: undefined,
-		minify: undefined,
-		logLevel: undefined,
-		showInteractiveDevSession: undefined,
-		liveReload: undefined,
-		bundle: undefined,
-		additionalModules: undefined,
-		enablePagesAssetsServiceBinding: undefined,
-		d1Databases: undefined,
-		experimentalProvision: undefined,
-		enableIpc: undefined,
-		nodeCompat: undefined,
-		enableContainers: undefined,
-		dockerPath: undefined,
-		containerEngine: undefined,
-		tunnel: undefined,
-		tunnelName: undefined,
-		tunnelAllowedMail: undefined,
-		envFile: undefined,
-		onReady: undefined,
-	};
-}

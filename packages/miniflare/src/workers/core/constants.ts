@@ -79,6 +79,7 @@ export const CoreBindings = {
 	TEXT_UPSTREAM_URL: "MINIFLARE_UPSTREAM_URL",
 	JSON_CF_BLOB: "CF_BLOB",
 	JSON_ROUTES: "MINIFLARE_ROUTES",
+	JSON_CDN_CGI_ALLOWED_HOSTS: "MINIFLARE_CDN_CGI_ALLOWED_HOSTS",
 	JSON_LOG_LEVEL: "MINIFLARE_LOG_LEVEL",
 	DURABLE_OBJECT_NAMESPACE_PROXY: "MINIFLARE_PROXY",
 	DATA_PROXY_SECRET: "MINIFLARE_PROXY_SECRET",
@@ -101,6 +102,7 @@ export const CoreBindings = {
 	SERVICE_STREAM: "MINIFLARE_STREAM",
 	SERVICE_IMAGES_DELIVERY: "MINIFLARE_IMAGES_DELIVERY",
 	SERVICE_D1: "MINIFLARE_D1",
+	SERVICE_FLAGSHIP: "MINIFLARE_FLAGSHIP",
 	SERVICE_KV: "MINIFLARE_KV",
 	SERVICE_R2: "MINIFLARE_R2",
 	SERVICE_R2_PUBLIC: "MINIFLARE_R2_PUBLIC",
@@ -169,6 +171,16 @@ export function isFetcherFetch(targetName: string, key: string) {
 			targetName === "DurableObject" ||
 			targetName === "WorkerRpc") &&
 		key === "fetch"
+	);
+}
+// `DevControl` RPC calls wait on Durable Object work (e.g. eviction waits for
+// `waitUntil()` promises), which may in turn be waiting on Node.js (service
+// bindings, outbound handlers). They must be async: blocking the Node.js event
+// loop with `Atomics.wait()` would deadlock until workerd times out.
+export function isDevControlCall(targetName: string, key: string) {
+	return (
+		targetName === "Fetcher" &&
+		(key === "evictDurableObject" || key === "execDurableObjectSql")
 	);
 }
 // `R2Object#writeHttpMetadata()` is one of the few functions that mutates its

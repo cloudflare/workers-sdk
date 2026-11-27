@@ -90,7 +90,7 @@ describe("codemod runner", () => {
 			 * This migration needs manual work. Resolve every TODO in this file, then remove the error below.
 			 */
 			/**
-			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` and \`@cloudflare/vite-plugin@beta\` as dev dependencies before using the generated configuration.
+			 * TODO(@cloudflare): cf migrate: No package.json was found. Create or locate the package that owns this Worker, then install \`cf@latest\` and \`@cloudflare/vite-plugin@^2.0.0-rc.0\` as dev dependencies before using the generated configuration.
 			 */
 			throw new Error("Migration incomplete. Resolve every cf migrate TODO in \`cloudflare.config.ts\`.");
 
@@ -615,7 +615,7 @@ export default defineWorkersProject({
 		const cwd = await createProject({
 			"package.json": JSON.stringify({
 				devDependencies: {
-					"@cloudflare/vite-plugin": "^2.0.0-beta.sha-805ec1ff3",
+					"@cloudflare/vite-plugin": "^2.0.0-rc.0",
 					cf: "1.0.0",
 				},
 				name: "dry-run-test",

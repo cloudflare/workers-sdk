@@ -1,15 +1,16 @@
 import assert from "node:assert";
 import {
 	APIError,
-	configFileName,
 	formatTime,
 	getSubdomainMixedStateCheckDisabled,
 	isNonInteractiveOrCI,
 	retryOnAPIFailure,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import PQueue from "p-queue";
+import { diffJsonObjects } from "../deploy/helpers/diff-json";
 import {
 	WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
 	WORKFLOW_JURISDICTION_IMMUTABLE_CODE,
@@ -19,7 +20,13 @@ import {
 	isWorkflowDefinedInThisScript,
 	validateOwnedWorkflowDeclarations,
 } from "../deploy/helpers/owned-workflows";
-import { fetchListResult, fetchResult, logger } from "../shared/context";
+import {
+	fetchListResult,
+	fetchPagedListResult,
+	fetchResult,
+	logger,
+} from "../shared/context";
+import { partitionRoutes } from "../shared/partition-routes";
 import { applyEmailRoutingAddresses } from "./email-routing";
 import {
 	publishCustomDomains,
@@ -32,9 +39,13 @@ import {
 } from "./queue-consumers";
 import { getWorkerSubdomain, getWorkersDevSubdomain } from "./subdomain";
 import { getZoneForRoute } from "./zones";
+import type { JsonLike } from "../deploy/helpers/diff-json";
 import type { TriggerDeployment, TriggerProps } from "../shared/types";
-import type { RouteObject } from "./publish-routes";
-import type { Config, Route } from "@cloudflare/workers-utils";
+import type {
+	Config,
+	CustomDomainRoute,
+	Route,
+} from "@cloudflare/workers-utils/config";
 
 export const PREVIEW_DOMAIN_PROVISIONING_NOTE =
 	"Note: DNS and TLS certificate provisioning for Preview domains may continue after this deploy. If a new Preview URL does not work immediately, wait a few minutes and retry.";
@@ -49,13 +60,150 @@ export async function triggersDeploy(
 		validateOwnedWorkflowDeclarations(config, scriptName);
 	}
 
-	if (props.dryRun) {
-		logger.log(`--dry-run: exiting now.`);
+	const { routesOnly, customDomainsOnly } = partitionRoutes(routes);
+	const ownedWorkflows = getWorkflowsOwnedByScript(config, scriptName);
+
+	for (const workflow of config.workflows) {
+		if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
+			if (workflow.limits) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
+						`Configure limits on the worker that defines the workflow.`,
+					{
+						telemetryMessage: "triggers deploy workflow limits external script",
+					}
+				);
+			}
+			if (workflow.concurrency) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
+						`Configure concurrency on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow concurrency external script",
+					}
+				);
+			}
+			if (workflow.schedules) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
+						`Configure schedules on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow schedules external script",
+					}
+				);
+			}
+			if (workflow.default_retention) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "default_retention" configured but references external script "${workflow.script_name}". ` +
+						`Configure default_retention on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow default_retention external script",
+					}
+				);
+			}
+			if (workflow.jurisdiction) {
+				throw new UserError(
+					`Workflow "${workflow.name}" has "jurisdiction" configured but references external script "${workflow.script_name}". ` +
+						`Configure jurisdiction on the worker that defines the workflow.`,
+					{
+						telemetryMessage:
+							"triggers deploy workflow jurisdiction external script",
+					}
+				);
+			}
+		}
+	}
+
+	if (props.dryRun && !props.showDiff) {
+		const { workers_dev: wantWorkersDev } = getSubdomainValues(
+			config.workers_dev,
+			config.preview_urls,
+			routes
+		);
+		const eventTriggers = config.triggers?.events;
+		const targets = [
+			...(wantWorkersDev ? ["workers.dev (enabled)"] : []),
+			...routesOnly.map(renderRoute),
+			...customDomainsOnly.map(renderRoute),
+			...(crons === undefined
+				? []
+				: crons.length === 0
+					? ["schedule: remove all"]
+					: crons.map((cron) => `schedule: ${cron}`)),
+			...(config.queues.producers ?? []).map(
+				(producer) => `Producer for ${producer.queue ?? producer.binding}`
+			),
+			...(config.queues.consumers ?? []).map(
+				(consumer) => `Consumer for ${consumer.queue}`
+			),
+			...ownedWorkflows.map((workflow) => `workflow: ${workflow.name}`),
+			...(eventTriggers !== undefined
+				? [`event triggers: ${eventTriggers.length}`]
+				: []),
+			...(config.addresses === undefined
+				? []
+				: config.addresses.length === 0
+					? ["email routing addresses: remove all"]
+					: [`email routing addresses: ${config.addresses.length}`]),
+		];
+		if (targets.length > 0) {
+			logger.log(
+				`--dry-run: no changes will be made. Would deploy ${scriptName} triggers:`
+			);
+			for (const target of targets) {
+				logger.log(" ", target);
+			}
+		} else {
+			logger.log(
+				`--dry-run: no changes will be made. No targets to deploy for ${scriptName}.`
+			);
+		}
 		return;
 	}
 
 	const { accountId } = props;
 	assert(accountId);
+
+	if (props.showDiff) {
+		let remoteTriggersSnapshot: Record<string, JsonLike> | undefined;
+		try {
+			remoteTriggersSnapshot = await fetchRemoteTriggers(
+				config,
+				accountId,
+				scriptName,
+				routesOnly,
+				customDomainsOnly
+			);
+		} catch (error) {
+			if (props.dryRun) {
+				throw error;
+			}
+			logger.warn(
+				"Unable to fetch remote trigger configuration. Skipping trigger diff and continuing with deployment."
+			);
+			logger.debug(error);
+		}
+
+		displayTriggerDiff(
+			remoteTriggersSnapshot,
+			buildLocalTriggers(
+				config,
+				routes,
+				routesOnly,
+				customDomainsOnly,
+				crons,
+				remoteTriggersSnapshot
+			)
+		);
+	}
+
+	if (props.dryRun) {
+		logger.log(`--dry-run: exiting now.`);
+		return;
+	}
 
 	if (props.validated !== true) {
 		await ensureQueuesExistByConfig(
@@ -65,17 +213,6 @@ export async function triggersDeploy(
 			scriptName,
 			props.queueCreateCommand
 		);
-	}
-
-	const routesOnly: Array<Route> = [];
-	const customDomainsOnly: Array<RouteObject> = [];
-
-	for (const route of routes) {
-		if (typeof route !== "string" && route.custom_domain) {
-			customDomainsOnly.push(route);
-		} else {
-			routesOnly.push(route);
-		}
 	}
 
 	const start = Date.now();
@@ -88,8 +225,6 @@ export async function triggersDeploy(
 		name: string;
 		deployment: Promise<TriggerDeployment>;
 	}[] = [];
-	const ownedWorkflows = getWorkflowsOwnedByScript(config, scriptName);
-
 	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
 		props,
 		accountId,
@@ -290,63 +425,6 @@ export async function triggersDeploy(
 				}))
 			)
 		);
-	}
-
-	// NOTE: if the user provides a script_name that's not this script (in other words, bound to another worker)
-	// we don't want to send this worker's config.
-	// TODO: move this earlier.
-	for (const workflow of config.workflows) {
-		if (!isWorkflowDefinedInThisScript(workflow, scriptName)) {
-			if (workflow.limits) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "limits" configured but references external script "${workflow.script_name}". ` +
-						`Configure limits on the worker that defines the workflow.`,
-					{
-						telemetryMessage: "triggers deploy workflow limits external script",
-					}
-				);
-			}
-			if (workflow.concurrency) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "concurrency" configured but references external script "${workflow.script_name}". ` +
-						`Configure concurrency on the worker that defines the workflow.`,
-					{
-						telemetryMessage:
-							"triggers deploy workflow concurrency external script",
-					}
-				);
-			}
-			if (workflow.schedules) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "schedules" configured but references external script "${workflow.script_name}". ` +
-						`Configure schedules on the worker that defines the workflow.`,
-					{
-						telemetryMessage:
-							"triggers deploy workflow schedules external script",
-					}
-				);
-			}
-			if (workflow.default_retention) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "default_retention" configured but references external script "${workflow.script_name}". ` +
-						`Configure default_retention on the worker that defines the workflow.`,
-					{
-						telemetryMessage:
-							"triggers deploy workflow default_retention external script",
-					}
-				);
-			}
-			if (workflow.jurisdiction) {
-				throw new UserError(
-					`Workflow "${workflow.name}" has "jurisdiction" configured but references external script "${workflow.script_name}". ` +
-						`Configure jurisdiction on the worker that defines the workflow.`,
-					{
-						telemetryMessage:
-							"triggers deploy workflow jurisdiction external script",
-					}
-				);
-			}
-		}
 	}
 
 	for (const workflow of ownedWorkflows) {
@@ -626,6 +704,215 @@ export async function triggersDeploy(
 	return targets;
 }
 
+type NormalizedRoute = {
+	pattern: string;
+	zone_name?: string;
+	zone_id?: string;
+	custom_domain?: boolean;
+	enabled?: boolean;
+	previews_enabled?: boolean;
+};
+
+/** Normalizes a route for comparison, excluding API-only fields. */
+function normalizeRoute(route: Route): NormalizedRoute {
+	if (typeof route === "string") {
+		return { pattern: route };
+	}
+	const normalized: NormalizedRoute = { pattern: route.pattern };
+	if ("zone_name" in route && route.zone_name) {
+		normalized.zone_name = route.zone_name;
+	}
+	if ("zone_id" in route && route.zone_id) {
+		normalized.zone_id = route.zone_id;
+	}
+	if (route.custom_domain) {
+		normalized.custom_domain = true;
+		normalized.enabled =
+			("enabled" in route ? route.enabled : undefined) ?? true;
+		normalized.previews_enabled =
+			("previews_enabled" in route ? route.previews_enabled : undefined) ??
+			false;
+	}
+	return normalized;
+}
+
+/** Orders normalized routes by their pattern for stable comparisons. */
+function byPattern(firstRoute: NormalizedRoute, secondRoute: NormalizedRoute) {
+	return firstRoute.pattern.localeCompare(secondRoute.pattern);
+}
+
+/** Compares explicit zone selections while omitting zones inferred by the API. */
+async function normalizeRemoteRoutes(
+	config: Config,
+	accountId: string,
+	remoteRoutes: Route[],
+	localRoutes: Route[]
+): Promise<NormalizedRoute[]> {
+	const zoneIdCache = new Map<string, Promise<string | null>>();
+	const normalizedRoutes = await Promise.all(
+		remoteRoutes.map(async (route) => {
+			const normalized = normalizeRoute(route);
+			const matchingRoute = localRoutes.find(
+				(candidate) =>
+					(typeof candidate === "string" ? candidate : candidate.pattern) ===
+					normalized.pattern
+			);
+			if (matchingRoute === undefined) {
+				return normalized;
+			}
+			const localRoute = normalizeRoute(matchingRoute);
+			if (localRoute.zone_id) {
+				const zone = await getZoneForRoute(
+					config,
+					{ route, accountId },
+					zoneIdCache
+				);
+				normalized.zone_id = zone?.id;
+				delete normalized.zone_name;
+			} else {
+				delete normalized.zone_id;
+				if (!localRoute.zone_name) {
+					delete normalized.zone_name;
+				}
+			}
+			return normalized;
+		})
+	);
+	return normalizedRoutes.sort(byPattern);
+}
+
+/**
+ * Builds the normalized local trigger configuration to compare with the remote.
+ */
+function buildLocalTriggers(
+	config: Config,
+	routes: Route[],
+	routesOnly: Route[],
+	customDomainsOnly: CustomDomainRoute[],
+	crons: string[] | undefined,
+	remoteTriggers: Record<string, JsonLike> = {}
+): Record<string, JsonLike> {
+	const { workers_dev, preview_urls } = getSubdomainValuesAPIMock(
+		config.workers_dev,
+		config.preview_urls,
+		routes
+	);
+	const triggers: Record<string, JsonLike> = {
+		...remoteTriggers,
+		workers_dev,
+		preview_urls,
+	};
+
+	const normalizedRoutes = routesOnly.map(normalizeRoute).sort(byPattern);
+	if (normalizedRoutes.length > 0) {
+		triggers.routes = normalizedRoutes;
+	}
+
+	const normalizedCustomDomains = customDomainsOnly
+		.map(normalizeRoute)
+		.sort(byPattern);
+	if (normalizedCustomDomains.length > 0) {
+		triggers.custom_domains = normalizedCustomDomains;
+	}
+
+	if (crons !== undefined) {
+		triggers.crons = [...crons].sort();
+	}
+
+	return triggers;
+}
+
+/**
+ * Fetches and normalizes the deployed routes, domains, crons and subdomain settings.
+ */
+async function fetchRemoteTriggers(
+	config: Config,
+	accountId: string,
+	workerName: string,
+	localRoutes: Route[],
+	localCustomDomains: CustomDomainRoute[]
+): Promise<Record<string, JsonLike>> {
+	const [routes, customDomains, subdomainStatus, cronTriggers] =
+		await Promise.all([
+			localRoutes.length > 0
+				? fetchResult<Route[]>(
+						config,
+						`/accounts/${accountId}/workers/services/${workerName}/environments/production/routes?show_zonename=true`
+					)
+				: [],
+			localCustomDomains.length > 0
+				? fetchPagedListResult<{
+						hostname: string;
+						zone_id: string;
+						zone_name: string;
+						enabled: boolean;
+						previews_enabled: boolean;
+					}>(
+						config,
+						`/accounts/${accountId}/workers/domains/records`,
+						{},
+						new URLSearchParams({
+							service: workerName,
+							environment: "production",
+						})
+					)
+				: [],
+			getWorkerSubdomain(config, accountId, workerName),
+			fetchResult<{ schedules: { cron: string }[] }>(
+				config,
+				`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
+			),
+		]);
+	const [normalizedRoutes, normalizedCustomDomains] = await Promise.all([
+		normalizeRemoteRoutes(config, accountId, routes, localRoutes),
+		normalizeRemoteRoutes(
+			config,
+			accountId,
+			customDomains.map((domain) => ({
+				pattern: domain.hostname,
+				zone_id: domain.zone_id,
+				zone_name: domain.zone_name,
+				custom_domain: true,
+				enabled: domain.enabled,
+				previews_enabled: domain.previews_enabled,
+			})),
+			localCustomDomains
+		),
+	]);
+	return {
+		workers_dev: subdomainStatus.enabled,
+		preview_urls: subdomainStatus.previews_enabled,
+		routes: normalizedRoutes,
+		custom_domains: normalizedCustomDomains,
+		crons: cronTriggers.schedules.map((schedule) => schedule.cron).sort(),
+	};
+}
+
+/**
+ * Displays the differences between the deployed and local trigger configurations.
+ */
+function displayTriggerDiff(
+	remoteTriggers: Record<string, JsonLike> | undefined,
+	localTriggers: Record<string, JsonLike>
+): void {
+	if (!remoteTriggers) {
+		return;
+	}
+
+	const diff = diffJsonObjects(remoteTriggers, localTriggers);
+
+	logger.log("");
+	if (diff) {
+		logger.log(
+			`Trigger changes (remote ${chalk.red("\u2192")} local):\n${diff}`
+		);
+	} else {
+		logger.log(
+			"No changes detected to routes, custom domains, cron schedules, workers.dev, or Preview URLs."
+		);
+	}
+}
+
 /**
  * Collapse the telemetry labels of a set of inner errors into a single sorted,
  * deduplicated string. Each `UserError` contributes its own `telemetryMessage`;
@@ -803,7 +1090,9 @@ async function subdomainDeploy(
 
 	const { workers_dev: wantWorkersDev, preview_urls: wantPreviews } =
 		getSubdomainValues(config.workers_dev, config.preview_urls, routes);
-	const before = await getWorkerSubdomain(config, accountId, scriptName);
+	const before = await getWorkerSubdomain(config, accountId, scriptName, {
+		fallbackToScriptOnNotFound: firstDeploy,
+	});
 
 	// workers.dev URL is only set if we want to deploy to workers.dev.
 	if (wantWorkersDev) {

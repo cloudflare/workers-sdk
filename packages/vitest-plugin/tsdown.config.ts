@@ -50,17 +50,19 @@ const commonOptions: UserConfig = {
 	target: "esnext",
 	format: "esm",
 	unbundle: false,
-	noExternal: ["devalue"],
-	external: [
-		// Cloudflare/workerd built-ins
-		/^cloudflare:.*$/,
-		/^workerd:.*$/,
-		// Virtual/runtime modules
-		"__VITEST_POOL_WORKERS_DEFINES",
-		"__VITEST_POOL_WORKERS_USER_OBJECT",
-		// Runtime dependencies and peer dependencies (derived from package.json)
-		...runtimeDepPatterns,
-	],
+	deps: {
+		alwaysBundle: ["devalue"],
+		neverBundle: [
+			// Cloudflare/workerd built-ins
+			/^cloudflare:.*$/,
+			/^workerd:.*$/,
+			// Virtual/runtime modules
+			"__VITEST_POOL_WORKERS_DEFINES",
+			"__VITEST_POOL_WORKERS_USER_OBJECT",
+			// Runtime dependencies and peer dependencies (derived from package.json)
+			...runtimeDepPatterns,
+		],
+	},
 	sourcemap: true,
 	outDir: path.join(pkgRoot, "dist"),
 	ignoreWatch: ["dist"],

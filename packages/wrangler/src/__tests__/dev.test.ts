@@ -38,7 +38,7 @@ import type {
 	Trigger,
 } from "../api";
 import type { StartDevOptions } from "../dev";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { ExpectStatic } from "vitest";
 import type { Mock, MockInstance } from "vitest";
 
@@ -2072,6 +2072,52 @@ describe("wrangler dev", { concurrent: false }, () => {
 				"
 			`);
 		});
+
+		it("should still load a UTF-8 `.dev.vars` file that starts with a BOM", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(
+				".dev.vars",
+				Buffer.concat([
+					Buffer.from([0xef, 0xbb, 0xbf]),
+					Buffer.from("API_KEY=abc\r\nOTHER=xyz\r\n"),
+				])
+			);
+			writeWranglerConfig({ main: "index.js" });
+
+			const config = await runWranglerUntilConfig("dev");
+
+			expect(config.bindings).toMatchObject({
+				API_KEY: { type: "secret_text", value: "abc" },
+				OTHER: { type: "secret_text", value: "xyz" },
+			});
+		});
+
+		it.for([
+			[
+				"UTF-16LE with a BOM",
+				Buffer.concat([
+					Buffer.from([0xff, 0xfe]),
+					Buffer.from("API_KEY=abc\r\n", "utf16le"),
+				]),
+			],
+			["UTF-16LE without a BOM", Buffer.from("API_KEY=abc\r\n", "utf16le")],
+		])(
+			"should error rather than load no variables when `.dev.vars` is %s",
+			async ([, contents], { expect }) => {
+				fs.writeFileSync("index.js", `export default {};`);
+				// This is what `"API_KEY=abc" > .dev.vars` writes in Windows PowerShell 5.1.
+				fs.writeFileSync(".dev.vars", contents);
+				writeWranglerConfig({ main: "index.js" });
+
+				await expect(runWranglerUntilConfig("dev")).rejects.toThrow();
+				expect(std.err).toContain(
+					'The file ".dev.vars" is not UTF-8 encoded, so its variables cannot be read.'
+				);
+				expect(std.out).not.toContain("Using secrets defined in .dev.vars");
+			}
+		);
 	});
 
 	describe("secrets config", () => {
@@ -2314,6 +2360,30 @@ describe("wrangler dev", { concurrent: false }, () => {
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 ("(hidden)")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ("(hidden)")      Environment Variable      local"
 			`);
+		});
+
+		it("should warn and skip a `.env` file that is not UTF-8 encoded", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				".env",
+				Buffer.concat([
+					Buffer.from([0xff, 0xfe]),
+					Buffer.from("__DOT_ENV_LOCAL_DEV_VAR_1=utf16\r\n", "utf16le"),
+				])
+			);
+			await runWranglerUntilConfig("dev");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(
+				`"Using secrets defined in .env.local"`
+			);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ("(hidden)")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ("(hidden)")      Environment Variable      local"
+			`);
+			expect(std.warn).toContain(
+				'The file ".env" is not UTF-8 encoded, so its variables cannot be read.'
+			);
+			expect(std.warn.match(/is not UTF-8 encoded/g)).toHaveLength(1);
 		});
 
 		it("should not load local dev `vars` from `.env` if there is a `.dev.vars` file", async ({
@@ -3238,6 +3308,34 @@ describe("wrangler dev", { concurrent: false }, () => {
 				expect(generateRuntimeTypesSpy).not.toHaveBeenCalled();
 				expect(std.out).not.toContain("types might be out of date");
 				expect(std.out).not.toContain("types looked out of date");
+			});
+
+			it("should not warn about up to date types with CRLF line endings", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.ts",
+					vars: { EXISTING_VAR: "existing value" },
+				});
+				fs.writeFileSync("index.ts", `export default {};`);
+
+				generateRuntimeTypesSpy.mockRestore();
+
+				await runWrangler("types");
+
+				// Simulate a checkout with `core.autocrlf=true` (the Git for Windows default)
+				const typesContent = fs.readFileSync(
+					DEFAULT_WORKERS_TYPES_FILE_PATH,
+					"utf-8"
+				);
+				fs.writeFileSync(
+					DEFAULT_WORKERS_TYPES_FILE_PATH,
+					typesContent.replace(/\n/g, "\r\n")
+				);
+
+				await runWranglerUntilConfig("dev");
+
+				expect(std.out).not.toContain("types might be out of date");
 			});
 		});
 	});

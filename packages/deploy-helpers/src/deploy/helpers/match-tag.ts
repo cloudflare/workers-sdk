@@ -1,11 +1,13 @@
 import {
 	APIError,
-	configFileName,
 	FatalError,
-	formatConfigSnippet,
 	getCIMatchTag,
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	formatConfigSnippet,
+} from "@cloudflare/workers-utils/config";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
@@ -46,23 +48,15 @@ export async function verifyWorkerMatchesCITag(
 		);
 	}
 
-	let tag;
-
-	try {
-		const worker = await fetchResult<ServiceMetadataRes>(
-			complianceConfig,
-			`/accounts/${accountId}/workers/services/${workerName}`
-		);
-		tag = worker.default_environment.script.tag;
-		logger.debug(`API returned with tag: ${tag} for worker: ${workerName}`);
-	} catch (e) {
+	const worker = await fetchResult<ServiceMetadataRes>(
+		complianceConfig,
+		`/accounts/${accountId}/workers/services/${workerName}`
+	).catch((e: unknown) => {
 		logger.debug(e);
 		if (isWorkerNotFoundError(e)) {
-			throw new FatalError(
-				`The Worker "${workerName}" was not found in your account. Check that the name in your ${configFileName(configPath)} file is correct and that the Worker exists in this account.`,
-				{ telemetryMessage: "ci match tag worker not found" }
-			);
-		} else if (e instanceof APIError) {
+			return undefined;
+		}
+		if (e instanceof APIError) {
 			throw new FatalError(
 				"An error occurred while trying to validate that the Worker name matches what is expected by the build system.\n" +
 					e.message +
@@ -70,14 +64,21 @@ export async function verifyWorkerMatchesCITag(
 					e.notes.map((note) => note.text).join("\n"),
 				{ telemetryMessage: "ci match tag validation api error" }
 			);
-		} else {
-			throw new FatalError(
-				"The Worker name could not be validated against what is expected by the build system. Please retry the build. " +
-					"If the problem persists, please contact support.",
-				{ telemetryMessage: "ci match tag validation failed" }
-			);
 		}
+		throw new FatalError(
+			"The Worker name could not be validated against what is expected by the build system. Please retry the build. " +
+				"If the problem persists, please contact support.",
+			{ telemetryMessage: "ci match tag validation failed" }
+		);
+	});
+	const tag = worker?.default_environment.script?.tag;
+	if (!tag) {
+		throw new FatalError(
+			`The Worker "${workerName}" was not found in your account. Check that the name in your ${configFileName(configPath)} file is correct and that the Worker exists in this account.`,
+			{ telemetryMessage: "ci match tag worker not found" }
+		);
 	}
+	logger.debug(`API returned with tag: ${tag} for worker: ${workerName}`);
 	if (tag !== matchTag) {
 		logger.debug(
 			`Failed to match Worker tag. The API returned "${tag}", but the CI system expected "${matchTag}"`

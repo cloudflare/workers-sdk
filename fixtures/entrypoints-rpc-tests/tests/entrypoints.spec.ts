@@ -800,8 +800,9 @@ describe("entrypoints", () => {
 		// Wait for error to be thrown
 		await waitFor(async () => {
 			let response = await fetch(url);
-			expect(await response.text()).toBe(
-				'Worker "bound" not found. Make sure it is running locally.'
+			expect(response.status).toBe(500);
+			expect(await response.text()).toContain(
+				'Worker does not export an entrypoint named "ThingEntrypoint"'
 			);
 		});
 	});
@@ -812,7 +813,7 @@ describe("entrypoints", () => {
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
-		const { url } = await dev({
+		const { url, session } = await dev({
 			"wrangler.toml": dedent`
 			name = "entry"
 			main = "index.ts"
@@ -829,12 +830,30 @@ describe("entrypoints", () => {
 			}
 		`,
 		});
-		await waitFor(async () => {
-			const response = await fetch(url);
-			expect(await response.text()).toBe(
-				'Worker "bound" not found. Make sure it is running locally.'
-			);
+		const readinessRequestTimeout = 5_000;
+		const readinessAgent = new Agent({
+			headersTimeout: readinessRequestTimeout,
 		});
+		try {
+			await waitFor(async () => {
+				const response = await fetch(url, {
+					dispatcher: readinessAgent,
+					signal: AbortSignal.timeout(readinessRequestTimeout),
+				});
+				const text = await response.text();
+				expect(response.status).toBe(503);
+				expect(text).toBe(
+					'Worker "bound" not found. Make sure it is running locally.'
+				);
+			}, 15_000);
+		} catch (cause) {
+			throw new Error(
+				`Entry worker did not return the missing-binding response. Wrangler output:\n${session.getOutput()}`,
+				{ cause }
+			);
+		} finally {
+			await readinessAgent.destroy();
+		}
 
 		// Start up the bound worker using HTTPS
 		const files: Record<string, string> = {

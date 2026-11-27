@@ -1,7 +1,8 @@
-import fs from "node:fs";
-import { getD1MigrationFiles } from "@cloudflare/workers-utils";
+import { readD1Migrations as readD1MigrationsFromOptions } from "@cloudflare/workers-utils";
 import type { D1Migration } from "../shared/d1";
 
+// Declared here so the plugin's public types don't depend on workers-utils,
+// which is bundled. Passing them to the shared function keeps them in sync.
 export type ReadD1MigrationsOptions = {
 	projectPath?: string;
 	migrationsDir?: string;
@@ -20,22 +21,8 @@ export type ReadD1MigrationsOptions = {
 export async function readD1Migrations(
 	migrationsPathOrOptions: string | ReadD1MigrationsOptions
 ): Promise<D1Migration[]> {
-	const files = listD1MigrationFiles(migrationsPathOrOptions);
-	const { unstable_splitSqlQuery } = await import("wrangler"); // (lazy)
-	return files.map(({ name, filePath }) => {
-		const migration = fs.readFileSync(filePath, "utf8");
-		const queries = unstable_splitSqlQuery(migration);
-		return { name, queries };
-	});
-}
-
-function listD1MigrationFiles(
-	migrationsPathOrOptions: string | ReadD1MigrationsOptions
-) {
 	if (typeof migrationsPathOrOptions === "string") {
-		// Preserve the historical error when the path is missing or not a directory.
-		fs.readdirSync(migrationsPathOrOptions);
-		return getD1MigrationFiles({
+		return readD1MigrationsFromOptions({
 			projectPath: migrationsPathOrOptions,
 			migrationsDir: ".",
 			migrationsPattern: "*.sql",
@@ -46,11 +33,7 @@ function listD1MigrationFiles(
 		migrationsPathOrOptions !== null &&
 		typeof migrationsPathOrOptions === "object"
 	) {
-		return getD1MigrationFiles({
-			projectPath: migrationsPathOrOptions.projectPath ?? process.cwd(),
-			migrationsDir: migrationsPathOrOptions.migrationsDir,
-			migrationsPattern: migrationsPathOrOptions.migrationsPattern,
-		});
+		return readD1MigrationsFromOptions(migrationsPathOrOptions);
 	}
 
 	throw new TypeError(

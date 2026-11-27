@@ -9,7 +9,8 @@ import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
 import type { Teams } from "./teams";
-import type { Config, FatalError, UserError } from "@cloudflare/workers-utils";
+import type { FatalError, UserError } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type Cloudflare from "cloudflare";
 import type {
 	ArgumentsCamelCase,

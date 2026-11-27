@@ -12,7 +12,7 @@ import type {
 	AiSearchBinding,
 	AiSearchNamespaceBinding,
 	AnalyticsEngineDatasetBinding,
-	AnalyticsSQLBinding,
+	AnalyticsSqlBinding,
 	ArtifactsBinding,
 	AssetsBinding,
 	BrowserBinding,
@@ -28,10 +28,12 @@ import type {
 	LogfwdrBinding,
 	MediaBinding,
 	MtlsCertificateBinding,
+	OidcTokenBinding,
 	PipelineBinding,
 	QueueBinding,
 	R2Binding,
 	RateLimitBinding,
+	RealtimeKitBinding,
 	SecretBinding,
 	SecretsStoreSecretBinding,
 	SendEmailBinding,
@@ -106,7 +108,7 @@ type Binding =
 	| AiSearchBinding
 	| AiSearchNamespaceBinding
 	| AnalyticsEngineDatasetBinding
-	| AnalyticsSQLBinding
+	| AnalyticsSqlBinding
 	| ArtifactsBinding
 	| AssetsBinding
 	| BrowserBinding
@@ -114,6 +116,7 @@ type Binding =
 	| DispatchNamespaceBinding
 	| DurableObjectBinding
 	| FlagshipBinding
+	| RealtimeKitBinding
 	| HyperdriveBinding
 	| ImagesBinding
 	| JsonBinding
@@ -122,6 +125,7 @@ type Binding =
 	| LogfwdrBinding
 	| MediaBinding
 	| MtlsCertificateBinding
+	| OidcTokenBinding
 	| PipelineBinding
 	| QueueBinding
 	| R2Binding
@@ -366,7 +370,7 @@ export interface DurableObjectContainerConfig extends BaseContainerConfig {
 
 /**
  * Container application configuration. This is the input shape passed to
- * `defineContainer` and parsed at runtime by `InputContainerSchema`.
+ * `defineContainer` and parsed at runtime by `ContainerConfigSchema`.
  */
 export type ContainerConfig =
 	| DurableObjectContainerConfig
@@ -376,7 +380,7 @@ export type ContainerConfig =
  * Worker configuration. This is the input shape passed to
  * [`defineWorker`](https://developers.cloudflare.com/workers/wrangler/configuration/).
  *
- * Fields are parsed and normalised at runtime by `InputWorkerSchema` before
+ * Fields are parsed and normalised at runtime by `WorkerConfigSchema` before
  * being passed to downstream tooling.
  */
 export interface WorkerConfig {
@@ -473,18 +477,16 @@ export interface WorkerConfig {
 	triggers?: Trigger[];
 
 	/**
-	 * A list of Tail Workers that are bound to this Worker.
+	 * A list of Tail Workers that are bound to this Worker. Each consumer
+	 * receives this Worker's tail events through its `tail()` handler.
 	 *
-	 * `@cloudflare/config` unifies regular and streaming tail consumers under
-	 * a single field; pass `streaming: true` to forward streaming tail events.
+	 * For reference, see https://developers.cloudflare.com/workers/observability/logs/tail-workers/
 	 *
 	 * @default []
 	 */
 	tailConsumers?: Array<{
 		/** The name of the service tail events will be forwarded to. */
 		worker: string;
-		/** Whether to stream tail events in real time. */
-		streaming?: boolean;
 	}>;
 
 	/**
@@ -604,6 +606,28 @@ export interface WorkerConfig {
 	};
 
 	/**
+	 * Cloudflare Images configuration for this Worker. The Images binding
+	 * itself is declared in `env`.
+	 */
+	images?: {
+		/** Configures `/cdn-cgi/image/...` URL transformations for this Worker. */
+		urlTransformations?: {
+			/**
+			 * Whether URL transformations are enabled. Set to `false` to disable
+			 * them, overriding any zone-level setting.
+			 */
+			enabled: boolean;
+			/**
+			 * Hostnames that images may be fetched from, in addition to the
+			 * Worker's own zone, without a protocol (e.g. `"images.example.com"`
+			 * or `"*.example.com"`). Use `["*"]` to allow any origin. At most 10
+			 * entries.
+			 */
+			allowedOrigins?: string[];
+		};
+	};
+
+	/**
 	 * Whether we use `<name>.<subdomain>.workers.dev` to
 	 * test and deploy your Worker.
 	 *
@@ -622,11 +646,30 @@ export interface WorkerConfig {
 	previewUrls?: boolean;
 
 	/**
-	 * Designates this Worker as an internal-only "first-party" Worker.
+	 * Experimental features. Fields here may change or be removed without a
+	 * major version bump.
 	 *
-	 * @internal
+	 * @default {}
 	 */
-	firstPartyWorker?: boolean;
+	experimental?: {
+		/**
+		 * A list of Streaming Tail Workers that are bound to this Worker. Each
+		 * consumer receives this Worker's tail events through its
+		 * `tailStream()` handler.
+		 *
+		 * @default []
+		 */
+		streamingTailConsumers?: Array<{
+			/** The name of the service streaming tail events will be forwarded to. */
+			worker: string;
+		}>;
+		/**
+		 * Designates this Worker as an internal-only "first-party" Worker.
+		 *
+		 * @internal
+		 */
+		firstPartyWorker?: boolean;
+	};
 
 	/**
 	 * "Unsafe" tables for runtime features that aren't directly supported by

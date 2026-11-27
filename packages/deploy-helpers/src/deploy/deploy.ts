@@ -11,16 +11,18 @@ import {
 import {
 	APIError,
 	formatTime,
-	getBindings,
 	getDockerPath,
-	getDurableObjectContainerApps,
-	hasDurableObjectExports,
 	parseNonHyphenedUuid,
 	printBindings,
 	retryOnAPIFailure,
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import {
+	getBindings,
+	getDurableObjectContainerApps,
+	hasDurableObjectExports,
+} from "@cloudflare/workers-utils/config";
 import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
@@ -51,7 +53,10 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "./helpers/environments";
-import { EXPORTS_RECONCILIATION_ERROR_CODE } from "./helpers/error-codes";
+import {
+	EXPORTS_RECONCILIATION_ERROR_CODE,
+	WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE,
+} from "./helpers/error-codes";
 import { resolveExportsUploadPayload } from "./helpers/exports";
 import {
 	isExportsReconciliationErrorDetails,
@@ -59,6 +64,8 @@ import {
 	renderExportsReconciliationSuccess,
 } from "./helpers/exports-reconciliation";
 import { helpIfErrorIsSizeOrScriptStartup } from "./helpers/friendly-validator-errors";
+import { applyImagesUrlTransformations } from "./helpers/images-url-transformations";
+import { printOidcTokenIdentity } from "./helpers/oidc-tokens";
 import { collectPackageDependencies } from "./helpers/package-dependencies";
 import { parseBulkInputToObject } from "./helpers/parse-bulk-input";
 import { parseConfigPlacement } from "./helpers/placement";
@@ -207,6 +214,8 @@ async function deployWorker(
 	}
 
 	let versionId: string | null = null;
+	// A Worker's first upload creates its tag, so the upload response has it.
+	let uploadedWorkerTag = workerTag;
 	const scriptName = name;
 
 	const start = Date.now();
@@ -286,7 +295,11 @@ async function deployWorker(
 			});
 	// Durable Object lifecycle is expressed through either legacy `migrations`
 	// or the declarative `exports` map. Only one is sent on each upload.
-	const { migrations, exports } = await resolveExportsUploadPayload({
+	const {
+		migrations,
+		exports,
+		headers: exportsHeaders,
+	} = await resolveExportsUploadPayload({
 		scriptName,
 		isDryRun,
 		accountId,
@@ -543,9 +556,10 @@ async function deployWorker(
 							{
 								method: "POST",
 								body: workerBundle,
-								headers: props.sendMetrics
-									? { metricsEnabled: "true" }
-									: undefined,
+								headers: {
+									...exportsHeaders,
+									...(props.sendMetrics && { metricsEnabled: "true" }),
+								},
 							},
 							new URLSearchParams({ bindings_inherit: "strict" })
 						),
@@ -607,6 +621,7 @@ async function deployWorker(
 							mutable_pipeline_id: string | null;
 							deployment_id: string | null;
 							startup_time_ms: number;
+							tag?: string;
 							exports_reconciliation?: ExportsReconciliationResult;
 						}>(
 							config,
@@ -614,9 +629,10 @@ async function deployWorker(
 							{
 								method: "PUT",
 								body: workerBundle,
-								headers: props.sendMetrics
-									? { metricsEnabled: "true" }
-									: undefined,
+								headers: {
+									...exportsHeaders,
+									...(props.sendMetrics && { metricsEnabled: "true" }),
+								},
 							},
 							new URLSearchParams({
 								// pass excludeScript so the whole body of the
@@ -628,6 +644,7 @@ async function deployWorker(
 					logger
 				);
 				result = uploadResult;
+				uploadedWorkerTag ??= uploadResult.tag ?? null;
 				if (uploadResult.exports_reconciliation) {
 					renderExportsReconciliationSuccess(
 						uploadResult.exports_reconciliation
@@ -709,6 +726,22 @@ async function deployWorker(
 				throw new UserError(
 					renderExportsReconciliationError(err.meta.details),
 					{ telemetryMessage: "deploy do exports reconciliation failed" }
+				);
+			}
+
+			// Workflow exports are provisioned on deploy, so this can come back here
+			// as well as from `triggers deploy`.
+			if (
+				err instanceof APIError &&
+				err.code === WORKFLOW_CRON_REQUIRES_PAID_PLAN_CODE
+			) {
+				err.preventReport();
+				throw new UserError(
+					`A Workflow has "schedules" configured, but scheduled Workflows require a paid Workers plan.`,
+					{
+						cause: err,
+						telemetryMessage: "deploy workflow cron requires paid plan",
+					}
 				);
 			}
 
@@ -874,7 +907,13 @@ async function deployWorker(
 
 	// Early exit for WfP since it doesn't need the below code
 	if (props.dispatchNamespace !== undefined) {
+		if (props.triggers?.length) {
+			logger.warn(
+				"Cron triggers are not supported with --dispatch-namespace and will be ignored."
+			);
+		}
 		deployWfpUserWorker(props.dispatchNamespace, versionId);
+		printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
 		return { versionId, workerTag, assetUploadStats, bundleSize };
 	}
 	assert(accountId);
@@ -895,6 +934,16 @@ async function deployWorker(
 		previewUrlsConfigFieldName: options.previewUrlsConfigFieldName,
 		previewUrlsConfigAssignment: options.previewUrlsConfigAssignment,
 	});
+
+	// Before the Images update, which can throw after the Worker is deployed.
+	printOidcTokenIdentity(bindings, accountId, uploadedWorkerTag);
+
+	await applyImagesUrlTransformations(
+		config,
+		accountId,
+		scriptName,
+		options.deployCommand
+	);
 
 	logger.log("Current Version ID:", versionId);
 

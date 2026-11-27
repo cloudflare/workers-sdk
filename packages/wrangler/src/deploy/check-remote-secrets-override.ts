@@ -1,6 +1,6 @@
 import { checkRemoteSecretsOverride as checkRemoteSecretsOverrideBase } from "@cloudflare/deploy-helpers";
 import { requireAuth } from "../user";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export async function checkRemoteSecretsOverride(
 	config: Config,

@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { existsSync, statSync, type Stats } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	checkWorkerNameValidity,
@@ -10,20 +10,26 @@ import {
 	parsePackageJSON,
 	readFileSync,
 } from "@cloudflare/workers-utils";
-import { AutoConfigDetectionError } from "../errors";
+import {
+	AutoConfigDetectionError,
+	AutoConfigFrameworkConfigurationError,
+} from "../errors";
 import { getFrameworkClassInstance } from "../frameworks";
 import {
-	allFrameworksInfos,
+	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
 import { detectFramework } from "./framework-detection";
+import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
 } from "../types";
+import type { DetectedFramework } from "./framework-detection";
 import type { PackageManager } from "@cloudflare/workers-utils";
-import type { Config, PackageJSON } from "@cloudflare/workers-utils";
+import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const CLOUDFLARE_CONFIG_FILE = "cloudflare.config.ts";
 
@@ -101,11 +107,30 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 }
 
 /**
+ * Expresses a caller-supplied output directory relative to the project, matching
+ * the shape of a detected one (e.g. `"public"`, or `"."` for the project itself).
+ */
+function normalizeOutputDir(projectPath: string, outputDir: string): string {
+	return relative(projectPath, resolve(projectPath, outputDir)) || ".";
+}
+
+/**
  * Detects project details needed for autoconfig: framework, package manager,
  * output directory, worker name, commands, and whether the project is already configured.
  * By default, the project is considered configured when `cloudflare.config.ts`
  * exists. Passing `target: "wrangler"` opts into Wrangler configuration
  * detection instead.
+ *
+ * For the cf target, build and dev commands may use bare framework executables.
+ * Callers must resolve these from `nodeModulesPaths`, which includes the
+ * application and its detected workspace, excluding unrelated parent installs.
+ * Command readiness problems are reported in `commandError` without preventing
+ * inspection of the project's configuration.
+ * Workspace applications with custom-named Vite configs must identify their
+ * tooling in their own manifest: declare the Cloudflare plugin, or Vite/Vite+
+ * as a dependency or dev dependency. Config paths forwarded to the eventual
+ * command are not available during detection; root tools alone do not identify
+ * which sibling applications use Vite.
  *
  * @param options - Detection options including project path, wrangler config, and context.
  * @returns The detected project details.
@@ -114,6 +139,7 @@ export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
 	target = "cf",
+	outputDir: requestedOutputDir,
 	context,
 }: {
 	/** The path to the project, defaults to cwd. */
@@ -122,6 +148,16 @@ export async function getDetailsForAutoConfig({
 	wranglerConfig?: Config;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
+	/**
+	 * A directory of built static assets the caller has already chosen,
+	 * for example the directory passed to `wrangler pages deploy <directory>`.
+	 * Selects static-asset configuration instead of framework configuration, so
+	 * a framework adapter or build cannot replace the requested assets. Existing
+	 * Workers and Pages configurations, including framework-managed deployments,
+	 * retain their usual detection behavior.
+	 * Relative paths are resolved against `projectPath`.
+	 */
+	outputDir?: string;
 	/** The autoconfig context providing logger, dialogs, and other dependencies. */
 	context: AutoConfigContext;
 }): Promise<AutoConfigDetails> {
@@ -148,10 +184,24 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
-	const { detectedFramework, packageManager, isWorkspaceRoot } =
+	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, { wranglerConfig, target });
+	const nodeModulesPaths = getNodeModulesPaths(projectPath, workspaceRoot);
 
-	const framework = getFrameworkClassInstance(detectedFramework.framework.id);
+	const detectedFrameworkInstance = getFrameworkClassInstance(
+		detectedFramework.framework.id,
+		target
+	);
+	const configured =
+		hasCloudflareConfig ||
+		detectedFrameworkInstance.isConfigured(projectPath, { target });
+	const useStaticAssets =
+		!configured &&
+		requestedOutputDir !== undefined &&
+		detectedFramework.framework.id !== "cloudflare-pages";
+	let framework = useStaticAssets
+		? getFrameworkClassInstance(staticFramework.id, target)
+		: detectedFrameworkInstance;
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -165,22 +215,74 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const configured =
-		hasCloudflareConfig || framework.isConfigured(projectPath, { target });
+	let outputDir = configured
+		? undefined
+		: requestedOutputDir !== undefined && framework.id === staticFramework.id
+			? normalizeOutputDir(projectPath, requestedOutputDir)
+			: (detectedFramework.dist ?? (await findAssetsDir(projectPath)));
 
-	const outputDir =
-		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
+	// Unknown frameworks also use the static class. Validate its assets before
+	// a native Vite fallback can replace the framework and output directory.
+	if (!configured && framework.id === staticFramework.id) {
+		await assertNoPagesFunctionsWithRootAssets(
+			projectPath,
+			outputDir,
+			target,
+			context
+		);
+	}
+
+	const inspectViteProject = canInspectViteProject({
+		target,
+		useStaticAssets,
+		configured,
+		detectedFramework,
+	});
+	const useNativeCommands =
+		!detectedFramework.devCommand && !detectedFramework.buildCommand;
+	const viteCommands = inspectViteProject
+		? getViteProjectCommands({
+				projectPath,
+				packageJson,
+				workspaceRoot: configured ? workspaceRoot : undefined,
+				packageManager,
+				isWorkspaceRoot,
+				nodeModulesPaths,
+				resolveCommands: useNativeCommands || framework.id === "vite",
+			})
+		: undefined;
+	const fallbackCommands = useNativeCommands ? viteCommands : undefined;
+	if (fallbackCommands) {
+		framework = getFrameworkClassInstance("vite", target);
+	}
+
+	if (fallbackCommands && detectedFramework.dist === undefined) {
+		outputDir = "dist";
+	}
 
 	const baseDetails = {
 		projectPath,
 		framework,
 		packageJson,
 		packageManager,
-		devCommand: getProjectCommand(detectedFramework.devCommand, packageManager),
-		buildCommand: getProjectCommand(
-			detectedFramework.buildCommand,
-			packageManager
-		),
+		nodeModulesPaths,
+		commandError: viteCommands?.error,
+		devCommand: useStaticAssets
+			? undefined
+			: getProjectCommand(
+					detectedFramework.devCommand ?? fallbackCommands?.devCommand,
+					packageManager,
+					packageJson,
+					target
+				),
+		buildCommand: useStaticAssets
+			? undefined
+			: getProjectCommand(
+					detectedFramework.buildCommand ?? fallbackCommands?.buildCommand,
+					packageManager,
+					packageJson,
+					target
+				),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
@@ -215,23 +317,148 @@ export async function getDetailsForAutoConfig({
 }
 
 /**
- * Converts a detected project command into one that can be run in the terminal
- * (such as `npm run build` or `npx astro dev`). If no command is detected
- * `undefined` is returned instead.
+ * Rejects unconfigured static sites whose root assets would silently omit Pages
+ * Functions. Interactive detection can ask the user whether this is a Pages
+ * project, but non-interactive detection assumes it is a static site.
+ */
+async function assertNoPagesFunctionsWithRootAssets(
+	projectPath: string,
+	outputDir: string | undefined,
+	target: AutoConfigTarget,
+	context: AutoConfigContext
+): Promise<void> {
+	if (
+		!(context.isNonInteractiveOrCI?.() ?? false) ||
+		outputDir === undefined ||
+		resolve(projectPath, outputDir) !== resolve(projectPath) ||
+		!(await getPathStats(join(projectPath, "functions")))?.isDirectory()
+	) {
+		return;
+	}
+
+	const configFile =
+		target === "cf"
+			? `a \`${CLOUDFLARE_CONFIG_FILE}\` file`
+			: "a Wrangler configuration file";
+	throw new AutoConfigDetectionError(
+		"This project has a `functions` directory and static files in its root, which looks like a Cloudflare Pages project using Pages Functions. " +
+			"Automatic configuration cannot migrate Pages Functions to Workers yet, and deploying the project root as static assets would leave the Functions undeployed.\n" +
+			"If `functions` contains Pages Functions, move the static files into a subdirectory (for example `public/`) and deploy with `wrangler pages deploy public --project-name <name>`, " +
+			"or migrate the Functions to a Worker: https://developers.cloudflare.com/workers/static-assets/migration-guides/migrate-from-pages/\n" +
+			`If \`functions\` is not Pages Functions, move the static files into a subdirectory or add ${configFile} for the Worker.`,
+		{
+			telemetryMessage: "autoconfig details pages functions with root assets",
+			frameworkId: staticFramework.id,
+			configured: false,
+		}
+	);
+}
+
+/**
+ * Keeps native execution from bypassing Pages detection or unsupported setup.
+ * An existing configuration can opt an otherwise unsupported project into execution.
+ */
+function canInspectViteProject({
+	target,
+	useStaticAssets,
+	configured,
+	detectedFramework,
+}: {
+	target: AutoConfigTarget;
+	useStaticAssets: boolean;
+	configured: boolean;
+	detectedFramework: DetectedFramework;
+}): boolean {
+	if (
+		target !== "cf" ||
+		useStaticAssets ||
+		detectedFramework.framework.id === "cloudflare-pages"
+	) {
+		return false;
+	}
+	if (configured) {
+		return true;
+	}
+
+	const frameworkInfo = getAllFrameworksInfos(target).find(
+		({ id }) => id === detectedFramework.framework.id
+	);
+	return frameworkInfo?.supported === true && frameworkInfo.supportsCf;
+}
+
+/**
+ * Requires runnable project commands at an execution boundary. Read-only callers
+ * can inspect detection results, including missing installs, without throwing.
+ *
+ * @param details The detected project details
+ * @throws {AutoConfigFrameworkConfigurationError} If project commands are unavailable
+ */
+export function assertProjectCommandsAvailable(
+	details: AutoConfigDetails
+): void {
+	if (details.commandError) {
+		throw new AutoConfigFrameworkConfigurationError(
+			details.commandError.message,
+			{
+				telemetryMessage: "autoconfig vite command unavailable",
+			}
+		);
+	}
+}
+
+/** Restricts package lookup to the application and its validated workspace. */
+function getNodeModulesPaths(
+	projectPath: string,
+	workspaceRoot?: string
+): string[] {
+	const directories: string[] = [];
+	const root = resolve(workspaceRoot ?? projectPath);
+	let directory = resolve(projectPath);
+	while (true) {
+		directories.push(join(directory, "node_modules"));
+		if (directory === root || dirname(directory) === directory) {
+			return directories;
+		}
+		directory = dirname(directory);
+	}
+}
+
+/**
+ * Converts a detected project command for the target's command runner. The cf
+ * runner must resolve local executables, while Wrangler commands include
+ * package-manager prefixes. Returns `undefined` if no command is detected.
  *
  * @param command The detected project command
  * @param packageManager The package manager to use for command prefixes
+ * @param packageJson The optional project manifest used to detect Vite+
+ * @param target The consumer, defaults to cf and requires local executable lookup
  * @returns A runnable project command if detected, undefined otherwise
  */
-function getProjectCommand(
+export function getProjectCommand(
 	command: string | undefined,
-	packageManager: PackageManager
+	packageManager: PackageManager,
+	packageJson?: PackageJSON,
+	target: AutoConfigTarget = "cf"
 ): string | undefined {
 	if (!command) {
 		return undefined;
 	}
 
 	const { type, dlx, npx } = packageManager;
+	const executablePrefix = target === "cf" ? "" : `${npx} `;
+	if (usesVitePlus(packageJson)) {
+		if (
+			["vite", "vite dev", `${npx} vite`, `${npx} vite dev`].includes(command)
+		) {
+			return `${executablePrefix}vp dev`;
+		}
+		if (command === "vite build" || command === `${npx} vite build`) {
+			return `${executablePrefix}vp build`;
+		}
+	}
+	if (target === "cf") {
+		return command;
+	}
 
 	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
 		if (command.startsWith(packageManagerCommandPrefix)) {
@@ -280,13 +507,16 @@ export function displayAutoConfigDetails(
  *
  * @param autoConfigDetails - The detected project details.
  * @param context - The autoconfig context providing dialogs.
+ * @param target - The configuration target, defaults to cf.
  * @returns The (possibly updated) autoconfig details.
  */
 export async function confirmAutoConfigDetails(
 	autoConfigDetails: AutoConfigDetails,
-	context: AutoConfigContext
+	context: AutoConfigContext,
+	target: AutoConfigTarget = "cf"
 ): Promise<AutoConfigDetails> {
 	const { dialogs } = context;
+	const allFrameworksInfos = getAllFrameworksInfos(target);
 	const modifySettings = await dialogs.confirm(
 		"Do you want to modify these settings?",
 		{ defaultValue: false, fallbackValue: false }
@@ -337,7 +567,10 @@ export async function confirmAutoConfigDetails(
 		}
 	);
 
-	updatedAutoConfigDetails.framework = getFrameworkClassInstance(frameworkId);
+	updatedAutoConfigDetails.framework = getFrameworkClassInstance(
+		frameworkId,
+		target
+	);
 
 	const outputDir = await dialogs.prompt(
 		"What directory contains your applications' output/asset files?",

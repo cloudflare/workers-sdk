@@ -633,14 +633,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "solid",
-			quarantine: true,
-			promptHandlers: [
-				{
-					matcher: /Which template would you like to use/,
-					input: [keys.enter],
-				},
-			],
-			flags: ["--ts"],
+			flags: ["--ts", "--v2", "--template", "basic"],
 			extraEnv: {
 				BEGIT_GH_API_KEY: process.env.GITHUB_TOKEN,
 			},
@@ -660,33 +653,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			nodeCompat: true,
 		},
 		{
-			name: "svelte:pages",
-			argv: ["--platform", "pages"],
-			flags: [
-				"--no-install",
-				"--no-add-ons",
-				"--template",
-				"minimal",
-				"--types",
-				"ts",
-			],
-			testCommitMessage: true,
-			unsupportedOSs: ["win32"],
-			unsupportedPms: ["npm"],
-			verifyDeploy: {
-				route: "/",
-				expectedText: "SvelteKit app",
-			},
-			verifyPreview: {
-				previewArgs: ["--inspector-port=0"],
-				route: "/test",
-				expectedText: "C3_TEST",
-			},
-			nodeCompat: false,
-		},
-		{
-			name: "svelte:workers",
-			argv: ["--platform", "workers"],
+			name: "svelte",
 			flags: [
 				"--no-install",
 				"--no-add-ons",
@@ -849,7 +816,7 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: false,
 		},
 		{
-			name: "svelte:workers",
+			name: "svelte",
 			argv: ["--platform", "workers"],
 			flags: [
 				"--no-install",
@@ -1032,14 +999,7 @@ function getExperimentalFrameworkTestConfig(
 		},
 		{
 			name: "solid",
-			quarantine: true,
-			promptHandlers: [
-				{
-					matcher: /Which template would you like to use/,
-					input: [keys.enter],
-				},
-			],
-			flags: ["--ts"],
+			flags: ["--ts", "--v2", "--template", "basic"],
 			extraEnv: {
 				BEGIT_GH_API_KEY: process.env.GITHUB_TOKEN,
 			},

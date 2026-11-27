@@ -9,7 +9,8 @@ import {
 	toOutputValue,
 	type UnknownRecord,
 } from "./converter-helpers";
-import { DURABLE_OBJECT_EXPORTS_DOCS_URL, createFollowUp } from "./follow-ups";
+import { inferDurableObjectExports } from "./durable-object-exports";
+import { createFollowUp } from "./follow-ups";
 import type { MigrationFollowUp, OutputObject, OutputProperty } from "./types";
 
 export const WORKFLOW_SETTINGS = [
@@ -53,6 +54,10 @@ function workflowExportOptions(record: UnknownRecord): OutputObject {
 			properties.push({ key, value: camelObject(value) });
 		}
 	}
+	const events = getRecords(record, "events");
+	if (events.length > 0) {
+		properties.push({ key: "events", value: events.map(camelObject) });
+	}
 	const schedules = toOutputValue(record.schedules);
 	if (schedules !== undefined) {
 		properties.push({ key: "schedules", value: schedules });
@@ -68,13 +73,78 @@ function workflowExportOptions(record: UnknownRecord): OutputObject {
 	return { kind: "object", properties };
 }
 
+/** Attaches legacy targets to the exports that actually own the Workflows. */
+function attachWorkflowEvents(
+	source: UnknownRecord,
+	sourcePrefix: string,
+	exports: Map<string, UnknownRecord>,
+	report: (followUp: MigrationFollowUp) => void
+): void {
+	const events = getRecord(source, "triggers")?.events;
+	if (!Array.isArray(events)) {
+		return;
+	}
+	for (const [index, event] of events.entries()) {
+		const sourcePath = `${sourcePrefix ? sourcePrefix + "." : ""}triggers.events.${index}`;
+		if (
+			!isRecord(event) ||
+			typeof event.type !== "string" ||
+			!Array.isArray(event.targets) ||
+			event.targets.length === 0 ||
+			(event.filter !== undefined && !isRecord(event.filter))
+		) {
+			report(
+				createFollowUp(
+					"invalid-workflow-event",
+					"This event subscription could not be migrated. Review its type, filter, and Workflow targets.",
+					{ sourcePath }
+				)
+			);
+			continue;
+		}
+		for (const [targetIndex, target] of event.targets.entries()) {
+			const owned =
+				isRecord(target) && target.type === "workflow"
+					? [...exports.values()].filter(
+							(workflow) => workflow.name === target.workflow_name
+						)
+					: [];
+			if (owned.length !== 1) {
+				report(
+					createFollowUp(
+						"workflow-event-target",
+						"This event target does not identify one Workflow export owned by this Worker. Its subscription was not migrated.",
+						{
+							sourcePath: `${sourcePath}.targets.${targetIndex}`,
+						}
+					)
+				);
+				continue;
+			}
+			const workflow = owned[0];
+			const previous = getRecords(workflow, "events");
+			workflow.events = [
+				...previous,
+				{
+					type: event.type,
+					...(event.filter === undefined ? {} : { filter: event.filter }),
+				},
+			];
+		}
+	}
+}
+
 export function convertExports(
 	source: UnknownRecord,
 	sourcePrefix: string,
 	imports: Set<string>,
 	report: (followUp: MigrationFollowUp) => void
 ): OutputObject | undefined {
-	const configuredExports = getRecord(source, "exports") ?? {};
+	const configuredExports = inferDurableObjectExports(
+		source,
+		sourcePrefix,
+		report
+	);
 
 	const properties: OutputProperty[] = [];
 	// Workflow exports render last, once every `workflows` binding has had the
@@ -126,13 +196,6 @@ export function convertExports(
 				key: name,
 				value: call("exports.durableObject", options),
 			});
-			report(
-				createFollowUp(
-					"durable-object-review",
-					"Durable Object exports require manual review after migration.",
-					{ docsUrl: DURABLE_OBJECT_EXPORTS_DOCS_URL, sourcePath }
-				)
-			);
 			if (hasOwn(value, "container")) {
 				report(
 					createFollowUp(
@@ -161,8 +224,8 @@ export function convertExports(
 	}
 	// A `workflows` binding to a Workflow this Worker defines becomes an export
 	// here, carrying the Workflow's settings. When the Wrangler `exports` table
-	// already declares the same Workflow, the two merge the way Wrangler merges
-	// them (`getWorkflowsOwnedByScript`), with the binding's settings winning.
+	// already declares the same Workflow, the two merge, with the binding's
+	// settings winning.
 	for (const [index, entry] of getRecords(source, "workflows").entries()) {
 		if (
 			!isLocalWorkflow(entry, source) ||
@@ -199,6 +262,7 @@ export function convertExports(
 			);
 		}
 	}
+	attachWorkflowEvents(source, sourcePrefix, workflowExports, report);
 	for (const [property, record] of pendingWorkflows) {
 		property.value = call("exports.workflow", workflowExportOptions(record));
 	}

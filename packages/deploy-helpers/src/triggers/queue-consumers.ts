@@ -1,7 +1,8 @@
 import { UserError } from "@cloudflare/workers-utils";
 import { fetchPagedListResult, fetchResult, logger } from "../shared/context";
 import type { TriggerDeployment } from "../shared/types";
-import type { Config, ComplianceConfig } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type QueueJurisdiction = "eu" | "us" | "fedramp";
 

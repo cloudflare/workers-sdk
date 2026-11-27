@@ -2,7 +2,7 @@ import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { listCatalogEntries, truncateDescription } from "./utils";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 type ListModelsArgs = {
 	author?: string;

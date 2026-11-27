@@ -14,6 +14,7 @@ import type {
 	CfModuleType,
 	Json,
 	WorkerMetadataBinding,
+	WorkerUploadMetadataBinding,
 } from "@cloudflare/workers-utils";
 import type { Protocol } from "devtools-protocol";
 import type { V4ModuleDefinition, V4WorkerOptionsShape } from "miniflare";
@@ -21,6 +22,10 @@ import type { FormData, FormDataEntryValue } from "undici";
 import type { RawData } from "ws";
 
 const STARTUP_PROFILE_TIMEOUT_MS = 10_000;
+
+type StartupProfileBinding =
+	| WorkerUploadMetadataBinding
+	| WorkerMetadataBinding;
 
 const MODULE_TYPE_TO_MINIFLARE_TYPE: Record<
 	CfModuleType,
@@ -302,6 +307,7 @@ type MiniflareBindingOptions = Pick<
 	| "dispatchNamespaces"
 	| "email"
 	| "flagship"
+	| "realtimekit"
 	| "helloWorld"
 	| "images"
 	| "kvNamespaces"
@@ -355,6 +361,7 @@ async function convertWorkerBundleBindings(
 		MiniflareBindingOption<"email">["send_email"]
 	> = [];
 	const flagship: MiniflareBindingOption<"flagship"> = {};
+	const realtimekit: MiniflareBindingOption<"realtimekit"> = {};
 	const helloWorld: MiniflareBindingOption<"helloWorld"> = {};
 	let images: MiniflareBindingOption<"images"> | undefined;
 	const kvNamespaces: Record<string, { id: string }> = {};
@@ -385,7 +392,7 @@ async function convertWorkerBundleBindings(
 			unsupportedBindings.push({ name: "<unknown>", type: "unknown" });
 			continue;
 		}
-		const binding = value as WorkerMetadataBinding;
+		const binding = value as StartupProfileBinding;
 		// Raw resource bindings expose a Fetcher instead of their product API.
 		if (isRawWorkerBinding(binding)) {
 			serviceBindings[binding.name] = createOfflineFetcherBinding();
@@ -415,7 +422,9 @@ async function convertWorkerBundleBindings(
 				kvNamespaces[binding.name] = { id: binding.namespace_id };
 				break;
 			case "d1":
-				d1Databases[binding.name] = { id: binding.id };
+				d1Databases[binding.name] = {
+					id: "database_id" in binding ? binding.database_id : binding.id,
+				};
 				break;
 			case "r2_bucket":
 				r2Buckets[binding.name] = { id: binding.bucket_name };
@@ -538,6 +547,9 @@ async function convertWorkerBundleBindings(
 			case "flagship":
 				flagship[binding.name] = { app_id: binding.app_id };
 				break;
+			case "realtimekit":
+				realtimekit[binding.name] = { app_id: binding.app_id };
+				break;
 			case "ratelimit":
 				ratelimits[binding.name] = {
 					namespace_id: binding.namespace_id,
@@ -558,6 +570,10 @@ async function convertWorkerBundleBindings(
 				break;
 			case "worker_loader":
 				workerLoaders[binding.name] = {};
+				break;
+			case "oidc_token":
+				// There is no local OIDC token signer.
+				unsupportedBindings.push(binding);
 				break;
 			case "inherit":
 				// Inheritance erases the original binding type from upload metadata.
@@ -602,6 +618,7 @@ async function convertWorkerBundleBindings(
 			dispatchNamespaces,
 			email: { send_email: sendEmailBindings },
 			flagship,
+			realtimekit,
 			helloWorld,
 			images,
 			kvNamespaces,
@@ -625,7 +642,7 @@ async function convertWorkerBundleBindings(
 	};
 }
 
-function isRawWorkerBinding(binding: WorkerMetadataBinding): boolean {
+function isRawWorkerBinding(binding: StartupProfileBinding): boolean {
 	switch (binding.type) {
 		case "browser":
 		case "ai":

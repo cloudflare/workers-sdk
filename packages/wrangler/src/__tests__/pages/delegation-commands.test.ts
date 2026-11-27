@@ -60,6 +60,7 @@ describe("Pages-to-Workers command delegation", () => {
 			command: "deploy",
 			agentId: "test-agent",
 			deployArgs: { name: "new-project" },
+			assetsDirectory: "public",
 		});
 		expect(pagesDeploymentRequests).toBe(0);
 	});

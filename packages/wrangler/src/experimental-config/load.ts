@@ -19,10 +19,10 @@ import {
 import { resolveWranglerConfig } from "./wrangler-definition";
 import type { ParsedWranglerConfig } from "./schema";
 import type {
-	ParsedInputConfig,
-	ParsedInputWorkerConfig,
+	ParsedCloudflareConfig,
+	ParsedWorkerConfig,
 } from "@cloudflare/config";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 export const CLOUDFLARE_CONFIG_FILENAME = "cloudflare.config.ts";
 export const WRANGLER_CONFIG_FILENAME = "wrangler.config.ts";
@@ -32,8 +32,8 @@ export interface NormalizedTypes {
 	includeRuntime: boolean;
 }
 
-export type ParsedProjectConfig = ParsedInputConfig & {
-	worker: ParsedInputWorkerConfig;
+export type ParsedProjectConfig = ParsedCloudflareConfig & {
+	worker: ParsedWorkerConfig;
 };
 
 export interface LoadNewConfigResult {
@@ -174,7 +174,7 @@ export async function loadNewConfig(options: {
  *
  * Worker fields cannot appear in tooling (rejected by `WranglerConfigSchema`).
  * Tooling fields cannot appear in worker (rejected by `@cloudflare/config`'s
- * `InputWorkerSchema.strictObject`). The only overlap is `assets`, where worker
+ * `WorkerConfigSchema.strictObject`). The only overlap is `assets`, where worker
  * carries `binding`/`html_handling`/`not_found_handling`/`base_path`/
  * `run_worker_first` and tooling carries `directory` (sourced from the flat
  * top-level `assetsDirectory` field on `wrangler.config.ts`).

@@ -131,7 +131,7 @@ The tag is appended to versions and used as the npm dist-tag. The `latest` tag i
 
 Add a changeset when starting a prerelease. Miniflare requires a major changeset when beginning a new major prerelease because its minor version remains aligned with workerd. While a prerelease is active, major, minor, and patch changesets all advance it by one release. Updating workerd updates Miniflare's date and resets its patch to `0`.
 
-Change `tag` and add a changeset to move to another stage such as `beta` or `rc`. To graduate, remove `npmPrerelease` and add a changeset. The prerelease suffix will be removed while retaining the target version.
+Change `tag` and add a changeset to move to another stage such as `beta` or `rc`. Releases with the `rc` tag also update the `beta` npm dist-tag to the same version, so existing beta users receive release candidates. Before entering `rc`, enable **Allow npm dist-tag** for the package's `changesets.yml` trusted publisher in its npm settings. To graduate, remove `npmPrerelease` and add a changeset. The prerelease suffix will be removed while retaining the target version.
 
 ## File Example
 

@@ -1,27 +1,7 @@
 import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
 import { CorePaths } from "miniflare";
 import { isAgentSession } from "../detect-agent";
-import { createPlugin } from "../utils";
 import type * as vite from "vite";
-
-/**
- * Plugin that prints the Local Explorer API URL and useful routes when
- * the dev server is started by a headless AI agent. This allows agents
- * to discover and call the Local Explorer API programmatically.
- *
- * The hint is printed by patching `server.bindCLIShortcuts` so it
- * appears after both the server URLs and the keyboard shortcut hints.
- */
-export const agentHintPlugin = createPlugin("agent-hint", () => {
-	return {
-		configureServer(viteDevServer) {
-			maybeAddAgentHint(viteDevServer, "dev");
-		},
-		configurePreviewServer(vitePreviewServer) {
-			maybeAddAgentHint(vitePreviewServer, "preview");
-		},
-	};
-});
 
 /**
  * If the session is a headless AI agent with Local Explorer enabled,

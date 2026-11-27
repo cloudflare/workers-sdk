@@ -9,17 +9,19 @@ import type {
 	CfModule,
 	CfModuleType,
 	CfWorkerSourceMap,
-	Config,
 	FetchKVGetValueFetcher,
 	FetchResultFetcher,
 	FetchListResultFetcher,
 	FetchPagedListResultFetcher,
 	Logger,
-	Route,
 	Entry,
+} from "@cloudflare/workers-utils";
+import type {
+	Config,
+	Route,
 	ContainerApp,
 	DurableObjectCodeUpdateStrategy,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 /** API, logging, and prompt implementations supplied by the consumer. */
 export type DeployHelpersContext = {
@@ -130,6 +132,8 @@ export type SharedDeployVersionsProps = {
 	skipProvisioningConfigWriteback: boolean;
 	/** From --strict arg. In strict mode, conflicting pre-upload checks abort instead of auto-continuing. */
 	strict: boolean;
+	/** Optional consumer-specific message shown when strict mode aborts in a non-interactive session. */
+	strictModeAbortMessage?: string;
 	/** Container configuration and locally built image state. */
 	containers: ContainerDeployConfig;
 	/** Whether the resolved Worker name differs from the pre-merge config/args name. */
@@ -203,6 +207,7 @@ export type TriggerProps = {
 	routes: Route[];
 	firstDeploy: boolean;
 	dryRun: boolean;
+	showDiff?: boolean;
 	validated: boolean;
 	queueCreateCommand: (queueName: string) => string;
 	workersDevConfigFieldName: string;

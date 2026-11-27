@@ -42,6 +42,7 @@
 		"@changesets/changelog-github": "^0.5.0",
 		"@changesets/cli": "^2.29.7",
 		"@changesets/parse": "^0.4.1",
+		"@cloudflare/oxlint-config": "^0.2.0",
 		"@manypkg/cli": "^0.23.0",
 		"@types/node": "catalog:default",
 		"@vue/compiler-sfc": "^3.3.4",
@@ -52,19 +53,19 @@
 		"eslint-plugin-turbo": "^2.8.17",
 		"jsonc-parser": "catalog:default",
 		"oxfmt": "^0.68.0",
-		"oxlint": "^1.56.0",
-		"oxlint-tsgolint": "^0.17.0",
+		"oxlint": "^1.94.0",
 		"tree-kill": "catalog:default",
+		"tsrs": "^7.1.0-beta.tsrs3",
 		"turbo": "^2.7.2",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"engines": {
-		"node": ">=22.0.0",
+		"node": "^22.23.4 || >=24.11.0",
 		"pnpm": "^10.33.0"
 	},
 	"volta": {
-		"node": "22.22.1",
+		"node": "22.23.4",
 		"pnpm": "10.33.0"
 	},
 	"packageManager": "pnpm@10.33.0"

@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import { format } from "node:util";
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import {
@@ -6,9 +5,11 @@ import {
 	createCfProfileStore,
 } from "@cloudflare/workers-auth/cf";
 import { isNonInteractiveOrCI } from "@cloudflare/workers-utils";
+import { PACKAGE_INFO } from "./package-info";
 import { debuglog } from "./utils";
+import type { RemoteBindingsAuth } from "@cloudflare/remote-bindings";
 import type { CloudflareAuth } from "@cloudflare/workers-auth/cf";
-import type { AsyncHook, CfAccount, Logger } from "@cloudflare/workers-utils";
+import type { Logger } from "@cloudflare/workers-utils";
 import type * as vite from "vite";
 
 class AccountSelectionUnavailable extends Error {
@@ -19,16 +20,23 @@ class AccountSelectionUnavailable extends Error {
 	}
 }
 
-const { version: packageVersion } = createRequire(import.meta.url)(
-	"../package.json"
-) as { version: string };
-
-export const USER_AGENT = `vite-plugin/${packageVersion}`;
+export const USER_AGENT = `vite-plugin/${PACKAGE_INFO.version}`;
 
 /**
  * Set up cf authentication using the profile associated with the Vite project.
  */
 export function createAuth(profileDir: string, logger: Logger) {
+	return createAuthForProfile(resolveAuthProfile(profileDir, logger), logger);
+}
+
+export function resolveAuthProfile(profileDir: string, logger: Logger): string {
+	return createCfProfileStore({ logger }).resolve({ cwd: profileDir });
+}
+
+export function createAuthForProfile(
+	profile: string,
+	logger: Logger
+): CloudflareAuth {
 	const context = {
 		logger,
 		userAgent: USER_AGENT,
@@ -50,7 +58,7 @@ export function createAuth(profileDir: string, logger: Logger) {
 			if (isNonInteractiveOrCI()) {
 				throw new AccountSelectionUnavailable();
 			}
-			return inputPrompt<string>({
+			const accountId = await inputPrompt<string>({
 				type: "select",
 				question,
 				label: "Account",
@@ -60,51 +68,54 @@ export function createAuth(profileDir: string, logger: Logger) {
 				})),
 				throwOnError: true,
 			});
+			logger.info(
+				[
+					"To use this account automatically in future, configure accountId in cloudflare.config.ts:",
+					"",
+					`  accountId: ${JSON.stringify(accountId)},`,
+					"",
+					"Alternatively, set the `CLOUDFLARE_ACCOUNT_ID` environment variable.",
+				].join("\n")
+			);
+			return accountId;
 		},
 		isNoDefaultValueProvidedError: (error: unknown) =>
 			error instanceof AccountSelectionUnavailable,
 	};
 	const auth = createCfAuth(context);
-	const profileStore = createCfProfileStore({ logger });
-	auth.setProfile(profileStore.resolve({ cwd: profileDir }));
+	auth.setProfile(profile);
 	return auth;
 }
 
 /**
- * Get the cf auth hook for remote bindings sessions.
+ * Get the cf credentials for remote bindings sessions.
  *
- * Hooks are cached because `maybeStartOrUpdateRemoteProxySession()` restarts
- * the session whenever it receives a different hook.
+ * The key includes the resolved profile so a profile change restarts the
+ * session with the newly selected credentials.
  *
- * @param hooks - Hook cache that persists across Vite server restarts.
  * @param profileDir - Directory used to resolve the cf auth profile.
  * @param accountId - The configured account ID, if any.
- * @param logger - Logger for the auth flow.
- * @returns A hook resolving the account ID and API token for the session.
+ * @param getAuth - Returns the auth instance shared by this Vite project.
+ * @returns A hook resolving the account ID and API token, with a key
+ * identifying those credentials.
  */
 export function getRemoteBindingsAuth(
-	hooks: Map<string, AsyncHook<CfAccount>>,
 	profileDir: string,
 	accountId: string | undefined,
-	logger: Logger
-): AsyncHook<CfAccount> {
-	const key = JSON.stringify([profileDir, accountId]);
-	let hook = hooks.get(key);
-	if (hook === undefined) {
-		let auth: CloudflareAuth | undefined;
-		hook = async () => {
-			// Only resolve the profile once a session actually needs credentials
-			auth ??= createAuth(profileDir, logger);
+	getAuth: () => CloudflareAuth
+): RemoteBindingsAuth {
+	const auth = getAuth();
+	return {
+		hook: async () => {
 			return {
 				accountId: await auth.requireAuth(
 					accountId ? { account_id: accountId } : {}
 				),
 				apiToken: auth.requireApiToken(),
 			};
-		};
-		hooks.set(key, hook);
-	}
-	return hook;
+		},
+		key: JSON.stringify([profileDir, accountId, auth.getActiveProfile()]),
+	};
 }
 
 /** Adapt Vite's logger to the shared Cloudflare API logger interface. */

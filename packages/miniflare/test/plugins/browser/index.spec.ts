@@ -1,14 +1,26 @@
+import { once } from "node:events";
+import fs from "node:fs/promises";
+import https from "node:https";
+import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
+import { getGlobalWranglerCachePath } from "@cloudflare/workers-utils/global-wrangler-config-path";
 import { Log, LogLevel, Miniflare } from "miniflare";
 import {
 	afterEach,
 	beforeAll,
 	beforeEach,
+	onTestFinished,
 	describe,
 	test,
-	type TestOptions,
 	vi,
 } from "vitest";
-import { singleModuleManifest, useDispose } from "../../test-shared";
+import { CERT, KEY } from "../../../src/http/cert";
+import { singleModuleManifest, useDispose, useTmp } from "../../test-shared";
+import {
+	BROWSER_RENDERING_RETRY,
+	CHROME_INSTALL_TIMEOUT,
+	retryBrowserStartup,
+} from "../../test-shared/browser";
 import type { MiniflareOptions } from "miniflare";
 
 async function sendMessage(ws: WebSocket, message: unknown) {
@@ -102,23 +114,6 @@ export default {
 	expect(JSON.parse(responseText)).toEqual({ closingState: 2, closedState: 3 });
 });
 
-const BROWSER_RENDERING_RETRY = {
-	retry: {
-		condition:
-			/Chrome readiness probe .* timed out|Test timed out|Failed to launch (the browser process|local browser)/i,
-		count: 3,
-		delay: 1_000,
-	},
-} satisfies TestOptions;
-
-/**
- * Budget for the one-off Chrome download in {@link warmChromeInstall}.
- *
- * Generous on purpose: a cold CI runner fetches ~150 MB before the first
- * browser can start.
- */
-const CHROME_INSTALL_TIMEOUT = 10 * 60 * 1_000;
-
 const BROWSER_WORKER_SCRIPT = () => `
 export default {
 	async fetch(request, env) {
@@ -129,6 +124,21 @@ export default {
 	}
 };
 `;
+
+/**
+ * Dispatches a request to `mf` and parses the response as JSON. A Worker that
+ * throws, for example because Chrome failed to launch, responds with the error
+ * as text, so put that text in the failure where the retry condition can see
+ * it rather than failing with a truncated JSON parse error.
+ */
+async function dispatchJson(mf: Miniflare, url: string): Promise<any> {
+	const res = await mf.dispatchFetch(url);
+	const text = await res.text();
+	if (!res.ok) {
+		throw new Error(`Worker responded with ${res.status}: ${text}`);
+	}
+	return JSON.parse(text);
+}
 
 /**
  * Download and launch Chrome once, before any of the timed tests run.
@@ -146,6 +156,10 @@ export default {
  * means the tests only ever see a complete install.
  */
 async function warmChromeInstall(): Promise<void> {
+	await retryBrowserStartup(launchWarmupBrowser);
+}
+
+async function launchWarmupBrowser(): Promise<void> {
 	const mf = new Miniflare({
 		// Miniflare logs to a no-op by default, which makes a failure here
 		// (a bad cached install, a download that will not complete) impossible
@@ -174,7 +188,7 @@ async function warmChromeInstall(): Promise<void> {
 	}
 }
 
-// We need to run browser rendering tests in a serial manner to avoid a race condition installing the browser.
+// Keep browser session lifecycle tests serial within this file.
 describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 	beforeAll(warmChromeInstall, CHROME_INSTALL_TIMEOUT);
 
@@ -184,6 +198,7 @@ describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 	});
 	afterEach(() => {
 		vi.restoreAllMocks();
+		vi.unstubAllEnvs();
 	});
 
 	test(
@@ -208,6 +223,97 @@ describe("browser rendering", { concurrent: false, timeout: 20_000 }, () => {
 			const res = await mf.dispatchFetch("https://localhost/session");
 			const text = await res.text();
 			expect(text.includes("sessionId")).toBe(true);
+		}
+	);
+
+	test(
+		"verifies HTTPS with a private user home",
+		BROWSER_RENDERING_RETRY,
+		async ({ expect }) => {
+			const tmp = await useTmp();
+			onTestFinished(() => removeDir(tmp));
+			const home = await fs.mkdtemp(path.join(tmp, "home-"));
+			// Keep the warmed Chrome install when changing HOME for this session.
+			vi.stubEnv("XDG_CACHE_HOME", path.dirname(getGlobalWranglerCachePath()));
+			vi.stubEnv("HOME", home);
+			vi.stubEnv("XDG_CONFIG_HOME", path.join(home, ".config"));
+			vi.stubEnv("XDG_DATA_HOME", path.join(home, ".local", "share"));
+
+			const server = https.createServer(
+				{ key: KEY, cert: CERT },
+				(_req, res) => {
+					res.end("<title>Local HTTPS fixture</title>");
+				}
+			);
+			onTestFinished(async () => {
+				server.closeAllConnections();
+				await new Promise<void>((resolve, reject) => {
+					server.close((error) => (error ? reject(error) : resolve()));
+				});
+			});
+			server.listen(0, "127.0.0.1");
+			await once(server, "listening");
+			const address = server.address();
+			if (address === null || typeof address === "string") {
+				throw new Error("Expected a TCP listener");
+			}
+			const url = `https://127.0.0.1:${address.port}`;
+			const mf = new Miniflare({
+				workers: [
+					{
+						config: {
+							name: "https-browser",
+							compatibilityDate: "2024-11-20",
+							env: { MYBROWSER: { type: "browser" } },
+							manifest: singleModuleManifest(`
+export default {
+	async fetch(request, env) {
+		const { sessionId } = await env.MYBROWSER.fetch("https://localhost/v1/acquire").then(r => r.json());
+		const targets = await env.MYBROWSER.fetch(
+			\`https://localhost/v1/devtools/browser/\${sessionId}/json/list\`
+		).then(r => r.json());
+		const { webSocket: ws } = await env.MYBROWSER.fetch(
+			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targets.find(t => t.type === "page").id}\`,
+			{ headers: { Upgrade: "websocket" } }
+		);
+		ws.accept();
+		const result = await new Promise(resolve => {
+			ws.addEventListener("message", event => {
+				const message = JSON.parse(event.data);
+				if (message.id === 1) resolve(message);
+			});
+			ws.send(JSON.stringify({ id: 1, method: "Page.navigate", params: { url: ${JSON.stringify(url)} } }));
+		});
+		ws.close();
+		return Response.json(result);
+	}
+};`),
+						},
+					},
+				],
+			});
+			useDispose(mf);
+			const response = await mf.dispatchFetch("https://localhost");
+			const body = await response.text();
+			expect(response.status, body).toBe(200);
+			// Exercise certificate verification before checking Linux's NSS files.
+			expect(JSON.parse(body)).toMatchObject({
+				result: { errorText: "net::ERR_CERT_AUTHORITY_INVALID" },
+			});
+			if (process.platform !== "linux") {
+				return;
+			}
+			const nss = path.join(home, ".local", "share", "pki", "nssdb");
+			for (const directory of [home, path.dirname(nss), nss]) {
+				const stat = await fs.stat(directory);
+				expect(stat.uid).toBe(process.getuid?.());
+				expect(stat.mode & 0o777).toBe(0o700);
+			}
+			for (const file of ["cert9.db", "key4.db", "pkcs11.txt"]) {
+				const stat = await fs.stat(path.join(nss, file));
+				expect(stat.uid).toBe(process.getuid?.());
+				expect(stat.mode & 0o077).toBe(0);
+			}
 		}
 	);
 
@@ -545,9 +651,8 @@ export default {
 			const mf = new Miniflare(opts);
 			useDispose(mf);
 
-			const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((res) => res.json())) as any;
+			const { emptySessions, acquiredSessions, afterClosedSessions } =
+				await dispatchJson(mf, "https://localhost");
 			expect(emptySessions.length).toBe(0);
 			expect(acquiredSessions.length).toBe(1);
 			expect(
@@ -561,20 +666,20 @@ export default {
 	);
 
 	const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
-${waitForClosedConnection.toString()}
-
 export default {
 	async fetch(request, env) {
 		const { sessionId } = await env.MYBROWSER.fetch("https://localhost/v1/acquire").then(res => res.json());
-		const { webSocket: ws } = await env.MYBROWSER.fetch(\`https://localhost/v1/connectDevtools?browser_session=\${sessionId}\`, {
+		const connectPath = new URL(request.url).searchParams.get("path").replace(":sessionId", sessionId);
+		const { webSocket: ws } = await env.MYBROWSER.fetch(\`https://localhost\${connectPath}\`, {
 			headers: { "Upgrade": "websocket" },
 		});
 		ws.accept();
 
 		const { sessions: [connectedSession] } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
+		// The session clears its connection before echoing the close
+		const closed = new Promise((resolve) => ws.addEventListener("close", resolve, { once: true }));
 		ws.close();
-
-		await waitForClosedConnection(ws);
+		await closed;
 
 		const { sessions: [disconnectedSession] } = await env.MYBROWSER.fetch("https://localhost/v1/sessions").then(res => res.json());
 
@@ -583,10 +688,13 @@ export default {
 };
 `;
 
-	test(
-		"gets sessions while connecting and disconnecting session",
+	test.for([
+		"/v1/connectDevtools?browser_session=:sessionId",
+		"/v1/devtools/browser/:sessionId",
+	])(
+		"gets sessions while connecting and disconnecting session via %s",
 		BROWSER_RENDERING_RETRY,
-		async ({ expect }) => {
+		async (connectPath, { expect }) => {
 			const opts: MiniflareOptions = {
 				workers: [
 					{
@@ -604,9 +712,10 @@ export default {
 			const mf = new Miniflare(opts);
 			useDispose(mf);
 
-			const { connectedSession, disconnectedSession } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((res) => res.json())) as any;
+			const { connectedSession, disconnectedSession } = await dispatchJson(
+				mf,
+				`https://localhost?path=${encodeURIComponent(connectPath)}`
+			);
 			expect(connectedSession.sessionId).toBe(disconnectedSession.sessionId);
 			expect(
 				typeof connectedSession.connectionId === "string" &&
@@ -702,9 +811,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { emptyList, list, detail, missingStatus } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { emptyList, list, detail, missingStatus } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(emptyList).toEqual([]);
 			expect(list.length).toBe(1);
@@ -754,19 +864,25 @@ export default {
 			});
 			useDispose(mf);
 
-			const { version, list, listAlias } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { version, list, listAlias } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(typeof version.Browser).toBe("string");
 			expect(typeof version["Protocol-Version"]).toBe("string");
 			expect(Array.isArray(list)).toBe(true);
 			// The page title for about:blank can change between sequential
 			// requests (from "" to "about:blank"), so strip the volatile
-			// `title` field before comparing the two alias endpoints.
-			const stripTitle = (arr: any[]) =>
-				arr.map(({ title, ...rest }: any) => rest);
-			expect(stripTitle(list)).toEqual(stripTitle(listAlias));
+			// `title` field before comparing the two alias endpoints. Chrome
+			// also adds and reorders its own targets, such as browser UI and
+			// extension service workers, so compare only the pages.
+			const pages = (arr: any[]) =>
+				arr
+					.filter(({ type }: any) => type === "page")
+					.map(({ title, ...rest }: any) => rest);
+			expect(pages(list)).toHaveLength(1);
+			expect(pages(list)).toEqual(pages(listAlias));
 		}
 	);
 
@@ -819,9 +935,8 @@ export default {
 			});
 			useDispose(mf);
 
-			const { deleteStatus, deleteBody, sessionGone, wsClosed } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { deleteStatus, deleteBody, sessionGone, wsClosed } =
+				await dispatchJson(mf, "https://localhost");
 
 			expect(deleteStatus).toBe(200);
 			expect(deleteBody.status).toBe("closed");
@@ -888,9 +1003,7 @@ export default {
 				getStatus,
 				sessionIdFromGet,
 				browserProduct,
-			} = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			} = await dispatchJson(mf, "https://localhost");
 
 			expect(postStatus).toBe(200);
 			expect(typeof sessionId).toBe("string");
@@ -936,9 +1049,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { status, sessionId, browserProduct } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { status, sessionId, browserProduct } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(status).toBe(101);
 			expect(typeof sessionId).toBe("string");
@@ -977,9 +1091,7 @@ export default {
 			});
 			useDispose(mf);
 
-			const { hasDomains } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { hasDomains } = await dispatchJson(mf, "https://localhost");
 
 			expect(hasDomains).toBe(true);
 		}
@@ -1028,9 +1140,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { targetType, activateStatus, closeStatus } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { targetType, activateStatus, closeStatus } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(targetType).toBe("page");
 			expect(activateStatus).toBe(200);
@@ -1045,7 +1158,7 @@ export default {
 		const targets = await env.MYBROWSER.fetch(
 			\`https://localhost/v1/devtools/browser/\${sessionId}/json/list\`
 		).then(r => r.json());
-		const targetId = targets[0].id;
+		const targetId = targets.find(t => t.type === "page").id;
 		const { webSocket: ws } = await env.MYBROWSER.fetch(
 			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targetId}\`,
 			{ headers: { Upgrade: "websocket" } }
@@ -1127,9 +1240,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { deleteStatus, deleteBody, sessionGone } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { deleteStatus, deleteBody, sessionGone } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(deleteStatus).toBe(200);
 			expect(deleteBody.status).toBe("closed");
@@ -1156,7 +1270,7 @@ export default {
 			\`https://localhost/v1/devtools/browser/\${sessionId}/json/list\`
 		).then(r => r.json());
 		const { webSocket: pageWs } = await env.MYBROWSER.fetch(
-			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targets[0].id}\`,
+			\`https://localhost/v1/devtools/browser/\${sessionId}/page/\${targets.find(t => t.type === "page").id}\`,
 			{ headers: { Upgrade: "websocket" } }
 		);
 		pageWs.accept();
@@ -1202,9 +1316,7 @@ export default {
 			useDispose(mf);
 
 			const { deleteStatus, deleteBody, browserWsClosed, pageWsClosed } =
-				(await mf
-					.dispatchFetch("https://localhost")
-					.then((r) => r.json())) as any;
+				await dispatchJson(mf, "https://localhost");
 
 			expect(deleteStatus).toBe(200);
 			expect(deleteBody.status).toBe("closed");
@@ -1269,9 +1381,10 @@ export default {
 			});
 			useDispose(mf);
 
-			const { product1, product2 } = (await mf
-				.dispatchFetch("https://localhost")
-				.then((r) => r.json())) as any;
+			const { product1, product2 } = await dispatchJson(
+				mf,
+				"https://localhost"
+			);
 
 			expect(typeof product1).toBe("string");
 			expect(product1).toContain("Chrome");

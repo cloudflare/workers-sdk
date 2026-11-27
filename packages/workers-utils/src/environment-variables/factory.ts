@@ -11,12 +11,16 @@ type VariableNames =
 	| "CLOUDFLARE_ACCOUNT_ID"
 	/** API token for authentication. Preferred over API key + email. */
 	| "CLOUDFLARE_API_TOKEN"
+	/** Auth profile to use when no explicit profile argument is provided. Overrides directory bindings. */
+	| "CLOUDFLARE_AUTH_PROFILE"
 	/** Legacy API key for authentication. Requires CLOUDFLARE_EMAIL. It is preferred to use `CLOUDFLARE_API_TOKEN`. */
 	| "CLOUDFLARE_API_KEY"
 	/** Email address for API key authentication. Used with `CLOUDFLARE_API_KEY`. It is preferred to use `CLOUDFLARE_API_TOKEN`. */
 	| "CLOUDFLARE_EMAIL"
 	/** Custom API base URL. Defaults to https://api.cloudflare.com/client/v4 */
 	| "CLOUDFLARE_API_BASE_URL"
+	/** Additional Cloudflare API headers as a JSON object of string values. */
+	| "CLOUDFLARE_API_HEADERS"
 	/** Set to "fedramp_high" for FedRAMP High compliance region. This will update the API/AUTH URLs used to make requests to Cloudflare. */
 	| "CLOUDFLARE_COMPLIANCE_REGION"
 	/** API token for Basin SQL service. */
@@ -116,6 +120,8 @@ type VariableNames =
 
 	/** Enable the local explorer UI at /cdn-cgi/local/explorer (experimental, default: false). */
 	| "X_LOCAL_EXPLORER"
+	/** Trust Vite's allowed hosts for Local Explorer and other /cdn-cgi/ endpoints (experimental, default: false). */
+	| "X_LOCAL_EXPLORER_USE_VITE_ALLOWED_HOSTS"
 	/** Enable local-dev observability capture (experimental, default: false). */
 	| "X_LOCAL_OBSERVABILITY"
 	/** Open the browser in headful (visible) mode when using the Browser Run API in local dev (default: false). */

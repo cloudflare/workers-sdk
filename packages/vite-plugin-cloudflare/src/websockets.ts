@@ -1,7 +1,11 @@
 import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
+import {
+	createHeadersForIncomingMessage,
+	getForwardedProto,
+	resolveRequestTarget,
+} from "./request-handler";
 import { UNKNOWN_HOST } from "./shared";
-import { createHeadersForIncomingMessage, getForwardedProto } from "./utils";
 import type { Headers, Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
@@ -13,7 +17,8 @@ import type * as vite from "vite";
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
 	miniflare: Miniflare,
-	entryWorkerName?: string
+	entryWorkerName?: string,
+	viteWebSocketEnabled = false
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -53,7 +58,7 @@ export function handleWebSocket(
 				const base = /^https?:\/\//i.test(rawHost)
 					? rawHost
 					: `${protocol}//${rawHost}`;
-				const url = new URL(request.url ?? "", base);
+				const url = resolveRequestTarget(request.url ?? "/", base);
 
 				const isViteRequest =
 					request.headers["sec-websocket-protocol"]?.startsWith("vite");
@@ -63,6 +68,10 @@ export function handleWebSocket(
 				// Leave Vite HMR and DevTools upgrades to their own handlers, but
 				// forward all sandbox requests to the Worker.
 				if ((isViteRequest || isDevToolsRequest) && !isSandboxRequest) {
+					// No Vite handler claims HMR upgrades when `server.ws` is disabled.
+					if (isViteRequest && !viteWebSocketEnabled) {
+						socket.destroy();
+					}
 					return;
 				}
 

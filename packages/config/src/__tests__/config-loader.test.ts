@@ -130,9 +130,7 @@ describe("resolveAndParseConfig", () => {
 		}
 	});
 
-	it("accepts an inline Worker and defaults containers to an empty array", async ({
-		expect,
-	}) => {
+	it("accepts an inline Worker without containers", async ({ expect }) => {
 		const result = await resolveAndParseConfig(
 			{
 				worker: { name: "web", compatibilityDate },
@@ -143,7 +141,7 @@ describe("resolveAndParseConfig", () => {
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.data.worker?.name).toBe("web");
-			expect(result.data.containers).toEqual([]);
+			expect(result.data.containers).toBeUndefined();
 		}
 	});
 
@@ -178,7 +176,6 @@ describe("resolveAndParseConfig", () => {
 			data: {
 				accountId: "account-id",
 				complianceRegion: "public",
-				containers: [],
 			},
 		});
 	});
@@ -370,6 +367,49 @@ describe("resolveAndParseConfig", () => {
 						'The referenced Container "processor" is not included in the `containers` array.',
 				})
 			);
+		}
+	});
+
+	it("validates Container relationships after resolving definitions", async ({
+		expect,
+	}) => {
+		const api = defineContainer(async () => ({
+			name: "api",
+			image: { dockerfile: "./Dockerfile" },
+		}));
+		const result = await resolveAndParseConfig(
+			defineConfig({
+				containers: [
+					api,
+					defineContainer({
+						name: "api",
+						image: { dockerfile: "./OtherDockerfile" },
+					}),
+				],
+				worker: {
+					name: "web",
+					compatibilityDate,
+					exports: {
+						Api: workerExports.durableObject({
+							storage: "sqlite",
+							container: api,
+						}),
+						Other: workerExports.durableObject({
+							storage: "sqlite",
+							container: api,
+						}),
+					},
+				},
+			}),
+			{ isPreview: false, mode: undefined }
+		);
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues.map((issue) => issue.path)).toEqual([
+				["containers", 1, "name"],
+				["worker", "exports", "Other", "container"],
+			]);
 		}
 	});
 

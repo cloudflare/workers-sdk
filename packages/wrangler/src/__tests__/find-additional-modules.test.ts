@@ -5,7 +5,7 @@ import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { mockConsoleMethods } from "./helpers/mock-console";
-import type { ConfigModuleRuleType } from "@cloudflare/workers-utils";
+import type { ConfigModuleRuleType } from "@cloudflare/workers-utils/config";
 
 /*
  * This file contains inline comments with the word "javascript"

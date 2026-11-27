@@ -4,12 +4,14 @@ import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli-shared-helpers/interactive";
 import {
 	APIError,
-	configFileName,
 	createFatalError,
 	JsonFriendlyFatalError,
+	normalizeSqlLineEndings,
 	readFileSync,
+	splitSqlQuery,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import md5File from "md5-file";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -21,7 +23,6 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
-import { normalizeSqlLineEndings, splitSqlQuery } from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type {
 	Database,
@@ -30,7 +31,8 @@ import type {
 	PollingFailure,
 } from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
-import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean | null>[];
@@ -77,7 +79,7 @@ export const d1ExecuteCommand = createCommand({
 		local: {
 			type: "boolean",
 			description:
-				"Execute commands/files against a local DB for use with wrangler dev",
+				"Execute commands/files against a local DB for use with wrangler dev (default)",
 		},
 		remote: {
 			type: "boolean",

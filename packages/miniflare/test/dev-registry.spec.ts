@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { watch } from "chokidar";
-import { getWorkerRegistry, Miniflare } from "miniflare";
+import { DeferredPromise, getWorkerRegistry, Miniflare } from "miniflare";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { DevRegistry } from "../src/shared/dev-registry";
 import {
@@ -1656,6 +1656,127 @@ describe("DevRegistry", { concurrent: false }, () => {
 				const res = await local.dispatchFetch("http://placeholder");
 				expect(await res.text()).toBe("Response: v2");
 				expect(res.status).toBe(200);
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+	});
+
+	test("cross-process bindings and tail consumers survive a local workerd crash restart", async ({
+		expect,
+	}) => {
+		const unsafeDevRegistryPath = await useTmp();
+
+		const remote = new Miniflare({
+			unsafeDevRegistryPath,
+			workers: [
+				{
+					dev: { unsafeRegisterWorker: true },
+					config: {
+						name: "remote-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
+				import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+				const tailedLogs = [];
+				export class MyDurableObject extends DurableObject {
+					ping() { return "object pong"; }
+				}
+				export default class extends WorkerEntrypoint {
+					ping() { return "service pong"; }
+					fetch() { return Response.json(tailedLogs); }
+					tail(events) {
+						for (const event of events) {
+							for (const log of event.logs) tailedLogs.push(log.message[0]);
+						}
+					}
+				}
+			`),
+						exports: {
+							MyDurableObject: { type: "durable-object", storage: "sqlite" },
+						},
+					},
+				},
+			],
+		});
+		useDispose(remote);
+		await remote.ready;
+
+		const runtimeRestarted = new DeferredPromise<void>();
+		const local = new Miniflare({
+			unsafeDevRegistryPath,
+			unsafeHandleRuntimeRestart: () => runtimeRestarted.resolve(),
+			handleStructuredLogs: () => {},
+			workers: [
+				{
+					config: {
+						name: "local-worker",
+						compatibilityDate: "2025-05-01",
+						compatibilityFlags: ["experimental"],
+						manifest: singleModuleManifest(`
+				import { abortIsolate } from "cloudflare:workers";
+				export default {
+					async fetch(request, env) {
+						const url = new URL(request.url);
+						if (url.searchParams.get("crash")) {
+							abortIsolate("test crash");
+						}
+						console.log("tail mark: " + url.searchParams.get("mark"));
+						try {
+							const service = await env.SERVICE.ping();
+							const object = await env.DO.get(env.DO.idFromName("a")).ping();
+							return new Response(service + ", " + object);
+						} catch (e) {
+							return new Response(e.message, { status: 500 });
+						}
+					}
+				}
+			`),
+						env: {
+							SERVICE: { type: "worker", worker: "remote-worker" },
+							DO: {
+								type: "durable-object",
+								worker: "remote-worker",
+								exportName: "MyDurableObject",
+							},
+						},
+						tailConsumers: [{ worker: "remote-worker" }],
+					},
+				},
+			],
+		});
+		useDispose(local);
+
+		const tailedLogs = async () => {
+			const res = await remote.dispatchFetch("http://placeholder");
+			return (await res.json()) as string[];
+		};
+
+		await vi.waitFor(
+			async () => {
+				const res = await local.dispatchFetch(
+					"http://placeholder/?mark=before"
+				);
+				expect(await res.text()).toBe("service pong, object pong");
+				expect(res.status).toBe(200);
+				expect(await tailedLogs()).toContain("tail mark: before");
+			},
+			{ timeout: 10_000, interval: 100 }
+		);
+
+		await expect(
+			local.dispatchFetch("http://placeholder/?crash=1")
+		).rejects.toThrow();
+		await runtimeRestarted;
+
+		// The restarted runtime is assembled from the same options as the first
+		// one, so its bindings and tail consumer must still route through the dev
+		// registry proxy to `remote-worker`, not through the proxy to itself.
+		const res = await local.dispatchFetch("http://placeholder/?mark=after");
+		expect(await res.text()).toBe("service pong, object pong");
+		expect(res.status).toBe(200);
+		await vi.waitFor(
+			async () => {
+				expect(await tailedLogs()).toContain("tail mark: after");
 			},
 			{ timeout: 10_000, interval: 100 }
 		);

@@ -244,7 +244,7 @@ describe("Workflows on ctx.exports", () => {
 							name: "overridden",
 							worker: "exporter",
 							exportName: "OtherWorkflow",
-							limits: { steps: 2 },
+							unsafeConfig: { limits: { steps: 2 } },
 						},
 					},
 				}),
@@ -552,6 +552,72 @@ describe("Workflows on ctx.exports", () => {
 			});
 		}
 	);
+
+	test("introspects the instances of an exported Workflow from Node.js", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [worker("exporter", { exports: MY_WORKFLOW_EXPORT })],
+		});
+		useDispose(mf);
+		const fetch: Fetch = (url) => mf.dispatchFetch(url);
+
+		const introspector = await mf.unsafeIntrospectWorkflow(
+			"exporter",
+			"MyWorkflow"
+		);
+		await expect(
+			mf.unsafeIntrospectWorkflow("exporter", "MyWorkflow")
+		).rejects.toThrow(
+			'Workflow "my-workflow" already has an active introspection session.'
+		);
+		await introspector.modifyAll(async (modifier) => {
+			await modifier.mockStepResult({ name: "step 0" }, "mocked");
+		});
+		await fetchJson(fetch, "/create?id=instance");
+		const [instance] = await introspector.get();
+		await instance?.waitForStatus("complete");
+		expect(await instance?.getOutput()).toEqual(["mocked"]);
+		await introspector.dispose();
+	});
+
+	test("introspects an instance of an exported Workflow from Node.js", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [worker("exporter", { exports: MY_WORKFLOW_EXPORT })],
+		});
+		useDispose(mf);
+		const fetch: Fetch = (url) => mf.dispatchFetch(url);
+
+		const instance = await mf.unsafeIntrospectWorkflowInstance(
+			"exporter",
+			"MyWorkflow",
+			"instance"
+		);
+		await instance.modify(async (modifier) => {
+			await modifier.mockStepResult({ name: "step 0" }, "mocked");
+		});
+		await fetchJson(fetch, "/create?id=instance");
+		await instance.waitForStatus("complete");
+		expect(await instance.getOutput()).toEqual(["mocked"]);
+		await instance.dispose();
+	});
+
+	test("rejects introspecting a Workflow the Worker doesn't export", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [worker("exporter", { exports: MY_WORKFLOW_EXPORT })],
+		});
+		useDispose(mf);
+
+		await expect(
+			mf.unsafeIntrospectWorkflow("exporter", "OtherWorkflow")
+		).rejects.toThrow(
+			'No Workflow class named "OtherWorkflow" found in "exporter" worker.'
+		);
+	});
 
 	test("rejects two Workers exporting the same Workflow", async ({
 		expect,

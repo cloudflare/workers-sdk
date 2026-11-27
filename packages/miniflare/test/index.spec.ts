@@ -246,8 +246,8 @@ test("Miniflare: accepts mixed pipelines record", () => {
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(""),
 					env: {
-						LOCAL_PIPELINE: { type: "pipeline", name: "local-pipeline" },
-						REMOTE_PIPELINE: { type: "pipeline", name: "remote-pipeline" },
+						LOCAL_PIPELINE: { type: "pipeline", streamId: "local-pipeline" },
+						REMOTE_PIPELINE: { type: "pipeline", streamId: "remote-pipeline" },
 					},
 				},
 			},
@@ -789,6 +789,13 @@ test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 		AcceptEncoding: "br, gzip",
 		clientAcceptEncoding: "hello",
 	});
+	res = await fetch(url, {
+		headers: { "Accept-Encoding": "identity" },
+	});
+	expect(await res.json()).toEqual({
+		AcceptEncoding: "br, gzip",
+		clientAcceptEncoding: "identity",
+	});
 
 	// Check all encodings supported
 	res = await fetch(gzipUrl);
@@ -981,7 +988,7 @@ test("Miniflare: web socket kitchen sink", async ({
 		headers.push("Set-Cookie: key=value");
 	});
 	const port = await new Promise<number>((resolve) => {
-		server.listen(0, () => {
+		server.listen(0, "127.0.0.1", () => {
 			onTestFinished(() => {
 				server.close();
 			});
@@ -1008,7 +1015,7 @@ test("Miniflare: web socket kitchen sink", async ({
 								expect(request.cf?.regionCode).toBe("TX");
 								expect(request.headers.get("MF-Custom-Service")).toBe(null);
 								// Testing WebSocket-upgrading fetch
-								return fetch(`http://localhost:${port}`, request);
+								return fetch(`http://127.0.0.1:${port}`, request);
 							},
 						},
 					},
@@ -1237,6 +1244,76 @@ test("Miniflare: service binding to disk", async ({ expect }) => {
 	expect(res.status).toBe(204);
 	expect(await fs.readFile(testPath, "utf8")).toBe("✏️");
 });
+test("Miniflare: fails calls to Workers that aren't running", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		// Keeps Workers in other dev sessions out of reach
+		enableDevRegistry: false,
+		workers: [
+			{
+				config: {
+					name: "app",
+					compatibilityDate: "2025-05-01",
+					env: {
+						API: { type: "worker", worker: "missing" },
+						COUNTER: {
+							type: "durable-object",
+							worker: "missing",
+							exportName: "Counter",
+						},
+						FLOW: {
+							type: "workflow",
+							name: "flow",
+							worker: "missing",
+							exportName: "Flow",
+						},
+					},
+					tailConsumers: [{ worker: "missing" }],
+					manifest: singleModuleManifest(`
+						export default {
+							async fetch(request, env) {
+								if (new URL(request.url).pathname === "/flow") {
+									const flow = await env.FLOW.get("flow");
+									return Response.json(await flow.status());
+								}
+								const api = await env.API.fetch("http://api/");
+								let counter;
+								try {
+									const id = env.COUNTER.idFromName("a");
+									const response = await env.COUNTER.get(id).fetch("http://counter/");
+									counter = [response.status, await response.text()];
+								} catch (error) {
+									counter = error.message;
+								}
+								// Its run fails when the Engine calls the Workflow's Worker
+								await env.FLOW.create({ id: "flow" });
+								return Response.json({ api: [api.status, await api.text()], counter });
+							}
+						};
+					`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost/");
+	const notFound =
+		'Worker "missing" not found. Make sure it is running locally.';
+	expect(await response.json()).toEqual({
+		api: [503, notFound],
+		counter: [503, notFound],
+	});
+	await vi.waitFor(async () => {
+		const flow = await mf.dispatchFetch("http://localhost/flow");
+		expect(await flow.json()).toMatchObject({
+			status: "errored",
+			error: { message: notFound },
+		});
+	});
+});
+
 test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
@@ -1475,6 +1552,69 @@ test("Miniflare: tail consumer called", async ({ expect }) => {
 			}[]
 		)[0].logs[0].message
 	).toEqual(["Tail: log event"]);
+});
+
+test("Miniflare: experimental streaming tail consumer called", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		handleStructuredLogs: () => {},
+		workers: [
+			{
+				config: {
+					name: "a",
+					experimental: { streamingTailConsumers: [{ worker: "b" }] },
+					compatibilityDate: "2025-12-02",
+					env: {
+						B: { type: "worker", worker: "b" },
+					},
+					manifest: singleModuleManifest(`
+				export default {
+					async fetch(request, env) {
+						if (request.url.includes("b")) { return env.B.fetch(request) }
+						console.log("Tail: log event");
+						return new Response("hello from a");
+					}
+				}
+				`),
+				},
+			},
+			{
+				config: {
+					name: "b",
+					compatibilityDate: "2025-12-02",
+					manifest: singleModuleManifest(`
+				import { WorkerEntrypoint } from "cloudflare:workers";
+				const events = [];
+				export default class extends WorkerEntrypoint {
+					fetch() { return Response.json(events) }
+					tailStream(onset) {
+						events.push(onset.event.type);
+						return {
+							log(event) { events.push(event.event.type) },
+							outcome(event) { events.push(event.event.type) },
+						};
+					}
+				}
+				`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://placeholder");
+	expect(await res.text()).toEqual("hello from a");
+	// Each poll is routed through "a" too, which streams another onset/outcome
+	// pair, so only check the events from the first invocation.
+	await expect
+		.poll(async () => {
+			const events = (await (
+				await mf.dispatchFetch("http://placeholder/b")
+			).json()) as string[];
+			return events.slice(0, 3);
+		})
+		.toEqual(["onset", "log", "outcome"]);
 });
 
 test("Miniflare: custom outbound service", async ({ expect }) => {
@@ -2514,6 +2654,70 @@ This is a random email body.
 	expect(await res.text()).toBe("true");
 });
 
+test("Miniflare: manually triggered email handler - exposes canBeForwarded on ForwardableEmailMessage", async ({
+	expect,
+}) => {
+	const log = new TestLog();
+
+	const mf = new Miniflare({
+		log,
+		unsafeTriggerHandlers: true,
+		workers: [
+			{
+				config: {
+					name: "",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			let messageDetails = null;
+			export default {
+				fetch() {
+					return Response.json(messageDetails);
+				},
+				async email(emailMessage) {
+					messageDetails = {
+						canBeForwarded: emailMessage.canBeForwarded,
+						hasCanBeForwarded: "canBeForwarded" in emailMessage,
+						rawSize: emailMessage.rawSize,
+					};
+				}
+			}`),
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	let res = await mf.dispatchFetch("http://localhost");
+	expect(await res.json()).toBe(null);
+
+	res = await mf.dispatchFetch(
+		"http://localhost/cdn-cgi/local/email?from=someone@example.com&to=someone-else@example.com",
+		{
+			body: `From: someone <someone@example.com>
+To: someone else <someone-else@example.com>
+Message-ID: <im-a-random-message-id@example.com>
+MIME-Version: 1.0
+Content-Type: text/plain
+
+This is a random email body.
+`,
+			method: "POST",
+		}
+	);
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
+
+	res = await mf.dispatchFetch("http://localhost");
+	const details = (await res.json()) as {
+		canBeForwarded: boolean;
+		hasCanBeForwarded: boolean;
+		rawSize: number;
+	};
+	expect(details.canBeForwarded).toBe(true);
+	expect(details.hasCanBeForwarded).toBe(true);
+	expect(details.rawSize).toBeGreaterThan(0);
+});
+
 test("Miniflare: manually triggered email handler - invalid email, no message id", async ({
 	expect,
 }) => {
@@ -3496,6 +3700,106 @@ test("Miniflare: unsafeEvictDurableObject() resets in-memory state and preserves
 		memoryCount: 1,
 		storageCount: 2,
 	});
+});
+
+test("Miniflare: unsafeEvictDurableObject() does not block the Node.js event loop while the Durable Object awaits Node.js", async ({
+	expect,
+}) => {
+	// Eviction waits for the Durable Object's `waitUntil()` work. If that work
+	// awaits a Node.js service binding, a synchronous (`Atomics.wait()`) proxy
+	// call would block Node.js from ever answering it, until workerd gave up
+	// after 30 seconds.
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "do-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			export class Busy {
+				constructor(ctx, env) {
+					this.ctx = ctx;
+					this.env = env;
+				}
+
+				fetch() {
+					this.ctx.waitUntil(this.env.NODE.fetch("http://node/"));
+					return new Response("started");
+				}
+			}
+
+			export default {
+				fetch(_request, env) {
+					return env.BUSY.get(env.BUSY.idFromName("busy")).fetch("http://busy");
+				}
+			};
+		`),
+					env: {
+						BUSY: {
+							type: "durable-object",
+							worker: "do-worker",
+							exportName: "Busy",
+						},
+						NODE: {
+							type: "node-handler",
+							handler: (_req, res) => {
+								setTimeout(() => res.end("done"), 300);
+							},
+						},
+					},
+					exports: {
+						Busy: { type: "durable-object", storage: "sqlite" },
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost");
+	expect(await response.text()).toBe("started");
+
+	let ticks = 0;
+	const interval = setInterval(() => ticks++, 10);
+	const start = Date.now();
+	try {
+		await mf.unsafeEvictDurableObject("do-worker", "Busy", { name: "busy" });
+	} finally {
+		clearInterval(interval);
+	}
+	expect(Date.now() - start).toBeLessThan(5000);
+	expect(ticks).toBeGreaterThan(5);
+});
+
+test("Miniflare: unsafeEvictDurableObject() rejects for a Durable Object that is not running", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		workers: [
+			{
+				config: {
+					name: "do-worker",
+					compatibilityDate: "2025-05-01",
+					manifest: singleModuleManifest(`
+			export class Counter {
+				fetch() {
+					return new Response("ok");
+				}
+			}
+			export default { fetch: () => new Response("ok") };
+		`),
+					exports: {
+						Counter: { type: "durable-object", storage: "legacy-kv" },
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	await expect(
+		mf.unsafeEvictDurableObject("do-worker", "Counter", { name: "cold" })
+	).rejects.toThrow(/not currently running/);
 });
 
 test("Miniflare: allows direct access to workers", async ({ expect }) => {

@@ -198,6 +198,8 @@ describe("Local Explorer API validation", () => {
 			"http://localhost:8787",
 			"http://127.0.0.1:8787",
 			"http://[::1]:8787",
+			"http://my-app.localhost:5173",
+			"https://deep.my-app.localhost",
 		]) {
 			res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
 				headers: { Origin: origin },
@@ -265,13 +267,36 @@ describe("Local Explorer API validation", () => {
 		expect(status).toBe(403);
 	});
 
-	test("blocks subdomains of localhost hostnames", async ({ expect }) => {
-		const res = await mf.dispatchFetch(`${BASE_URL}/storage/kv/namespaces`, {
-			headers: { Origin: "http://sub.localhost:8787" },
-		});
-		expect(res.status).toBe(403);
-		await res.arrayBuffer();
-	});
+	test.for([
+		["my-app.localhost:5173", 200],
+		["deep.my-app.localhost", 200],
+		["evillocalhost", 403],
+		["localhost.evil.com", 403],
+		["my-app.localhost.evil.com", 403],
+	] as const)(
+		"validates local hostname %s",
+		async ([hostname, status], { expect }) => {
+			for (const header of ["Host", "Origin"]) {
+				const url = await mf.ready;
+				const actualStatus = await new Promise<number>((resolve, reject) => {
+					const req = http.get(
+						`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
+						{
+							headers: {
+								[header]: header === "Host" ? hostname : `https://${hostname}`,
+							},
+						},
+						(res) => {
+							res.resume();
+							resolve(res.statusCode ?? 0);
+						}
+					);
+					req.on("error", reject);
+				});
+				expect(actualStatus, header).toBe(status);
+			}
+		}
+	);
 
 	describe("routing", () => {
 		test("serves OpenAPI spec at /cdn-cgi/local/explorer/api", async ({
@@ -325,6 +350,74 @@ describe("Local Explorer API validation", () => {
 			expect(await res.text()).toBe("user worker");
 		});
 	});
+});
+
+describe("Local Explorer works with additional allowed hosts", () => {
+	let mf: Miniflare;
+
+	beforeAll(() => {
+		mf = new Miniflare({
+			unsafeLocalExplorer: true,
+			unsafeCdnCgiAllowedHosts: [
+				"my-app.test",
+				".example.com",
+				"test.trycloudflare.com",
+			],
+			workers: [
+				{
+					config: {
+						name: "allowed-hosts",
+						compatibilityDate: "2025-01-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("user worker"); } }`
+						),
+					},
+				},
+			],
+		});
+	});
+
+	afterAll(async () => {
+		await disposeWithRetry(mf);
+	});
+
+	test.for([
+		["localhost:8787", 200],
+		["my-app.test:5173", 200],
+		["example.com", 200],
+		["sub.example.com", 200],
+		["deep.sub.example.com", 200],
+		["test.trycloudflare.com", 200],
+		["sub.my-app.test", 403],
+		["evilmy-app.test", 403],
+		["notexample.com", 403],
+		["example.com.evil.com", 403],
+		["other.trycloudflare.com", 403],
+		["evil.com", 403],
+	] as const)(
+		"validates configured hostname %s",
+		async ([hostname, status], { expect }) => {
+			for (const header of ["Host", "Origin"]) {
+				const url = await mf.ready;
+				const actualStatus = await new Promise<number>((resolve, reject) => {
+					const req = http.get(
+						`${url.origin}${CorePaths.EXPLORER}/api/storage/kv/namespaces`,
+						{
+							headers: {
+								[header]: header === "Host" ? hostname : `https://${hostname}`,
+							},
+						},
+						(res) => {
+							res.resume();
+							resolve(res.statusCode ?? 0);
+						}
+					);
+					req.on("error", reject);
+				});
+				expect(actualStatus, header).toBe(status);
+			}
+		}
+	);
 });
 
 describe("Local Explorer works with custom routes", () => {

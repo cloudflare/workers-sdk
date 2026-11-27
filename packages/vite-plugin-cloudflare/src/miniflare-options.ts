@@ -7,6 +7,7 @@ import { format } from "node:util";
 import {
 	createContainerDevPlanForCfConfig,
 	createContainerPreviewPlanForCfConfig,
+	createMiniflareExports,
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
@@ -14,9 +15,12 @@ import { maybeStartOrUpdateRemoteProxySession } from "@cloudflare/remote-binding
 import {
 	getBrowserRenderingHeadfulFromEnv,
 	getLocalExplorerEnabledFromEnv,
+	getLocalExplorerUseViteAllowedHostsFromEnv,
 	getLocalObservabilityEnabledFromEnv,
-	getZoneFromRoute,
+	getWorkerZone,
 } from "@cloudflare/workers-utils";
+import { toApiComplianceRegion } from "@cloudflare/workers-utils/compliance";
+import { createArtifactsLocalDefaultWarner } from "@cloudflare/workers-utils/config";
 import { getDockerPath } from "@cloudflare/workers-utils/docker-path";
 import {
 	buildPublicUrl,
@@ -25,27 +29,26 @@ import {
 	Log,
 	LogLevel,
 	parseModuleFallbackRequest,
+	resolveLocalBindings,
 	Response as MiniflareResponse,
 } from "miniflare";
 import { getAssetsConfig } from "./asset-config";
 import { createLogger, getRemoteBindingsAuth } from "./auth";
 import {
 	ASSET_WORKER_NAME,
+	CLI_DISPLAY_NAME,
 	kRequestType,
 	PROXY_SHARED_SECRET,
 	ROUTER_WORKER_NAME,
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { getInputInspectorPort } from "./debug";
-import { resolveLocalBindings } from "./local-env";
 import { additionalModuleRE } from "./plugins/additional-modules";
-import { getRemoteBindings } from "./remote-bindings";
 import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { checkForNpmUpdate } from "./update-check";
 import {
 	debuglog,
 	satisfiesMinimumViteVersion,
-	toApiComplianceRegion,
 	withTrailingSlash,
 } from "./utils";
 import type { Bundle } from "./build-output-preview";
@@ -55,16 +58,14 @@ import type {
 	PreviewPluginContext,
 	WorkersPluginContext,
 } from "./context";
-import type { ResolvedLocalBindings } from "./local-env";
 import type { PersistState } from "./plugin-config";
 import type {
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type {
 	ContainerDevOptions,
 	ContainerDevPlan,
-	ContainerDevRuntimeOptions,
 } from "@cloudflare/containers-shared";
 import type {
 	RemoteBindingsLogger,
@@ -216,32 +217,6 @@ function createRemoteBindingsLogger(logger: vite.Logger): RemoteBindingsLogger {
 	};
 }
 
-function getWorkerZone(
-	config: Pick<ParsedInputWorkerConfig, "domains" | "triggers">
-): string | undefined {
-	// Domains are converted to routes before fetch triggers, so this mirrors the
-	// first-route selection used by Wrangler's Miniflare options.
-	const domain = config.domains?.[0];
-	if (domain !== undefined) {
-		return getZoneFromRoute(
-			typeof domain === "string" ? domain : domain.hostname
-		);
-	}
-
-	const fetchTrigger = config.triggers?.find(
-		(trigger) => trigger.type === "fetch"
-	);
-	if (fetchTrigger?.type !== "fetch") {
-		return undefined;
-	}
-
-	return getZoneFromRoute(
-		fetchTrigger.zone?.includes(".")
-			? { pattern: fetchTrigger.pattern, zone_name: fetchTrigger.zone }
-			: fetchTrigger.pattern
-	);
-}
-
 export async function getDevMiniflareOptions(
 	ctx: AssetsOnlyPluginContext | WorkersPluginContext,
 	viteDevServer: vite.ViteDevServer
@@ -261,11 +236,9 @@ export async function getDevMiniflareOptions(
 		ctx.allWorkerConfigs,
 		resolvedPluginConfig.localEnv,
 		resolvedPluginConfig.devVars,
-		resolvedPluginConfig.remoteBindings
-	);
-	warnForMissingSecrets(
-		resolvedLocalBindingsByWorkerName,
+		resolvedPluginConfig.remoteBindings,
 		resolvedViteConfig.mode,
+		resolvedViteConfig.root,
 		viteDevServer.config.logger
 	);
 	const [routerWorkerManifest, assetWorkerManifest, viteProxyWorkerManifest] =
@@ -507,8 +480,6 @@ export async function getDevMiniflareOptions(
 			? await Promise.all(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
-							const bindings = getRemoteBindings(worker.config);
-
 							const preExistingRemoteProxySession =
 								remoteProxySessionsDataMap.get(worker.config.name);
 							const settings = resolvedPluginConfig.settings;
@@ -520,22 +491,24 @@ export async function getDevMiniflareOptions(
 									: await maybeStartOrUpdateRemoteProxySession(
 											{
 												name: worker.config.name,
-												bindings: bindings ?? {},
+												target: "cf",
+												env: worker.config.env,
 												complianceRegion: toApiComplianceRegion(
 													settings.complianceRegion
 												),
-												account_id: settings.accountId,
-												profileDir: resolvedViteConfig.root,
 											},
 											preExistingRemoteProxySession ?? null,
 											getRemoteBindingsAuth(
-												ctx.remoteBindingsAuthHooks,
 												resolvedViteConfig.root,
 												settings.accountId,
-												createLogger(viteDevServer.config.logger)
+												() =>
+													ctx.getCloudflareAuth(
+														resolvedViteConfig.root,
+														createLogger(viteDevServer.config.logger)
+													)
 											),
 											{
-												cliDisplayName: resolvedPluginConfig.cliDisplayName,
+												cliDisplayName: CLI_DISPLAY_NAME,
 												logger: createRemoteBindingsLogger(
 													viteDevServer.config.logger
 												),
@@ -574,7 +547,7 @@ export async function getDevMiniflareOptions(
 							const resolvedLocalBindings =
 								resolvedLocalBindingsByWorkerName.get(worker.config.name);
 							assert(resolvedLocalBindings);
-							const env = { ...resolvedLocalBindings.bindings };
+							const env = { ...resolvedLocalBindings };
 							for (const [name, binding] of Object.entries(env)) {
 								if (binding.type === "assets") {
 									env[name] = {
@@ -614,7 +587,7 @@ export async function getDevMiniflareOptions(
 								worker: worker.config.name,
 								exportName: "__VITE_RUNNER_OBJECT__",
 							};
-							const workerExports = createMiniflareExports({
+							const workerExports: MiniflareExports = createMiniflareExports({
 								exports: config.exports,
 								containerRuntimeOptions: containerPlansByWorkerName.get(
 									worker.config.name
@@ -672,6 +645,12 @@ export async function getDevMiniflareOptions(
 			inputInspectorPort === false ? undefined : inputInspectorPort,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
+		// Trust Vite's hosts only with explicit opt-in; true never disables validation.
+		unsafeCdnCgiAllowedHosts:
+			getLocalExplorerUseViteAllowedHostsFromEnv() &&
+			serverConfig.allowedHosts !== true
+				? serverConfig.allowedHosts
+				: undefined,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The switch for local observability capture: tells Miniflare core to
 		// attach the trace collector to each user worker. Opt-in via the
@@ -816,11 +795,9 @@ export async function getPreviewMiniflareOptions(
 		ctx.allWorkerConfigs,
 		resolvedPluginConfig.localEnv,
 		resolvedPluginConfig.devVars,
-		resolvedPluginConfig.remoteBindings
-	);
-	warnForMissingSecrets(
-		resolvedLocalBindingsByWorkerName,
-		resolvedViteConfig.mode,
+		resolvedPluginConfig.remoteBindings,
+		resolvedPluginConfig.mode,
+		resolvedViteConfig.root,
 		vitePreviewServer.config.logger
 	);
 	const containerPlansByWorkerName = new Map<string, ContainerDevPlan>();
@@ -842,7 +819,6 @@ export async function getPreviewMiniflareOptions(
 	const workers: WorkerOptions[] = await Promise.all(
 		resolvedPluginConfig.workers.map(async (previewWorker) => {
 			const workerConfig = previewWorker.config;
-			const bindings = getRemoteBindings(workerConfig);
 			const preExistingRemoteProxySessionData = remoteProxySessionsDataMap.get(
 				workerConfig.name
 			);
@@ -851,22 +827,24 @@ export async function getPreviewMiniflareOptions(
 				: await maybeStartOrUpdateRemoteProxySession(
 						{
 							name: workerConfig.name,
-							bindings: bindings ?? {},
+							target: "cf",
+							env: workerConfig.env,
 							complianceRegion: toApiComplianceRegion(
 								resolvedPluginConfig.settings.complianceRegion
 							),
-							account_id: resolvedPluginConfig.settings.accountId,
-							profileDir: resolvedViteConfig.root,
 						},
 						preExistingRemoteProxySessionData ?? null,
 						getRemoteBindingsAuth(
-							ctx.remoteBindingsAuthHooks,
 							resolvedViteConfig.root,
 							resolvedPluginConfig.settings.accountId,
-							createLogger(vitePreviewServer.config.logger)
+							() =>
+								ctx.getCloudflareAuth(
+									resolvedViteConfig.root,
+									createLogger(vitePreviewServer.config.logger)
+								)
 						),
 						{
-							cliDisplayName: resolvedPluginConfig.cliDisplayName,
+							cliDisplayName: CLI_DISPLAY_NAME,
 							logger: createRemoteBindingsLogger(
 								vitePreviewServer.config.logger
 							),
@@ -885,8 +863,8 @@ export async function getPreviewMiniflareOptions(
 				workerConfig.name
 			);
 			assert(resolvedLocalBindings);
-			const env = { ...resolvedLocalBindings.bindings };
-			const workerExports = createMiniflareExports({
+			const env = { ...resolvedLocalBindings };
+			const workerExports: MiniflareExports = createMiniflareExports({
 				exports,
 				containerRuntimeOptions: containerPlansByWorkerName.get(
 					workerConfig.name
@@ -938,6 +916,12 @@ export async function getPreviewMiniflareOptions(
 			inputInspectorPort === false ? undefined : inputInspectorPort,
 		unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 		unsafeTriggerHandlers: true,
+		// Trust Vite's hosts only with explicit opt-in; true never disables validation.
+		unsafeCdnCgiAllowedHosts:
+			getLocalExplorerUseViteAllowedHostsFromEnv() &&
+			serverConfig.allowedHosts !== true
+				? serverConfig.allowedHosts
+				: undefined,
 		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The one switch for local observability: this env var tells Miniflare
 		// core to attach the trace collector to each user worker.
@@ -963,78 +947,57 @@ export async function getPreviewMiniflareOptions(
 	};
 }
 
-/**
- * Replaces authored Container names on Durable Object exports with workerd's
- * local Container runtime metadata.
- *
- * @param options - Worker exports and their planned local Container metadata.
- * @returns Exports accepted by Miniflare's native Worker config schema.
- */
-export function createMiniflareExports(options: {
-	exports:
-		| ParsedInputWorkerConfig["exports"]
-		| ParsedOutputWorkerConfig["exports"];
-	containerRuntimeOptions: Map<string, ContainerDevRuntimeOptions> | undefined;
-}): MiniflareExports {
-	const workerExports: MiniflareExports = {};
-	for (const [name, workerExport] of Object.entries(options.exports ?? {})) {
-		if (workerExport.type === "durable-object" && "storage" in workerExport) {
-			const containerName =
-				"container" in workerExport ? workerExport.container : undefined;
-			const container =
-				containerName === undefined
-					? undefined
-					: options.containerRuntimeOptions?.get(name);
-			assert(
-				containerName === undefined || container !== undefined,
-				`Expected runtime options for Container-backed Durable Object export "${name}".`
-			);
-			workerExports[name] = { ...workerExport, container };
-		} else {
-			workerExports[name] = workerExport;
-		}
-	}
-	return workerExports;
-}
+// Remembers warnings per project root, so restarting the dev server after a
+// config change doesn't repeat them.
+const warnForArtifactsLocalDefault =
+	createArtifactsLocalDefaultWarner("cloudflare-config");
 
 function resolveLocalBindingsByWorkerName(
-	workerConfigs: Array<ParsedInputWorkerConfig | ParsedOutputWorkerConfig>,
+	workerConfigs: Array<ParsedWorkerConfig | ParsedBuildOutputWorkerConfig>,
 	localEnv: LoadedEnv,
 	devVars: Record<string, string> | undefined,
-	remoteBindings: boolean
-): Map<string, ResolvedLocalBindings> {
-	const resolvedLocalBindingsByWorkerName = new Map<
-		string,
-		ResolvedLocalBindings
-	>();
+	remoteBindings: boolean,
+	mode: string | undefined,
+	projectRoot: string,
+	logger: vite.Logger
+): Map<string, MiniflareEnv> {
+	const resolvedLocalBindingsByWorkerName = new Map<string, MiniflareEnv>();
 	for (const config of workerConfigs) {
+		if (remoteBindings) {
+			warnForArtifactsLocalDefault(
+				{
+					id: projectRoot,
+					bindings: Object.entries(config.env ?? {}).flatMap(
+						([name, binding]) =>
+							binding.type === "artifacts"
+								? [
+										{
+											name,
+											remote: binding.dev?.remote,
+											// Name the Worker when several could declare the binding.
+											worker:
+												workerConfigs.length > 1 ? config.name : undefined,
+										},
+									]
+								: []
+					),
+				},
+				(message) => logger.warn(message)
+			);
+		}
 		resolvedLocalBindingsByWorkerName.set(
 			config.name,
-			resolveLocalBindings(config.env, localEnv.values, devVars, remoteBindings)
+			resolveLocalBindings(config.env, {
+				workerName: config.name,
+				localEnv: localEnv.values,
+				devVars,
+				mode,
+				remoteBindings,
+				logger,
+			})
 		);
 	}
 	return resolvedLocalBindingsByWorkerName;
-}
-
-function warnForMissingSecrets(
-	resolvedLocalBindingsByWorkerName: Map<string, ResolvedLocalBindings>,
-	mode: string,
-	logger: vite.Logger
-): void {
-	for (const [
-		workerName,
-		{ missingSecrets },
-	] of resolvedLocalBindingsByWorkerName) {
-		if (missingSecrets.length === 0) {
-			continue;
-		}
-		logger.warn(
-			`Missing required secrets for Worker "${workerName}": ${missingSecrets.join(", ")}. ` +
-				`Add them to one of \`.dev.vars.${mode}\`, \`.dev.vars\`, ` +
-				`\`.env.${mode}.local\`, \`.env.${mode}\`, \`.env.local\`, or \`.env\`. ` +
-				"Alternatively, set them as environment variables."
-		);
-	}
 }
 
 /**

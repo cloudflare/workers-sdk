@@ -1,37 +1,38 @@
 import assert from "node:assert";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
-import { allFrameworksInfos, staticFramework } from "./all-frameworks";
+import { getAllFrameworksInfos, staticFramework } from "./all-frameworks";
 import { NoOpFramework } from "./no-op";
 import type { AutoConfigTarget } from "../context";
 import type { Framework } from "./framework-class";
 
 export type { Framework, PackageJsonScriptsOverrides } from "./framework-class";
 
-/** Set of the ids of all the possible frameworks, including the "static" framework */
-const allKnownFrameworksIds = new Set<string>(
-	allFrameworksInfos.map(({ id }) => id)
-);
-
 /**
  * Identifies whether a given id maps to a known framework's id
  *
  * @param frameworkId The target id to check
+ * @param target The configuration target
  * @returns true if the id is that of a known framework, false otherwise
  */
-export function isKnownFramework(frameworkId: string): boolean {
-	return allKnownFrameworksIds.has(frameworkId);
+export function isKnownFramework(
+	frameworkId: string,
+	target: AutoConfigTarget
+): boolean {
+	return getAllFrameworksInfos(target).some(({ id }) => id === frameworkId);
 }
 
 /**
  * Gets a class instance for a framework based on its id
  *
  * @param frameworkId The target framework's id
+ * @param target The configuration target
  * @returns The class for the framework, defaulting to the static framework is the id is not recognized
  */
 export function getFrameworkClassInstance(
-	frameworkId: FrameworkInfo["id"]
+	frameworkId: FrameworkInfo["id"],
+	target: AutoConfigTarget
 ): Framework {
-	const targetedFramework = allFrameworksInfos.find(
+	const targetedFramework = getAllFrameworksInfos(target).find(
 		(framework) => framework.id === frameworkId
 	);
 	const framework = targetedFramework ?? staticFramework;
@@ -45,12 +46,14 @@ export function getFrameworkClassInstance(
  * Checks whether a framework is supported by autoconfig.
  *
  * @param frameworkId The target framework's id
+ * @param target The configuration target, defaults to cf
  * @returns a boolean indicating wether the framework is supported
  */
 export function isFrameworkSupported(
-	frameworkId: FrameworkInfo["id"]
+	frameworkId: FrameworkInfo["id"],
+	target: AutoConfigTarget = "cf"
 ): boolean {
-	const targetedFramework = allFrameworksInfos.find(
+	const targetedFramework = getAllFrameworksInfos(target).find(
 		(framework) => framework.id === frameworkId
 	);
 	assert(
@@ -75,7 +78,7 @@ export function validateFrameworkTargetSupport(
 		return;
 	}
 
-	const frameworkInfo = allFrameworksInfos.find(
+	const frameworkInfo = getAllFrameworksInfos(target).find(
 		({ id }) => id === framework.id
 	);
 	if (frameworkInfo?.supported !== true || frameworkInfo.supportsCf) {

@@ -1,13 +1,14 @@
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { Writable } from "node:stream";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { x } from "tinyexec";
 import treeKill from "tree-kill";
 import dedent from "ts-dedent";
 import { logger } from "../logger";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type { Result } from "tinyexec";
 
 export type WranglerCommand = "dev" | "deploy" | "versions upload" | "types";

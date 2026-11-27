@@ -1,12 +1,14 @@
 import path from "node:path";
 import {
-	InputContainerSchema,
-	OutputContainerSchema,
+	ContainerConfigSchema,
+	WorkerConfigSchema,
+	BuildOutputContainerConfigSchema,
 } from "@cloudflare/config";
 import { describe, test } from "vitest";
 import {
 	createContainerDevPlanForCfConfig,
 	createContainerPreviewPlanForCfConfig,
+	createMiniflareExports,
 } from "../src/dev-options";
 
 describe("createContainerDevPlanForCfConfig", () => {
@@ -14,7 +16,7 @@ describe("createContainerDevPlanForCfConfig", () => {
 		expect,
 	}) => {
 		const root = path.resolve("project");
-		const standard = InputContainerSchema.parse({
+		const standard = ContainerConfigSchema.parse({
 			name: "standard",
 			image: {
 				dockerfile: "./containers/Dockerfile",
@@ -22,7 +24,7 @@ describe("createContainerDevPlanForCfConfig", () => {
 				buildVars: { VERSION: "1" },
 			},
 		});
-		const managed = InputContainerSchema.parse({
+		const managed = ContainerConfigSchema.parse({
 			name: "managed",
 			schedulingPolicy: "durable-object",
 			images: {
@@ -85,7 +87,7 @@ describe("createContainerDevPlanForCfConfig", () => {
 	}) => {
 		const plan = createContainerDevPlanForCfConfig({
 			containers: [
-				InputContainerSchema.parse({
+				ContainerConfigSchema.parse({
 					name: "managed",
 					schedulingPolicy: "durable-object",
 				}),
@@ -119,7 +121,7 @@ describe("createContainerDevPlanForCfConfig", () => {
 			})
 		).toThrow('Expected Container "missing"');
 
-		const container = InputContainerSchema.parse({
+		const container = ContainerConfigSchema.parse({
 			name: "duplicate",
 			image: { reference: "docker.io/example:latest" },
 		});
@@ -139,11 +141,11 @@ describe("createContainerPreviewPlanForCfConfig", () => {
 	}) => {
 		const plan = createContainerPreviewPlanForCfConfig({
 			containers: [
-				OutputContainerSchema.parse({
+				BuildOutputContainerConfigSchema.parse({
 					name: "standard",
 					image: { localReference: "cloudflare-build/project/app:123" },
 				}),
-				OutputContainerSchema.parse({
+				BuildOutputContainerConfigSchema.parse({
 					name: "managed",
 					schedulingPolicy: "durable-object",
 					images: {
@@ -205,5 +207,60 @@ describe("createContainerPreviewPlanForCfConfig", () => {
 				exports: {},
 			})
 		).toBeUndefined();
+	});
+});
+
+describe("createMiniflareExports", () => {
+	test("replaces Container names with runtime image metadata", ({ expect }) => {
+		const worker = WorkerConfigSchema.parse({
+			name: "worker",
+			compatibilityDate: "2024-12-30",
+			exports: {
+				ContainerDO: {
+					type: "durable-object",
+					storage: "sqlite",
+					container: "api",
+				},
+				RegularDO: {
+					type: "durable-object",
+					storage: "sqlite",
+				},
+			},
+		});
+
+		const exports = createMiniflareExports({
+			exports: worker.exports,
+			containerRuntimeOptions: new Map([
+				["ContainerDO", { imageName: "cloudflare-dev/containerdo:123" }],
+			]),
+		});
+
+		expect(exports).toEqual({
+			ContainerDO: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: { imageName: "cloudflare-dev/containerdo:123" },
+			},
+			RegularDO: {
+				type: "durable-object",
+				storage: "sqlite",
+				container: undefined,
+			},
+		});
+	});
+
+	test("rejects Container exports without a runtime plan", ({ expect }) => {
+		expect(() =>
+			createMiniflareExports({
+				exports: {
+					ContainerDO: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "missing",
+					},
+				},
+				containerRuntimeOptions: undefined,
+			})
+		).toThrow("Expected runtime options");
 	});
 });

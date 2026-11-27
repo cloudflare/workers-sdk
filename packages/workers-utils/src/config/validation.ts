@@ -124,9 +124,11 @@ export type ConfigBindingFieldName =
 	| "assets"
 	| "unsafe_hello_world"
 	| "flagship"
+	| "realtimekit"
 	| "worker_loaders"
 	| "vpc_services"
-	| "vpc_networks";
+	| "vpc_networks"
+	| "oidc_tokens";
 
 export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	data_blobs: "Data Blob",
@@ -166,9 +168,11 @@ export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	assets: "Assets",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	realtimekit: "RealtimeKit",
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
 	vpc_networks: "VPC Network",
+	oidc_tokens: "OIDC Token",
 } as const;
 
 /**
@@ -213,10 +217,12 @@ const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	logfwdr: "logfwdr",
 	unsafe_hello_world: "Hello World",
 	flagship: "Flagship",
+	realtimekit: "RealtimeKit",
 	ratelimit: "Rate Limit",
 	worker_loader: "Worker Loader",
 	vpc_service: "VPC Service",
 	vpc_network: "VPC Network",
+	oidc_token: "OIDC Token",
 	media: "Media",
 	assets: "Assets",
 	inherit: "Inherited",
@@ -867,6 +873,43 @@ function normalizeAndValidateAssets(
 		validateAssetsConfig,
 		undefined
 	);
+}
+
+/**
+ * `images` is not inherited by named environments. As `url_transformations` is easy to lose
+ * when an environment declares `images` only for its binding, warn about that case too.
+ */
+function normalizeAndValidateImages(
+	diagnostics: Diagnostics,
+	topLevelEnv: Environment | undefined,
+	rawConfig: RawConfig | undefined,
+	rawEnv: RawEnvironment,
+	envName: string
+): Config["images"] {
+	const images = notInheritable(
+		diagnostics,
+		topLevelEnv,
+		rawConfig,
+		rawEnv,
+		envName,
+		"images",
+		validateImagesBinding(envName),
+		undefined
+	);
+
+	if (
+		images !== undefined &&
+		topLevelEnv?.images?.url_transformations !== undefined &&
+		images.url_transformations === undefined
+	) {
+		diagnostics.warnings.push(
+			`"images.url_transformations" exists at the top level, but not on "env.${envName}".\n` +
+				`This is not what you probably want, since "images.url_transformations" is not inherited by environments.\n` +
+				`Please add "images.url_transformations" to "env.${envName}".`
+		);
+	}
+
+	return images;
 }
 
 /**
@@ -1989,15 +2032,12 @@ function normalizeAndValidateEnvironment(
 			validateAIBinding(envName),
 			undefined
 		),
-		images: notInheritable(
+		images: normalizeAndValidateImages(
 			diagnostics,
 			topLevelEnv,
 			rawConfig,
 			rawEnv,
-			envName,
-			"images",
-			validateNamedSimpleBinding(envName),
-			undefined
+			envName
 		),
 		stream: notInheritable(
 			diagnostics,
@@ -2079,6 +2119,16 @@ function normalizeAndValidateEnvironment(
 			validateBindingArray(envName, validateFlagshipBinding),
 			[]
 		),
+		realtimekit: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"realtimekit",
+			validateBindingArray(envName, validateRealtimeKitBinding),
+			[]
+		),
 		worker_loaders: notInheritable(
 			diagnostics,
 			topLevelEnv,
@@ -2117,6 +2167,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"vpc_networks",
 			validateBindingArray(envName, validateVpcNetworkBinding),
+			[]
+		),
+		oidc_tokens: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"oidc_tokens",
+			validateBindingArray(envName, validateOidcTokenBinding),
 			[]
 		),
 		version_metadata: notInheritable(
@@ -2403,10 +2463,11 @@ const validateTriggers: ValidatorFn = (
 					)) {
 						if (
 							(filterName !== "namespace" && filterName !== "repo_name") ||
-							typeof filterValue !== "string"
+							typeof filterValue !== "string" ||
+							filterValue.length === 0
 						) {
 							diagnostics.errors.push(
-								`Expected "${eventFieldName}.filter" to contain only string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
+								`Expected "${eventFieldName}.filter" to contain only non-empty string "namespace" and "repo_name" fields, but got ${JSON.stringify(event.filter)}.`
 							);
 							isValid = false;
 							break;
@@ -3596,6 +3657,168 @@ const validateNamedSimpleBinding =
 		return isValid;
 	};
 
+const validateImagesBinding =
+	(envName: string): ValidatorFn =>
+	(diagnostics, field, value, config) => {
+		const fieldPath =
+			config === undefined ? `${field}` : `env.${envName}.${field}`;
+
+		if (typeof value !== "object" || value === null || Array.isArray(value)) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+					value
+				)}.`
+			);
+			return false;
+		}
+
+		const images = value as NonNullable<Config["images"]>;
+		let isValid = true;
+
+		if (
+			images.binding === undefined &&
+			images.url_transformations === undefined
+		) {
+			diagnostics.errors.push(
+				`The field "${fieldPath}" should have a "binding" or "url_transformations" field.`
+			);
+			isValid = false;
+		}
+
+		isValid =
+			validateOptionalProperty(
+				diagnostics,
+				fieldPath,
+				"binding",
+				images.binding,
+				"string"
+			) && isValid;
+
+		if (!isRemoteValid(value, fieldPath, diagnostics)) {
+			isValid = false;
+		}
+
+		if (images.url_transformations !== undefined) {
+			isValid =
+				validateImagesUrlTransformations(
+					diagnostics,
+					`${fieldPath}.url_transformations`,
+					images.url_transformations
+				) && isValid;
+		}
+
+		validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
+			"binding",
+			"remote",
+			"url_transformations",
+		]);
+
+		return isValid;
+	};
+
+const MAX_IMAGES_ALLOWED_ORIGINS = 10;
+
+const validateImagesAllowedOrigins = (
+	diagnostics: Diagnostics,
+	fieldPath: string,
+	origins: string[]
+): boolean => {
+	if (origins.length === 0) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" should not be empty. Omit it to only allow images from the Worker's own zone.`
+		);
+		return false;
+	}
+	if (origins.includes("*") && origins.length > 1) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" cannot contain "*" alongside other origins. Use ["*"] on its own to allow any origin.`
+		);
+		return false;
+	}
+	if (origins.length > MAX_IMAGES_ALLOWED_ORIGINS) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" can contain at most ${MAX_IMAGES_ALLOWED_ORIGINS} origins, but got ${origins.length}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	for (const [i, origin] of origins.entries()) {
+		if (origin === "") {
+			diagnostics.errors.push(`"${fieldPath}[${i}]" should not be empty.`);
+			isValid = false;
+		} else if (/^https?:\/\//i.test(origin)) {
+			diagnostics.errors.push(
+				`"${fieldPath}[${i}]" should be a hostname without a protocol, e.g. ${JSON.stringify(
+					origin.replace(/^https?:\/\//i, "")
+				)} rather than ${JSON.stringify(origin)}.`
+			);
+			isValid = false;
+		} else if (origin.includes(",")) {
+			diagnostics.errors.push(
+				`"${fieldPath}[${i}]" should not contain a comma, but got ${JSON.stringify(origin)}.`
+			);
+			isValid = false;
+		}
+	}
+	return isValid;
+};
+
+const validateImagesUrlTransformations = (
+	diagnostics: Diagnostics,
+	fieldPath: string,
+	value: unknown
+): boolean => {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`The field "${fieldPath}" should be an object but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		return false;
+	}
+
+	const { enabled, allowed_origins } = value as {
+		enabled?: unknown;
+		allowed_origins?: unknown;
+	};
+
+	let isValid = validateRequiredProperty(
+		diagnostics,
+		fieldPath,
+		"enabled",
+		enabled,
+		"boolean"
+	);
+
+	if (allowed_origins !== undefined) {
+		if (
+			!validateTypedArray(
+				diagnostics,
+				`${fieldPath}.allowed_origins`,
+				allowed_origins,
+				"string"
+			)
+		) {
+			isValid = false;
+		} else {
+			isValid =
+				validateImagesAllowedOrigins(
+					diagnostics,
+					`${fieldPath}.allowed_origins`,
+					allowed_origins as string[]
+				) && isValid;
+		}
+	}
+
+	validateAdditionalProperties(diagnostics, fieldPath, Object.keys(value), [
+		"enabled",
+		"allowed_origins",
+	]);
+
+	return isValid;
+};
+
 const validateAIBinding =
 	(envName: string): ValidatorFn =>
 	(diagnostics, field, value, config) => {
@@ -3693,7 +3916,9 @@ const validateUnsafeBinding: ValidatorFn = (diagnostics, field, value) => {
 			"worker_loader",
 			"vpc_service",
 			"flagship",
+			"realtimekit",
 			"vpc_network",
+			"oidc_token",
 			"stream",
 			"media",
 			"artifacts",
@@ -5139,6 +5364,15 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		isValid = false;
 	}
 
+	if (!isOptionalProperty(value, "jurisdiction", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should, optionally, have a string "jurisdiction" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
 	if (!isOptionalProperty(value, "migrations_dir", "string")) {
 		diagnostics.errors.push(
 			`"${field}" bindings should, optionally, have a string "migrations_dir" field but got ${JSON.stringify(
@@ -5171,6 +5405,7 @@ const validateD1Binding: ValidatorFn = (diagnostics, field, value) => {
 		"database_id",
 		"database_internal_env",
 		"database_name",
+		"jurisdiction",
 		"migrations_dir",
 		"migrations_pattern",
 		"migrations_table",
@@ -5407,6 +5642,78 @@ const validateVpcServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+/** The JWS algorithms an OIDC token binding can sign with. */
+const OIDC_TOKEN_ALGS = ["ES256", "RS256"];
+
+/** Matches the Workers OIDC issuer's limit on the `aud` claim. */
+const OIDC_TOKEN_MAX_AUDIENCE_LENGTH = 2048;
+
+/**
+ * Whether an OIDC token audience is accepted at upload: 1 to 2048 printable
+ * ASCII characters with no whitespace. Verifiers compare `aud` byte for byte,
+ * so a stray space or lookalike character would silently never match.
+ *
+ * @param audience - The configured audience
+ * @returns Whether the audience is valid
+ */
+function isValidOidcTokenAudience(audience: string): boolean {
+	return (
+		audience.length > 0 &&
+		audience.length <= OIDC_TOKEN_MAX_AUDIENCE_LENGTH &&
+		/^[\x21-\x7e]+$/.test(audience)
+	);
+}
+
+const validateOidcTokenBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"oidc_tokens" bindings should be objects, but got ${JSON.stringify(
+				value
+			)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		!isRequiredProperty(value, "audience", "string") ||
+		!isValidOidcTokenAudience(value.audience)
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "audience" field of 1 to ${OIDC_TOKEN_MAX_AUDIENCE_LENGTH} printable ASCII characters with no whitespace, but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (
+		hasProperty(value, "alg") &&
+		!isRequiredProperty(value, "alg", "string", OIDC_TOKEN_ALGS)
+	) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have an "alg" field of ${OIDC_TOKEN_ALGS.map((alg) => `"${alg}"`).join(" or ")} if one is set, but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"audience",
+		"alg",
+	]);
+
+	return isValid;
+};
+
 const validateVpcNetworkBinding: ValidatorFn = (diagnostics, field, value) => {
 	if (typeof value !== "object" || value === null) {
 		diagnostics.errors.push(
@@ -5491,7 +5798,9 @@ const validateBindingsHaveUniqueNames = (
 			getBindingNames(
 				bindingType === "queues"
 					? config[bindingType]?.producers
-					: config[bindingType]
+					: bindingType === "images" && config.images?.binding === undefined
+						? undefined
+						: config[bindingType]
 			),
 		])
 	);
@@ -5718,7 +6027,12 @@ const validateAnalyticsEngineBinding: ValidatorFn = (
 	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
 		"binding",
 		"dataset",
+		"remote",
 	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
 
 	return isValid;
 };
@@ -6433,6 +6747,44 @@ const validateFlagshipBinding: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+const validateRealtimeKitBinding: ValidatorFn = (diagnostics, field, value) => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"realtimekit" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	let isValid = true;
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "app_id", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings must have a string "app_id" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+
+	validateAdditionalProperties(diagnostics, field, Object.keys(value), [
+		"binding",
+		"app_id",
+		"remote",
+	]);
+
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+
+	return isValid;
+};
+
 const validateWorkerLoaderBinding: ValidatorFn = (
 	diagnostics,
 	field,
@@ -6625,9 +6977,11 @@ const validatePreviewsConfig =
 				"artifacts",
 				"unsafe_hello_world",
 				"flagship",
+				"realtimekit",
 				"worker_loaders",
 				"ratelimits",
 				"vpc_services",
+				"oidc_tokens",
 				"version_metadata",
 				"containers",
 				"logpush",
@@ -6840,6 +7194,16 @@ const validatePreviewsConfig =
 		}
 
 		if (previews.images !== undefined) {
+			if (
+				typeof previews.images === "object" &&
+				previews.images !== null &&
+				"url_transformations" in previews.images
+			) {
+				diagnostics.errors.push(
+					`The field "${field}.images.url_transformations" is not supported in previews.`
+				);
+				isValid = false;
+			}
 			isValid =
 				validateNamedSimpleBinding(envName)(
 					diagnostics,
@@ -6918,6 +7282,14 @@ const validatePreviewsConfig =
 			) && isValid;
 
 		isValid =
+			validateBindingArray(envName, validateRealtimeKitBinding)(
+				diagnostics,
+				`${field}.realtimekit`,
+				previews.realtimekit,
+				undefined
+			) && isValid;
+
+		isValid =
 			validateBindingArray(envName, validateWorkerLoaderBinding)(
 				diagnostics,
 				`${field}.worker_loaders`,
@@ -6938,6 +7310,14 @@ const validatePreviewsConfig =
 				diagnostics,
 				`${field}.vpc_services`,
 				previews.vpc_services,
+				undefined
+			) && isValid;
+
+		isValid =
+			validateBindingArray(envName, validateOidcTokenBinding)(
+				diagnostics,
+				`${field}.oidc_tokens`,
+				previews.oidc_tokens,
 				undefined
 			) && isValid;
 
@@ -7864,6 +8244,12 @@ const validateObservability: ValidatorFn = (diagnostics, field, value) => {
 				val.logs.invocation_logs,
 				"boolean"
 			) && isValid;
+
+		if (val.logs.enabled === false && val.logs.invocation_logs === true) {
+			diagnostics.warnings.push(
+				`"${field}.logs.invocation_logs" has no effect when "${field}.logs.enabled" is false. Set "${field}.logs.enabled" to true to enable invocation logs.`
+			);
+		}
 
 		isValid =
 			validateOptionalTypedArray(
