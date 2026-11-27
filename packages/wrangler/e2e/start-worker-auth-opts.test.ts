@@ -1,4 +1,5 @@
 import path from "node:path";
+import { mockConsoleMethods } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { afterEach, assert, beforeEach, describe, test, vi } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
@@ -8,7 +9,7 @@ import {
 } from "./helpers/e2e-wrangler-test";
 import { waitForLong } from "./helpers/wait-for";
 import type { Worker } from "../src/api/startDevWorker";
-import type { ExpectStatic, MockInstance } from "vitest";
+import type { ExpectStatic } from "vitest";
 
 const { unstable_startWorker: startWorker } = await importWrangler();
 
@@ -17,13 +18,9 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 	describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("with remote bindings", () => {
 		let helper: WranglerE2ETestHelper;
 
-		let consoleErrorMock: MockInstance<typeof console.error>;
+		mockConsoleMethods();
 
 		beforeEach(async () => {
-			consoleErrorMock = vi.spyOn(console, "error").mockImplementation(() => {
-				// suppress error output during tests
-			});
-
 			helper = new WranglerE2ETestHelper();
 			const aiWorkerScript = dedent`
 			export default {
@@ -149,7 +146,6 @@ describe("startWorker - auth options", { concurrent: false }, () => {
 
 			expect(incorrectAuth).toHaveBeenCalled();
 
-			consoleErrorMock.mockReset();
 			emittedErrors = [];
 
 			const validAuth = vi.fn(() => {
