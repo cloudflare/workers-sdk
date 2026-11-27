@@ -170,6 +170,10 @@ export async function getDetailsForAutoConfig({
 
 	const hasCloudflareConfig =
 		target === "cf" && existsSync(resolve(projectPath, CLOUDFLARE_CONFIG_FILE));
+	const projectWranglerConfigPath =
+		wranglerConfigPath ??
+		wranglerConfig?.configPath ??
+		findProjectWranglerConfig(projectPath);
 
 	if (
 		target === "wrangler" &&
@@ -184,6 +188,7 @@ export async function getDetailsForAutoConfig({
 			workerName: getWorkerName(wranglerConfig.name, projectPath),
 			// Fall back to npm when already configured since we don't need to run package manager commands
 			packageManager: NpmPackageManager,
+			wranglerConfigPath: projectWranglerConfigPath,
 		};
 	}
 
@@ -289,10 +294,7 @@ export async function getDetailsForAutoConfig({
 				),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
-		wranglerConfigPath:
-			wranglerConfigPath ??
-			wranglerConfig?.configPath ??
-			findProjectWranglerConfig(projectPath),
+		wranglerConfigPath: projectWranglerConfigPath,
 	};
 
 	if (configured) {
