@@ -11,6 +11,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/generate-auth-url.ts` — authorize URL builder
 - `src/generate-random-state.ts` — CSRF state generator
 - `src/env-vars.ts` — `WRANGLER_*` and `CLOUDFLARE_AUTH_*` env-var getters
+- `src/profiles.ts` — Shared profile resolution: explicit argument → `CLOUDFLARE_AUTH_PROFILE` → nearest directory binding → `default`. Environment values use the same name validation as explicit profiles; empty values are ignored.
 - `src/account-id.ts` — `validateAccountId(id, source)`, applied to every user-supplied account ID (`CLOUDFLARE_ACCOUNT_ID`, the consumer's `account_id` config field) before it reaches an API URL path
 - `src/access.ts` — Cloudflare Access detection + service-token / `cloudflared` headers
 - `src/config-file/auth.ts` — the `AuthConfigStorage` / `UserAuthConfig` storage contract (interfaces only). The default plaintext credential implementation lives alongside the credential-store layer at `src/credential-store/file-store.ts` (see "Credential storage" below). The core `src/core/auth-config-file.ts` (`createAuthConfigFileHelpers({getConfigPath, format})`) and `src/core/file-storage.ts` (`createFileStorage(format, getPath)`) build the per-profile path helpers and non-credential file stores; each CLI descriptor (`src/wrangler/auth-config-file.ts`, `src/cf/auth-config-file.ts`) binds them to its config dir + `FileFormat` and re-exports `createTomlFileStorage` / `createJsonFileStorage`, `getAuthConfigFilePath`, etc. from its entrypoint. See "CORE LAYER" below.
@@ -19,7 +20,7 @@ CLIs. Internal-only — published as `prerelease: true`.
 - `src/state.ts` — `readStoredAuthState()` + `StoredAuthState` shape
 - `src/token-exchange.ts` — auth-code → token + refresh-token rotation + `fetchAuthToken`
 - `src/callback-server.ts` — local HTTP server for the OAuth callback (listens on the host/port from the consumer's `redirectUri`)
-- `src/device-flow.ts` — `getOauthTokenViaDeviceFlow(options, ctx)`: the OAuth 2.0 Device Authorization Grant (RFC 8628) used by `login({device: true})` when the browser cannot reach the local callback URL. No callback server; prints the verification URL + user code and polls `/oauth2/token`. Every user-facing string is parameterised by `ctx.displayName` / `ctx.deviceLoginCommand` so the module carries no per-CLI branding. Both endpoints' bodies are narrowed before use (`asDeviceAuthorizationResponse`, `pollDeviceToken`'s `DevicePollResult`) rather than cast — an intermediary's envelope or a 2xx without a grant must produce a reportable `unexpected`/unusable-response error, never `undefined` arithmetic. `slow_down` / 5xx / 429 / unparseable bodies keep the loop alive; the last such failure is reported in place of the generic timeout if the deadline passes
+- `src/device-flow.ts` — `getOauthTokenViaDeviceFlow(options, ctx)`: the OAuth 2.0 Device Authorization Grant (RFC 8628) used by `login({device: true})` when the browser cannot reach the local callback URL. No callback server; prints the verification URL + user code and polls `/oauth2/token`. Every user-facing string is parameterised by `ctx.cliDisplayName` / `ctx.deviceLoginCommand` so the module carries no per-CLI branding. Both endpoints' bodies are narrowed before use (`asDeviceAuthorizationResponse`, `pollDeviceToken`'s `DevicePollResult`) rather than cast — an intermediary's envelope or a 2xx without a grant must produce a reportable `unexpected`/unusable-response error, never `undefined` arithmetic. `slow_down` / 5xx / 429 / unparseable bodies keep the loop alive; the last such failure is reported in place of the generic timeout if the deadline passes
 - `src/generate-device-auth-url.ts` — `generateVerificationUrl` (fallback `verification_uri_complete` builder for servers that omit it, RFC 8628 §3.3.1) + `assertTrustedVerificationUrl`, which rejects any server-supplied verification URL that is not `https:` on exactly the resolved auth domain (with no embedded credentials) before it is printed or handed to `openInBrowser` — the device flow is the only place this package opens a URL it did not build itself (RFC 8628 §5.4, remote phishing)
 - `src/flow.ts` — `createOAuthFlow(ctx)` factory wiring everything together
 - `src/context.ts` — `OAuthFlowContext` interface (DI surface)
@@ -64,7 +65,7 @@ files and its own encryption key.
 - `clientId` (required) — the consumer's registered OAuth app ID; `string` or
   `() => string` for lazy (e.g. env-driven prod/staging) resolution
 - `consent` (required) — the consumer's branded granted/denied consent pages
-- `displayName` (required) — the consumer's branded name (`"Wrangler"`, `"cf"`),
+- `cliDisplayName` (required) — the consumer's branded name (`"Wrangler"`, `"cf"`),
   interpolated into the device flow's "To authorize \<name\>…" copy
 - `deviceLoginCommand` (required) — the command that restarts the device flow
   (`"wrangler login --device"`), quoted when a device code is denied, expires,
@@ -82,7 +83,7 @@ files and its own encryption key.
 - `generateAuthUrl?` / `generateRandomState?` — test overrides for deterministic
   snapshot tests (defaults pull from `./generate-auth-url` / `./generate-random-state`)
 
-`clientId`, `consent`, `displayName`, `deviceLoginCommand`, `redirectUri`, and
+`clientId`, `consent`, `cliDisplayName`, `deviceLoginCommand`, `redirectUri`, and
 `storageFactory` are consumer-specific, so they are required rather than
 defaulted here. Wrangler's values live in the in-package wrangler layer
 (`src/wrangler/`, see below) rather than in the `wrangler` package itself.
@@ -104,14 +105,16 @@ Cloudflare CLI built on this package. It lives in `src/core/`:
   `createConfigCache`), account selection (`fetchInternalBase` with the token
   the flow already holds), login / logout / refresh, and `requireAuth`. Imports
   only `@cloudflare/workers-utils`.
-- `types.ts` — `AuthContext` (the injected primitives: `logger`, `userAgent`,
-  interactive `prompt` / `select`, `isNoDefaultValueProvidedError`) and
+- `types.ts` — `AuthContext` (the injected primitives: `logger`, optional
+  `temporaryAccountLogger` for temporary-account notices, `userAgent`, interactive
+  `prompt` / `select`, `isNoDefaultValueProvidedError`) and
   `CliDescriptor` (everything that varies per CLI: `cliName` (the executable),
   `displayName` (branded name used in prose), auth command names
-  (`login` / `whoami` / `createProfile` / `deviceLogin`), `keyringServiceName`,
+  (`login` / `logout` / `whoami` / `createProfile` / `deviceLogin`),
+  `keyringServiceName`,
   `clientId`, `consent`, `redirectUri`, `useDeviceFlowByDefault`,
   `getConfigPath`, `fileFormat`,
-  `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
+  `persistAccountSelection`, `accountCachePrefix`, `cacheNamespace`, `getConfigFileLabel`,
   `getDefaultScopeKeys`, …).
 - `file-storage.ts` (`createFileStorage(format, getPath)`), `auth-config-file.ts`
   (`createAuthConfigFileHelpers({getConfigPath, format})`), `preferences.ts`
@@ -144,7 +147,9 @@ Each CLI is a thin **descriptor + entrypoint**:
     CLI's registration, and device authorization is its default interactive
     login flow. cf carries its own scope policy (`src/cf/scopes.ts`): the raw
     client registration is kept separate from the known-grantable catalog used
-    for validation, types, and login defaults. Requestable scopes must both
+    for validation and types. Every requestable scope is included in login
+    defaults; excluding one requires an explicit `scopes` override when calling
+    `login` or a call to `setLoginScopeKeys()`. Requestable scopes must both
     appear in the client registration and resolve in the consent service's Bach
     catalog; registered exceptions stay explicit negative regressions. Retain
     separately verified, grandfathered legacy scopes and registration order.
@@ -156,7 +161,9 @@ Each CLI is a thin **descriptor + entrypoint**:
 - License: dual MIT/Apache-2.0. Files derived from
   [BitySA/oauth2-auth-code-pkce](https://github.com/BitySA/oauth2-auth-code-pkce)
   carry the Apache-2.0 header.
-- No `console.*` — use the injected `ctx.logger`.
+- No `console.*` — use the injected `ctx.logger`. Temporary-account notices
+  (terms notice, proof-of-work, "Temporary account ready") go through the
+  `temporaryAccountLogger` instead, so a CLI can keep them off stdout.
 - No global `fetch` — use undici's `fetch`.
 - `UserError` instances must carry stable `telemetryMessage` labels
   (`<area> <sub-area> <failure>`, e.g. `user oauth invalid scope`).
@@ -169,9 +176,9 @@ Each CLI is a thin **descriptor + entrypoint**:
 
 ## BUILD
 
-- tsup: two entry points — `src/index.ts` and `src/test-helpers/index.ts`
+- tsdown: shared core, Wrangler and cf entry points, plus test helpers
 - ESM-only output to `dist/`
-- `@cloudflare/*`, `undici`, `msw`, and `vitest` are kept external
+- Runtime dependencies (`@cloudflare/workers-utils` and `undici`), `msw`, and `vitest` are kept external
 
 ## CREDENTIAL STORAGE NOTES
 

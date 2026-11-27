@@ -1,11 +1,9 @@
 import { readFileSync } from "node:fs";
+import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import {
-	APIError,
 	bucketFormatMessage,
 	isValidR2BucketName,
-	parseJSON,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt, select } from "../../dialogs";
@@ -42,7 +40,7 @@ import type {
 	SinkFormat,
 	Stream,
 } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function getErrorMessage(error: unknown, fallback: string): string {
 	if (error instanceof APIError && error.notes.length > 0) {
@@ -144,9 +142,9 @@ async function ensureCatalogEnabled(
 	}
 
 	if (catalogEnabled) {
-		logger.log("  Data Catalog already enabled");
+		logger.log("  Basin Catalog already enabled");
 	} else {
-		process.stdout.write("  Enabling Data Catalog...");
+		process.stdout.write("  Enabling Basin Catalog...");
 		await enableR2Catalog(config, accountId, bucketName);
 		logger.log(chalk.green(" done"));
 	}
@@ -382,7 +380,7 @@ export const pipelinesSetupCommand = createCommand({
 	metadata: {
 		description: "Interactive setup for a complete pipeline",
 		owner: "Product: Pipelines",
-		status: "open beta",
+		status: "stable",
 	},
 	args: {
 		name: {
@@ -717,7 +715,7 @@ async function setupSinkConfiguration(
 	const sinkType = await select("Destination type:", {
 		choices: [
 			{ title: "R2 Bucket", value: "r2" },
-			{ title: "Data Catalog (Iceberg)", value: "r2_data_catalog" },
+			{ title: "Basin Catalog (Iceberg)", value: "r2_data_catalog" },
 		],
 		defaultOption: 0,
 		fallbackOption: 0,
@@ -972,7 +970,7 @@ async function setupDataCatalogSink(
 	const token = await promptCatalogToken(config, accountId, bucket);
 
 	const compression = await promptParquetCompression();
-	// R2 Data Catalog sinks require minimum 60 second intervals to prevent compaction issues
+	// Basin Catalog sinks require minimum 60 second intervals to prevent compaction issues
 	const rollingPolicy = await promptRollingPolicy({
 		minIntervalSeconds: SINK_DEFAULTS.rolling_policy.min_interval_seconds,
 	});
@@ -1158,7 +1156,7 @@ async function reviewAndCreateStreamSink(
 		logger.log(`  Sink      ${setupConfig.sinkName}`);
 		logger.log(
 			chalk.dim(
-				`            Data Catalog → ${setupConfig.sinkConfig.config.namespace}/${setupConfig.sinkConfig.config.table_name}\n`
+				`            Basin Catalog → ${setupConfig.sinkConfig.config.namespace}/${setupConfig.sinkConfig.config.table_name}\n`
 			)
 		);
 	}
@@ -1276,7 +1274,7 @@ async function createPipelineIfNeeded(
 			if (!retry) {
 				logger.log(
 					chalk.dim(
-						"\n  You can create the pipeline later with: wrangler pipelines create"
+						"\n  You can create the pipeline later with: wrangler basin pipelines create"
 					)
 				);
 				logger.log(

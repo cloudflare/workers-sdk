@@ -3,9 +3,10 @@
 	"remoteCache": {
 		"signature": true
 	},
-	"globalEnv": ["CI_OS", "NODE_VERSION"],
+	"globalEnv": ["CI_OS", "NODE_VERSION", "X_LOCAL_OBSERVABILITY_BATCH_SIZE"],
 	"globalPassThroughEnv": [
 		"CI",
+		"CI_TEST_SHARD",
 		"CLOUDFLARE_CONTAINER_REGISTRY",
 		"E2E_SHARD",
 		"E2E_SHARD_COUNT",
@@ -13,11 +14,15 @@
 		"LOCAL_TESTS_WITHOUT_DOCKER",
 		"MINIFLARE_CACHE_DIR",
 		"NODE_EXTRA_CA_CERTS",
+		"pnpm_config_manage_package_manager_versions",
+		"pnpm_config_pm_on_fail",
+		"pnpm_config_verify_deps_before_run",
 		"PWD",
 		"TEST_REPORT_PATH",
 		"VSCODE_INSPECTOR_OPTIONS",
 		"WRANGLER_API_ENVIRONMENT",
 		"WRANGLER_CACHE_DIR",
+		"WRANGLER_CONTAINER_IMAGE_COMPRESSION",
 		"CLOUDFLARED_PATH",
 		"MINIFLARE_CONTAINER_EGRESS_IMAGE",
 		"MINIFLARE_CONTAINER_EGRESS_IMAGE_PLATFORM",
@@ -25,6 +30,7 @@
 		"WRANGLER_LOG_PATH",
 		"WRANGLER_LOG",
 		"CLOUDFLARE_API_TOKEN",
+		"CLOUDFLARE_API_HEADERS",
 		"CLOUDFLARE_ACCOUNT_ID",
 		"WRANGLER_WRITE_LOGS",
 		"X_LOCAL_OBSERVABILITY",
@@ -83,6 +89,12 @@
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"$TURBO_ROOT$/vitest.shared.ts",
+				"$TURBO_ROOT$/fixtures/shared/src/**",
+				"$TURBO_ROOT$/fixtures/shared/package.json"
+			],
 			"outputLogs": "new-only"
 		},
 		"test:e2e": {
@@ -92,6 +104,7 @@
 				"CLOUDFLARE_ACCOUNT_ID",
 				"CLOUDFLARE_API_TOKEN",
 				"E2E_ACCOUNT_WORKERS_DEV_DOMAIN",
+				"E2E_ACCESS_WORKER_PREFIX",
 				"NODE_DEBUG"
 			]
 		},

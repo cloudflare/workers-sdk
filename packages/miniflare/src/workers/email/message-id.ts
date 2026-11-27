@@ -5,6 +5,67 @@
 
 const ID_ALPHABET =
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const MESSAGE_ID_DOMAIN_LABEL =
+	/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/u;
+const MESSAGE_ID_DOMAIN_LITERAL =
+	/^\[(?:[\x21-\x5a\x5e-\x7e]|\\[\x20-\x7e])+\]$/u;
+
+function extractTrailingDomainLiteral(senderEmail: string): string | undefined {
+	const literalStart = senderEmail.lastIndexOf("@[");
+	if (literalStart === -1) {
+		return undefined;
+	}
+	const literal = senderEmail.slice(literalStart + 1);
+	return MESSAGE_ID_DOMAIN_LITERAL.test(literal) ? literal : undefined;
+}
+
+function normalizeDnsDomain(value: string): string | undefined {
+	if (value === "" || /[\s/:?#@\[\]\\<>%]/u.test(value)) {
+		return undefined;
+	}
+	let hostname: string;
+	try {
+		const url = new URL(`http://${value}`);
+		if (
+			url.username !== "" ||
+			url.password !== "" ||
+			url.port !== "" ||
+			url.pathname !== "/" ||
+			url.search !== "" ||
+			url.hash !== ""
+		) {
+			return undefined;
+		}
+		hostname = url.hostname;
+	} catch {
+		return undefined;
+	}
+
+	const unqualified = hostname.endsWith(".") ? hostname.slice(0, -1) : hostname;
+	if (
+		hostname.length > 254 ||
+		unqualified === "" ||
+		!unqualified
+			.split(".")
+			.every((label) => MESSAGE_ID_DOMAIN_LABEL.test(label))
+	) {
+		return undefined;
+	}
+	return hostname;
+}
+
+function getMessageIdDomain(senderEmail: string): string {
+	const literal = extractTrailingDomainLiteral(senderEmail);
+	if (literal !== undefined) {
+		return literal;
+	}
+	const separator = senderEmail.lastIndexOf("@");
+	const domain =
+		separator === -1
+			? undefined
+			: normalizeDnsDomain(senderEmail.slice(separator + 1));
+	return domain ?? "localhost";
+}
 
 /**
  * Builds a Message-ID in the shape the production `send_email` binding returns:
@@ -16,7 +77,7 @@ export function synthesizeMessageId(senderEmail: string): string {
 		bytes,
 		(byte) => ID_ALPHABET[byte % ID_ALPHABET.length]
 	).join("");
-	const domain = senderEmail.slice(senderEmail.lastIndexOf("@") + 1);
+	const domain = getMessageIdDomain(senderEmail);
 	return `<${id}@${domain}>`;
 }
 
@@ -41,48 +102,136 @@ export function setMessageIdHeader(
 		throw new Error("could not find end of email headers");
 	}
 
-	const lineEnding = usesCrlf ? "\r\n" : "\n";
-	const header = new TextDecoder().decode(rawEmail.subarray(0, headerEnd));
-	const lines = header.split(/\r?\n/u);
-	const normalizedLines: string[] = [];
-	let foundMessageId = false;
-	let skippingContinuation = false;
-
-	for (const line of lines) {
-		if (/^[ \t]/u.test(line)) {
-			if (!skippingContinuation) {
-				normalizedLines.push(line);
-			}
-			continue;
-		}
-
-		skippingContinuation = /^message-id\s*:/iu.test(line);
-		if (skippingContinuation) {
-			if (!foundMessageId) {
-				normalizedLines.push(`Message-ID: ${messageId}`);
-				foundMessageId = true;
-			}
-			continue;
-		}
-		normalizedLines.push(line);
+	const fields = findHeaderFields(rawEmail, headerEnd);
+	const lastField = fields.at(-1);
+	if (lastField !== undefined) {
+		lastField.end += usesCrlf ? 2 : 1;
+	}
+	const messageIdFields = fields.filter(({ start, nameEnd }) =>
+		asciiEqualsIgnoreCase(rawEmail.subarray(start, nameEnd), "message-id")
+	);
+	const replacement = new TextEncoder().encode(`Message-ID: ${messageId}`);
+	if (messageIdFields.length === 0) {
+		const lineEnding = usesCrlf
+			? new Uint8Array([13, 10])
+			: new Uint8Array([10]);
+		return concatenateBytes([
+			replacement,
+			...(headerEnd === 0 ? [] : [lineEnding]),
+			rawEmail,
+		]);
 	}
 
-	if (!foundMessageId) {
-		normalizedLines.unshift(`Message-ID: ${messageId}`);
+	const chunks: Uint8Array[] = [];
+	let retainedOffset = 0;
+	for (const [index, field] of messageIdFields.entries()) {
+		chunks.push(rawEmail.subarray(retainedOffset, field.start));
+		if (index === 0) {
+			chunks.push(replacement);
+			const terminator = getFieldTerminator(rawEmail, field.start, field.end);
+			if (terminator !== undefined) {
+				chunks.push(terminator);
+			}
+		}
+		retainedOffset = field.end;
 	}
+	chunks.push(rawEmail.subarray(retainedOffset));
+	return concatenateBytes(chunks);
+}
 
-	const encodedHeaders = new TextEncoder().encode(
-		normalizedLines.join(lineEnding)
+interface HeaderFieldRange {
+	start: number;
+	nameEnd: number;
+	end: number;
+}
+
+function findHeaderFields(
+	rawEmail: Uint8Array,
+	headerEnd: number
+): HeaderFieldRange[] {
+	const fields: HeaderFieldRange[] = [];
+	let hasActiveField = false;
+	let offset = 0;
+	while (offset < headerEnd) {
+		let lineEnd = offset;
+		while (lineEnd < headerEnd && rawEmail[lineEnd] !== 10) {
+			lineEnd++;
+		}
+		const contentEnd =
+			lineEnd > offset && rawEmail[lineEnd - 1] === 13 ? lineEnd - 1 : lineEnd;
+		const continuation = rawEmail[offset] === 32 || rawEmail[offset] === 9;
+		if (continuation) {
+			if (!hasActiveField) {
+				throw new Error("email header block contains an invalid continuation");
+			}
+		} else {
+			const previous = fields.at(-1);
+			if (previous !== undefined && hasActiveField) {
+				previous.end = offset;
+			}
+			hasActiveField = false;
+			let colon = offset;
+			while (colon < contentEnd && rawEmail[colon] !== 58) {
+				colon++;
+			}
+			if (colon >= contentEnd) {
+				throw new Error("email header block contains an invalid field");
+			}
+			let nameEnd = colon;
+			while (
+				nameEnd > offset &&
+				(rawEmail[nameEnd - 1] === 32 || rawEmail[nameEnd - 1] === 9)
+			) {
+				nameEnd--;
+			}
+			if (nameEnd === offset) {
+				throw new Error("email header block contains an invalid field name");
+			}
+			fields.push({ start: offset, nameEnd, end: headerEnd });
+			hasActiveField = true;
+		}
+		offset = lineEnd < headerEnd ? lineEnd + 1 : headerEnd;
+	}
+	return fields;
+}
+
+function asciiEqualsIgnoreCase(bytes: Uint8Array, expected: string): boolean {
+	if (bytes.byteLength !== expected.length) {
+		return false;
+	}
+	for (let index = 0; index < bytes.byteLength; index++) {
+		const byte = bytes[index];
+		const lower = byte >= 65 && byte <= 90 ? byte + 32 : byte;
+		if (lower !== expected.charCodeAt(index)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+function getFieldTerminator(
+	bytes: Uint8Array,
+	start: number,
+	end: number
+): Uint8Array | undefined {
+	if (end > start && bytes[end - 1] === 10) {
+		return end - start >= 2 && bytes[end - 2] === 13
+			? bytes.subarray(end - 2, end)
+			: bytes.subarray(end - 1, end);
+	}
+	return undefined;
+}
+
+function concatenateBytes(chunks: Uint8Array[]): Uint8Array {
+	const result = new Uint8Array(
+		chunks.reduce((total, chunk) => total + chunk.byteLength, 0)
 	);
-	const separator = usesCrlf ? crlfSeparator : lfSeparator;
-	const body = rawEmail.subarray(headerEnd + separator.byteLength);
-	const normalizedEmail = new Uint8Array(
-		encodedHeaders.byteLength + separator.byteLength + body.byteLength
-	);
-	normalizedEmail.set(encodedHeaders);
-	normalizedEmail.set(separator, encodedHeaders.byteLength);
-	normalizedEmail.set(body, encodedHeaders.byteLength + separator.byteLength);
-	return normalizedEmail;
+	let offset = 0;
+	for (const chunk of chunks) {
+		result.set(chunk, offset);
+		offset += chunk.byteLength;
+	}
+	return result;
 }
 
 function findSequence(bytes: Uint8Array, sequence: Uint8Array): number {

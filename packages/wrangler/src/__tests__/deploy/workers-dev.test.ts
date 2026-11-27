@@ -1076,7 +1076,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 
 				await expect(runWrangler("deploy ./index")).rejects.toThrow(
-					'Wrangler could not automatically register "agent-project-name" as your `workers.dev` subdomain.'
+					'Could not automatically register "agent-project-name" as your `workers.dev` subdomain. Register a subdomain at https://dash.cloudflare.com/some-account-id/workers/onboarding.'
 				);
 			});
 
@@ -1192,6 +1192,78 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+
+			it("falls back to the script subdomain when the newly uploaded Worker is not found", async ({
+				expect,
+			}) => {
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockWorkerDoesNotExist();
+				mockSubDomainRequest("test-sub-domain", true, false);
+				mockUploadWorkerRequest({ useOldUploadApi: true });
+				const getScriptSubdomain = vi.fn(() =>
+					HttpResponse.json(
+						createFetchResult({ enabled: true, previews_enabled: true })
+					)
+				);
+				msw.use(
+					http.get("*/accounts/some-account-id/workers/workers/test-name", () =>
+						HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: 10007,
+									message: "This Worker does not exist on your account.",
+								},
+							]),
+							{ status: 404 }
+						)
+					),
+					http.get(
+						"*/accounts/some-account-id/workers/scripts/test-name/subdomain",
+						getScriptSubdomain
+					)
+				);
+
+				await runWrangler("deploy ./index");
+
+				expect(getScriptSubdomain).toHaveBeenCalledTimes(1);
+				expect(std.out).toContain(
+					"https://test-name.test-sub-domain.workers.dev"
+				);
+				expect(std.out).toContain("Current Version ID: Galaxy-Class");
+			});
+
+			it.for([null, undefined])(
+				"recovers an interrupted first deploy when script is %s",
+				async (script, { expect }) => {
+					writeWranglerConfig();
+					writeWorkerSource();
+					const lookupSubdomain = vi.fn(() =>
+						HttpResponse.json(
+							createFetchResult({ subdomain: "test-sub-domain" })
+						)
+					);
+					msw.use(
+						http.get("*/accounts/:accountId/workers/services/:scriptName", () =>
+							HttpResponse.json(
+								createFetchResult({
+									default_environment: { environment: "production", script },
+								})
+							)
+						),
+						http.get("*/accounts/:accountId/workers/subdomain", lookupSubdomain)
+					);
+					mockUploadWorkerRequest({
+						useOldUploadApi: true,
+						expectedEntry: () => expect(lookupSubdomain).toHaveBeenCalled(),
+					});
+
+					await runWrangler("deploy ./index");
+
+					expect(std.out).toContain("Uploaded test-name");
+					expect(std.out).toContain("Current Version ID: Galaxy-Class");
+				}
+			);
 
 			it("uploads a new Worker when granular auth prevents the account subdomain lookup", async ({
 				expect,
@@ -1619,10 +1691,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		it("should warn the user if workers_dev default is different from remote", async ({
+		it("should warn with TOML syntax if workers_dev default is different from remote when using wrangler.toml", async ({
 			expect,
 		}) => {
-			writeWranglerConfig({}); // Default workers_dev should be true, since there's no routes.
+			writeWranglerConfig({}, "./wrangler.toml"); // Default workers_dev should be true, since there's no routes.
 			writeWorkerSource();
 			mockSubDomainRequest();
 			mockUploadWorkerRequest();
@@ -1643,15 +1715,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your Wrangler file, it will be enabled for this deployment by default.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause 'workers_dev' is not in your wrangler.toml, it will be enabled for this deployment by default.[0m
 
 				  To override this setting, you can disable workers.dev by explicitly setting 'workers_dev = false'
-				  in your Wrangler file.
+				  in your wrangler.toml.
 
 				"
 			`);
 		});
-
 		it("should warn the user if preview_urls default is different from remote", async ({
 			expect,
 		}) => {
@@ -1676,10 +1747,10 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be enabled for this deployment by default.[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mBecause your 'workers.dev' route is enabled and your 'preview_urls' setting is not in your wrangler.toml, Preview URLs will be enabled for this deployment by default.[0m
 
 				  To override this setting, you can disable Preview URLs by explicitly setting 'preview_urls =
-				  false' in your Wrangler file.
+				  false' in your wrangler.toml.
 
 				"
 			`);
@@ -1811,7 +1882,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				    [4mhttps://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev[0m
 
 				  To prevent this Worker from being unintentionally public, you may want to disable the Preview URLs
-				  as well by setting \`preview_urls = false\` in your Wrangler config file.
+				  as well by setting \`preview_urls = false\` in your wrangler.toml.
 
 				"
 			`);
@@ -1872,8 +1943,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				  be accessible at:
 				    [4mhttps://<VERSION_PREFIX>-test-name.test-sub-domain.workers.dev[0m
 
-				  You may want to enable the Preview URLs as well by setting \`preview_urls = true\` in your Wrangler
-				  config file.
+				  You may want to enable the Preview URLs as well by setting \`preview_urls = true\` in your
+				  wrangler.toml.
 
 				"
 			`);

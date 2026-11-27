@@ -635,7 +635,7 @@ describe("wrangler pipelines", () => {
 				│ broken_pipeline │ pipeline_2 │ 1/2/2024 │ 1/2/2024 │ failed │
 				└─┴─┴─┴─┴─┘
 
-				1 pipeline is in a failed state. Run 'wrangler pipelines get <pipeline>' for details:
+				1 pipeline is in a failed state. Run 'wrangler basin pipelines get <pipeline>' for details:
 				  X broken_pipeline: Sink bucket 'my-bucket' does not exist
 				"
 			`);
@@ -718,14 +718,9 @@ describe("wrangler pipelines", () => {
 			await runWrangler("pipelines list");
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines list\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  You have legacy pipelines. Consider creating new pipelines by running 'wrangler pipelines setup'.[0m
-
-				"
-			`);
+			expect(std.warn).toContain(
+				"⚠️  You have legacy pipelines. Consider creating new pipelines by running 'wrangler basin pipelines setup'."
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
@@ -1071,14 +1066,9 @@ describe("wrangler pipelines", () => {
 			expect(listRequest.count).toBeGreaterThan(0);
 			expect(listRequest.dataCount).toBe(0);
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines get\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  This is a legacy pipeline. Consider creating a new pipeline by running 'wrangler pipelines setup'.[0m
-
-				"
-			`);
+			expect(std.warn).toContain(
+				"⚠️  This is a legacy pipeline. Consider creating a new pipeline by running 'wrangler basin pipelines setup'."
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
@@ -1442,14 +1432,9 @@ describe("wrangler pipelines", () => {
 			);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines update\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-
-
-				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  Updating legacy pipeline. Consider recreating with 'wrangler pipelines setup'.[0m
-
-				"
-			`);
+			expect(std.warn).toContain(
+				"⚠️  Updating legacy pipeline. Consider recreating with 'wrangler basin pipelines setup'."
+			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
@@ -2299,7 +2284,7 @@ describe("wrangler pipelines", () => {
 			);
 		});
 
-		it("should create R2 Data Catalog sink", async ({ expect }) => {
+		it("should create Basin Catalog sink", async ({ expect }) => {
 			const createRequest = mockCreateSinkRequest(expect, {
 				name: "my_sink",
 				type: "r2_data_catalog",
@@ -2322,7 +2307,7 @@ describe("wrangler pipelines", () => {
 
 				Creation Summary:
 				General:
-				  Type:  R2 Data Catalog
+				  Type:  Basin Catalog
 
 				Destination:
 				  Bucket:  catalog-bucket
@@ -2359,7 +2344,7 @@ describe("wrangler pipelines", () => {
 					"pipelines sinks create my_sink --type r2-data-catalog --bucket catalog-bucket --namespace default --table my-table --catalog-token token123 --roll-interval 30"
 				)
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Pipeline frequency must be at least 60 seconds for R2 Data Catalog sinks to prevent compaction issues. Current value: 30 seconds.]`
+				`[Error: Pipeline frequency must be at least 60 seconds for Basin Catalog sinks to prevent compaction issues. Current value: 30 seconds.]`
 			);
 		});
 

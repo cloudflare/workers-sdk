@@ -2,15 +2,15 @@ import { describe, it } from "vitest";
 import { exports as exportConfig } from "../exports";
 import {
 	BindingSchema,
-	InputConfigSchema,
-	InputContainerSchema,
-	InputSettingsSchema,
-	InputWorkerSchema,
-	OutputContainerSchema,
-	OutputRootConfigSchema,
-	OutputWorkerSchema,
+	CloudflareConfigSchema,
+	ContainerConfigSchema,
+	SettingsSchema,
+	WorkerConfigSchema,
+	BuildOutputContainerConfigSchema,
+	BuildOutputRootConfigSchema,
+	BuildOutputWorkerConfigSchema,
 } from "../schema";
-import type { ParsedInputWorkerConfig } from "../schema";
+import type { ParsedWorkerConfig } from "../schema";
 
 const baseConfig = {
 	name: "my-worker",
@@ -25,27 +25,105 @@ const baseContainer = {
 const baseOutputConfig = { ...baseConfig } as const;
 const baseOutputContainer = { ...baseContainer } as const;
 
-describe("InputWorkerSchema", () => {
+describe.each([
+	["input", WorkerConfigSchema],
+	["output", BuildOutputWorkerConfigSchema],
+] as const)("%s Worker domains", (_name, schema) => {
+	it.for([
+		{ production: true, previews: false },
+		{ production: false, previews: true },
+		{ production: true, previews: true },
+	])(
+		"accepts traffic settings $production/$previews",
+		(traffic, { expect }) => {
+			const domains = [
+				"example.com",
+				{ hostname: "previews.example.com", ...traffic },
+			];
+			const result = schema.parse({ ...baseConfig, domains });
+			expect(result.domains).toEqual(domains);
+		}
+	);
+
+	it.for([
+		{ hostname: "example.com", production: false, previews: false },
+		{ hostname: "example.com", production: true },
+		{ hostname: "example.com", previews: true },
+		{ hostname: "example.com", production: "true", previews: false },
+		{ hostname: "example.com", production: false, previews: "true" },
+		{ production: true, previews: false },
+		{ hostname: 123, production: true, previews: false },
+		{
+			hostname: "example.com",
+			production: true,
+			previews: false,
+			enabled: true,
+		},
+		123,
+	])("rejects invalid domain %j", (domain, { expect }) => {
+		expect(schema.safeParse({ ...baseConfig, domains: [domain] }).success).toBe(
+			false
+		);
+	});
+});
+
+describe.each([
+	["input", WorkerConfigSchema],
+	["output", BuildOutputWorkerConfigSchema],
+] as const)("%s Worker tail consumers", (_name, schema) => {
+	it("accepts tail and experimental streaming tail consumers", ({ expect }) => {
+		const result = schema.parse({
+			...baseConfig,
+			tailConsumers: [{ worker: "tail-worker" }],
+			experimental: {
+				streamingTailConsumers: [{ worker: "stream-worker" }],
+			},
+		});
+		expect(result.tailConsumers).toEqual([{ worker: "tail-worker" }]);
+		expect(result.experimental).toEqual({
+			streamingTailConsumers: [{ worker: "stream-worker" }],
+		});
+	});
+
+	it("rejects the removed `streaming` flag on tailConsumers", ({ expect }) => {
+		const result = schema.safeParse({
+			...baseConfig,
+			tailConsumers: [{ worker: "stream-worker", streaming: true }],
+		});
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unknown experimental fields", ({ expect }) => {
+		const result = schema.safeParse({
+			...baseConfig,
+			experimental: { unknownFeature: true },
+		});
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("WorkerConfigSchema", () => {
 	describe("env singleton bindings", () => {
 		it("accepts undefined env", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({ ...baseConfig });
+			const result = WorkerConfigSchema.safeParse({ ...baseConfig });
 
 			expect(result.success).toBe(true);
 		});
 
 		it("accepts empty env", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({ ...baseConfig, env: {} });
+			const result = WorkerConfigSchema.safeParse({ ...baseConfig, env: {} });
 
 			expect(result.success).toBe(true);
 		});
 
 		it("accepts a single singleton binding of each type", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					MY_AI: { type: "ai" },
 					MY_ASSETS: { type: "assets" },
 					MY_BROWSER: { type: "browser" },
+					MY_ANALYTICS: { type: "analytics-sql" },
 					MY_IMAGES: { type: "images" },
 					MY_MEDIA: { type: "media" },
 					MY_STREAM: { type: "stream" },
@@ -59,7 +137,7 @@ describe("InputWorkerSchema", () => {
 		it("accepts multiple non-singleton bindings of the same type", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					KV_1: { type: "kv" },
@@ -71,8 +149,19 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts a jurisdiction on D1 bindings", ({ expect }) => {
+			const result = WorkerConfigSchema.safeParse({
+				...baseConfig,
+				env: {
+					DB: { type: "d1", jurisdiction: "eu" },
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
 		it("accepts multiple agent-memory bindings", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					MEM_1: { type: "agent-memory", namespace: "ns-1" },
@@ -84,7 +173,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("accepts binding options nested under dev", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					KV: { type: "kv", dev: { remote: true } },
@@ -109,8 +198,87 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts Cloudflare Access local development configuration", ({
+			expect,
+		}) => {
+			const result = WorkerConfigSchema.safeParse({
+				...baseConfig,
+				access: {
+					dev: {
+						aud: "my-app-aud-tag",
+						identity: { email: "user@example.com" },
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("does not require an identity in Cloudflare Access local development configuration", ({
+			expect,
+		}) => {
+			const result = WorkerConfigSchema.safeParse({
+				...baseConfig,
+				access: { dev: { aud: "my-app-aud-tag" } },
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("requires an audience in Cloudflare Access local development configuration", ({
+			expect,
+		}) => {
+			const result = WorkerConfigSchema.safeParse({
+				...baseConfig,
+				access: { dev: { identity: { email: "user@example.com" } } },
+			});
+
+			expect(result.success).toBe(false);
+		});
+
+		it("accepts Images URL transformations configuration", ({ expect }) => {
+			const result = WorkerConfigSchema.safeParse({
+				...baseConfig,
+				images: {
+					urlTransformations: {
+						enabled: true,
+						allowedOrigins: ["images.example.com/public", "*.example.org"],
+					},
+				},
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects invalid Images URL transformations configuration", ({
+			expect,
+		}) => {
+			for (const images of [
+				{ urlTransformations: {} },
+				{ urlTransformations: { enabled: true, allowedOrigins: [] } },
+				{ urlTransformations: { enabled: true, allowedOrigins: ["a,b"] } },
+				{ urlTransformations: { enabled: true, allowedOrigins: ["*", "a"] } },
+				{
+					urlTransformations: {
+						enabled: true,
+						allowedOrigins: ["https://images.example.com"],
+					},
+				},
+				{
+					urlTransformations: {
+						enabled: true,
+						allowedOrigins: Array.from({ length: 11 }, (_, i) => `${i}.com`),
+					},
+				},
+				{ urlTransformations: { enabled: true }, binding: "IMAGES" },
+			]) {
+				const result = WorkerConfigSchema.safeParse({ ...baseConfig, images });
+				expect(result.success).toBe(false);
+			}
+		});
+
 		it("rejects remote at the binding root", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: { KV: { type: "kv", remote: true } },
 			});
@@ -122,12 +290,13 @@ describe("InputWorkerSchema", () => {
 			["ai"],
 			["assets"],
 			["browser"],
+			["analytics-sql"],
 			["images"],
 			["media"],
 			["stream"],
 			["version-metadata"],
 		] as const)("rejects two %s bindings", ([type], { expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					BINDING_1: { type },
@@ -147,7 +316,7 @@ describe("InputWorkerSchema", () => {
 		it("rejects multiple duplicate singleton types with 'and' message", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					AI_1: { type: "ai" },
@@ -169,7 +338,7 @@ describe("InputWorkerSchema", () => {
 		it("rejects three duplicate singleton types with oxford comma", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					AI_1: { type: "ai" },
@@ -193,7 +362,7 @@ describe("InputWorkerSchema", () => {
 		it("lists duplicates alphabetically regardless of input order", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					STREAM_1: { type: "stream" },
@@ -213,7 +382,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("ignores non-singleton duplicates when reporting", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					AI_1: { type: "ai" },
@@ -293,11 +462,34 @@ describe("InputWorkerSchema", () => {
 		});
 	});
 
+	describe("workflow bindings", () => {
+		const workflowBinding = {
+			type: "workflow",
+			name: "greeting",
+			worker: "workflow-worker",
+			exportName: "GreetingWorkflow",
+		} as const;
+
+		it("accepts a cross-Worker Workflow binding", ({ expect }) => {
+			expect(BindingSchema.safeParse(workflowBinding).success).toBe(true);
+		});
+
+		it.for(["name", "worker", "exportName"] as const)(
+			"requires %s",
+			(field, { expect }) => {
+				const binding: Record<string, unknown> = { ...workflowBinding };
+				delete binding[field];
+
+				expect(BindingSchema.safeParse(binding).success).toBe(false);
+			}
+		);
+	});
+
 	describe("entrypoint", () => {
 		it("accepts a string entrypoint and passes it through unchanged", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				entrypoint: "./src/index.ts",
 			});
@@ -309,7 +501,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects a namespace-like object", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				entrypoint: { default: "./src/index.ts" },
 			});
@@ -320,7 +512,7 @@ describe("InputWorkerSchema", () => {
 		it("rejects a namespace object whose default is not a string", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				entrypoint: { default: 123 },
 			});
@@ -329,7 +521,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects a namespace object missing a default export", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				entrypoint: { other: "value" },
 			});
@@ -338,7 +530,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("accepts an undefined entrypoint", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({ ...baseConfig });
+			const result = WorkerConfigSchema.safeParse({ ...baseConfig });
 
 			expect(result.success).toBe(true);
 			if (result.success) {
@@ -349,7 +541,7 @@ describe("InputWorkerSchema", () => {
 
 	describe("unknown property rejection", () => {
 		it("rejects unknown top-level keys (typo)", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				// Typo: should be `compatibilityDate`
 				compatibilityDates: "2025-01-01",
@@ -371,7 +563,7 @@ describe("InputWorkerSchema", () => {
 		it("rejects a top-level `manifest` field (included in output schema only)", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				manifest: {
 					type: "complete",
@@ -394,7 +586,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects unknown keys inside `assets`", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				assets: {
 					// Typo: should be `htmlHandling`
@@ -416,7 +608,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects unknown keys inside a binding", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					MY_KV: {
@@ -441,7 +633,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects unknown keys inside `observability.logs`", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				observability: {
 					logs: {
@@ -468,7 +660,7 @@ describe("InputWorkerSchema", () => {
 		it("accepts camelCase query string redaction configuration", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				observability: {
 					enabled: true,
@@ -482,7 +674,7 @@ describe("InputWorkerSchema", () => {
 		it("rejects snake_case query string redaction configuration", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				observability: {
 					enabled: true,
@@ -494,7 +686,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects unknown keys inside a trigger", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				triggers: [
 					{
@@ -520,7 +712,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("accepts a connect trigger", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				triggers: [
 					{
@@ -535,8 +727,41 @@ describe("InputWorkerSchema", () => {
 			expect(result.success).toBe(true);
 		});
 
+		it("accepts a UDP connect trigger", ({ expect }) => {
+			const result = WorkerConfigSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "udp",
+						port: 5432,
+						idleTimeoutMs: 1_000,
+						maxPendingBytes: 65_536,
+					},
+				],
+			});
+
+			expect(result.success).toBe(true);
+		});
+
+		it("rejects UDP options on a TCP connect trigger", ({ expect }) => {
+			const result = WorkerConfigSchema.safeParse({
+				...baseConfig,
+				triggers: [
+					{
+						type: "connect",
+						protocol: "tcp",
+						port: 5432,
+						idleTimeoutMs: 1_000,
+					},
+				],
+			});
+
+			expect(result.success).toBe(false);
+		});
+
 		it("rejects a connect trigger with an invalid protocol", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				triggers: [{ type: "connect", protocol: "ftp", port: 5432 }],
 			});
@@ -545,7 +770,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects unknown keys inside a connect trigger", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				triggers: [
 					{
@@ -573,7 +798,7 @@ describe("InputWorkerSchema", () => {
 		it("still accepts unknown keys on `unsafe:*` bindings (looseObject escape hatch)", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					MY_UNSAFE: {
@@ -590,7 +815,7 @@ describe("InputWorkerSchema", () => {
 		it("passes the `unsafe:*` `type` through unchanged on parse", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					MY_UNSAFE: {
@@ -612,7 +837,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects `unsafe:` (empty suffix)", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					MY_UNSAFE: { type: "unsafe:" },
@@ -625,7 +850,7 @@ describe("InputWorkerSchema", () => {
 		it("still accepts arbitrary binding names in `env` (record, not object)", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					MY_WEIRDLY_NAMED_BINDING_1234: { type: "kv" },
@@ -638,7 +863,7 @@ describe("InputWorkerSchema", () => {
 
 	describe("vpc-network binding", () => {
 		it("accepts a binding with `tunnelId`", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: { V: { type: "vpc-network", tunnelId: "tun-1" } },
 			});
@@ -647,7 +872,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("accepts a binding with `networkId`", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: { V: { type: "vpc-network", networkId: "net-1" } },
 			});
@@ -658,7 +883,7 @@ describe("InputWorkerSchema", () => {
 		it("rejects a binding with neither `tunnelId` nor `networkId`", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: { V: { type: "vpc-network" } },
 			});
@@ -669,7 +894,7 @@ describe("InputWorkerSchema", () => {
 		it("rejects a binding with both `tunnelId` and `networkId`", ({
 			expect,
 		}) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					V: { type: "vpc-network", tunnelId: "tun-1", networkId: "net-1" },
@@ -680,7 +905,7 @@ describe("InputWorkerSchema", () => {
 		});
 
 		it("rejects unknown keys on a `vpc-network` binding", ({ expect }) => {
-			const result = InputWorkerSchema.safeParse({
+			const result = WorkerConfigSchema.safeParse({
 				...baseConfig,
 				env: {
 					V: { type: "vpc-network", tunnelId: "tun-1", unknownField: "x" },
@@ -701,18 +926,18 @@ describe("InputWorkerSchema", () => {
 	});
 });
 
-describe("InputContainerSchema", () => {
+describe("ContainerConfigSchema", () => {
 	it("accepts a Container with a Dockerfile", ({ expect }) => {
-		const result = InputContainerSchema.safeParse(baseContainer);
+		const result = ContainerConfigSchema.safeParse(baseContainer);
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data).toMatchObject({ maxInstances: 20 });
+			expect(result.data).not.toHaveProperty("maxInstances");
 		}
 	});
 
 	it("accepts a Container with an image reference", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			image: { reference: "registry.example.com/my-image:latest" },
 		});
@@ -720,8 +945,22 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts a Container with the us jurisdiction", ({ expect }) => {
+		const result = ContainerConfigSchema.safeParse({
+			...baseContainer,
+			constraints: { jurisdiction: "us" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({
+				constraints: { jurisdiction: "us" },
+			});
+		}
+	});
+
 	it("rejects a local image reference", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			image: { localReference: "locally-built-image:latest" },
 		});
@@ -730,7 +969,7 @@ describe("InputContainerSchema", () => {
 	});
 
 	it("accepts all optional fields", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			image: {
 				dockerfile: "./container/Dockerfile",
@@ -764,13 +1003,13 @@ describe("InputContainerSchema", () => {
 
 	it.for(["name", "image"] as const)("requires %s", (field, { expect }) => {
 		const { [field]: _omitted, ...container } = baseContainer;
-		const result = InputContainerSchema.safeParse(container);
+		const result = ContainerConfigSchema.safeParse(container);
 
 		expect(result.success).toBe(false);
 	});
 
 	it("rejects an empty name", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			name: "",
 		});
@@ -779,7 +1018,7 @@ describe("InputContainerSchema", () => {
 	});
 
 	it("accepts a Durable Object Container", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			images: {
@@ -792,7 +1031,7 @@ describe("InputContainerSchema", () => {
 	});
 
 	it("accepts a Durable Object Container without images", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 		});
@@ -803,7 +1042,7 @@ describe("InputContainerSchema", () => {
 	it("accepts application-wide observability for a Durable Object Container", ({
 		expect,
 	}) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			observability: { enabled: true, logs: { enabled: true } },
@@ -812,10 +1051,21 @@ describe("InputContainerSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts SSH settings for a Durable Object Container", ({ expect }) => {
+		const result = ContainerConfigSchema.safeParse({
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			ssh: { enabled: true, port: 2222 },
+			authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
 	it.for([{ targetInstancePercentage: 50 }, { targetInstanceCount: 2 }])(
 		"rejects observability instance targeting for a Durable Object Container: %o",
 		(observability, { expect }) => {
-			const result = InputContainerSchema.safeParse({
+			const result = ContainerConfigSchema.safeParse({
 				name: "durable-object-container",
 				schedulingPolicy: "durable-object",
 				observability,
@@ -826,7 +1076,7 @@ describe("InputContainerSchema", () => {
 	);
 
 	it("rejects Docker build fields without a Dockerfile", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			image: {
 				reference: "registry.example.com/my-image:latest",
@@ -841,7 +1091,7 @@ describe("InputContainerSchema", () => {
 		{ description: "Dockerfile path", image: { dockerfile: "" } },
 		{ description: "image reference", image: { reference: "" } },
 	])("rejects an empty $description", ({ image }, { expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			image,
 		});
@@ -852,7 +1102,7 @@ describe("InputContainerSchema", () => {
 	it.for([-1, 1.5])(
 		"rejects maxInstances of %s",
 		(maxInstances, { expect }) => {
-			const result = InputContainerSchema.safeParse({
+			const result = ContainerConfigSchema.safeParse({
 				...baseContainer,
 				maxInstances,
 			});
@@ -868,7 +1118,7 @@ describe("InputContainerSchema", () => {
 	] as const)(
 		"rejects an invalid custom instance type %s",
 		([field, value], { expect }) => {
-			const result = InputContainerSchema.safeParse({
+			const result = ContainerConfigSchema.safeParse({
 				...baseContainer,
 				instanceType: { [field]: value },
 			});
@@ -880,7 +1130,7 @@ describe("InputContainerSchema", () => {
 	it.for([-1, 0, 1.5, 65_536])(
 		"rejects an SSH port of %s",
 		(port, { expect }) => {
-			const result = InputContainerSchema.safeParse({
+			const result = ContainerConfigSchema.safeParse({
 				...baseContainer,
 				ssh: { enabled: true, port },
 			});
@@ -890,7 +1140,7 @@ describe("InputContainerSchema", () => {
 	);
 
 	it("rejects an unsupported rollout step percentage", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			rollout: { stepPercentage: 15 },
 		});
@@ -907,7 +1157,7 @@ describe("InputContainerSchema", () => {
 	it.for([5, 10, 20, 25, 50, 100])(
 		"accepts a rollout step percentage of %s",
 		(stepPercentage, { expect }) => {
-			const result = InputContainerSchema.safeParse({
+			const result = ContainerConfigSchema.safeParse({
 				...baseContainer,
 				rollout: { stepPercentage },
 			});
@@ -940,7 +1190,7 @@ describe("InputContainerSchema", () => {
 	])(
 		"rejects a $description rollout plan",
 		({ stepPercentage, path }, { expect }) => {
-			const result = InputContainerSchema.safeParse({
+			const result = ContainerConfigSchema.safeParse({
 				...baseContainer,
 				rollout: { stepPercentage },
 			});
@@ -955,7 +1205,7 @@ describe("InputContainerSchema", () => {
 	);
 
 	it("rejects more rollout steps than maximum instances", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			maxInstances: 2,
 			rollout: { stepPercentage: [10, 50, 100] },
@@ -971,7 +1221,7 @@ describe("InputContainerSchema", () => {
 	});
 
 	it("rejects a negative rollout active grace period", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			rollout: { activeGracePeriod: -1 },
 		});
@@ -987,7 +1237,7 @@ describe("InputContainerSchema", () => {
 	])(
 		"rejects an invalid observability target: %o",
 		(observability, { expect }) => {
-			const result = InputContainerSchema.safeParse({
+			const result = ContainerConfigSchema.safeParse({
 				...baseContainer,
 				observability,
 			});
@@ -999,7 +1249,7 @@ describe("InputContainerSchema", () => {
 	it.for([{ targetInstancePercentage: 100 }, { targetInstanceCount: 0 }])(
 		"accepts an observability target boundary: %o",
 		(observability, { expect }) => {
-			const result = InputContainerSchema.safeParse({
+			const result = ContainerConfigSchema.safeParse({
 				...baseContainer,
 				observability,
 			});
@@ -1009,7 +1259,7 @@ describe("InputContainerSchema", () => {
 	);
 
 	it("rejects both observability targets together", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			observability: {
 				targetInstancePercentage: 50,
@@ -1023,7 +1273,7 @@ describe("InputContainerSchema", () => {
 	it("rejects standard Container fields with durable-object scheduling", ({
 		expect,
 	}) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			schedulingPolicy: "durable-object",
 		});
@@ -1032,7 +1282,7 @@ describe("InputContainerSchema", () => {
 	});
 
 	it("rejects unsupported enum values", ({ expect }) => {
-		const result = InputContainerSchema.safeParse({
+		const result = ContainerConfigSchema.safeParse({
 			...baseContainer,
 			instanceType: "standard",
 			schedulingPolicy: "random",
@@ -1042,24 +1292,40 @@ describe("InputContainerSchema", () => {
 	});
 });
 
-describe("OutputContainerSchema", () => {
+describe("BuildOutputContainerConfigSchema", () => {
+	it("accepts a Container with the us jurisdiction", ({ expect }) => {
+		const result = BuildOutputContainerConfigSchema.safeParse({
+			...baseOutputContainer,
+			image: { reference: "registry.example.com/my-image:digest" },
+			constraints: { jurisdiction: "us" },
+		});
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toMatchObject({
+				constraints: { jurisdiction: "us" },
+			});
+		}
+	});
+
 	it.for([
 		{ reference: "registry.example.com/my-image:digest" },
 		{ localReference: "locally-built-image:latest" },
 	])("accepts a built image reference: %o", (image, { expect }) => {
-		const result = OutputContainerSchema.safeParse({
+		const result = BuildOutputContainerConfigSchema.safeParse({
 			...baseOutputContainer,
 			image,
 		});
 
 		expect(result.success).toBe(true);
 		if (result.success) {
-			expect(result.data).toMatchObject({ maxInstances: 20 });
+			expect(result.data).not.toHaveProperty("maxInstances");
 		}
 	});
 
 	it("rejects a Dockerfile that has not been built", ({ expect }) => {
-		const result = OutputContainerSchema.safeParse(baseOutputContainer);
+		const result =
+			BuildOutputContainerConfigSchema.safeParse(baseOutputContainer);
 
 		expect(result.success).toBe(false);
 	});
@@ -1067,7 +1333,7 @@ describe("OutputContainerSchema", () => {
 	it.for([{ reference: "" }, { localReference: "" }])(
 		"rejects an empty image reference: %o",
 		(image, { expect }) => {
-			const result = OutputContainerSchema.safeParse({
+			const result = BuildOutputContainerConfigSchema.safeParse({
 				...baseOutputContainer,
 				image,
 			});
@@ -1077,7 +1343,7 @@ describe("OutputContainerSchema", () => {
 	);
 
 	it("rejects both image reference types together", ({ expect }) => {
-		const result = OutputContainerSchema.safeParse({
+		const result = BuildOutputContainerConfigSchema.safeParse({
 			...baseOutputContainer,
 			image: {
 				reference: "registry.example.com/my-image:digest",
@@ -1089,7 +1355,7 @@ describe("OutputContainerSchema", () => {
 	});
 
 	it("accepts built Durable Object Container images", ({ expect }) => {
-		const result = OutputContainerSchema.safeParse({
+		const result = BuildOutputContainerConfigSchema.safeParse({
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			images: {
@@ -1101,8 +1367,23 @@ describe("OutputContainerSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("preserves SSH settings for a Durable Object Container", ({ expect }) => {
+		const container = {
+			name: "durable-object-container",
+			schedulingPolicy: "durable-object",
+			ssh: { enabled: true },
+			authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
+		};
+		const result = BuildOutputContainerConfigSchema.safeParse(container);
+
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data).toEqual(container);
+		}
+	});
+
 	it("rejects unbuilt Durable Object Container images", ({ expect }) => {
-		const result = OutputContainerSchema.safeParse({
+		const result = BuildOutputContainerConfigSchema.safeParse({
 			name: "durable-object-container",
 			schedulingPolicy: "durable-object",
 			images: { primary: { dockerfile: "./Dockerfile" } },
@@ -1112,7 +1393,7 @@ describe("OutputContainerSchema", () => {
 	});
 
 	it("validates rollout steps against maximum instances", ({ expect }) => {
-		const result = OutputContainerSchema.safeParse({
+		const result = BuildOutputContainerConfigSchema.safeParse({
 			...baseOutputContainer,
 			image: { reference: "registry.example.com/my-image:digest" },
 			maxInstances: 2,
@@ -1123,7 +1404,7 @@ describe("OutputContainerSchema", () => {
 	});
 
 	it("rejects invalid custom instance resources", ({ expect }) => {
-		const result = OutputContainerSchema.safeParse({
+		const result = BuildOutputContainerConfigSchema.safeParse({
 			...baseOutputContainer,
 			image: { reference: "registry.example.com/my-image:digest" },
 			instanceType: { vcpu: 0, memoryMib: -1, diskMb: -1 },
@@ -1133,7 +1414,7 @@ describe("OutputContainerSchema", () => {
 	});
 
 	it("rejects invalid observability targets", ({ expect }) => {
-		const result = OutputContainerSchema.safeParse({
+		const result = BuildOutputContainerConfigSchema.safeParse({
 			...baseOutputContainer,
 			image: { reference: "registry.example.com/my-image:digest" },
 			observability: { targetInstancePercentage: 101 },
@@ -1143,9 +1424,11 @@ describe("OutputContainerSchema", () => {
 	});
 });
 
-describe("OutputWorkerSchema", () => {
+describe("BuildOutputWorkerConfigSchema", () => {
 	it("accepts a config without manifest (assets-only mode)", ({ expect }) => {
-		const result = OutputWorkerSchema.safeParse({ ...baseOutputConfig });
+		const result = BuildOutputWorkerConfigSchema.safeParse({
+			...baseOutputConfig,
+		});
 
 		expect(result.success).toBe(true);
 		if (result.success) {
@@ -1154,7 +1437,7 @@ describe("OutputWorkerSchema", () => {
 	});
 
 	it("accepts a config with a valid complete manifest", ({ expect }) => {
-		const result = OutputWorkerSchema.safeParse({
+		const result = BuildOutputWorkerConfigSchema.safeParse({
 			...baseOutputConfig,
 			manifest: {
 				type: "complete",
@@ -1175,7 +1458,7 @@ describe("OutputWorkerSchema", () => {
 	it("accepts a partial manifest that omits its main module from modules.manifest", ({
 		expect,
 	}) => {
-		const result = OutputWorkerSchema.safeParse({
+		const result = BuildOutputWorkerConfigSchema.safeParse({
 			...baseOutputConfig,
 			manifest: {
 				type: "partial",
@@ -1190,7 +1473,7 @@ describe("OutputWorkerSchema", () => {
 	it("rejects a partial manifest that includes its main module in modules.manifest", ({
 		expect,
 	}) => {
-		const result = OutputWorkerSchema.safeParse({
+		const result = BuildOutputWorkerConfigSchema.safeParse({
 			...baseOutputConfig,
 			manifest: {
 				type: "partial",
@@ -1205,7 +1488,7 @@ describe("OutputWorkerSchema", () => {
 	it("rejects an entrypoint field (included in input schema only)", ({
 		expect,
 	}) => {
-		const result = OutputWorkerSchema.safeParse({
+		const result = BuildOutputWorkerConfigSchema.safeParse({
 			...baseOutputConfig,
 			entrypoint: "./src/index.ts",
 		});
@@ -1214,7 +1497,7 @@ describe("OutputWorkerSchema", () => {
 	});
 
 	it("rejects a manifest with an unknown module type", ({ expect }) => {
-		const result = OutputWorkerSchema.safeParse({
+		const result = BuildOutputWorkerConfigSchema.safeParse({
 			...baseOutputConfig,
 			manifest: {
 				type: "complete",
@@ -1229,7 +1512,7 @@ describe("OutputWorkerSchema", () => {
 	});
 
 	it("rejects a manifest without mainModule", ({ expect }) => {
-		const result = OutputWorkerSchema.safeParse({
+		const result = BuildOutputWorkerConfigSchema.safeParse({
 			...baseOutputConfig,
 			manifest: {
 				type: "complete",
@@ -1243,7 +1526,7 @@ describe("OutputWorkerSchema", () => {
 	it("rejects a complete manifest that does not include its main module", ({
 		expect,
 	}) => {
-		const result = OutputWorkerSchema.safeParse({
+		const result = BuildOutputWorkerConfigSchema.safeParse({
 			...baseOutputConfig,
 			manifest: {
 				type: "complete",
@@ -1256,7 +1539,7 @@ describe("OutputWorkerSchema", () => {
 	});
 
 	it("rejects a manifest module entry with unknown keys", ({ expect }) => {
-		const result = OutputWorkerSchema.safeParse({
+		const result = BuildOutputWorkerConfigSchema.safeParse({
 			...baseOutputConfig,
 			manifest: {
 				type: "complete",
@@ -1271,11 +1554,9 @@ describe("OutputWorkerSchema", () => {
 	});
 });
 
-describe("InputConfigSchema", () => {
-	it("accepts settings without a Worker and defaults its Containers", ({
-		expect,
-	}) => {
-		const result = InputConfigSchema.safeParse({
+describe("CloudflareConfigSchema", () => {
+	it("accepts settings without a Worker or Containers", ({ expect }) => {
+		const result = CloudflareConfigSchema.safeParse({
 			accountId: "account-id",
 			complianceRegion: "public",
 		});
@@ -1283,28 +1564,126 @@ describe("InputConfigSchema", () => {
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.data.worker).toBeUndefined();
-			expect(result.data.containers).toEqual([]);
+			expect(result.data.containers).toBeUndefined();
 		}
 	});
 
 	it("accepts a Container without a Worker", ({ expect }) => {
-		const result = InputConfigSchema.safeParse({
+		const result = CloudflareConfigSchema.safeParse({
 			containers: [baseContainer],
 		});
 
 		expect(result.success).toBe(true);
 	});
+
+	it("accepts resolved Container links and unlinked Containers", ({
+		expect,
+	}) => {
+		const result = CloudflareConfigSchema.safeParse({
+			worker: {
+				...baseConfig,
+				exports: {
+					Api: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			},
+			containers: [baseContainer, { ...baseContainer, name: "unlinked" }],
+		});
+
+		expect(result.success).toBe(true);
+	});
+
+	it("rejects duplicate Container names without a Worker", ({ expect }) => {
+		const result = CloudflareConfigSchema.safeParse({
+			containers: [baseContainer, { ...baseContainer }],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toContainEqual(
+				expect.objectContaining({
+					path: ["containers", 1, "name"],
+					message: expect.stringContaining("Container names must be unique"),
+				})
+			);
+		}
+	});
+
+	it("rejects references to missing Containers", ({ expect }) => {
+		const result = CloudflareConfigSchema.safeParse({
+			worker: {
+				...baseConfig,
+				exports: {
+					Api: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "missing",
+					},
+				},
+			},
+			containers: [baseContainer],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toContainEqual(
+				expect.objectContaining({
+					path: ["worker", "exports", "Api", "container"],
+					message:
+						'The referenced Container "missing" is not included in the `containers` array.',
+				})
+			);
+		}
+	});
+
+	it("rejects multiple Durable Objects linked to the same Container", ({
+		expect,
+	}) => {
+		const result = CloudflareConfigSchema.safeParse({
+			worker: {
+				...baseConfig,
+				exports: {
+					Api: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+					Other: {
+						type: "durable-object",
+						storage: "sqlite",
+						container: "my-container",
+					},
+				},
+			},
+			containers: [baseContainer],
+		});
+
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.error.issues).toContainEqual(
+				expect.objectContaining({
+					path: ["worker", "exports", "Other", "container"],
+					message: expect.stringContaining(
+						"already referenced by `worker.exports.Api`"
+					),
+				})
+			);
+		}
+	});
 });
 
-describe("InputSettingsSchema", () => {
+describe("SettingsSchema", () => {
 	it("accepts a minimal settings config", ({ expect }) => {
-		const result = InputSettingsSchema.safeParse({});
+		const result = SettingsSchema.safeParse({});
 
 		expect(result.success).toBe(true);
 	});
 
 	it("accepts accountId and complianceRegion", ({ expect }) => {
-		const result = InputSettingsSchema.safeParse({
+		const result = SettingsSchema.safeParse({
 			accountId: "acc-123",
 			complianceRegion: "fedramp-high",
 		});
@@ -1313,7 +1692,7 @@ describe("InputSettingsSchema", () => {
 	});
 
 	it("strips fields outside the account settings", ({ expect }) => {
-		const result = InputSettingsSchema.safeParse({
+		const result = SettingsSchema.safeParse({
 			accountId: "acc-123",
 			name: "my-worker",
 			mode: "staging",
@@ -1326,39 +1705,72 @@ describe("InputSettingsSchema", () => {
 	});
 });
 
-describe("OutputRootConfigSchema", () => {
-	it("accepts build context alongside the settings fields", ({ expect }) => {
-		const result = OutputRootConfigSchema.safeParse({
-			accountId: "acc-123",
-			complianceRegion: "public",
+describe("BuildOutputRootConfigSchema", () => {
+	it("accepts settings, build context and a producer", ({ expect }) => {
+		const result = BuildOutputRootConfigSchema.safeParse({
+			producer: { name: "@cloudflare/vite-plugin", version: "2.3.0" },
+			settings: { accountId: "acc-123", complianceRegion: "public" },
 			buildContext: { isPreview: false, mode: "staging" },
 		});
 
 		expect(result.success).toBe(true);
 	});
 
-	it("accepts a build context without a mode", ({ expect }) => {
-		const result = OutputRootConfigSchema.safeParse({
+	it("accepts no settings, no producer and no mode", ({ expect }) => {
+		const result = BuildOutputRootConfigSchema.safeParse({
 			buildContext: { isPreview: false },
 		});
 
 		expect(result.success).toBe(true);
 	});
 
+	it("rejects settings at the top level", ({ expect }) => {
+		const result = BuildOutputRootConfigSchema.safeParse({
+			accountId: "acc-123",
+			buildContext: { isPreview: false },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects unknown settings", ({ expect }) => {
+		const result = BuildOutputRootConfigSchema.safeParse({
+			settings: { name: "my-worker" },
+			buildContext: { isPreview: false },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it.for([
+		{ name: "@cloudflare/vite-plugin" },
+		{ name: "@cloudflare/vite-plugin", version: 2 },
+		{ name: "@cloudflare/vite-plugin", version: "2.3.0", url: "x" },
+	])("rejects an invalid producer %o", (producer, { expect }) => {
+		const result = BuildOutputRootConfigSchema.safeParse({
+			producer,
+			buildContext: { isPreview: false },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
 	it("requires build context", ({ expect }) => {
-		const result = OutputRootConfigSchema.safeParse({});
+		const result = BuildOutputRootConfigSchema.safeParse({});
 
 		expect(result.success).toBe(false);
 	});
 
 	it("requires Preview intent", ({ expect }) => {
-		const result = OutputRootConfigSchema.safeParse({ buildContext: {} });
+		const result = BuildOutputRootConfigSchema.safeParse({
+			buildContext: {},
+		});
 
 		expect(result.success).toBe(false);
 	});
 
 	it("rejects a non-string mode", ({ expect }) => {
-		const result = OutputRootConfigSchema.safeParse({
+		const result = BuildOutputRootConfigSchema.safeParse({
 			buildContext: { isPreview: false, mode: 123 },
 		});
 
@@ -1366,7 +1778,7 @@ describe("OutputRootConfigSchema", () => {
 	});
 
 	it("rejects unknown fields", ({ expect }) => {
-		const result = OutputRootConfigSchema.safeParse({
+		const result = BuildOutputRootConfigSchema.safeParse({
 			buildContext: { isPreview: false, mode: "staging" },
 			name: "my-worker",
 		});
@@ -1377,7 +1789,7 @@ describe("OutputRootConfigSchema", () => {
 
 describe("ExportSchema", () => {
 	function parseExports(exports: unknown) {
-		return InputWorkerSchema.safeParse({ ...baseConfig, exports });
+		return WorkerConfigSchema.safeParse({ ...baseConfig, exports });
 	}
 
 	it("accepts `container` on a live durable-object export", ({ expect }) => {
@@ -1462,6 +1874,94 @@ describe("ExportSchema", () => {
 		expect(result.success).toBe(true);
 	});
 
+	it("accepts a workflow export", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: exportConfig.workflow({ name: "greeting" }),
+			BatchWorkflow: exportConfig.workflow({
+				name: "batch",
+				limits: { steps: 10 },
+			}),
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.data?.exports).toEqual({
+			GreetingWorkflow: { type: "workflow", name: "greeting" },
+			BatchWorkflow: { type: "workflow", name: "batch", limits: { steps: 10 } },
+		});
+	});
+
+	it("accepts every Workflow setting on a workflow export", ({ expect }) => {
+		const scheduled = exportConfig.workflow({
+			name: "scheduled",
+			limits: { steps: 10 },
+			concurrency: { limit: 2 },
+			schedules: ["0 * * * *"],
+			defaultRetention: {
+				successRetention: "3 days",
+				errorRetention: 86_400_000,
+			},
+			jurisdiction: "eu",
+		});
+		const result = parseExports({ ScheduledWorkflow: scheduled });
+
+		expect(result.success).toBe(true);
+		expect(result.data?.exports).toEqual({ ScheduledWorkflow: scheduled });
+	});
+
+	it("rejects invalid Workflow settings on a workflow export", ({ expect }) => {
+		for (const settings of [
+			{ schedules: "" },
+			{ schedules: [] },
+			{ schedules: [""] },
+			{ concurrency: { limit: 0 } },
+			{ defaultRetention: { successRetention: -1 } },
+			{ defaultRetention: { errorRetention: "" } },
+			{ jurisdiction: "fedramp-high" },
+		]) {
+			const result = parseExports({
+				GreetingWorkflow: { type: "workflow", name: "greeting", ...settings },
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+
+	it("rejects a workflow export without a name", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: { type: "workflow" },
+		});
+
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects a workflow step limit that is not a positive integer", ({
+		expect,
+	}) => {
+		for (const steps of [0, -1, 1.5]) {
+			const result = parseExports({
+				GreetingWorkflow: {
+					type: "workflow",
+					name: "greeting",
+					limits: { steps },
+				},
+			});
+
+			expect(result.success).toBe(false);
+		}
+	});
+
+	it("rejects Durable Object fields on a workflow export", ({ expect }) => {
+		const result = parseExports({
+			GreetingWorkflow: {
+				type: "workflow",
+				name: "greeting",
+				storage: "sqlite",
+			},
+		});
+
+		expect(result.success).toBe(false);
+	});
+
 	// Containers require the SQLite storage engine. The check below is the type
 	// half of that rule: `tsc` checks this body (it is never called), so a missing
 	// error fails `check:type` via the unused `@ts-expect-error` directives.
@@ -1483,7 +1983,7 @@ describe("ExportSchema", () => {
 				container: baseContainer,
 			});
 
-			const _exports: NonNullable<ParsedInputWorkerConfig["exports"]> = {
+			const _exports: NonNullable<ParsedWorkerConfig["exports"]> = {
 				MyDO: {
 					type: "durable-object",
 					storage: "legacy-kv",
@@ -1514,5 +2014,39 @@ describe("ExportSchema", () => {
 		}
 
 		expect(typeAssertions).toBeTypeOf("function");
+	});
+});
+
+describe("oidc-token bindings", () => {
+	it.for([
+		["a URL", "https://api.example.com"],
+		["a URI", "api://token-exchange"],
+		["2,048 characters", "a".repeat(2048)],
+	])("accepts an audience of %s", ([, audience], { expect }) => {
+		expect(
+			BindingSchema.safeParse({ type: "oidc-token", audience }).success
+		).toBe(true);
+	});
+
+	it.for([
+		["empty", ""],
+		["with a space", "has space"],
+		["with a tab", "tab\there"],
+		["of 2,049 characters", "a".repeat(2049)],
+		["with non-ASCII characters", "café"],
+	])("rejects an audience %s", ([, audience], { expect }) => {
+		expect(
+			BindingSchema.safeParse({ type: "oidc-token", audience }).success
+		).toBe(false);
+	});
+
+	it("rejects an alg other than ES256 or RS256", ({ expect }) => {
+		expect(
+			BindingSchema.safeParse({
+				type: "oidc-token",
+				audience: "https://api.example.com",
+				alg: "HS256",
+			}).success
+		).toBe(false);
 	});
 });

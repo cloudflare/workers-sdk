@@ -10,7 +10,7 @@ import type {
 	AiSearchStats,
 	AiSearchToken,
 } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const jsonContentType = "application/json; charset=utf-8;";
 

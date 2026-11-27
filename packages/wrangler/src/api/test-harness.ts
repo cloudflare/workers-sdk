@@ -3,11 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
+import { splitSqlQuery, UserError } from "@cloudflare/workers-utils";
 import {
 	convertConfigToBindings,
 	normalizeAndValidateConfig,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import {
 	WorkflowInstanceIntrospectorHandle,
 	WorkflowIntrospectorHandle,
@@ -22,12 +22,12 @@ import {
 	getUnappliedMigrationNames,
 	resolveMigrationsConfig,
 } from "../d1/migrations/helpers";
-import { splitSqlQuery } from "../d1/splitter";
 import { getDatabaseInfoFromConfig } from "../d1/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { runWithLogLevel } from "../logger";
 import { requireApiToken, requireAuth } from "../user";
+import { BUN_UNSUPPORTED_MESSAGE, isBun } from "../utils/is-bun";
 import { DevEnv } from "./startDevWorker/DevEnv";
 import { MultiworkerRuntimeController } from "./startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "./startDevWorker/NoOpProxyController";
@@ -46,7 +46,7 @@ import type {
 	FetcherScheduledOptions,
 	FetcherScheduledResult,
 } from "@cloudflare/workers-types/experimental";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type { Config, RawConfig } from "@cloudflare/workers-utils/config";
 import type {
 	WorkflowBinding,
 	WorkflowInstanceIntrospector,
@@ -316,6 +316,12 @@ export type TestHarness = {
 	 * await server.fetch("http://example.com/api/data");
 	 * // Dispatches a request to the API Worker with URL "http://example.com/api/data"
 	 * ```
+	 *
+	 * Under Bun, this method, `server.getWorker()`'s `fetch()`, `email()` and
+	 * `scheduled()`, and the URL returned by `listen()` cannot reach the Worker,
+	 * because Bun's `fetch()` ignores the undici `dispatcher` that Miniflare routes
+	 * requests through. The methods throw a `UserError` and the URL answers with a
+	 * 503. `server.getWorker().getEnv()` and `getExport()` keep working under Bun.
 	 */
 	fetch: DispatchFetch;
 	/**
@@ -969,6 +975,16 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 		worker?: string,
 		event = "fetch"
 	) {
+		// Miniflare's `dispatchFetch()` routes every request, `getWorker()` ones
+		// included, through an undici dispatcher that Bun's `fetch()` ignores, so
+		// a request can leave for the network. Refuse before sending anything.
+		if (isBun()) {
+			throw new UserError(
+				`${BUN_UNSUPPORTED_MESSAGE} \`server.getWorker().getEnv()\` and \`getExport()\` still work under Bun.`,
+				{ telemetryMessage: "test harness dispatch under bun" }
+			);
+		}
+
 		let resolvedInput = input;
 
 		if (typeof input === "string" && !URL.canParse(input)) {
@@ -1153,10 +1169,24 @@ export function createTestHarness(options?: TestHarnessOptions): TestHarness {
 					);
 
 					try {
-						const ids = await miniflare.listDurableObjectIds(
-							classNameOrBindingName,
-							workerName
-						);
+						// A binding name first, then a class this Worker exports, as
+						// Miniflare resolved them when it took either
+						const binding = getWorkerDevEnv(session, workerName).config
+							.latestConfig?.bindings?.[classNameOrBindingName];
+						const durableObject =
+							binding?.type === "durable_object_namespace"
+								? binding
+								: undefined;
+						const scriptName = durableObject?.script_name ?? workerName;
+						// The harness keeps no storage for a Worker it doesn't run
+						const ids = session.devEnvs.some(
+							(devEnv) => devEnv.config.latestConfig?.name === scriptName
+						)
+							? await miniflare.listDurableObjectIds(
+									durableObject?.class_name ?? classNameOrBindingName,
+									scriptName
+								)
+							: [];
 						debugLog(
 							`durable object ids - ${classNameOrBindingName} - completed (${ids.length} found)`,
 							workerName

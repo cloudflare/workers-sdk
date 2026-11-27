@@ -8,7 +8,7 @@ import type {
 	ArtifactsNamespace,
 	ArtifactsRepo,
 } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 function getArtifactsNamespacesPath(accountId: string): string {
 	return `/accounts/${accountId}/artifacts/namespaces`;

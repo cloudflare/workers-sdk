@@ -11,6 +11,9 @@ const WORKER_SCRIPT = `
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
+		if (url.pathname === "/info") {
+			return Response.json(await env.IMAGES.info(request.body));
+		}
 		const transform = JSON.parse(url.searchParams.get("transform") || "{}");
 		const format = url.searchParams.get("format") || "image/png";
 		const result = await env.IMAGES.input(request.body)
@@ -77,7 +80,8 @@ describe("Images binding local transforms", () => {
 
 	async function transform(
 		transformOpts: Record<string, unknown>,
-		format = "image/png"
+		format = "image/png",
+		source: Buffer = sourcePng
 	) {
 		const params = new URLSearchParams({
 			transform: JSON.stringify(transformOpts),
@@ -85,10 +89,24 @@ describe("Images binding local transforms", () => {
 		});
 		const res = await mf.dispatchFetch(`http://localhost/?${params}`, {
 			method: "POST",
-			body: sourcePng,
+			body: source,
 		});
 		const body = Buffer.from(await res.arrayBuffer());
 		return { res, body };
+	}
+
+	// The 200x100 white-top/red-bottom source as a JPEG tagged with EXIF
+	// orientation 6 ("rotate 90 degrees clockwise to display") - the layout phone cameras
+	// use for portrait photos. A production-matching transform bakes that
+	// rotation in, producing an upright 100x200 image with red on the left
+	// (the source's bottom half) and white on the right.
+	async function exifRotatedJpeg(expect: import("vitest").ExpectStatic) {
+		const source = await sharp(sourcePng)
+			.jpeg({ quality: 95 })
+			.withMetadata({ orientation: 6 })
+			.toBuffer();
+		expect((await sharp(source).metadata()).orientation).toBe(6);
+		return source;
 	}
 
 	async function pixelAt(body: Buffer, x: number, y: number) {
@@ -202,5 +220,55 @@ describe("Images binding local transforms", () => {
 		});
 		const { r, g, b } = await pixelAt(body, 0, 0);
 		expect([r, g, b]).toEqual([255, 255, 255]);
+	});
+
+	test("EXIF orientation is applied before transforms (matches production)", async ({
+		expect,
+	}) => {
+		// Production auto-orients per EXIF before transforming. Without it the
+		// 200x100 source would pass through sideways as 200x100.
+		const { body } = await transform(
+			{},
+			"image/png",
+			await exifRotatedJpeg(expect)
+		);
+		const meta = await sharp(body).metadata();
+		expect(meta.width).toBe(100);
+		expect(meta.height).toBe(200);
+
+		// After the 90 degrees clockwise rotation the source's red bottom half lands on the
+		// left and the white top half on the right. JPEG encoding is lossy, so
+		// sample deep inside each half and allow small artifacts.
+		const left = await pixelAt(body, 25, 100);
+		expect(left.r).toBeGreaterThan(240);
+		expect(left.g).toBeLessThan(15);
+		expect(left.b).toBeLessThan(15);
+		const right = await pixelAt(body, 75, 100);
+		expect(right.r).toBeGreaterThan(240);
+		expect(right.g).toBeGreaterThan(240);
+		expect(right.b).toBeGreaterThan(240);
+	});
+
+	test("EXIF orientation composes with resize", async ({ expect }) => {
+		// width applies to the upright (100x200) image, not the stored
+		// sideways (200x100) pixels.
+		const { body } = await transform(
+			{ width: 50 },
+			"image/png",
+			await exifRotatedJpeg(expect)
+		);
+		const meta = await sharp(body).metadata();
+		expect(meta.width).toBe(50);
+		expect(meta.height).toBe(100);
+	});
+	test("info reports stored dimensions for an EXIF-rotated image", async ({
+		expect,
+	}) => {
+		const source = await exifRotatedJpeg(expect);
+		const response = await mf.dispatchFetch("http://localhost/info", {
+			method: "POST",
+			body: source,
+		});
+		expect(await response.json()).toMatchObject({ width: 200, height: 100 });
 	});
 });

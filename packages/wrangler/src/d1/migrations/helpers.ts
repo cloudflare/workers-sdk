@@ -2,19 +2,19 @@ import fs from "node:fs";
 import path from "node:path";
 import {
 	compareMigrationPaths,
-	configFileName,
 	getD1MigrationFiles,
 	isNonInteractiveOrCI,
 	normalizeRelativePath,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { configFileName } from "@cloudflare/workers-utils/config";
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import type { QueryResult } from "../execute";
 import type { Database, Migration } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 export { compareMigrationPaths, normalizeRelativePath };
 

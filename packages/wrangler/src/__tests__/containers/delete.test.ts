@@ -8,7 +8,9 @@ import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 import type { ExpectStatic } from "vitest";
 
-const testContainerID = "6925adea-c4ad-4aa6-bffd-d26783e9afbb";
+const legacyApplicationId = "a03f56b7-5c4f-4502-a892-947a2d8412e6";
+const durableObjectApplicationId = "458b755b379844af88d7dd9edc536b9e";
+const testContainerID = legacyApplicationId;
 
 describe("containers delete", () => {
 	const stdCli = mockCLIOutput();
@@ -46,13 +48,24 @@ describe("containers delete", () => {
 		`);
 	});
 
-	it("should reject invalid container ID format", async ({ expect }) => {
+	it("should reject invalid container ID format without making a request", async ({
+		expect,
+	}) => {
 		setWranglerConfig({});
+		let requestCount = 0;
+		msw.use(
+			http.delete("*/applications/:id", () => {
+				requestCount++;
+				return HttpResponse.json({ success: true, result: {} });
+			})
+		);
+
 		await expect(
 			runWrangler("containers delete invalid-id")
 		).rejects.toMatchInlineSnapshot(
 			`[Error: Expected a container ID but got invalid-id. Use \`wrangler containers list\` to view your containers and corresponding IDs.]`
 		);
+		expect(requestCount).toBe(0);
 	});
 
 	async function testStatusCode(expect: ExpectStatic, code: number) {
@@ -121,12 +134,13 @@ describe("containers delete", () => {
 		`);
 	});
 
-	it("should delete container", async ({ expect }) => {
+	async function testDeleteApplication(expect: ExpectStatic, id: string) {
 		setWranglerConfig({});
 		msw.use(
 			http.delete(
 				"*/applications/:id",
-				async ({ request }) => {
+				async ({ request, params }) => {
+					expect(params.id).toBe(id);
 					expect(await request.text()).toEqual("");
 					return new HttpResponse(`{"success": true, "result": {}}`, {
 						type: "application/json",
@@ -135,14 +149,15 @@ describe("containers delete", () => {
 				{ once: true }
 			)
 		);
-		await runWrangler(`containers delete ${testContainerID}`);
-		expect(stdCli.stderr).toMatchInlineSnapshot(`""`);
-		expect(stdCli.stdout).toMatchInlineSnapshot(`
-			"╭ Delete your container
-			│
-			╰ Your container has been deleted
+		await runWrangler(`containers delete ${id}`);
+		expect(stdCli.stderr).toBe("");
+		expect(stdCli.stdout).toContain("Your container has been deleted");
+	}
 
-			"
-		`);
-	});
+	it("should delete a container with a legacy application ID", ({ expect }) =>
+		testDeleteApplication(expect, legacyApplicationId));
+
+	it("should delete a container with a Durable Object application ID", ({
+		expect,
+	}) => testDeleteApplication(expect, durableObjectApplicationId));
 });

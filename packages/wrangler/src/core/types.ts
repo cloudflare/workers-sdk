@@ -9,7 +9,8 @@ import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
 import type { Teams } from "./teams";
-import type { Config, FatalError, UserError } from "@cloudflare/workers-utils";
+import type { FatalError, UserError } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 import type Cloudflare from "cloudflare";
 import type {
 	ArgumentsCamelCase,
@@ -241,9 +242,11 @@ export type CommandDefinition<
 
 		/**
 		 * Whether this command can authenticate with a temporary preview account
-		 * (via the hidden `--temporary` flag) when no real credentials are available.
-		 * Only enable this for commands whose API calls are covered by the temporary
-		 * preview-account deploy token (Workers, KV, D1, Hyperdrive, Queues, SSL/Certs).
+		 * (via the hidden `--temporary` and `--event-code` flags) when no real
+		 * credentials are available. Only enable this for commands whose API calls
+		 * are covered by the temporary preview-account deploy token (Workers, KV,
+		 * D1, Hyperdrive, Queues, SSL/Certs). R2 and Containers commands are also
+		 * enabled, but only work on event accounts created with `--event-code`.
 		 * @default false
 		 */
 		supportTemporary?: boolean;

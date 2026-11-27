@@ -47,6 +47,17 @@ describe("assets", () => {
 `);
 	});
 
+	it.for([
+		"/..%2fpublic-neighbor/message.txt",
+		"/%2e%2e%2fpublic-neighbor%2fmessage.txt",
+	])("keeps %s within the assets directory", async (pathname, { expect }) => {
+		const response = await exports.default.fetch(
+			`http://example.com${pathname}`
+		);
+		expect(response.status).toBe(404);
+		expect(await response.text()).toContain("Not found");
+	});
+
 	it("respects _redirects", async ({ expect }) => {
 		const response = await exports.default.fetch(
 			"http://example.com/take-me-home",

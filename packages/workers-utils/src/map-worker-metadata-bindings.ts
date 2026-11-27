@@ -79,6 +79,13 @@ export function mapWorkerMetadataBindings(
 							};
 						}
 						break;
+					case "analytics":
+						{
+							configObj.analytics = {
+								binding: binding.name,
+							};
+						}
+						break;
 					case "ai":
 						{
 							configObj.ai = {
@@ -155,6 +162,16 @@ export function mapWorkerMetadataBindings(
 					case "flagship": {
 						configObj.flagship = [
 							...(configObj.flagship ?? []),
+							{
+								binding: binding.name,
+								app_id: binding.app_id,
+							},
+						];
+						break;
+					}
+					case "realtimekit": {
+						configObj.realtimekit = [
+							...(configObj.realtimekit ?? []),
 							{
 								binding: binding.name,
 								app_id: binding.app_id,
@@ -338,6 +355,12 @@ export function mapWorkerMetadataBindings(
 							},
 						];
 						break;
+					case "k2":
+						configObj.k2 = [
+							...(configObj.k2 ?? []),
+							{ binding: binding.name, stream: binding.stream },
+						];
+						break;
 					case "assets":
 						configObj.assets = {
 							binding: binding.name,
@@ -414,6 +437,18 @@ export function mapWorkerMetadataBindings(
 									{ binding: binding.name, network_id: binding.network_id },
 								];
 							}
+						}
+						break;
+					case "oidc_token":
+						{
+							configObj.oidc_tokens = [
+								...(configObj.oidc_tokens ?? []),
+								{
+									binding: binding.name,
+									audience: binding.audience,
+									...(binding.alg !== undefined && { alg: binding.alg }),
+								},
+							];
 						}
 						break;
 					default: {

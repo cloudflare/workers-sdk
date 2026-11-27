@@ -81,11 +81,12 @@ describe("wrangler", () => {
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
-				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
+				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [open beta]
+				  wrangler basin                  🏞️ Manage Basin products
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler k2                     ⛰️ Manage K2 streams [open beta]
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
-				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
 				  wrangler vectorize              🧮 Manage Vectorize indexes
@@ -182,11 +183,12 @@ describe("wrangler", () => {
 				  wrangler workflows              🔁 Manage Workflows
 
 				STORAGE & DATABASES
-				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [private beta]
+				  wrangler artifacts              🧱 Manage Artifacts namespaces and repos [open beta]
+				  wrangler basin                  🏞️ Manage Basin products
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler k2                     ⛰️ Manage K2 streams [open beta]
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
-				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
 				  wrangler vectorize              🧮 Manage Vectorize indexes
@@ -539,7 +541,6 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler r2 object  Manage R2 objects
 				  wrangler r2 bucket  Manage R2 buckets
-				  wrangler r2 sql     Send queries and manage R2 SQL [open beta]
 
 				GLOBAL FLAGS
 				  -c, --config          Path to Wrangler configuration file  [string]

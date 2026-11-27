@@ -11,14 +11,18 @@ export default defineConfig({
 		},
 	},
 	environments: {
-		worker: {
+		ssr: {
 			optimizeDeps: {
 				exclude: ["@playground/module-resolution-excludes"],
 			},
 		},
 	},
 	plugins: [
-		cloudflare({ inspectorPort: false, persistState: false }),
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
 		testDepPlugin(),
 	],
 });

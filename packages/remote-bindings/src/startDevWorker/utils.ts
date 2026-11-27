@@ -8,6 +8,16 @@ import type { Hook, HookValues } from "@cloudflare/workers-utils";
  */
 export const PREVIEW_TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
 
+/**
+ * How soon to try again after a proactive preview token refresh fails (e.g.
+ * the machine is offline). A failed refresh must not give up the retry cycle
+ * for good — otherwise a network outage longer than the API's own few quick
+ * retries (see `retryOnAPIFailure`) permanently strands the session even
+ * after connectivity returns, since nothing else re-triggers a refresh
+ * attempt for a long-lived session like `getPlatformProxy()`'s.
+ */
+export const PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL = 60 * 1000;
+
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {
 	promise: Promise<T>;

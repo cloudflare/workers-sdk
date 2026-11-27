@@ -28,7 +28,12 @@ export type Socket = {
 	name?: string;
 	address?: string;
 	service?: ServiceDesignator;
-} & ({ http?: HttpOptions } | { https?: Socket_Https } | { tcp?: Socket_Tcp });
+} & (
+	| { http?: HttpOptions }
+	| { https?: Socket_Https }
+	| { tcp?: Socket_Tcp }
+	| { udp?: Socket_Udp }
+);
 
 export interface Socket_Https {
 	options?: HttpOptions;
@@ -37,6 +42,11 @@ export interface Socket_Https {
 
 export interface Socket_Tcp {
 	tlsOptions?: TlsOptions;
+}
+
+export interface Socket_Udp {
+	idleTimeoutMs?: number;
+	maxPendingBytes?: number;
 }
 
 export type Service = {
@@ -57,6 +67,7 @@ export interface ServiceDesignator {
 export type Worker_DockerConfiguration = {
 	socketPath: string;
 	containerEgressInterceptorImage?: string;
+	sessionId?: string;
 };
 
 export type Worker_ContainerEngine = {
@@ -82,7 +93,19 @@ export type Worker = (
 	containerEngine?: Worker_ContainerEngine;
 	accessBlobHeader?: string;
 	accessBindingService?: ServiceDesignator;
+	workflowsEngine?: WorkflowsEngine;
 };
+
+export interface WorkflowsEngine {
+	actorClass?: ServiceDesignator;
+	workflows?: WorkflowsEngine_Workflow[];
+}
+
+export interface WorkflowsEngine_Workflow {
+	className?: string;
+	name?: string;
+	bindingService?: ServiceDesignator;
+}
 
 export type Worker_DurableObjectStorage =
 	| { none?: Void }

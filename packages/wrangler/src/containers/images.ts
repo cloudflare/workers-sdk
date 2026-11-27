@@ -13,7 +13,7 @@ import { logger } from "../logger";
 import { getOrSelectAccountId } from "../user";
 import { containersScope } from ".";
 import type { ContainerImageRepository } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 // --- Namespace definition ---
 
@@ -34,6 +34,7 @@ export const containersImagesListCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
@@ -60,6 +61,7 @@ export const containersImagesDeleteCommand = createCommand({
 		owner: "Product: Cloudchamber",
 	},
 	behaviour: {
+		supportTemporary: true,
 		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {

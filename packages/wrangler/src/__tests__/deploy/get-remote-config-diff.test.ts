@@ -1,6 +1,6 @@
 import { assert, describe, it } from "vitest";
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
+import type { Config, RawConfig } from "@cloudflare/workers-utils/config";
 
 function normalizeDiff(log: string): string {
 	let normalizedLog = log;

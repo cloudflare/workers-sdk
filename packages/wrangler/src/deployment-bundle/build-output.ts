@@ -8,21 +8,21 @@ import {
 import { UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
-	ParsedInputWorkerConfig,
-	ParsedOutputWorkerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputWorkerConfig,
 } from "@cloudflare/config";
 import type { WorkerBuildResult } from "@cloudflare/deploy-helpers";
 import type { AssetsOptions, CfModuleType } from "@cloudflare/workers-utils";
 
 interface WriteWorkerOutputArgs {
 	root: string;
-	workerConfig: ParsedInputWorkerConfig;
+	workerConfig: ParsedWorkerConfig;
 	buildResult: WorkerBuildResult | undefined;
 	assetsOptions: AssetsOptions | undefined;
 }
 
 /**
- * Write the Worker's `.cloudflare/output/v0/workers/default/` directory
+ * Write the Worker's `.cloudflare/output/v1/workers/default/` directory
  * tree from an in-memory `WorkerBuildResult` and `AssetsOptions`.
  */
 export async function writeWorkerOutput({
@@ -56,12 +56,13 @@ async function writeBundle({
 }: {
 	root: string;
 	buildResult: WorkerBuildResult;
-}): Promise<ParsedOutputWorkerConfig["manifest"]> {
+}): Promise<ParsedBuildOutputWorkerConfig["manifest"]> {
 	const bundleDir = getWorkerBundleDir(root);
 	await fsp.mkdir(bundleDir, { recursive: true });
 
-	const modules: NonNullable<ParsedOutputWorkerConfig["manifest"]>["modules"] =
-		{};
+	const modules: NonNullable<
+		ParsedBuildOutputWorkerConfig["manifest"]
+	>["modules"] = {};
 
 	// Entry module
 	const entryKey = stripLeadingDotSlash(
@@ -80,9 +81,10 @@ async function writeBundle({
 	}
 
 	// Source maps. `buildResult.sourceMaps` is already gated by
-	// `uploadSourceMaps` inside `buildWorker` (undefined when off) and
+	// `uploadSourceMaps` inside `buildWorker` (undefined when explicitly off) and
 	// contains the main module's map plus any module maps, each named
-	// `<module>.map` (e.g. `index.js.map`).
+	// `<module>.map` (e.g. `index.js.map`). `buildWorker` makes their `sources`
+	// relative to their location in the bundle directory.
 	for (const sourceMap of buildResult.sourceMaps ?? []) {
 		const key = stripLeadingDotSlash(sourceMap.name);
 		await writeBundleFile(bundleDir, key, sourceMap.content);

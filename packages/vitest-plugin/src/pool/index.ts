@@ -1,18 +1,13 @@
 import assert from "node:assert";
-import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import util from "node:util";
-import {
-	DEFAULT_COMPAT_DATE,
-	isNodejsCompatDefaultOn,
-} from "@cloudflare/workers-utils";
+import { isNodejsCompatDefaultOn } from "@cloudflare/workers-utils";
+import { getNodeCompat } from "@cloudflare/workers-utils/node-compat";
 import * as devalue from "devalue";
 import getPort, { portNumbers } from "get-port";
 import {
-	convertV4MiniflareOptions,
-	getNodeCompat,
 	kCurrentWorker,
 	kUnsafeEphemeralUniqueKey,
 	Log,
@@ -22,6 +17,7 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "miniflare";
+import semverMajor from "semver/functions/major.js";
 import semverSatisfies from "semver/functions/satisfies.js";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { guessWorkerExports } from "./guess-exports";
@@ -31,18 +27,14 @@ import {
 	isFileNotFoundError,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
-import { handleLoopbackRequest } from "./loopback";
+import { createLoopbackHandler } from "./loopback";
+import { waitForMiniflareReady } from "./miniflare-startup";
 import { handleModuleFallbackRequest } from "./module-fallback";
-import type {
-	SourcelessWorkerOptions,
-	WorkersPoolOptions,
-	WorkersPoolOptionsWithDefines,
-} from "./config";
+import type { ProjectWorkers, WorkersPoolOptionsWithDefines } from "./config";
 import type {
 	MiniflareOptions,
-	LegacyWorkerOptions,
-	V4MiniflareOptions,
 	WorkerdStructuredLog,
+	WorkerOptions,
 } from "miniflare";
 import type { TestProject, Vitest } from "vitest/node";
 
@@ -112,52 +104,7 @@ function handleStructuredLogs({ level, message }: WorkerdStructuredLog): void {
 	}
 }
 
-export function getRunnerName(project: TestProject, testFile?: string) {
-	const name = `${WORKER_NAME_PREFIX}runner-${project.name.replace(
-		/[^a-z0-9-]/gi,
-		"_"
-	)}`;
-	if (testFile === undefined) {
-		return name;
-	}
-	const testFileHash = crypto.createHash("sha1").update(testFile).digest("hex");
-	testFile = testFile.replace(/[^a-z0-9-]/gi, "_");
-	return `${name}-${testFileHash}-${testFile}`;
-}
-
-function isDurableObjectDesignatorToSelf(
-	value: unknown
-): value is string | { className: string } {
-	// Either this is a simple `string` designator to the current worker...
-	if (typeof value === "string") {
-		return true;
-	}
-	// ...or it's an object designator without a `scriptName`. We're assuming the
-	// user isn't able to guess the current worker name, so if a `scriptName` is
-	// set, the designator is definitely for another worker.
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"className" in value &&
-		typeof value.className === "string" &&
-		(!("scriptName" in value) || value.scriptName === undefined)
-	);
-}
-
-function isWorkflowDesignatorToSelf(
-	value: unknown,
-	currentScriptName: string | undefined
-): value is { className: string } {
-	return (
-		typeof value === "object" &&
-		value !== null &&
-		"className" in value &&
-		typeof value.className === "string" &&
-		(!("scriptName" in value) ||
-			value.scriptName === undefined ||
-			value.scriptName === currentScriptName)
-	);
-}
+export { getRunnerName } from "./helpers";
 
 interface DurableObjectDesignator {
 	className: string;
@@ -165,33 +112,59 @@ interface DurableObjectDesignator {
 	unsafeUniqueKey?: string;
 }
 /**
- * Returns a map of Durable Objects bindings' bound names to the designators of
- * the objects they point to.
+ * Returns a map of the runner's Durable Object bindings' bound names to the
+ * designators of the objects they point to. Durable Objects the runner exports
+ * without a binding are included by class name, so their stubs from `exports`
+ * work with the test helpers.
+ *
+ * @param options The project's parsed pool options.
+ * @returns The designators, keyed by bound name or class name.
  */
 export function getDurableObjectDesignators(
-	options: WorkersPoolOptions
+	options: WorkersPoolOptionsWithDefines
 ): Map<string /* bound name */, DurableObjectDesignator> {
 	const result = new Map<string, DurableObjectDesignator>();
-	const durableObjects = options.miniflare?.durableObjects ?? {};
-	for (const [key, designator] of Object.entries(durableObjects)) {
-		if (typeof designator === "string") {
-			result.set(key, { className: designator });
-		} else if (typeof designator.unsafeUniqueKey !== "symbol") {
-			result.set(key, {
-				className: designator.className,
-				scriptName: designator.scriptName,
-				unsafeUniqueKey: designator.unsafeUniqueKey,
-			});
-		}
+	const runner = options.projectWorkers?.[0];
+	if (runner === undefined) {
+		return result;
 	}
-
-	for (const unboundDurableObject of options.miniflare
-		?.additionalUnboundDurableObjects ?? []) {
-		if (typeof unboundDurableObject.unsafeUniqueKey !== "symbol") {
-			result.set(unboundDurableObject.className, {
-				className: unboundDurableObject.className,
-				scriptName: unboundDurableObject.scriptName,
-				unsafeUniqueKey: unboundDurableObject.unsafeUniqueKey,
+	const runnerExports = runner.config.exports ?? {};
+	const getUniqueKey = (className: string) => {
+		const exported = runnerExports[className];
+		return exported?.type === "durable-object" &&
+			"unsafeUniqueKey" in exported &&
+			typeof exported.unsafeUniqueKey === "string"
+			? exported.unsafeUniqueKey
+			: undefined;
+	};
+	const boundClassNames = new Set<string>();
+	for (const [key, binding] of Object.entries(runner.config.env ?? {})) {
+		if (binding.type !== "durable-object" || key === RUNNER_OBJECT_BINDING) {
+			continue;
+		}
+		const isRunnerObject = binding.worker === runner.config.name;
+		if (isRunnerObject) {
+			boundClassNames.add(binding.exportName);
+		}
+		result.set(key, {
+			className: binding.exportName,
+			scriptName: isRunnerObject ? undefined : String(binding.worker),
+			unsafeUniqueKey: isRunnerObject
+				? getUniqueKey(binding.exportName)
+				: undefined,
+		});
+	}
+	for (const [name, exported] of Object.entries(runnerExports)) {
+		if (
+			exported.type === "durable-object" &&
+			"storage" in exported &&
+			typeof exported.unsafeUniqueKey !== "symbol" &&
+			!boundClassNames.has(name) &&
+			!result.has(name)
+		) {
+			result.set(name, {
+				className: name,
+				unsafeUniqueKey: getUniqueKey(name),
 			});
 		}
 	}
@@ -202,98 +175,59 @@ export function getDurableObjectDesignators(
  * Gets a set of Durable Object class names for the SELF Worker.
  *
  * This is calculated from the Durable Object bindings that point to SELF as well as the
- * unbound Durable Objects that only have migrations defined.
+ * Durable Objects it exports, which may not have bindings.
  */
-function getDurableObjectClasses(worker: SourcelessWorkerOptions): Set<string> {
+function getDurableObjectClasses(worker: WorkerOptions["config"]): Set<string> {
 	// TODO(someday): may need to extend this to take into account other workers
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
 	const result = new Set<string>();
 
 	// Get all the Durable Object class names from bindings to the SELF Worker.
-	for (const designator of Object.values(worker.durableObjects ?? {})) {
-		if (isDurableObjectDesignatorToSelf(designator)) {
-			result.add(
-				typeof designator === "string" ? designator : designator.className
-			);
+	for (const binding of Object.values(worker.env ?? {})) {
+		if (binding.type === "durable-object" && binding.worker === worker.name) {
+			result.add(binding.exportName);
 		}
 	}
 
-	// And all the Durable Object class names that may not have bindings but have migrations.
-	for (const designator of worker.additionalUnboundDurableObjects ?? []) {
-		result.add(designator.className);
+	// And all the Durable Object class names it exports, which may not have bindings.
+	for (const [name, exported] of Object.entries(worker.exports ?? {})) {
+		if (exported.type === "durable-object" && "storage" in exported) {
+			result.add(name);
+		}
 	}
 
 	return result;
 }
 
 /**
- * Gets a set of class names for Workflows defined in the SELF Worker.
+ * Gets a set of class names for Workflows defined in the SELF Worker, either
+ * declared in its `exports` or bound to it.
  */
-function getWorkflowClasses(
-	worker: SourcelessWorkerOptions,
-	configWorkerName: string | undefined
-): Set<string> {
+function getWorkflowClasses(worker: WorkerOptions["config"]): Set<string> {
 	// TODO(someday): may need to extend this to take into account other workers
 	//  if doing multi-worker tests across workspace projects
 	// TODO(someday): may want to validate class names are valid identifiers?
 	const result = new Set<string>();
-	if (worker.workflows === undefined) {
-		return result;
-	}
-	for (const key of Object.keys(worker.workflows)) {
-		const designator = worker.workflows[key];
-
-		let workerName: string | undefined;
-		// If the designator's scriptName matches its own Worker name,
-		// use that as the worker name, otherwise use the vitest worker's name
-		if (configWorkerName && designator.scriptName === configWorkerName) {
-			workerName = configWorkerName;
-		} else {
-			workerName = worker.name;
+	for (const [name, exported] of Object.entries(worker.exports ?? {})) {
+		if (exported.type === "workflow") {
+			result.add(name);
 		}
-
-		// `designator` hasn't been validated at this point
-		if (isWorkflowDesignatorToSelf(designator, workerName)) {
-			result.add(designator.className);
-			// Shallow clone to avoid mutating config
-			worker.workflows[key] = { ...designator };
+	}
+	for (const binding of Object.values(worker.env ?? {})) {
+		if (binding.type === "workflow" && binding.worker === worker.name) {
+			result.add(binding.exportName);
 		}
 	}
 	return result;
 }
 
-type ProjectWorkers = [
-	runnerWorker: LegacyWorkerOptions,
-	...auxiliaryWorkers: LegacyWorkerOptions[],
-];
-
 const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
-function rewriteStreamingTailSelfReferences(
-	worker: LegacyWorkerOptions,
-	configWorkerName: string,
-	runnerWorkerName: string
-) {
-	worker.streamingTails = worker.streamingTails?.map((tail) => {
-		if (tail === configWorkerName) {
-			return runnerWorkerName;
-		}
-		if (
-			typeof tail === "object" &&
-			tail !== null &&
-			"name" in tail &&
-			tail.name === configWorkerName
-		) {
-			return { ...tail, name: runnerWorkerName };
-		}
-		return tail;
-	});
-}
-
 async function buildProjectWorkerOptions(
+	ctx: Vitest,
 	project: TestProject,
 	customOptions: WorkersPoolOptionsWithDefines,
 	main: string | undefined
@@ -302,29 +236,10 @@ async function buildProjectWorkerOptions(
 		(v) => path.relative("", v),
 		customOptions.resolvedConfig?.path
 	);
-	const runnerWorker = customOptions.miniflare ?? {};
-
-	// `unstable_getMiniflareWorkerOptions` returns service bindings whose `name`
-	// is the literal `config.name` for self-references (e.g. `{ name: "my-worker" }`
-	// when the config has `name: "my-worker"`). We rename the runner worker below,
-	// so rewrite those self-references to `kCurrentWorker` first. That symbol
-	// resolves at request time relative to the referer worker, so it survives the
-	// rename.
-	const configWorkerName = customOptions.resolvedConfig?.workerName;
-	if (configWorkerName && runnerWorker.serviceBindings) {
-		for (const [key, sb] of Object.entries(runnerWorker.serviceBindings)) {
-			if (
-				typeof sb === "object" &&
-				sb !== null &&
-				"name" in sb &&
-				sb.name === configWorkerName
-			) {
-				runnerWorker.serviceBindings[key] = { ...sb, name: kCurrentWorker };
-			}
-		}
-	}
-
-	runnerWorker.name = getRunnerName(project);
+	// The Worker under test and the auxiliary Workers are resolved while parsing
+	assert(customOptions.projectWorkers !== undefined);
+	const [userWorker, ...auxiliaryWorkers] = customOptions.projectWorkers;
+	const runnerWorker = userWorker.config;
 
 	// Make sure the worker has the `nodejs_compat` and `export_commonjs_default`
 	// compatibility flags enabled. Vitest makes heavy use of Node APIs, and many
@@ -342,16 +257,6 @@ async function buildProjectWorkerOptions(
 	runnerWorker.compatibilityFlags.push(
 		"no_handle_cross_request_promise_resolution"
 	);
-
-	if (runnerWorker.compatibilityDate === undefined) {
-		// No compatibility date was provided, so use the default
-		runnerWorker.compatibilityDate = DEFAULT_COMPAT_DATE;
-		debug(
-			"No compatibility date was provided for project %s, defaulting to %s.",
-			getRelativeProjectPath(project),
-			runnerWorker.compatibilityDate
-		);
-	}
 
 	const flagAssertions = new CompatibilityFlagAssertions({
 		compatibilityDate: runnerWorker.compatibilityDate,
@@ -412,21 +317,62 @@ async function buildProjectWorkerOptions(
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_v8_module");
 	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_process_v2");
 
+	const vitestMajorVersion = semverMajor(getVitestVersion(ctx));
+	if (vitestMajorVersion >= 5) {
+		// Vitest 5's spy package constructs a FinalizationRegistry when imported
+		// and a WeakRef for every mock. Workerd gates both APIs behind this flag.
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"weak_ref",
+			"to support Vitest 5",
+			runnerWorker.compatibilityDate >= "2025-05-05"
+		);
+	}
+	// The Worker cannot read the host's installed Vitest version, so pass it
+	// explicitly for its runner and coverage setup.
+	runnerWorker.env ??= {};
+	runnerWorker.env.__VITEST_POOL_WORKERS_VITEST_MAJOR_VERSION = {
+		type: "text",
+		value: String(vitestMajorVersion),
+	};
+
+	// V8 coverage drives the isolate's Profiler domain through node:inspector.
+	// The real Session implementation is intentionally local-dev-only.
+	const { coverage } = project.serializedConfig;
+	if (coverage.enabled && coverage.provider === "v8") {
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"nodejs_inspector_module",
+			'because Vitest\'s `coverage.provider` is set to `"v8"`'
+		);
+		ensureFeature(
+			runnerWorker.compatibilityFlags,
+			"nodejs_inspector_local_dev",
+			'because Vitest\'s `coverage.provider` is set to `"v8"`'
+		);
+	}
+
 	// Make sure we define an unsafe eval binding and enable the fallback service
-	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
-	runnerWorker.unsafeUseModuleFallbackService = true;
+	userWorker.dev ??= {};
+	userWorker.dev.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
+	userWorker.dev.useModuleFallbackService = true;
 
 	// Make sure we define our self/loopback service bindings for helpers
-	runnerWorker.serviceBindings ??= {};
-	runnerWorker.serviceBindings[SELF_SERVICE_BINDING] = kCurrentWorker;
-	runnerWorker.serviceBindings[LOOPBACK_SERVICE_BINDING] =
-		handleLoopbackRequest;
+	runnerWorker.env[SELF_SERVICE_BINDING] = {
+		type: "worker",
+		worker: kCurrentWorker,
+	};
+	runnerWorker.env[LOOPBACK_SERVICE_BINDING] = {
+		type: "fetcher",
+		handler: createLoopbackHandler(
+			project.serializedConfig.coverage.coverageFilesDirectory
+		),
+	};
 
 	// Build wrappers for entrypoints and Durable Objects defined in this worker
-	runnerWorker.durableObjects ??= {};
 	const durableObjectClassNames = getDurableObjectClasses(runnerWorker);
 
-	const workflowClassNames = getWorkflowClasses(runnerWorker, configWorkerName);
+	const workflowClassNames = getWorkflowClasses(runnerWorker);
 
 	const selfWorkerExports: string[] = [];
 	if (
@@ -496,8 +442,15 @@ async function buildProjectWorkerOptions(
 	// because the runner doesn't need persistent state, and all disk-backed DOs
 	// hit a workerd bug on Windows where SQLite paths use Unix-style forward
 	// slashes (cloudflare/workerd#6110).
-	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
-		className: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__",
+	runnerWorker.env[RUNNER_OBJECT_BINDING] = {
+		type: "durable-object",
+		worker: runnerWorker.name,
+		exportName: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__",
+	};
+	runnerWorker.exports ??= {};
+	runnerWorker.exports.__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ = {
+		type: "durable-object",
+		storage: "legacy-kv",
 		unsafePreventEviction: true,
 		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 	};
@@ -514,109 +467,50 @@ async function buildProjectWorkerOptions(
 	};
 	`;
 
-	// Make sure we define the runner script, including object wrappers & defines
-	if ("script" in runnerWorker) {
-		delete runnerWorker.script;
-	}
-	if ("scriptPath" in runnerWorker) {
-		delete runnerWorker.scriptPath;
-	}
-
 	// We want module names to be their absolute path without the leading	slash
 	// (i.e. the modules root should be the root directory). On Windows, we'd
 	// like paths to include the drive letter (i.e. `/C:/a/b/c/index.mjs`).
-	// Internally, Miniflare uses `path.relative(modulesRoot, path)` to compute
-	// module names. Setting `modulesRoot` to a drive letter and prepending this
-	// to paths ensures correct names. This requires us to specify `contents`
-	// with module definitions though, as the new paths don't exist.
 	// TODO: add source URL comments to injected modules for better stack traces
 	const modulesRoot = process.platform === "win32" ? "Z:\\" : "/";
-	runnerWorker.modulesRoot = modulesRoot;
 
-	runnerWorker.modules = [
-		{
-			type: "ESModule",
-			path: path.join(modulesRoot, "index.mjs"),
-			contents: fs.readFileSync(POOL_WORKER_PATH),
+	runnerWorker.manifest = {
+		mainModule: "index.mjs",
+		modulesRoot,
+		modules: {
+			"index.mjs": {
+				type: "esm",
+				contents: fs.readFileSync(POOL_WORKER_PATH),
+			},
+			__VITEST_POOL_WORKERS_USER_OBJECT: {
+				type: "esm",
+				contents: wrappers.join("\n"),
+			},
+			__VITEST_POOL_WORKERS_DEFINES: { type: "esm", contents: defines },
+			// The native workerd provided nodejs modules don't always support everything Vitest needs.
+			// As a short-term fix, inject polyfills into the worker bundle that override the native modules.
+			"node:console": {
+				type: "esm",
+				contents: fs.readFileSync(
+					path.join(DIST_PATH, `worker/node/console.mjs`)
+				),
+			},
+			"node:vm": {
+				type: "esm",
+				contents: fs.readFileSync(path.join(DIST_PATH, `worker/node/vm.mjs`)),
+			},
 		},
-		{
-			type: "ESModule",
-			path: path.join(modulesRoot, "__VITEST_POOL_WORKERS_USER_OBJECT"),
-			contents: wrappers.join("\n"),
-		},
-		{
-			type: "ESModule",
-			path: path.join(modulesRoot, "__VITEST_POOL_WORKERS_DEFINES"),
-			contents: defines,
-		},
-		// The native workerd provided nodejs modules don't always support everything Vitest needs.
-		// As a short-term fix, inject polyfills into the worker bundle that override the native modules.
-		{
-			type: "ESModule",
-			path: path.join(modulesRoot, "node:console"),
-			contents: fs.readFileSync(
-				path.join(DIST_PATH, `worker/node/console.mjs`)
-			),
-		},
-		{
-			type: "ESModule",
-			path: path.join(modulesRoot, "node:vm"),
-			contents: fs.readFileSync(path.join(DIST_PATH, `worker/node/vm.mjs`)),
-		},
-	];
+	};
 
-	// Build array of workers contributed by the workspace
-	const workers: ProjectWorkers = [runnerWorker as LegacyWorkerOptions];
-	if (runnerWorker.workers !== undefined) {
-		// Try to add workers defined by the user
-		for (let i = 0; i < runnerWorker.workers.length; i++) {
-			const worker: unknown = runnerWorker.workers[i];
-			// Make sure the worker has a non-empty name...
-			if (
-				typeof worker !== "object" ||
-				worker === null ||
-				!("name" in worker) ||
-				typeof worker.name !== "string" ||
-				worker.name === ""
-			) {
-				throw new Error(
-					`In project ${getRelativeProjectPath(
-						project
-					)}, \`miniflare.workers[${i}].name\` must be non-empty`
-				);
-			}
-			// ...that doesn't start with our reserved prefix
-			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
-				throw new Error(
-					`In project ${getRelativeProjectPath(
-						project
-					)}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${
-						worker.name
-					}`
-				);
-			}
-
-			// Miniflare will validate these options
-			const workerOptions = worker as LegacyWorkerOptions;
-			if (configWorkerName) {
-				rewriteStreamingTailSelfReferences(
-					workerOptions,
-					configWorkerName,
-					runnerWorker.name
-				);
-			}
-			workers.push(workerOptions);
-		}
-		delete runnerWorker.workers;
-	}
-
-	return workers;
+	return [userWorker, ...auxiliaryWorkers];
 }
 
 const SHARED_MINIFLARE_OPTIONS = {
 	log: mfLog,
 	handleStructuredLogs,
-} satisfies Partial<V4MiniflareOptions>;
+	// Keep test runs out of the dev registry, as converting V4 options did, so
+	// they don't exchange calls or queue messages with `wrangler dev` sessions
+	enableDevRegistry: false,
+} satisfies Partial<MiniflareOptions>;
 
 const DEFAULT_INSPECTOR_PORT = 9229;
 
@@ -625,7 +519,7 @@ function getFirstAvailablePort(start: number): Promise<number> {
 }
 
 type ModuleFallbackService = NonNullable<
-	V4MiniflareOptions["unsafeModuleFallbackService"]
+	MiniflareOptions["unsafeModuleFallbackService"]
 >;
 // Reuse the same bound module fallback service when constructing Miniflare
 // options, so deep equality checks succeed
@@ -647,18 +541,19 @@ function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 async function buildProjectMiniflareOptions(
 	ctx: Vitest,
 	project: TestProject,
-	customOptions: WorkersPoolOptions,
+	customOptions: WorkersPoolOptionsWithDefines,
 	main: string | undefined
 ): Promise<MiniflareOptions> {
 	const moduleFallbackService = getModuleFallbackService(ctx);
 	const [runnerWorker, ...auxiliaryWorkers] = await buildProjectWorkerOptions(
+		ctx,
 		project,
 		customOptions,
 		main
 	);
 
-	assert(runnerWorker.name !== undefined);
-	assert(runnerWorker.name.startsWith(WORKER_NAME_PREFIX));
+	assert(runnerWorker.config.name !== undefined);
+	assert(runnerWorker.config.name.startsWith(WORKER_NAME_PREFIX));
 
 	let inspectorPort: number | undefined;
 	if (ctx.config.inspector.enabled) {
@@ -682,16 +577,16 @@ async function buildProjectMiniflareOptions(
 		}
 	}
 
-	const options = {
+	return {
 		...SHARED_MINIFLARE_OPTIONS,
 		verbose: customOptions.verbose ?? true,
 		inspectorPort,
+		containerEngine: customOptions.containerEngine,
 		unsafeModuleFallbackService: moduleFallbackService,
 		workers: [runnerWorker, ...auxiliaryWorkers],
-	} satisfies V4MiniflareOptions;
-
-	return convertV4MiniflareOptions(options);
+	};
 }
+
 export async function getProjectMiniflare(
 	ctx: Vitest,
 	project: TestProject,
@@ -710,9 +605,7 @@ export async function getProjectMiniflare(
 			`Starting inspector on port ${mfOptions.inspectorPort} for ${getRelativeProjectPath(project)}`
 		);
 	}
-	const mf = new Miniflare(mfOptions);
-	await mf.ready;
-	return mf;
+	return waitForMiniflareReady(new Miniflare(mfOptions));
 }
 
 export function maybeGetResolvedMainPath(
@@ -806,26 +699,12 @@ function getUpstreamVitestVersion(pkgJson: PackageJson): string | undefined {
 	return pkgJson.bundledVersions?.vitest;
 }
 
-export function assertCompatibleVitestVersion(ctx: Vitest) {
-	// Some package managers don't enforce `peerDependencies` requirements,
-	// so add a runtime sanity check to ensure things don't break in strange ways.
-	const poolPkgJson = getPackageJson(__dirname);
+function getVitestVersion(ctx: Vitest): string {
 	const vitestPkgJson = getPackageJson(ctx.distPath);
-	assert(
-		poolPkgJson !== undefined,
-		"Expected to find `package.json` for `@cloudflare/vitest-plugin`"
-	);
 	assert(
 		vitestPkgJson !== undefined,
 		"Expected to find `package.json` for `vitest`"
 	);
-
-	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
-	assert(
-		expectedVitestVersion !== undefined,
-		"Expected to find `@cloudflare/vitest-plugin`'s `vitest` version constraint"
-	);
-
 	const actualVitestVersion =
 		vitestPkgJson.name === "vitest"
 			? vitestPkgJson.version
@@ -834,6 +713,25 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
 		actualVitestVersion !== undefined,
 		"Expected to find `vitest`'s version"
 	);
+	return actualVitestVersion;
+}
+
+export function assertCompatibleVitestVersion(ctx: Vitest) {
+	// Some package managers don't enforce `peerDependencies` requirements,
+	// so add a runtime sanity check to ensure things don't break in strange ways.
+	const poolPkgJson = getPackageJson(__dirname);
+	assert(
+		poolPkgJson !== undefined,
+		"Expected to find `package.json` for `@cloudflare/vitest-plugin`"
+	);
+
+	const expectedVitestVersion = poolPkgJson.peerDependencies?.vitest;
+	assert(
+		expectedVitestVersion !== undefined,
+		"Expected to find `@cloudflare/vitest-plugin`'s `vitest` version constraint"
+	);
+
+	const actualVitestVersion = getVitestVersion(ctx);
 
 	// Hard error on Vitest v3, which definitely won't work
 	if (semverSatisfies(actualVitestVersion, "3.x")) {
@@ -855,20 +753,29 @@ export function assertCompatibleVitestVersion(ctx: Vitest) {
  * Ensures that the specified compatibility feature is enabled for Vitest to work.
  * @param compatibilityFlags The list of current compatibility flags.
  * @param feature The name of the feature to enable.
+ * @param reason An optional explanation of why the feature is needed.
+ * @param enabledByDefault Whether the compatibility date enables this feature.
+ * @returns Nothing.
  */
-function ensureFeature(compatibilityFlags: string[], feature: string) {
+function ensureFeature(
+	compatibilityFlags: string[],
+	feature: string,
+	reason = "to support the Vitest runner",
+	enabledByDefault = false
+): void {
 	const flagToEnable = `enable_${feature}`;
 	const flagToDisable = `disable_${feature}`;
-	if (!compatibilityFlags.includes(flagToEnable)) {
+	if (!enabledByDefault && !compatibilityFlags.includes(flagToEnable)) {
 		debug(
-			"Adding `%s` compatibility flag during tests as this feature is needed to support the Vitest runner.",
-			flagToEnable
+			"Adding `%s` compatibility flag during tests as this feature is needed %s.",
+			flagToEnable,
+			reason
 		);
 		compatibilityFlags.push(flagToEnable);
 	}
 	if (compatibilityFlags.includes(flagToDisable)) {
 		log.warn(
-			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
+			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed ${reason}.`
 		);
 		compatibilityFlags.splice(compatibilityFlags.indexOf(flagToDisable), 1);
 	}

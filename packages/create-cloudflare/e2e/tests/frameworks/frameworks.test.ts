@@ -3,8 +3,10 @@ import { cp } from "node:fs/promises";
 import { join } from "node:path";
 import { beforeAll, describe } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
+import { usesCfCli } from "../../../src/cf/config";
 import {
 	frameworkToTestFilter,
+	frameworkTestShard,
 	isExperimental,
 	TEST_TIMEOUT,
 	testRetries,
@@ -22,12 +24,23 @@ import {
 	verifyPreviewScript,
 	verifyTypes,
 } from "../../helpers/framework-helpers";
+import {
+	getFrameworkTestRetries,
+	selectFrameworkTests,
+} from "../../helpers/framework-shard";
 import { test } from "../../helpers/index";
 import { recreateLogFolder } from "../../helpers/log-stream";
 import { getFrameworksTests } from "./test-config";
 import type { RunnerTestSuite } from "vitest";
 
-const frameworkTests = getFrameworksTests();
+const allFrameworkTests = getFrameworksTests();
+const frameworkTests = selectFrameworkTests(
+	// Balance runnable cases; quarantined and unsupported cases consume no time.
+	frameworkTestShard === undefined
+		? allFrameworkTests
+		: allFrameworkTests.filter(shouldRunTest),
+	frameworkTestShard
+);
 
 describe
 	.skipIf(frameworkTests.length === 0)
@@ -66,7 +79,7 @@ describe
 					variantLabel ? ` [${variantLabel}]` : ""
 				}`,
 				{
-					retry: testRetries,
+					retry: getFrameworkTestRetries(testConfig.retry, testRetries),
 					timeout: testConfig.timeout || TEST_TIMEOUT,
 				},
 				async ({ expect, logStream, project }) => {
@@ -101,9 +114,9 @@ describe
 						const pkgJsonPath = join(project.path, "package.json");
 						expect(pkgJsonPath).toExist();
 
-						// Wrangler should be installed
-						const wranglerPath = join(project.path, "node_modules/wrangler");
-						expect(wranglerPath).toExist();
+						// The project's Cloudflare CLI should be installed
+						const cliPackage = usesCfCli(project.path) ? "cf" : "wrangler";
+						expect(join(project.path, "node_modules", cliPackage)).toExist();
 
 						await addTestVarsToWranglerToml(project.path);
 

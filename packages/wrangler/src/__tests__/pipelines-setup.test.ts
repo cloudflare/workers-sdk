@@ -1097,7 +1097,7 @@ describe("wrangler pipelines setup", () => {
 
 				  Stream and sink were created, but pipeline creation failed.
 
-				  You can create the pipeline later with: wrangler pipelines create
+				  You can create the pipeline later with: wrangler basin pipelines create
 				  Your stream "test_pipeline_stream" and sink "test_pipeline_sink" are ready."
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1194,7 +1194,7 @@ describe("wrangler pipelines setup", () => {
 		});
 	});
 
-	describe("Data Catalog sink configuration", () => {
+	describe("Basin Catalog sink configuration", () => {
 		it("enables catalog when not already enabled", async ({ expect }) => {
 			setIsTTY(true);
 
@@ -1255,7 +1255,7 @@ describe("wrangler pipelines setup", () => {
 				`[Error: Table name - cancelled]`
 			);
 
-			expect(std.out).toContain("Data Catalog already enabled");
+			expect(std.out).toContain("Basin Catalog already enabled");
 		});
 
 		it("creates bucket when it does not exist", async ({ expect }) => {
@@ -1334,7 +1334,7 @@ describe("wrangler pipelines setup", () => {
 		});
 	});
 
-	describe("Advanced mode Data Catalog sink", () => {
+	describe("Advanced mode Basin Catalog sink", () => {
 		it("prompts for namespace and table name", async ({ expect }) => {
 			setIsTTY(true);
 
@@ -1366,11 +1366,11 @@ describe("wrangler pipelines setup", () => {
 				`[Error: Table name - cancelled]`
 			);
 
-			expect(std.out).toContain("Data Catalog already enabled");
+			expect(std.out).toContain("Basin Catalog already enabled");
 		});
 	});
 
-	describe("Data Catalog full flow", () => {
+	describe("Basin Catalog full flow", () => {
 		it("completes full setup from bucket to pipeline creation", async ({
 			expect,
 		}) => {
@@ -1453,7 +1453,7 @@ describe("wrangler pipelines setup", () => {
 				            HTTP enabled, unstructured
 
 				  Sink      test_pipeline_sink
-				            Data Catalog → default/events
+				            Basin Catalog → default/events
 
 				 done
 				 done

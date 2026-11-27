@@ -1,10 +1,9 @@
 import path from "node:path";
+import { DEFAULT_COMPAT_DATE, UserError } from "@cloudflare/workers-utils";
 import {
 	configFileName,
-	DEFAULT_COMPAT_DATE,
 	formatConfigSnippet,
-	UserError,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import dedent from "ts-dedent";
 import { sniffUserAgent } from "../package-manager";
 import { guessWorkerFormat } from "./guess-worker-format";
@@ -15,12 +14,12 @@ import {
 	resolveEntryWithScript,
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
+import type { Entry } from "@cloudflare/workers-utils";
 import type {
 	Config,
 	DurableObjectBindings,
-	Entry,
 	RawConfig,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 /**
  * Compute the entry-point for the Worker.

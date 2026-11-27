@@ -86,7 +86,12 @@ export const runDockerCmd = (
 
 export const runDockerCmdWithOutput = (dockerPath: string, args: string[]) => {
 	try {
-		const stdout = execFileSync(dockerPath, args, { encoding: "utf8" });
+		const stdout = execFileSync(dockerPath, args, {
+			encoding: "utf8",
+			// Without an explicit `stdio`, Node echoes the child's stderr to ours.
+			// A failure still carries that stderr in the thrown error message.
+			stdio: "pipe",
+		});
 		return stdout.trim();
 	} catch (error) {
 		throw new UserError(
@@ -288,68 +293,6 @@ function getFailedToRunDockerErrorMessage({
 
 	return message;
 }
-
-/**
- * Kills and removes any containers which come from the given image tag
- */
-export const cleanupContainers = (
-	dockerPath: string,
-	imageTags: Set<string>
-) => {
-	try {
-		// Find all containers (stopped and running) for each built image
-		const containerIds = getContainerIdsByImageTags(dockerPath, imageTags);
-
-		if (containerIds.length === 0) {
-			return true;
-		}
-
-		// Workerd should have stopped all containers, but clean up any in case. Sends a sigkill.
-		runDockerCmdWithOutput(dockerPath, ["rm", "--force", ...containerIds]);
-		return true;
-	} catch {
-		return false;
-	}
-};
-
-/**
- * See https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
- *
- * @param dockerPath The path to the Docker executable
- * @param imageTags A set of ancestor image tags
- * @returns The ids of all containers that share the given image tags as ancestors.
- */
-export function getContainerIdsByImageTags(
-	dockerPath: string,
-	imageTags: Set<string>
-): string[] {
-	const ids = new Set<string>();
-
-	for (const imageTag of imageTags) {
-		const containerIdsFromImage = getContainerIdsFromImage(
-			dockerPath,
-			imageTag
-		);
-		containerIdsFromImage.forEach((id) => ids.add(id));
-	}
-
-	return Array.from(ids);
-}
-
-export const getContainerIdsFromImage = (
-	dockerPath: string,
-	ancestorImage: string
-) => {
-	const output = runDockerCmdWithOutput(dockerPath, [
-		"ps",
-		"-a",
-		"--filter",
-		`ancestor=${ancestorImage}`,
-		"--format",
-		"{{.ID}}",
-	]);
-	return output.split("\n").filter((line) => line.trim());
-};
 
 /**
  * Generates a random container build id

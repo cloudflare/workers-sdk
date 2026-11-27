@@ -37,7 +37,7 @@ async function getTmpDir() {
 
 /**
  * Stage the fixture in a temporary directory. Symlinks `node_modules` so
- * the staged cloudflare.config.ts can resolve `wrangler/experimental-config`.
+ * the staged cloudflare.config.ts can resolve `cf/config`.
  */
 async function stageFixture(): Promise<string> {
 	const tmp = await getTmpDir();

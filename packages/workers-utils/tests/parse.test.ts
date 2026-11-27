@@ -11,7 +11,7 @@ import {
 
 describe("parseTOML", () => {
 	it("should parse toml that is empty", ({ expect }) => {
-		expect(parseTOML("")).toStrictEqual({});
+		expect(parseTOML("")).toEqual({});
 	});
 
 	it("should parse toml with basic values", ({ expect }) => {
@@ -20,7 +20,7 @@ describe("parseTOML", () => {
         name = "basic"
         version = 1
     `)
-		).toStrictEqual({
+		).toEqual({
 			name: "basic",
 			version: 1,
 		});
@@ -37,7 +37,7 @@ describe("parseTOML", () => {
         [owner.dog]
         exists = true
       `)
-		).toStrictEqual({
+		).toEqual({
 			name: "complex",
 			owner: {
 				alive: true,

@@ -1,10 +1,8 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli-shared-helpers";
-import {
-	CommandLineArgsError,
-	experimental_readRawConfig,
-} from "@cloudflare/workers-utils";
+import { CommandLineArgsError } from "@cloudflare/workers-utils";
+import { experimental_readRawConfig } from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
@@ -54,6 +52,25 @@ import {
 	artifactsReposListCommand,
 	artifactsReposNamespace,
 } from "./artifacts";
+import { basinNamespace } from "./basin";
+import {
+	r2BucketCatalogAlias,
+	basinCatalogCompactionDisableCommand,
+	basinCatalogCompactionEnableCommand,
+	basinCatalogCompactionNamespace,
+	basinCatalogDisableCommand,
+	basinCatalogEnableCommand,
+	basinCatalogGetCommand,
+	basinCatalogNamespace,
+	basinCatalogSnapshotExpirationDisableCommand,
+	basinCatalogSnapshotExpirationEnableCommand,
+	basinCatalogSnapshotExpirationNamespace,
+} from "./basin/catalog";
+import {
+	r2SqlAlias,
+	basinSqlNamespace,
+	basinSqlQueryCommand,
+} from "./basin/sql";
 import {
 	browserCloseCommand,
 	browserCreateCommand,
@@ -94,7 +111,6 @@ import {
 	cloudchamberSshNamespace,
 } from "./cloudchamber";
 import { completionsCommand } from "./complete";
-import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import {
 	containersBuildCommand,
 	containersDeleteCommand,
@@ -136,13 +152,13 @@ import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
 import { deleteCommand } from "./delete";
 import { deployCommand } from "./deploy";
 import { dev } from "./dev";
+import { getDefaultEnvFiles, loadDotEnv } from "./dev/dev-vars";
 import {
 	dispatchNamespaceCreateCommand,
 	dispatchNamespaceDeleteCommand,
 	dispatchNamespaceGetCommand,
 	dispatchNamespaceListCommand,
 	dispatchNamespaceNamespace,
-	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
 import { emailRoutingAddressesCreateCommand } from "./email-routing/addresses/create";
@@ -230,6 +246,14 @@ import {
 import { hyperdriveUpdateCommand } from "./hyperdrive/update";
 import { init } from "./init";
 import {
+	k2Namespace,
+	k2StreamsNamespace,
+	k2StreamsCreateCommand,
+	k2StreamsDeleteCommand,
+	k2StreamsGetCommand,
+	k2StreamsListCommand,
+} from "./k2/commands";
+import {
 	kvBulkDeleteCommand,
 	kvBulkGetCommand,
 	kvBulkNamespace,
@@ -299,7 +323,7 @@ import {
 } from "./pages/secret";
 import { pagesProjectUploadCommand } from "./pages/upload";
 import { pagesProjectValidateCommand } from "./pages/validate";
-import { pipelinesNamespace } from "./pipelines";
+import { pipelinesAlias, basinPipelinesNamespace } from "./pipelines";
 import { pipelinesCreateCommand } from "./pipelines/cli/create";
 import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
 import { pipelinesGetCommand } from "./pipelines/cli/get";
@@ -367,18 +391,6 @@ import {
 	r2BucketUpdateStorageClassCommand,
 } from "./r2/bucket";
 import {
-	r2BucketCatalogCompactionDisableCommand,
-	r2BucketCatalogCompactionEnableCommand,
-	r2BucketCatalogCompactionNamespace,
-	r2BucketCatalogDisableCommand,
-	r2BucketCatalogEnableCommand,
-	r2BucketCatalogGetCommand,
-	r2BucketCatalogNamespace,
-	r2BucketCatalogSnapshotExpirationDisableCommand,
-	r2BucketCatalogSnapshotExpirationEnableCommand,
-	r2BucketCatalogSnapshotExpirationNamespace,
-} from "./r2/catalog";
-import {
 	r2BucketCORSDeleteCommand,
 	r2BucketCORSListCommand,
 	r2BucketCORSNamespace,
@@ -439,7 +451,6 @@ import {
 	r2BucketSippyGetCommand,
 	r2BucketSippyNamespace,
 } from "./r2/sippy";
-import { r2SqlNamespace, r2SqlQueryCommand } from "./r2/sql";
 import {
 	secretBulkCommand,
 	secretDeleteCommand,
@@ -501,7 +512,7 @@ import {
 } from "./user/profiles";
 import { noProxy, proxy } from "./utils/constants";
 import { logDidYouMean } from "./utils/did-you-mean";
-import { debugLogFilepath } from "./utils/log-file";
+import { getDebugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
@@ -519,6 +530,7 @@ import { vectorizeQueryCommand } from "./vectorize/query";
 import { vectorizeUpsertCommand } from "./vectorize/upsert";
 import { versionsNamespace } from "./versions";
 import { versionsDeployCommand } from "./versions/deploy";
+import { normalizeDurableObjectsCodeUpdateModeArgs } from "./versions/deployment-args";
 import { deploymentsNamespace } from "./versions/deployments";
 import { deploymentsListCommand } from "./versions/deployments/list";
 import { deploymentsStatusCommand } from "./versions/deployments/status";
@@ -564,6 +576,22 @@ if (proxy) {
 	logger.warn(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`
 	);
+}
+
+function redactEventCode(argv: string[]): string[] {
+	return argv.map((arg, index) => {
+		const previousArg = argv[index - 1];
+		if (previousArg === "--event-code" || previousArg === "--eventCode") {
+			return "<redacted>";
+		}
+		if (arg.startsWith("--event-code=")) {
+			return "--event-code=<redacted>";
+		}
+		if (arg.startsWith("--eventCode=")) {
+			return "--eventCode=<redacted>";
+		}
+		return arg;
+	});
 }
 
 export function createCLIParser(argv: string[]) {
@@ -627,7 +655,9 @@ export function createCLIParser(argv: string[]) {
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
-	const wrangler: CommonYargsArgv = makeCLI(argv)
+	const wrangler: CommonYargsArgv = makeCLI(
+		normalizeDurableObjectsCodeUpdateModeArgs(argv)
+	)
 		.strict()
 		// We handle errors ourselves in a try-catch around `yargs.parse`.
 		// If you want the "help info" to be displayed then throw an instance of `CommandLineArgsError`.
@@ -672,6 +702,7 @@ export function createCLIParser(argv: string[]) {
 				args["env-file"] ?? getDefaultEnvFiles(args.env)
 			).map((p) => resolve(p));
 			process.env = loadDotEnv(resolvedEnvFilePaths, {
+				logger,
 				includeProcessEnv: true,
 				silent: true,
 			});
@@ -681,8 +712,8 @@ export function createCLIParser(argv: string[]) {
 				type: "wrangler-session",
 				version: 1,
 				wrangler_version: wranglerVersion,
-				command_line_args: argv,
-				log_file_path: debugLogFilepath,
+				command_line_args: redactEventCode(argv),
+				log_file_path: getDebugLogFilepath(),
 			});
 
 			return true;
@@ -1032,7 +1063,10 @@ export function createCLIParser(argv: string[]) {
 
 	registry.define([
 		{ command: "wrangler triggers", definition: triggersNamespace },
-		{ command: "wrangler triggers deploy", definition: triggersDeployCommand },
+		{
+			command: "wrangler triggers deploy",
+			definition: triggersDeployCommand,
+		},
 	]);
 	registry.registerNamespace("triggers");
 
@@ -1136,7 +1170,10 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{ command: "wrangler queues", definition: queuesNamespace },
 		{ command: "wrangler queues list", definition: queuesListCommand },
-		{ command: "wrangler queues create", definition: queuesCreateCommand },
+		{
+			command: "wrangler queues create",
+			definition: queuesCreateCommand,
+		},
 		{ command: "wrangler queues update", definition: queuesUpdateCommand },
 		{ command: "wrangler queues delete", definition: queuesDeleteCommand },
 		{ command: "wrangler queues info", definition: queuesInfoCommand },
@@ -1228,6 +1265,128 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("queues");
 
+	// Basin
+	registry.define([
+		{ command: "wrangler basin", definition: basinNamespace },
+		{
+			command: "wrangler basin sql",
+			definition: basinSqlNamespace,
+		},
+		{
+			command: "wrangler basin sql query",
+			definition: basinSqlQueryCommand,
+		},
+		{
+			command: "wrangler basin catalog",
+			definition: basinCatalogNamespace,
+		},
+		{
+			command: "wrangler basin catalog enable",
+			definition: basinCatalogEnableCommand,
+		},
+		{
+			command: "wrangler basin catalog disable",
+			definition: basinCatalogDisableCommand,
+		},
+		{
+			command: "wrangler basin catalog get",
+			definition: basinCatalogGetCommand,
+		},
+		{
+			command: "wrangler basin catalog compaction",
+			definition: basinCatalogCompactionNamespace,
+		},
+		{
+			command: "wrangler basin catalog compaction enable",
+			definition: basinCatalogCompactionEnableCommand,
+		},
+		{
+			command: "wrangler basin catalog compaction disable",
+			definition: basinCatalogCompactionDisableCommand,
+		},
+		{
+			command: "wrangler basin catalog snapshot-expiration",
+			definition: basinCatalogSnapshotExpirationNamespace,
+		},
+		{
+			command: "wrangler basin catalog snapshot-expiration enable",
+			definition: basinCatalogSnapshotExpirationEnableCommand,
+		},
+		{
+			command: "wrangler basin catalog snapshot-expiration disable",
+			definition: basinCatalogSnapshotExpirationDisableCommand,
+		},
+		{
+			command: "wrangler basin pipelines",
+			definition: basinPipelinesNamespace,
+		},
+		{
+			command: "wrangler basin pipelines setup",
+			definition: pipelinesSetupCommand,
+		},
+		{
+			command: "wrangler basin pipelines create",
+			definition: pipelinesCreateCommand,
+		},
+		{
+			command: "wrangler basin pipelines list",
+			definition: pipelinesListCommand,
+		},
+		{
+			command: "wrangler basin pipelines get",
+			definition: pipelinesGetCommand,
+		},
+		{
+			command: "wrangler basin pipelines update",
+			definition: pipelinesUpdateCommand,
+		},
+		{
+			command: "wrangler basin pipelines delete",
+			definition: pipelinesDeleteCommand,
+		},
+		{
+			command: "wrangler basin pipelines streams",
+			definition: pipelinesStreamsNamespace,
+		},
+		{
+			command: "wrangler basin pipelines streams create",
+			definition: pipelinesStreamsCreateCommand,
+		},
+		{
+			command: "wrangler basin pipelines streams list",
+			definition: pipelinesStreamsListCommand,
+		},
+		{
+			command: "wrangler basin pipelines streams get",
+			definition: pipelinesStreamsGetCommand,
+		},
+		{
+			command: "wrangler basin pipelines streams delete",
+			definition: pipelinesStreamsDeleteCommand,
+		},
+		{
+			command: "wrangler basin pipelines sinks",
+			definition: pipelinesSinksNamespace,
+		},
+		{
+			command: "wrangler basin pipelines sinks create",
+			definition: pipelinesSinksCreateCommand,
+		},
+		{
+			command: "wrangler basin pipelines sinks list",
+			definition: pipelinesSinksListCommand,
+		},
+		{
+			command: "wrangler basin pipelines sinks get",
+			definition: pipelinesSinksGetCommand,
+		},
+		{
+			command: "wrangler basin pipelines sinks delete",
+			definition: pipelinesSinksDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("basin");
+
 	// r2
 	registry.define([
 		{ command: "wrangler r2", definition: r2Namespace },
@@ -1293,43 +1452,7 @@ export function createCLIParser(argv: string[]) {
 		},
 		{
 			command: "wrangler r2 bucket catalog",
-			definition: r2BucketCatalogNamespace,
-		},
-		{
-			command: "wrangler r2 bucket catalog enable",
-			definition: r2BucketCatalogEnableCommand,
-		},
-		{
-			command: "wrangler r2 bucket catalog disable",
-			definition: r2BucketCatalogDisableCommand,
-		},
-		{
-			command: "wrangler r2 bucket catalog get",
-			definition: r2BucketCatalogGetCommand,
-		},
-		{
-			command: "wrangler r2 bucket catalog compaction",
-			definition: r2BucketCatalogCompactionNamespace,
-		},
-		{
-			command: "wrangler r2 bucket catalog compaction enable",
-			definition: r2BucketCatalogCompactionEnableCommand,
-		},
-		{
-			command: "wrangler r2 bucket catalog compaction disable",
-			definition: r2BucketCatalogCompactionDisableCommand,
-		},
-		{
-			command: "wrangler r2 bucket catalog snapshot-expiration",
-			definition: r2BucketCatalogSnapshotExpirationNamespace,
-		},
-		{
-			command: "wrangler r2 bucket catalog snapshot-expiration enable",
-			definition: r2BucketCatalogSnapshotExpirationEnableCommand,
-		},
-		{
-			command: "wrangler r2 bucket catalog snapshot-expiration disable",
-			definition: r2BucketCatalogSnapshotExpirationDisableCommand,
+			definition: r2BucketCatalogAlias,
 		},
 		{
 			command: "wrangler r2 bucket notification",
@@ -1465,11 +1588,7 @@ export function createCLIParser(argv: string[]) {
 		},
 		{
 			command: "wrangler r2 sql",
-			definition: r2SqlNamespace,
-		},
-		{
-			command: "wrangler r2 sql query",
-			definition: r2SqlQueryCommand,
+			definition: r2SqlAlias,
 		},
 		{
 			command: "wrangler r2 bulk",
@@ -2127,10 +2246,6 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler dispatch-namespace delete",
 			definition: dispatchNamespaceDeleteCommand,
 		},
-		{
-			command: "wrangler dispatch-namespace rename",
-			definition: dispatchNamespaceRenameCommand,
-		},
 	]);
 	registry.registerNamespace("dispatch-namespace");
 
@@ -2303,74 +2418,26 @@ export function createCLIParser(argv: string[]) {
 	registry.define([
 		{
 			command: "wrangler pipelines",
-			definition: pipelinesNamespace,
-		},
-		{
-			command: "wrangler pipelines setup",
-			definition: pipelinesSetupCommand,
-		},
-		{
-			command: "wrangler pipelines create",
-			definition: pipelinesCreateCommand,
-		},
-		{
-			command: "wrangler pipelines list",
-			definition: pipelinesListCommand,
-		},
-		{
-			command: "wrangler pipelines get",
-			definition: pipelinesGetCommand,
-		},
-		{
-			command: "wrangler pipelines update",
-			definition: pipelinesUpdateCommand,
-		},
-		{
-			command: "wrangler pipelines delete",
-			definition: pipelinesDeleteCommand,
-		},
-		{
-			command: "wrangler pipelines streams",
-			definition: pipelinesStreamsNamespace,
-		},
-		{
-			command: "wrangler pipelines streams create",
-			definition: pipelinesStreamsCreateCommand,
-		},
-		{
-			command: "wrangler pipelines streams list",
-			definition: pipelinesStreamsListCommand,
-		},
-		{
-			command: "wrangler pipelines streams get",
-			definition: pipelinesStreamsGetCommand,
-		},
-		{
-			command: "wrangler pipelines streams delete",
-			definition: pipelinesStreamsDeleteCommand,
-		},
-		{
-			command: "wrangler pipelines sinks",
-			definition: pipelinesSinksNamespace,
-		},
-		{
-			command: "wrangler pipelines sinks create",
-			definition: pipelinesSinksCreateCommand,
-		},
-		{
-			command: "wrangler pipelines sinks list",
-			definition: pipelinesSinksListCommand,
-		},
-		{
-			command: "wrangler pipelines sinks get",
-			definition: pipelinesSinksGetCommand,
-		},
-		{
-			command: "wrangler pipelines sinks delete",
-			definition: pipelinesSinksDeleteCommand,
+			definition: pipelinesAlias,
 		},
 	]);
 	registry.registerNamespace("pipelines");
+
+	registry.define([
+		{ command: "wrangler k2", definition: k2Namespace },
+		{ command: "wrangler k2 streams", definition: k2StreamsNamespace },
+		{
+			command: "wrangler k2 streams create",
+			definition: k2StreamsCreateCommand,
+		},
+		{ command: "wrangler k2 streams get", definition: k2StreamsGetCommand },
+		{ command: "wrangler k2 streams list", definition: k2StreamsListCommand },
+		{
+			command: "wrangler k2 streams delete",
+			definition: k2StreamsDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("k2");
 
 	registry.define([
 		{ command: "wrangler vpc", definition: vpcNamespace },

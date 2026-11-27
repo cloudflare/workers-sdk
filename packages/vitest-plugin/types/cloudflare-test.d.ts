@@ -268,6 +268,13 @@ declare module "cloudflare:test" {
 	 * @returns A `WorkflowInstanceIntrospector` to control the instance's behavior.
 	 *
 	 * @remarks
+	 * ### Workflows on `ctx.exports`
+	 *
+	 * Workflows on `ctx.exports` can't be passed here. To introspect a Workflow
+	 * declared in `exports`, add a binding to it, such as a test-only binding in
+	 * the `miniflare.workflows` option. The instance is introspected even if it
+	 * is created through `ctx.exports`.
+	 *
 	 * ### Dispose
 	 *
 	 * The introspector must be disposed after the test to remove mocks and release
@@ -618,6 +625,13 @@ declare module "cloudflare:test" {
 	 * @returns A `WorkflowIntrospector` to control the instances behavior.
 	 *
 	 * @remarks
+	 * ### Workflows on `ctx.exports`
+	 *
+	 * Workflows on `ctx.exports` can't be passed here. To introspect a Workflow
+	 * declared in `exports`, add a binding to it, such as a test-only binding in
+	 * the `miniflare.workflows` option. Instances created through `ctx.exports`
+	 * are introspected too.
+	 *
 	 * ### Dispose
 	 *
 	 * The introspector must be disposed after the test to remove mocks and release

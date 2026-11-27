@@ -52,7 +52,8 @@ export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>,
 	logger: WranglerLogger | ViteLogger,
-	complianceConfig?: ComplianceConfig
+	complianceConfig: ComplianceConfig | undefined,
+	registryConfigureCommand: string
 ): Promise<{ abort: () => void; ready: Promise<{ aborted: boolean }> }> {
 	const domain = new URL(`http://${options.image_uri}`).hostname;
 
@@ -66,7 +67,7 @@ export async function pullImage(
 		}
 		logger?.warn(
 			"Unable to retrieve configured registry credentials from Cloudflare." +
-				"\nUnless this is a public image, you will need to run `wrangler containers registries configure` before deploying." +
+				`\nUnless this is a public image, you will need to run \`${registryConfigureCommand}\` before deploying.` +
 				"\nAttempting to pull image anyway..."
 		);
 	}
@@ -79,7 +80,9 @@ export async function pullImage(
 		"linux/amd64",
 	]);
 	const ready = pull.ready.then(async ({ aborted }: { aborted: boolean }) => {
-		if (!aborted) {
+		// During Vite preview, remote Build Output references are pulled under the
+		// exact image tag used by the runtime, so avoid tagging an image as itself.
+		if (!aborted && options.image_uri !== options.image_tag) {
 			// re-tag image with the expected dev-formatted image tag for consistency
 			await runDockerCmd(dockerPath, [
 				"tag",
@@ -122,6 +125,17 @@ export async function prepareContainerImagesForDev(args: {
 	}) => void;
 	logger: WranglerLogger | ViteLogger;
 	complianceConfig?: ComplianceConfig;
+	/**
+	 * How to run without Docker, added to the error when Docker cannot be
+	 * reached. Omit it when the configuration cannot disable local Containers.
+	 */
+	dockerUnavailableHint?: string;
+	registryConfigureCommand: string;
+	/**
+	 * Operation named when Docker cannot be launched, e.g. `"running tests"`.
+	 * Defaults to `"running dev"`.
+	 */
+	operation?: string;
 }): Promise<{ aborted: boolean }> {
 	const {
 		dockerPath,
@@ -138,12 +152,12 @@ export async function prepareContainerImagesForDev(args: {
 	}
 	await verifyDockerInstalled({
 		dockerPath,
-		operation: "running dev",
+		operation: args.operation ?? "running dev",
 		imageNoun:
 			containerOptions.length !== 1
 				? "the configured images"
 				: "the configured image",
-		hint: "To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your Wrangler config or pass --enable-containers=false.",
+		hint: args.dockerUnavailableHint,
 	});
 	for (const options of containerOptions) {
 		if ("dockerfile" in options) {
@@ -175,7 +189,8 @@ export async function prepareContainerImagesForDev(args: {
 				dockerPath,
 				options,
 				args.logger,
-				args.complianceConfig
+				args.complianceConfig,
+				args.registryConfigureCommand
 			);
 			onContainerImagePreparationStart({
 				containerOptions: options,

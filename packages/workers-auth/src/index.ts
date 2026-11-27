@@ -22,11 +22,16 @@ export {
 	getAccessHeaders,
 } from "./access";
 
-export type { OAuthFlowContext, OAuthFlowLogger } from "./context";
+export type {
+	OAuthFlowContext,
+	OAuthFlowLogger,
+	TemporaryAccountRequest,
+} from "./context";
 
 export {
 	getAuthUrlFromEnv,
 	getCloudflareAccountIdFromEnv,
+	getCloudflareAuthProfileFromEnv,
 	getCloudflareAuthUseKeyringFromEnv,
 } from "./env-vars";
 
@@ -107,3 +112,5 @@ export type {
 	NpmRunner,
 	ScrubEncryptedCredentialsResult,
 } from "./credential-store";
+
+export { AuthenticationError } from "./core/authentication-error";

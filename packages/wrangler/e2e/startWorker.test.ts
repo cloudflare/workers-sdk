@@ -46,7 +46,7 @@ function collectMessagesContaining<T>(
 	return collection;
 }
 
-describe("DevEnv", { sequential: true }, () => {
+describe("DevEnv", { concurrent: false }, () => {
 	let helper: WranglerE2ETestHelper;
 
 	beforeEach(() => {

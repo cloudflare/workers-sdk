@@ -241,13 +241,44 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				 - wrangler (devDependency)
 				`
 			);
-			expect(std.out).toContain('  import { defineConfig } from "cf/config";');
-			expect(std.out).toContain("  export default defineConfig({");
+			expect(std.out).toContain(
+				'  import type { CloudflareConfig } from "cf/config";'
+			);
+			expect(std.out).toContain("  export default {");
+			expect(std.out).toContain("  } satisfies CloudflareConfig;");
 			expect(std.out).toContain(
 				'  import { defineWranglerConfig } from "wrangler/experimental-config";'
 			);
 			expect(std.out).toContain("  export default defineWranglerConfig({");
 		});
+
+		test.for([
+			{ target: "cf", plugin: "@cloudflare/vite-plugin@^2.0.0-rc.0" },
+			{ target: "wrangler", plugin: "@cloudflare/vite-plugin" },
+		] as const)(
+			"shows that $plugin will be installed for $target",
+			async ({ target, plugin }, { expect }) => {
+				await buildOperationsSummary(
+					{
+						workerName: "worker-name",
+						projectPath: "<PROJECT_PATH>",
+						packageJson: { name: "my-project" },
+						configured: false,
+						outputDir: "dist",
+						framework: new Static({ id: "static", name: "Static" }),
+						packageManager: NpmPackageManager,
+					},
+					testWorkerConfig,
+					{ buildTool: "vite", workerConfig: testWorkerConfig },
+					{ build: "npm run build", deploy: `${target} deploy` },
+					false,
+					target,
+					context
+				);
+
+				expect(std.out).toContain(` - ${plugin} (devDependency)`);
+			}
+		);
 
 		test("shows that when needed a framework specific configuration will be run", async ({
 			expect,

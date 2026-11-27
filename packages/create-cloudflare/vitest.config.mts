@@ -1,11 +1,12 @@
-import tsconfigPaths from "vite-tsconfig-paths";
 import { defineProject, mergeConfig } from "vitest/config";
 import configShared from "../../vitest.shared";
 
 export default mergeConfig(
 	configShared,
 	defineProject({
-		plugins: [tsconfigPaths({ projects: ["tsconfig.json"] })],
+		resolve: {
+			tsconfigPaths: true,
+		},
 		test: {
 			include: ["src/**/__tests__/**.test.ts"],
 			mockReset: true,

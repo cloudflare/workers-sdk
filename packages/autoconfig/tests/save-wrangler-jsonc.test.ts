@@ -3,7 +3,7 @@ import { NODEJS_COMPAT_DEFAULT_ON_DATE } from "@cloudflare/workers-utils";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, test } from "vitest";
 import { saveWranglerJsonc } from "../src/run";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 
 /** A date before `nodejs_compat` is enabled by the compatibility date alone. */
 const DATE_BEFORE_DEFAULT_ON = "2025-01-01";

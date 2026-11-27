@@ -1,12 +1,12 @@
-import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
-import {
-	cleanupContainers,
-	prepareContainerImagesForDev,
-} from "@cloudflare/containers-shared";
+import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { getDockerPath } from "@cloudflare/workers-utils";
+import {
+	configFileName,
+	createArtifactsLocalDefaultWarner,
+} from "@cloudflare/workers-utils/config";
 import chalk from "chalk";
 import {
 	buildPublicUrl,
@@ -119,6 +119,7 @@ export async function convertToConfigBundle(
 	const routes = [];
 	const queueConsumers = [];
 	const connectHandlers = [];
+	const artifactsEvents = [];
 	for (const trigger of event.config.triggers ?? []) {
 		if (trigger.type === "cron") {
 			crons.push(trigger.cron);
@@ -130,6 +131,8 @@ export async function convertToConfigBundle(
 		} else if (trigger.type === "connect") {
 			const { type: _, ...connectHandler } = trigger;
 			connectHandlers.push(connectHandler);
+		} else if (trigger.type === "artifacts-event") {
+			artifactsEvents.push(trigger.event);
 		}
 	}
 	if (event.bundle.entry.format === "service-worker") {
@@ -206,6 +209,7 @@ export async function convertToConfigBundle(
 		routes: event.config.dev.routeRequestsByRoutes ? routes : undefined,
 		queueConsumers,
 		connectHandlers,
+		artifactsEvents,
 		outboundService: event.config.dev.outboundService,
 		localProtocol: event.config.dev?.server?.secure ? "https" : "http",
 		localUpstream: event.config.dev?.origin?.hostname,
@@ -233,6 +237,7 @@ export async function convertToConfigBundle(
 
 export type ContainerImagePreparationState = {
 	dockerPath: string;
+	configFileName: string;
 	complianceRegion: StartDevWorkerOptions["complianceRegion"];
 	hasContainers: boolean;
 	containerOptions: ContainerDevOptions[];
@@ -267,12 +272,10 @@ export class LocalRuntimeController extends RuntimeController {
 		auth?: AsyncHook<CfAccount> | undefined;
 	} | null = null;
 
-	// Set of container images that have been seen in the current dev session.
-	// This is used to clean up containers at the end of the dev session.
-	containerImageTagsSeen: Set<string> = new Set();
-	// Stored here, so it can be used in `cleanupContainers()`
-	dockerPath: string | undefined;
 	#containerImagePreparationState?: ContainerImagePreparationState;
+
+	// Warns once per dev session, not on every config reload.
+	#warnForArtifactsLocalDefault = createArtifactsLocalDefaultWarner("wrangler");
 
 	// Used to store the information and abort handle for the
 	// current container that is being built
@@ -282,11 +285,7 @@ export class LocalRuntimeController extends RuntimeController {
 		abortRequested: boolean;
 	};
 
-	onBundleStart(_: BundleStartEvent) {
-		// Remove any existing listener, then add a new one.
-		process.off("exit", this.cleanupContainers);
-		process.on("exit", this.cleanupContainers);
-	}
+	onBundleStart(_: BundleStartEvent) {}
 
 	/**
 	 * Surfaces uncaught Worker exceptions as typed `runtimeError` events
@@ -311,6 +310,7 @@ export class LocalRuntimeController extends RuntimeController {
 	): Promise<ContainerImagePreparationState | undefined> {
 		const nextState: ContainerImagePreparationState = {
 			dockerPath: data.config.dev.dockerPath ?? getDockerPath(),
+			configFileName: configFileName(data.config.config),
 			complianceRegion: data.config.complianceRegion,
 			hasContainers: Boolean(
 				data.config.dev.enableContainers &&
@@ -326,11 +326,6 @@ export class LocalRuntimeController extends RuntimeController {
 			!nextState.hasContainers
 		) {
 			return nextState;
-		}
-
-		this.dockerPath = nextState.dockerPath;
-		for (const { image_tag } of nextState.containerOptions) {
-			this.containerImageTagsSeen.add(image_tag);
 		}
 
 		logger.log(chalk.dim("⎔ Preparing container image(s)..."));
@@ -350,6 +345,8 @@ export class LocalRuntimeController extends RuntimeController {
 			complianceConfig: {
 				compliance_region: nextState.complianceRegion,
 			},
+			dockerUnavailableHint: `To suppress this error if you do not intend on triggering any container instances, set dev.enable_containers to false in your ${nextState.configFileName} or pass --enable-containers=false.`,
+			registryConfigureCommand: "wrangler containers registries configure",
 		});
 		if (this.containerBeingBuilt) {
 			this.containerBeingBuilt.abortRequested = false;
@@ -373,6 +370,19 @@ export class LocalRuntimeController extends RuntimeController {
 			const configBundle = await convertToConfigBundle(data);
 
 			if (data.config.dev?.remote !== false) {
+				this.#warnForArtifactsLocalDefault(
+					{
+						id: data.config.config ?? data.config.name ?? "",
+						bindings: Object.entries(configBundle.bindings ?? {}).flatMap(
+							([name, binding]) =>
+								binding.type === "artifacts"
+									? [{ name, remote: binding.remote }]
+									: []
+						),
+					},
+					(message) => logger.warn(message)
+				);
+
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
 				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
@@ -389,8 +399,9 @@ export class LocalRuntimeController extends RuntimeController {
 						},
 						this.#remoteProxySessionData ?? null,
 						Object.keys(remoteBindings).length === 0
-							? // If there are no remote bindings (this is a local only session) there's no need to get auth data
-								undefined
+							? // Without remote bindings, keep the session's own hook. A new one,
+								// or none, would restart the session with no remote bindings.
+								this.#remoteProxySessionData?.auth
 							: data.config.dev.auth
 					);
 			}
@@ -537,22 +548,8 @@ export class LocalRuntimeController extends RuntimeController {
 		// Ignored in local runtime
 	}
 
-	cleanupContainers = () => {
-		if (!this.containerImageTagsSeen.size) {
-			return;
-		}
-
-		assert(
-			this.dockerPath,
-			"Docker path should have been set if containers are enabled"
-		);
-		cleanupContainers(this.dockerPath, this.containerImageTagsSeen);
-	};
-
 	#teardown = async (): Promise<void> => {
 		logger.debug("LocalRuntimeController teardown beginning...");
-		process.off("exit", this.cleanupContainers);
-		this.cleanupContainers();
 
 		if (this.#mf) {
 			logger.log(chalk.dim("⎔ Shutting down local server..."));

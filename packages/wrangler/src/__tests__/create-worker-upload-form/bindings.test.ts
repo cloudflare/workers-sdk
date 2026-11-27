@@ -145,7 +145,7 @@ describe("createWorkerUploadForm — bindings", () => {
 			expect(getBindings(form)).toContainEqual({
 				name: "MY_DB",
 				type: "d1",
-				id: "db-123",
+				database_id: "db-123",
 			});
 		});
 
@@ -304,6 +304,7 @@ describe("createWorkerUploadForm — bindings", () => {
 				type: "agent_memory" as const,
 				namespace: "my-agent",
 			},
+			{ type: "analytics" as const },
 			{ type: "inherit" as const },
 		])("should pass through $type binding unchanged", (input, { expect }) => {
 			const bindings: StartDevWorkerInput["bindings"] = {
@@ -430,6 +431,57 @@ describe("createWorkerUploadForm — bindings", () => {
 				name: "MY_PIPELINE",
 				type: "pipelines",
 				stream: "my-pipeline",
+			});
+		});
+	});
+
+	describe("realtimekit bindings", () => {
+		it("should upload only the app_id, omitting the local-dev remote flag", ({
+			expect,
+		}) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				RTK: {
+					type: "realtimekit",
+					app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+					remote: true,
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "RTK",
+				type: "realtimekit",
+				app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+			});
+		});
+	});
+
+	describe("oidc_token bindings", () => {
+		it("should include the audience and omit an unset alg", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				API_TOKEN: { type: "oidc_token", audience: "https://api.example.com" },
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "API_TOKEN",
+				type: "oidc_token",
+				audience: "https://api.example.com",
+			});
+		});
+
+		it("should include alg when set", ({ expect }) => {
+			const bindings: StartDevWorkerInput["bindings"] = {
+				RSA_TOKEN: {
+					type: "oidc_token",
+					audience: "api://token-exchange",
+					alg: "RS256",
+				},
+			};
+			const form = createWorkerUploadForm(createEsmWorker(), bindings);
+			expect(getBindings(form)).toContainEqual({
+				name: "RSA_TOKEN",
+				type: "oidc_token",
+				audience: "api://token-exchange",
+				alg: "RS256",
 			});
 		});
 	});

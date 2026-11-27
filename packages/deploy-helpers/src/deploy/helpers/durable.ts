@@ -2,14 +2,14 @@ import assert from "node:assert";
 import {
 	configFileName,
 	getDurableObjectExports,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 import { fetchResult, logger } from "../../shared/context";
 import { isWorkerNotFoundError } from "./worker-not-found-error";
 import type {
 	CfWorkerInit,
-	Config,
 	ServiceMetadataRes,
 } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 /**
  * For a given Worker + migrations config, figure out which migrations
@@ -46,7 +46,7 @@ export async function getMigrationsToUpload(
 					config,
 					`/accounts/${accountId}/workers/services/${scriptName}`
 				);
-				script = serviceMetadata.default_environment.script;
+				script = serviceMetadata.default_environment.script ?? undefined;
 			} catch (err) {
 				suppressNotFoundError(err);
 			}
@@ -59,7 +59,7 @@ export async function getMigrationsToUpload(
 			);
 			if (foundIndex === -1) {
 				logger.warn(
-					`The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in your ${configFileName(config.configPath)} file. You may have already deleted it. Applying all available migrations to the script...`
+					`The published script ${scriptName} has a migration tag "${script.migration_tag}, which was not found in your ${configFileName(config.configPath, config.userConfigPath)} file. You may have already deleted it. Applying all available migrations to the script...`
 				);
 				migrations = {
 					old_tag: script.migration_tag,

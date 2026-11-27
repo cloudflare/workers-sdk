@@ -35,6 +35,8 @@ const durableObjectContainer = defineContainer({
 		fallback: { reference: "registry.example.com/fallback:latest" },
 	},
 	observability: { enabled: true, logs: { enabled: true } },
+	ssh: { enabled: true },
+	authorizedKeys: [{ name: "developer", publicKey: "ssh-ed25519 AAAA" }],
 });
 
 const standaloneContainer = defineContainer({
@@ -85,11 +87,8 @@ workerExports.durableObject({
 const invalidObservabilityTargets: ContainerConfig = {
 	name: "invalid-observability",
 	image: { dockerfile: "./Dockerfile" },
-	observability: {
-		targetInstancePercentage: 50,
-		// @ts-expect-error Observability targets are mutually exclusive.
-		targetInstanceCount: 2,
-	},
+	// @ts-expect-error Observability targets are mutually exclusive.
+	observability: { targetInstancePercentage: 50, targetInstanceCount: 2 },
 };
 void invalidObservabilityTargets;
 

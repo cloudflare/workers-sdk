@@ -5,15 +5,18 @@ import { blue, gray } from "@cloudflare/cli-shared-helpers/colors";
 import {
 	APIError,
 	formatTime,
-	getBindings,
-	getDurableObjectContainerApps,
-	hasDurableObjectExports,
 	ParseError,
 	printBindings,
 	retryOnAPIFailure,
 	UserError,
 	writeOutput,
 } from "@cloudflare/workers-utils";
+import {
+	getBindings,
+	getDurableObjectContainerApps,
+	hasDurableObjectExports,
+} from "@cloudflare/workers-utils/config";
+import { parseAndExpandDotEnv } from "@cloudflare/workers-utils/local-env";
 import { Response } from "undici";
 import { fetchResult, logger } from "../shared/context";
 import { getWorkerSubdomain } from "../triggers/subdomain";
@@ -60,14 +63,27 @@ import type {
 	VersionsUploadProps,
 	WorkerBuildResult,
 } from "../shared/types";
-import type { DeployCallbacks } from "./deploy";
 import type { AssetUploadStats } from "./helpers/assets";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
-/** Compatibility callback shape for existing deploy-helpers consumers. */
-export type VersionsUploadCallbacks = Pick<DeployCallbacks, "analyseBundle">;
+export type VersionsUploadOptions = {
+	deployCommand: string;
+	versionsUploadCommand: string;
+	versionsDeployCommand: string;
+	triggersDeployCommand: string;
+	d1ListCommand: string;
+	d1DeleteCommand: string;
+	queueCreateCommand: (queueName: string) => string;
+	versionsSecretPutCommand: string;
+	/**
+	 * @deprecated Startup profiling is provided by deploy-helpers automatically.
+	 */
+	analyseBundle?: (
+		workerBundle: string | FormData
+	) => Promise<Record<string, unknown>>;
+};
 
 type VersionsUploadResult = {
 	versionId: string | null;
@@ -82,16 +98,11 @@ export default async function versionsUpload(
 	props: VersionsUploadProps,
 	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks = {}
+	options: VersionsUploadOptions
 ): Promise<VersionsUploadResult> {
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
-	const result = await uploadWorkerVersion(
-		props,
-		config,
-		buildResult,
-		callbacks
-	);
+	const result = await uploadWorkerVersion(props, config, buildResult, options);
 
 	writeOutput({
 		type: "version-upload",
@@ -118,7 +129,7 @@ async function uploadWorkerVersion(
 	props: VersionsUploadProps,
 	config: ContainerlessConfig,
 	buildResult: WorkerBuildResult,
-	callbacks: VersionsUploadCallbacks
+	options: VersionsUploadOptions
 ): Promise<VersionsUploadResult> {
 	const { entry, compatibilityDate, compatibilityFlags, keepVars, accountId } =
 		props;
@@ -129,7 +140,11 @@ async function uploadWorkerVersion(
 	const { name } = validateWorkerProps(props, config);
 
 	// any validation that DOES require API calls should go in preUploadApiChecks()
-	const { workerTag, tags, aborted } = await preUploadApiChecks(props, config);
+	const { workerTag, tags, aborted } = await preUploadApiChecks(
+		props,
+		config,
+		options.queueCreateCommand
+	);
 	if (aborted) {
 		return { versionId: null, workerTag };
 	}
@@ -170,7 +185,11 @@ async function uploadWorkerVersion(
 	// script_version row with `SkipDeploy:true`, so reconciliation is
 	// deferred to the subsequent deploy (either `wrangler deploy` or
 	// `wrangler versions deploy <id>`).
-	const { migrations, exports } = await resolveExportsUploadPayload({
+	const {
+		migrations,
+		exports,
+		headers: exportsHeaders,
+	} = await resolveExportsUploadPayload({
 		scriptName,
 		isDryRun: props.dryRun,
 		accountId,
@@ -179,7 +198,7 @@ async function uploadWorkerVersion(
 	});
 	if (migrations !== undefined) {
 		throw new UserError(
-			"This Worker has a pending Durable Object migration, which cannot be applied by `wrangler versions upload`. Durable Object migrations must be applied with `wrangler deploy`. Run `wrangler deploy` to apply the migration, then retry `wrangler versions upload`.",
+			`This Worker has a pending Durable Object migration, which cannot be applied by \`${options.versionsUploadCommand}\`. Durable Object migrations must be applied with \`${options.deployCommand}\`. Run \`${options.deployCommand}\` to apply the migration, then retry \`${options.versionsUploadCommand}\`.`,
 			{ telemetryMessage: "versions upload pending durable object migration" }
 		);
 	}
@@ -197,6 +216,8 @@ async function uploadWorkerVersion(
 				dryRun: Boolean(props.dryRun),
 				scriptName,
 				requireExistingImageLessApplications: true,
+				deployCommand: options.deployCommand,
+				versionsUploadCommand: options.versionsUploadCommand,
 			}
 		);
 
@@ -208,7 +229,11 @@ async function uploadWorkerVersion(
 	const assetsJwt = assetsUploadResult?.jwt;
 
 	if (props.secretsFile) {
-		const secretsResult = await parseBulkInputToObject(props.secretsFile);
+		const secretsResult = await parseBulkInputToObject(
+			props.secretsFile,
+			false,
+			parseAndExpandDotEnv
+		);
 		if (secretsResult) {
 			for (const [secretName, secretValue] of Object.entries(
 				secretsResult.content
@@ -313,6 +338,8 @@ async function uploadWorkerVersion(
 				config,
 				{
 					skipConfigWriteback: props.skipProvisioningConfigWriteback,
+					d1ListCommand: options.d1ListCommand,
+					d1DeleteCommand: options.d1DeleteCommand,
 				}
 			);
 		}
@@ -338,9 +365,10 @@ async function uploadWorkerVersion(
 						{
 							method: "POST",
 							body: workerBundle,
-							headers: props.sendMetrics
-								? { metricsEnabled: "true" }
-								: undefined,
+							headers: {
+								...exportsHeaders,
+								...(props.sendMetrics && { metricsEnabled: "true" }),
+							},
 						},
 						new URLSearchParams({ bindings_inherit: "strict" })
 					),
@@ -395,13 +423,17 @@ async function uploadWorkerVersion(
 				workerBundle,
 				projectRoot,
 				// eslint-disable-next-line @typescript-eslint/no-deprecated -- compatibility callback for existing deploy-helpers consumers
-				callbacks.analyseBundle
+				options.analyseBundle
 			);
 			if (message) {
 				logger.error(message);
 			}
 
-			handleMissingSecretsError(err, config, { type: "upload" });
+			handleMissingSecretsError(err, config, {
+				type: "upload",
+				secretPutCommand: options.versionsSecretPutCommand,
+				uploadCommand: options.versionsUploadCommand,
+			});
 
 			// Apply source mapping to validation startup errors if possible
 			if (
@@ -519,8 +551,8 @@ async function uploadWorkerVersion(
 		}
 	}
 
-	const cmdVersionsDeploy = blue("wrangler versions deploy");
-	const cmdTriggersDeploy = blue("wrangler triggers deploy");
+	const cmdVersionsDeploy = blue(options.versionsDeployCommand);
+	const cmdTriggersDeploy = blue(options.triggersDeployCommand);
 	logger.info(
 		gray(`
 To deploy this version to production traffic use the command ${cmdVersionsDeploy}

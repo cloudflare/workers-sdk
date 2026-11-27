@@ -1,5 +1,6 @@
 import type {
 	CacheOptions,
+	DurableObjectCodeUpdateStrategy,
 	Exports,
 	LocalS3Credentials,
 	Observability,
@@ -7,7 +8,10 @@ import type {
 } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
 import type { Json, WorkerMetadata } from "./types";
-import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type {
+	AssetConfig,
+	RouterConfig,
+} from "@cloudflare/workers-shared/utils/types";
 
 /**
  * The type of Worker
@@ -136,6 +140,12 @@ export interface CfBrowserBinding {
 	remote?: boolean;
 }
 
+/** A binding to Analytics SQL. */
+export interface CfAnalyticsSQLBinding {
+	binding: string;
+	remote?: boolean;
+}
+
 /**
  * A binding to the AI project
  */
@@ -239,6 +249,7 @@ export interface CfD1Database {
 	binding: string;
 	database_id?: string | typeof INHERIT_SYMBOL;
 	database_name?: string;
+	jurisdiction?: string;
 	preview_database_id?: string;
 	database_internal_env?: string;
 	migrations_table?: string;
@@ -296,6 +307,12 @@ export interface CfFlagship {
 	remote?: boolean;
 }
 
+export interface CfRealtimeKit {
+	binding: string;
+	app_id: string;
+	remote?: boolean;
+}
+
 export interface CfWorkerLoader {
 	binding: string;
 }
@@ -313,6 +330,11 @@ export interface CfHyperdrive {
 	binding: string;
 	id: string;
 	localConnectionString?: string;
+	/**
+	 * Connect to the deployed Hyperdrive configuration during local development
+	 * instead of a local database.
+	 */
+	remote?: boolean;
 }
 
 export interface CfDevPluginCfg {
@@ -359,9 +381,17 @@ export interface CfVpcNetwork {
 	remote?: boolean;
 }
 
+/** A binding that issues OIDC tokens for the Worker's identity, for one audience. */
+export interface CfOidcToken {
+	binding: string;
+	audience: string;
+	alg?: "ES256" | "RS256";
+}
+
 export interface CfAnalyticsEngineDataset {
 	binding: string;
 	dataset?: string;
+	remote?: boolean;
 }
 
 export interface CfDispatchNamespace {
@@ -398,6 +428,12 @@ export interface CfPipeline {
 	binding: string;
 	stream?: string;
 	pipeline?: string;
+	remote?: boolean;
+}
+
+export interface CfK2Binding {
+	binding: string;
+	stream: string;
 	remote?: boolean;
 }
 
@@ -504,6 +540,7 @@ export interface CfWorkerInit {
 		| undefined;
 
 	migrations: CfDurableObjectMigrations | undefined;
+	code_update_strategy?: DurableObjectCodeUpdateStrategy;
 	/**
 	 * Declarative exports configuration. Durable Object entries are sent instead
 	 * of `migrations`.

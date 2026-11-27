@@ -1,12 +1,14 @@
 import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import {
+	readWranglerConfig,
 	runInTempDir,
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, it } from "vitest";
+import { mockServiceScriptData } from "./deploy/helpers";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
@@ -749,7 +751,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "existing-d1-id",
+						database_id: "existing-d1-id",
 					},
 				],
 			});
@@ -872,7 +874,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "existing-d1-id-1",
+						database_id: "existing-d1-id-1",
 					},
 				],
 			});
@@ -1005,7 +1007,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1168,7 +1170,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1240,6 +1242,293 @@ describe("resource provisioning", () => {
 
 			rmSync(".wrangler/deploy/config.json");
 		});
+
+		it("preserves original D1 fields and order when writing a provisioned ID", async ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					main: "index.js",
+					d1_databases: [
+						{
+							binding: "EXISTING",
+							database_id: "original-id",
+							migrations_dir: "other-migrations",
+						},
+						{
+							binding: "NEW",
+							database_id: "original-stale-id",
+							migrations_dir: "migrations",
+						},
+					],
+				},
+				"./wrangler.jsonc"
+			);
+			writeRedirectedWranglerConfig(
+				{
+					main: "../../index.js",
+					d1_databases: [
+						{ binding: "NEW", migrations_dir: "../../migrations" },
+						{
+							binding: "EXISTING",
+							database_id: "generated-id",
+							migrations_dir: "../../other-migrations",
+						},
+					],
+				},
+				"./dist/my-app/wrangler.json"
+			);
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-new",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{ name: "NEW", type: "d1", database_id: "new-d1-id" },
+					{ name: "EXISTING", type: "d1", database_id: "generated-id" },
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(
+				readWranglerConfig("./dist/my-app/wrangler.json").d1_databases
+			).toEqual([
+				{
+					binding: "NEW",
+					database_id: "new-d1-id",
+					migrations_dir: "../../migrations",
+				},
+				{
+					binding: "EXISTING",
+					database_id: "generated-id",
+					migrations_dir: "../../other-migrations",
+				},
+			]);
+			expect(readWranglerConfig("./wrangler.jsonc")).toEqual({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "EXISTING",
+						database_id: "original-id",
+						migrations_dir: "other-migrations",
+					},
+					{
+						binding: "NEW",
+						database_id: "new-d1-id",
+						migrations_dir: "migrations",
+					},
+				],
+			});
+
+			rmSync(".wrangler/deploy/config.json");
+		});
+
+		it("writes provisioned IDs to the original named environment", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "DEFAULT_D1",
+						migrations_dir: "default-migrations",
+					},
+				],
+				env: {
+					production: {
+						d1_databases: [
+							{
+								binding: "D1",
+								migrations_dir: "migrations",
+							},
+						],
+					},
+				},
+			});
+			writeRedirectedWranglerConfig({
+				name: "test-name-production",
+				main: "../index.js",
+				userConfigPath: "./wrangler.toml",
+				topLevelName: "test-name",
+				targetEnvironment: "production",
+				definedEnvironments: ["production"],
+				d1_databases: [
+					{
+						binding: "D1",
+						migrations_dir: "../../migrations",
+					},
+				],
+			});
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-production-d1",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedScriptName: "test-name-production",
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "d1",
+						database_id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(readWranglerConfig()).toEqual({
+				compatibility_date: "2022-01-12",
+				name: "test-name",
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "DEFAULT_D1",
+						migrations_dir: "default-migrations",
+					},
+				],
+				env: {
+					production: {
+						d1_databases: [
+							{
+								binding: "D1",
+								database_id: "new-d1-id",
+								migrations_dir: "migrations",
+							},
+						],
+					},
+				},
+			});
+
+			rmSync(".wrangler/deploy/config.json");
+		});
+
+		it("writes provisioned IDs to the root config when no environment section exists", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", migrations_dir: "migrations" }],
+			});
+			writeRedirectedWranglerConfig({
+				name: "test-name-legacy",
+				main: "../index.js",
+				userConfigPath: "./wrangler.toml",
+				topLevelName: "test-name",
+				targetEnvironment: "legacy",
+				definedEnvironments: [],
+				d1_databases: [{ binding: "D1", migrations_dir: "../../migrations" }],
+			});
+			mockGetSettings();
+			mockSubDomainRequest("test-sub-domain", true, false);
+			mockServiceScriptData({});
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-legacy-d1",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedScriptName: "test-name-legacy",
+				useOldUploadApi: true,
+			});
+
+			await runWrangler("deploy");
+
+			expect(readWranglerConfig().d1_databases).toEqual([
+				{
+					binding: "D1",
+					database_id: "new-d1-id",
+					migrations_dir: "migrations",
+				},
+			]);
+
+			rmSync(".wrangler/deploy/config.json");
+		});
+
+		it.for([undefined, ""])(
+			"writes a D1 ID resolved by name when another binding is provisioned (database_id: %s)",
+			async (databaseId, { expect }) => {
+				writeWranglerConfig({
+					main: "index.js",
+					kv_namespaces: [{ binding: "KV" }],
+					d1_databases: [
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: "stale-d1-id",
+							migrations_dir: "migrations",
+						},
+					],
+				});
+				writeRedirectedWranglerConfig({
+					main: "../index.js",
+					kv_namespaces: [{ binding: "KV" }],
+					d1_databases: [
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: databaseId,
+							migrations_dir: "../migrations",
+						},
+					],
+				});
+				mockGetSettings();
+				mockGetD1Database(expect, "existing-db-name", {
+					name: "existing-db-name",
+					uuid: "existing-d1-id",
+				});
+				mockListKVNamespacesRequest(expect);
+				mockCreateKVNamespace(expect, { resultId: "new-kv-id" });
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{ name: "KV", type: "kv_namespace", namespace_id: "new-kv-id" },
+						{ name: "D1", type: "d1", database_id: "existing-d1-id" },
+					],
+				});
+
+				await runWrangler("deploy");
+
+				expect(readWranglerConfig().d1_databases).toEqual([
+					{
+						binding: "D1",
+						database_name: "existing-db-name",
+						database_id: "existing-d1-id",
+						migrations_dir: "migrations",
+					},
+				]);
+				expect(readWranglerConfig().kv_namespaces).toEqual([
+					{ binding: "KV", id: "new-kv-id" },
+				]);
+				expect(readWranglerConfig("./dist/wrangler.json").d1_databases).toEqual(
+					[
+						{
+							binding: "D1",
+							database_name: "existing-db-name",
+							database_id: "existing-d1-id",
+							migrations_dir: "../migrations",
+						},
+					]
+				);
+			}
+		);
 
 		it("can inject additional bindings in redirected config that aren't written back to disk", async ({
 			expect,
@@ -1318,7 +1607,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "test-name-d1-id",
+						database_id: "test-name-d1-id",
 					},
 				],
 			});
@@ -1477,7 +1766,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1515,6 +1804,103 @@ describe("resource provisioning", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("creates an auto-provisioned D1 database in the configured jurisdiction", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings();
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database", () =>
+					HttpResponse.json(createFetchResult([]))
+				)
+			);
+			mockCreateD1Database(expect, {
+				assertName: "test-name-d1",
+				assertJurisdiction: "eu",
+				resultId: "new-d1-id",
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "d1",
+						database_id: "new-d1-id",
+					},
+				],
+			});
+
+			await runWrangler("deploy");
+
+			expect(std.out).toContain('Creating new D1 Database "test-name-d1"');
+			expect(std.err).toBe("");
+		});
+
+		it("can inherit a D1 binding when the jurisdiction matches", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "d1",
+							name: "D1",
+							id: "d1-id",
+						},
+					],
+				},
+			});
+			mockGetD1Database(expect, "d1-id", { jurisdiction: "eu" });
+			mockUploadWorkerRequest({
+				expectedBindings: [
+					{
+						name: "D1",
+						type: "inherit",
+					},
+				],
+			});
+
+			await runWrangler("deploy --x-auto-create=false");
+
+			expect(std.out).toContain("env.D1 (inherited)");
+			expect(std.err).toBe("");
+		});
+
+		it("throws when an inherited D1 database has a different jurisdiction", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [{ binding: "D1", jurisdiction: "eu" }],
+			});
+			mockGetSettings({
+				result: {
+					bindings: [
+						{
+							type: "d1",
+							name: "D1",
+							id: "old-d1-id",
+						},
+					],
+				},
+			});
+			mockGetD1Database(expect, "old-d1-id", {
+				name: "test-name-d1",
+				uuid: "old-d1-id",
+				jurisdiction: "us",
+			});
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'D1 database "test-name-d1" (old-d1-id) is in jurisdiction "us", but the "D1" binding specifies jurisdiction "eu".'
+			);
 		});
 
 		it("can inherit d1 binding when the database name is provided", async ({
@@ -1610,7 +1996,7 @@ describe("resource provisioning", () => {
 					{
 						name: "D1",
 						type: "d1",
-						id: "new-d1-id",
+						database_id: "new-d1-id",
 					},
 				],
 			});
@@ -1815,7 +2201,7 @@ describe("resource provisioning", () => {
 					{
 						name: "DB_NAME",
 						type: "d1",
-						id: "existing-d1-id",
+						database_id: "existing-d1-id",
 					},
 				],
 			});
@@ -1839,6 +2225,31 @@ describe("resource provisioning", () => {
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("throws when a named D1 database has a different jurisdiction", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				d1_databases: [
+					{
+						binding: "DB_NAME",
+						database_name: "existing-db-name",
+						jurisdiction: "eu",
+					},
+				],
+			});
+			mockGetSettings();
+			mockGetD1Database(expect, "existing-db-name", {
+				name: "existing-db-name",
+				uuid: "existing-d1-id",
+				jurisdiction: "us",
+			});
+
+			await expect(runWrangler("deploy")).rejects.toThrow(
+				'D1 database "existing-db-name" (existing-d1-id) is in jurisdiction "us", but the "DB_NAME" binding specifies jurisdiction "eu".'
+			);
 		});
 
 		// because buckets with the same name can exist in different jurisdictions
@@ -2048,15 +2459,21 @@ function mockCreateD1Database(
 	options: {
 		resultId?: string;
 		assertName?: string;
+		assertJurisdiction?: string;
 	} = {}
 ) {
 	msw.use(
 		http.post(
 			"*/accounts/:accountId/d1/database",
 			async ({ request }) => {
-				if (options.assertName) {
+				if (options.assertName || options.assertJurisdiction) {
 					const requestBody = await request.json();
-					expect(requestBody).toEqual({ name: options.assertName });
+					expect(requestBody).toEqual({
+						name: options.assertName,
+						...(options.assertJurisdiction && {
+							jurisdiction: options.assertJurisdiction,
+						}),
+					});
 				}
 
 				return HttpResponse.json(

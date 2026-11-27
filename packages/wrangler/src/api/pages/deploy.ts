@@ -37,7 +37,7 @@ import { createUploadWorkerBundleContents } from "./create-worker-bundle-content
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 import type { Deployment, Project } from "@cloudflare/types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 const MAX_COMMIT_MESSAGE_BYTES = 384;
 

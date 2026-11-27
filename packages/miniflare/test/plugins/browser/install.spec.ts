@@ -8,7 +8,7 @@ import {
 	isInstallMarkedComplete,
 } from "../../../src/plugins/browser-rendering/install";
 
-const BUILD_ID = "126.0.6478.182";
+const BUILD_ID = "152.0.7977.64";
 const PLATFORM = "linux64";
 
 let cacheDir: string;

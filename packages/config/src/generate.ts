@@ -7,10 +7,8 @@ interface GenerateTypesOptions {
 	 * Package name used in the inline `import("<packageName>")` type expressions
 	 * for `InferEnv`/`InferDurableNamespaces`/`InferMainModule`/`UnwrapConfig`.
 	 *
-	 * Defaults to `"@cloudflare/config"`. Integrations that bundle
-	 * `@cloudflare/config` (e.g. `@cloudflare/vite-plugin`) should pass their
-	 * own re-export path here so users don't need to depend on
-	 * `@cloudflare/config` directly.
+	 * Defaults to `"@cloudflare/config"`. Integrations should pass the public
+	 * `cf/config` package used to author `cloudflare.config.ts` files.
 	 */
 	packageName?: string;
 }

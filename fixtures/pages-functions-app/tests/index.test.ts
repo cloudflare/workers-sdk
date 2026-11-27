@@ -166,8 +166,15 @@ describe("Pages Functions", () => {
 	});
 
 	describe("can import static assets", () => {
-		it("should render a static asset", async ({ expect }) => {
-			const response = await fetch(`http://${ip}:${port}/static`);
+		it.for([
+			"/static",
+			"//static",
+			"///static",
+			"/nested/static",
+			"/nested//static",
+			"/nested///static",
+		])("should render a static asset at %s", async (pathname, { expect }) => {
+			const response = await fetch(`http://${ip}:${port}${pathname}`);
 			const text = await response.text();
 			expect(text).toContain("<h1>Hello from an imported static asset!</h1>");
 		});

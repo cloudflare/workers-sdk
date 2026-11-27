@@ -258,12 +258,17 @@ function parseMethod(method: string[]): MethodFilter {
  * @returns a HeaderFilter for use with the API
  */
 function parseHeader(header: string): HeaderFilter {
-	const [headerKey, headerQuery] = header.split(":", 2);
+	// Only the first colon separates the key from the query: header values such
+	// as URLs or IPv6 addresses contain colons of their own.
+	const separatorIndex = header.indexOf(":");
+	if (separatorIndex === -1) {
+		return { header: { key: header.trim() } };
+	}
 
 	return {
 		header: {
-			key: headerKey.trim(),
-			query: headerQuery?.trim(),
+			key: header.slice(0, separatorIndex).trim(),
+			query: header.slice(separatorIndex + 1).trim(),
 		},
 	};
 }

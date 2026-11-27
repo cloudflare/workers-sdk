@@ -10,6 +10,13 @@ import type {
 	KVNamespace,
 	Workflow,
 } from "@cloudflare/workers-types";
+import type { MatchImageSnapshotOptions } from "jest-image-snapshot";
+
+declare module "vitest" {
+	interface Matchers<R> {
+		toMatchImageSnapshot(options?: MatchImageSnapshotOptions): R;
+	}
+}
 
 type Env = {
 	MY_VAR: string;
@@ -311,6 +318,20 @@ describe("getPlatformProxy - env", () => {
 					  These are not available in local development, so you will not be able to bind to them when testing locally, but they should work in production.
 					"
 				`);
+		});
+
+		it("ignores Workflows declared in `exports` and doesn't crash", async ({
+			expect,
+		}) => {
+			const { dispose } = await getPlatformProxy<Env>({
+				configPath: path.join(
+					__dirname,
+					"..",
+					"wrangler_workflow_exports.jsonc"
+				),
+			});
+			await dispose();
+			expect(warn).not.toHaveBeenCalled();
 		});
 	});
 

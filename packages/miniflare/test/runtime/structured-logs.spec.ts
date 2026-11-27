@@ -3,7 +3,10 @@ import { setImmediate as flush } from "node:timers/promises";
 import { test } from "vitest";
 // Imported from source rather than the package entry: this helper is internal
 // to the runtime and deliberately not part of Miniflare's public API.
-import { handleStructuredLogsFromStream } from "../../src/runtime/structured-logs";
+import {
+	handleStructuredLogsFromStream,
+	parseAddressInUse,
+} from "../../src/runtime/structured-logs";
 import type { WorkerdStructuredLog } from "miniflare";
 
 /** A line as workerd emits it when structured logging is enabled. */
@@ -153,6 +156,80 @@ test("address-in-use errors are still swallowed, even during a crash report", as
 			message: "*** std::terminate() called with no exception",
 		},
 	]);
+});
+
+test("the Rust server's address-in-use errors are swallowed", async ({
+	expect,
+}) => {
+	const message =
+		'Socket "entry": bind(): Address already in use (os error 48)';
+
+	// Miniflare turns this into a `MiniflareCoreError` too. The line has no
+	// stack, so it is not internal noise and must be recognised on its own.
+	expect(await collect([structured("error", message), `${message}\n`])).toEqual(
+		[]
+	);
+});
+
+test("an address-in-use crash banner is swallowed", async ({ expect }) => {
+	expect(
+		await collect([
+			"*** Fatal uncaught kj::Exception: rust/cxx/kj-rs-io/ffi.rs:209: failed: bind(): Address already in use (os error 48)\n",
+		])
+	).toEqual([]);
+});
+
+test("parseAddressInUse() finds the socket or address in use", ({ expect }) => {
+	// workerd's Rust server, plain text, on macOS, Linux and Windows.
+	expect(
+		parseAddressInUse(
+			'Socket "entry": bind(): Address already in use (os error 48)\n'
+		)
+	).toEqual({ socket: "entry" });
+	expect(
+		parseAddressInUse(
+			'Socket "entry:local": bind(): Address already in use (os error 98)\n'
+		)
+	).toEqual({ socket: "entry:local" });
+	expect(
+		parseAddressInUse(
+			'Socket "entry": bind(): Only one usage of each socket address (protocol/network address/port) is normally permitted. (os error 10048)\n'
+		)
+	).toEqual({ socket: "entry" });
+	// The same, as the raw line of a structured log.
+	expect(
+		parseAddressInUse(
+			structured(
+				"error",
+				'Socket "entry": bind(): Address already in use (os error 48)'
+			)
+		)
+	).toEqual({ socket: "entry" });
+	// workerd's C++ server over tokio-backed sockets: a fatal crash naming
+	// neither.
+	expect(
+		parseAddressInUse(
+			"*** Fatal uncaught kj::Exception: rust/cxx/kj-rs-io/ffi.rs:209: failed: bind(): Address already in use (os error 48)\n"
+		)
+	).toEqual({});
+	// The same on Windows, when the port's holder has `SO_EXCLUSIVEADDRUSE`.
+	expect(
+		parseAddressInUse(
+			"*** Fatal uncaught kj::Exception: rust/cxx/kj-rs-io\\ffi.rs:209: failed: bind(): An attempt was made to access a socket in a way forbidden by its access permissions. (os error 10013)\n"
+		)
+	).toEqual({});
+	// workerd's C++ server over kj's sockets.
+	expect(
+		parseAddressInUse(
+			"kj/async-io-unix.c++:1: failed: Address already in use; toString() = 127.0.0.1:8787; stack: 7ff6a1b2c3d4\n"
+		)
+	).toEqual({ address: "127.0.0.1:8787" });
+	// Other bind failures are not address-in-use.
+	expect(
+		parseAddressInUse(
+			'Socket "entry": bind(): Permission denied (os error 13)\n'
+		)
+	).toBeUndefined();
 });
 
 test("access violations still get their Windows-specific explanation", async ({

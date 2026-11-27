@@ -59,8 +59,27 @@ type WorkerContext = {
 	passThroughOnException: () => void;
 };
 
+/**
+ * Restore repeated slashes in a middleware prefix so functionPath can be removed
+ * from the original request URL by mounted handlers such as assets imports.
+ */
+function getOriginalPathPrefix(requestPath: string, normalizedPrefix: string) {
+	let end = 0;
+	for (let index = 0; index < normalizedPrefix.length; index++) {
+		end++;
+		if (normalizedPrefix[index] === "/") {
+			while (requestPath[end] === "/") {
+				end++;
+			}
+		}
+	}
+	return requestPath.slice(0, end);
+}
+
 function* executeRequest(request: Request) {
 	const requestPath = new URL(request.url).pathname;
+	// Match the asset server's slash normalization so requests cannot bypass middleware.
+	const normalizedRequestPath = requestPath.replace(/\/+/g, "/");
 
 	// First, iterate through the routes (backwards) and execute "middlewares" on partial route matches
 	for (const route of [...routes].reverse()) {
@@ -75,14 +94,20 @@ function* executeRequest(request: Request) {
 		const mountMatcher = match(route.mountPath.replace(escapeRegex, "\\$&"), {
 			end: false,
 		});
-		const matchResult = routeMatcher(requestPath);
-		const mountMatchResult = mountMatcher(requestPath);
+		const matchResult =
+			routeMatcher(requestPath) || routeMatcher(normalizedRequestPath);
+		const originalMountMatch = mountMatcher(requestPath);
+		const mountMatchResult =
+			originalMountMatch || mountMatcher(normalizedRequestPath);
 		if (matchResult && mountMatchResult) {
+			const path = originalMountMatch
+				? originalMountMatch.path
+				: getOriginalPathPrefix(requestPath, mountMatchResult.path);
 			for (const handler of route.middlewares.flat()) {
 				yield {
 					handler,
 					params: matchResult.params as Params,
-					path: mountMatchResult.path,
+					path,
 				};
 			}
 		}

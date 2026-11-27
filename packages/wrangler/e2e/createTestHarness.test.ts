@@ -888,7 +888,7 @@ describe("createTestHarness", () => {
 		const workflow = await worker.introspectWorkflow("MODERATOR");
 		onTestFinished(workflow.dispose);
 		await expect(worker.introspectWorkflow("MODERATOR")).rejects.toThrow(
-			`Workflow "moderator-workflow" already has an active introspection session for binding "MODERATOR".`
+			`Workflow "moderator-workflow" already has an active introspection session.`
 		);
 		await workflow.modifyAll(async (modifier) => {
 			await modifier.disableSleeps();
@@ -1281,7 +1281,10 @@ describe("createTestHarness", () => {
 		});
 		onTestFinished(server.close);
 
-		await expect(server.listen()).rejects.toThrow("core:user:missing-ai");
+		await server.listen();
+		await expect(server.fetch("/")).rejects.toThrow(
+			'Worker "missing-ai" not found. Make sure it is running locally.'
+		);
 	});
 
 	it("routes fetches based on worker routes", async ({ expect }) => {

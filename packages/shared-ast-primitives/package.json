@@ -24,7 +24,7 @@
 		}
 	},
 	"scripts": {
-		"build": "tsup",
+		"build": "tsdown",
 		"check:type": "tsc -p ./tsconfig.json",
 		"deploy": "echo 'no deploy'",
 		"dev": "tsx watch src/dev.ts",
@@ -40,7 +40,7 @@
 		"@vitest/ui": "catalog:default",
 		"concurrently": "^8.2.2",
 		"recast": "^0.23.11",
-		"tsup": "8.3.0",
+		"tsdown": "catalog:default",
 		"tsx": "^3.12.8",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

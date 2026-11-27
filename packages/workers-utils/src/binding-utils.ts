@@ -122,6 +122,11 @@ export function convertConfigToBindings(
 				output[binding] = { type: "browser", ...x };
 				break;
 			}
+			case "analytics": {
+				const { binding, ...x } = info;
+				output[binding] = { type: "analytics", ...x };
+				break;
+			}
 			case "durable_objects": {
 				for (const { name, ...x } of info.bindings ?? []) {
 					output[name] = { type: "durable_object_namespace", ...x };
@@ -210,8 +215,10 @@ export function convertConfigToBindings(
 				break;
 			}
 			case "images": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "images", ...x };
+				const { binding, url_transformations: _, ...x } = info;
+				if (binding) {
+					output[binding] = { type: "images", ...x };
+				}
 				break;
 			}
 			case "stream": {
@@ -281,6 +288,15 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "k2": {
+				if (pages) {
+					break;
+				}
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "k2", ...x };
+				}
+				break;
+			}
 			case "secrets_store_secrets": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "secrets_store_secret", ...x };
@@ -308,6 +324,12 @@ export function convertConfigToBindings(
 				}
 				break;
 			}
+			case "realtimekit": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "realtimekit", ...x };
+				}
+				break;
+			}
 			case "ratelimits": {
 				for (const { name, ...x } of info) {
 					output[name] = { type: "ratelimit", ...x };
@@ -329,6 +351,12 @@ export function convertConfigToBindings(
 			case "vpc_networks": {
 				for (const { binding, ...x } of info) {
 					output[binding] = { type: "vpc_network", ...x };
+				}
+				break;
+			}
+			case "oidc_tokens": {
+				for (const { binding, ...x } of info) {
+					output[binding] = { type: "oidc_token", ...x };
 				}
 				break;
 			}

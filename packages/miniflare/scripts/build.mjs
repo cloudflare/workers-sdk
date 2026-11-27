@@ -33,6 +33,7 @@
 import { cpSync, existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
 import esbuild from "esbuild";
 import { getPackage, pkgRoot } from "./common.mjs";
 
@@ -40,6 +41,7 @@ import { getPackage, pkgRoot } from "./common.mjs";
 
 const argv = process.argv.slice(2);
 const watch = argv[0] === "--watch";
+const sourcemap = process.env.SOURCEMAPS !== "false";
 
 // --- Helpers ---
 
@@ -237,7 +239,7 @@ const embedWorkersPlugin = {
 					format: "esm",
 					target: "esnext",
 					bundle: true,
-					sourcemap: true,
+					sourcemap,
 					sourcesContent: true,
 					// These virtual modules are provided by workerd at runtime
 					external: [
@@ -416,15 +418,27 @@ async function buildPackage() {
 
 	const indexPath = path.join(pkgRoot, "src", "index.ts");
 	const outPath = path.join(pkgRoot, "dist");
+	if (!watch) {
+		// A release build must not retain maps emitted by an earlier development build.
+		await removeDir(outPath);
+	}
 
 	const buildOptions = {
 		platform: "node",
 		format: "cjs",
 		target: "esnext",
 		bundle: true,
-		sourcemap: true,
+		sourcemap,
 		sourcesContent: true,
 		tsconfig: path.join(pkgRoot, "tsconfig.json"),
+		// Provide a real `import.meta.url` for the CJS bundle. Bundled ESM
+		// dependencies (e.g. `@cloudflare/workers-utils`) contain
+		// `createRequire(import.meta.url)` shims that would otherwise receive
+		// `undefined` and throw on load.
+		inject: [path.join(pkgRoot, "import-meta-url.js")],
+		define: {
+			"import.meta.url": "import_meta_url",
+		},
 		external: [
 			// Don't bundle miniflare itself — we want tests to run against
 			// the actual published code, not a re-bundled copy
@@ -437,10 +451,18 @@ async function buildPackage() {
 			"esbuild",
 		],
 		plugins: [embedWorkersPlugin],
+		loader: { ".wasm": "file" },
+		assetNames: "src/[name]",
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
-		entryPoints: [indexPath, ...fixtureBuilds],
+		entryPoints: [
+			indexPath,
+			// A separate thread keeps native Git available during synchronous Node
+			// binding-proxy calls, which block Miniflare's main event loop.
+			path.join(pkgRoot, "src/plugins/artifacts/git-sidecar.ts"),
+			...fixtureBuilds,
+		],
 	};
 
 	if (watch) {
@@ -451,7 +473,9 @@ async function buildPackage() {
 	}
 
 	copyLocalExplorerUi(outPath, pkgRoot);
-	await patchSourcemaps(outPath);
+	if (sourcemap) {
+		await patchSourcemaps(outPath);
+	}
 }
 
 buildPackage().catch((e) => {

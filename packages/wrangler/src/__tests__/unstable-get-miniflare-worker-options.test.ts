@@ -18,6 +18,40 @@ function asArray(value: unknown): unknown[] {
 describe("unstable_getMiniflareWorkerOptions", () => {
 	runInTempDir();
 
+	it("preserves UDP connect handlers", ({ expect }) => {
+		writeWranglerConfig(
+			{
+				name: "test-worker",
+				main: "./index.js",
+				compatibility_date: "2026-09-21",
+				compatibility_flags: ["experimental"],
+				connect: [
+					{
+						protocol: "udp",
+						port: 9000,
+						address: "::1",
+						idle_timeout_ms: 1_000,
+						max_pending_bytes: 65_536,
+					},
+				],
+			},
+			"./wrangler.json"
+		);
+
+		const { workerOptions } =
+			unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+		expect(workerOptions.connectHandlers).toEqual([
+			{
+				protocol: "udp",
+				port: 9000,
+				address: "::1",
+				idleTimeoutMs: 1_000,
+				maxPendingBytes: 65_536,
+			},
+		]);
+	});
+
 	describe("zone derivation (used for the outbound CF-Worker header)", () => {
 		it("derives the zone from a single `route` string", ({ expect }) => {
 			writeWranglerConfig(
@@ -197,6 +231,58 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 		});
 	});
 
+	describe("cron triggers", () => {
+		it("passes through exact cron strings from the selected environment", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					triggers: { crons: ["*/5 * * * *", " 0 17 * * SUN "] },
+					env: {
+						staging: {
+							triggers: { crons: ["30 6 * * mon"] },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+
+			const base = unstable_getMiniflareWorkerOptions("./wrangler.json");
+			const staging = unstable_getMiniflareWorkerOptions(
+				"./wrangler.json",
+				"staging"
+			);
+
+			expect(base.workerOptions.cronTriggers).toEqual([
+				"*/5 * * * *",
+				" 0 17 * * SUN ",
+			]);
+			expect(staging.workerOptions.cronTriggers).toEqual(["30 6 * * mon"]);
+		});
+
+		it.for([
+			{ label: "missing", crons: undefined },
+			{ label: "empty", crons: [] as string[] },
+		])("passes through $label cron triggers", ({ crons }, { expect }) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					triggers: { crons },
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+			expect(workerOptions.cronTriggers).toEqual(crons);
+		});
+	});
+
 	describe("workflow bindings", () => {
 		it("drops deploy-only workflow fields that the local runtime has no concept of", ({
 			expect,
@@ -233,6 +319,35 @@ describe("unstable_getMiniflareWorkerOptions", () => {
 					scriptName: undefined,
 					stepLimit: 5000,
 				},
+			});
+		});
+
+		it("surfaces configured workflow exports as workflowExports for the local runtime", ({
+			expect,
+		}) => {
+			writeWranglerConfig(
+				{
+					name: "test-worker",
+					main: "./index.js",
+					compatibility_date: "2024-10-04",
+					exports: {
+						GreetingWorkflow: { type: "workflow", name: "greeting" },
+						BatchWorkflow: {
+							type: "workflow",
+							name: "batch",
+							limits: { steps: 10 },
+						},
+					},
+				},
+				"./wrangler.json"
+			);
+
+			const { workerOptions } =
+				unstable_getMiniflareWorkerOptions("./wrangler.json");
+
+			expect(workerOptions.workflowExports).toEqual({
+				GreetingWorkflow: { name: "greeting" },
+				BatchWorkflow: { name: "batch", stepLimit: 10 },
 			});
 		});
 	});

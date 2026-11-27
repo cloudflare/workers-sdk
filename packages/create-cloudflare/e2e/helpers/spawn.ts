@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { stripAnsi } from "@cloudflare/cli-shared-helpers";
 import { overrideConfigEnv } from "@cloudflare/mock-npm-registry/config-env";
 import { spawn } from "cross-spawn";
@@ -8,6 +9,36 @@ import type {
 	SpawnOptionsWithoutStdio,
 } from "node:child_process";
 import type { Writable } from "node:stream";
+
+const packageManagerCaches = new WeakMap<Writable, string>();
+
+/**
+ * Keep each attempt's package cache outside the project C3 commits to Git.
+ * @param logStream The attempt's shared log stream.
+ * @param projectPath Absolute path of the scaffolded project.
+ */
+export function registerPackageManagerCache(
+	logStream: Writable,
+	projectPath: string
+) {
+	packageManagerCaches.set(logStream, `${projectPath}-package-cache`);
+}
+
+function getSpawnEnv(logStream: Writable, env: NodeJS.ProcessEnv | undefined) {
+	const inherited = { ...testEnv, ...env };
+	const cache = packageManagerCaches.get(logStream);
+	if (cache === undefined) {
+		return inherited;
+	}
+	return {
+		...overrideConfigEnv(inherited, {
+			cache: join(cache, "npm"),
+			"store-dir": join(cache, "pnpm", "store"),
+		}).env,
+		PNPM_HOME: join(cache, "pnpm"),
+		YARN_CACHE_FOLDER: join(cache, "yarn"),
+	};
+}
 
 /**
  * Spawn a child process and attach a handler that will log any output from
@@ -36,16 +67,17 @@ export const spawnWithLogging = (
 
 	const proc = spawn(cmd, argv, {
 		...opts,
-		env: {
-			...testEnv,
-			...opts.env,
-		},
+		env: getSpawnEnv(logStream, opts.env),
 	});
 
 	proc.stdout.on("data", (data) => {
+		// A timed-out attempt can close its log before the child stops emitting.
+		if (logStream.writableEnded || logStream.destroyed) {
+			return;
+		}
 		const lines: string[] = data.toString().split("\n");
 
-		lines.forEach(async (line) => {
+		lines.forEach((line) => {
 			const stripped = stripAnsi(line).trim();
 			if (stripped.length > 0) {
 				logStream.write(`${stripped}\n`);
@@ -54,7 +86,9 @@ export const spawnWithLogging = (
 	});
 
 	proc.stderr.on("data", (data) => {
-		logStream.write(data);
+		if (!logStream.writableEnded && !logStream.destroyed) {
+			logStream.write(data);
+		}
 	});
 
 	return proc;

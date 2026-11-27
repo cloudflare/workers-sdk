@@ -1,5 +1,21 @@
 # edge-preview-authenticated-proxy
 
+## 0.3.6
+
+### Patch Changes
+
+- [#16800](https://github.com/cloudflare/workers-sdk/pull/16800) [`8d2bb3d`](https://github.com/cloudflare/workers-sdk/commit/8d2bb3dccf55ba8ac3fdf8ac12cca7cd52a5bad0) Thanks [@cjol](https://github.com/cjol)! - Fix deployments of Workers using Prometheus metrics without `nodejs_compat`
+
+  The banner imports `node:module`, so Workers that bundle `@cloudflare/workers-utils/prometheus-metrics` without `nodejs_compat` failed to upload with `No such module "node:module"`. This blocked the `edge-preview-authenticated-proxy@0.3.5` deploy. The export has no CommonJS dependencies, so it is now built alongside the browser export, which already omits the banner.
+
+## 0.3.5
+
+### Patch Changes
+
+- [#16797](https://github.com/cloudflare/workers-sdk/pull/16797) [`1e1752e`](https://github.com/cloudflare/workers-sdk/commit/1e1752e462b517280d537c2ed2c95911d2d387cb) Thanks [@lokeshramchand-ctrl](https://github.com/lokeshramchand-ctrl)! - Restrict the `/.update-preview-token` redirect to same-origin paths
+
+  Previously, the `suffix` query parameter was copied into the `Location` header unchanged, so the endpoint could redirect the browser to any other site (for example `https://…`, `//…` or `/\…`). The `suffix` is now resolved against the request URL, and anything that would leave the current origin falls back to `/`.
+
 ## 0.3.4
 
 ### Patch Changes

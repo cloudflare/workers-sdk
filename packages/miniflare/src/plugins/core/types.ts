@@ -8,6 +8,12 @@ export type BindingIdMap = {
 	do: Record<string, DONamespaceInfo & { binding: string }>; // uniqueKey -> namespace info
 	r2: Record<string, string>; // bucketName -> bindingName
 	workflows: Record<string, WorkflowBindingInfo>; // workflowName -> binding info
+	flagship: Record<string, FlagshipBindingInfo>; // appId -> binding info
+};
+
+export type FlagshipBindingInfo = {
+	appId: string; // Flagship app id
+	bindings: string[]; // user-facing binding names using this app
 };
 
 type DONamespaceInfo = {
@@ -54,6 +60,26 @@ export type WorkerResourceBindings = {
 	sendEmail: {
 		bindingName: string;
 	}[];
+	flagship: {
+		/** id = Flagship app id */
+		id: string;
+		bindingName: string;
+	}[];
 };
 
-export type ExplorerWorkerOpts = Record<string, WorkerResourceBindings>;
+export type WorkerTriggerMetadata = {
+	crons: string[];
+};
+
+export type WorkerExplorerMetadata = {
+	bindings: WorkerResourceBindings;
+	triggers: WorkerTriggerMetadata;
+	/**
+	 * Opaque, stable identifier for the Worker's project root. This allows the
+	 * Local Explorer UI to scope browser persistence without exposing a local
+	 * filesystem path.
+	 */
+	persistenceScope?: string;
+};
+
+export type ExplorerWorkerOpts = Record<string, WorkerExplorerMetadata>;

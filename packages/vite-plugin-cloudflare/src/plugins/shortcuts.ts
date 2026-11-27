@@ -1,3 +1,6 @@
+import { convertToWranglerConfig } from "@cloudflare/config";
+import { printBindings } from "@cloudflare/workers-utils";
+import { convertConfigToBindings } from "@cloudflare/workers-utils/config";
 import {
 	CorePaths,
 	getDefaultDevRegistryPath,
@@ -5,37 +8,16 @@ import {
 } from "miniflare";
 import open from "open";
 import colors from "picocolors";
-import * as wrangler from "wrangler";
-import { assertIsNotPreview, assertIsPreview } from "../context";
-import { createPlugin, satisfiesMinimumViteVersion } from "../utils";
 import { extendTunnelExpiry, isTunnelOpen, toggleTunnel } from "./tunnel";
 import type { PluginContext } from "../context";
+import type {
+	ParsedContainerConfig,
+	ParsedWorkerConfig,
+	ParsedBuildOutputContainerConfig,
+	ParsedBuildOutputWorkerConfig,
+} from "@cloudflare/config";
+import type { ContainerApp } from "@cloudflare/workers-utils/config";
 import type * as vite from "vite";
-
-export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
-	// This requires Vite 7.2.7 which fixes custom CLI shortcuts support
-	// @see https://github.com/vitejs/vite/pull/21103
-	const isCustomShortcutsSupported = satisfiesMinimumViteVersion("7.2.7");
-
-	return {
-		async configureServer(viteDevServer) {
-			if (!isCustomShortcutsSupported) {
-				return;
-			}
-
-			assertIsNotPreview(ctx);
-			addShortcuts(viteDevServer, ctx);
-		},
-		async configurePreviewServer(vitePreviewServer) {
-			if (!isCustomShortcutsSupported) {
-				return;
-			}
-
-			assertIsPreview(ctx);
-			addShortcuts(vitePreviewServer, ctx);
-		},
-	};
-});
 
 export function addShortcuts(
 	server: vite.ViteDevServer | vite.PreviewServer,
@@ -55,20 +37,37 @@ export function addShortcuts(
 			const workerConfigs = ctx.allWorkerConfigs;
 
 			for (const workerConfig of workerConfigs) {
-				const bindings =
-					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
-						workerConfig
-					);
+				const wranglerConfig = convertToWranglerConfig({
+					worker: workerConfig,
+					containers: [],
+				});
+				const bindings = convertConfigToBindings(
+					{
+						...wranglerConfig,
+						durable_objects:
+							wranglerConfig.durable_objects === undefined
+								? undefined
+								: {
+										...wranglerConfig.durable_objects,
+										bindings: wranglerConfig.durable_objects.bindings ?? [],
+									},
+					},
+					{ usePreviewIds: true }
+				);
 
-				wrangler.unstable_printBindings(bindings, {
-					tailConsumers: workerConfig.tail_consumers,
-					streamingTailConsumers: workerConfig.streaming_tail_consumers,
-					containers: workerConfig.containers,
+				printBindings(bindings, {
+					tailConsumers: wranglerConfig.tail_consumers,
+					streamingTailConsumers: wranglerConfig.streaming_tail_consumers,
+					containers: getWorkerContainersForDisplay({
+						workerConfig,
+						containers: ctx.resolvedPluginConfig.containers,
+					}),
 					warnIfNoBindings: true,
 					isMultiWorker: workerConfigs.length > 1,
 					name: workerConfig.name ?? "Your Worker",
 					registry: getWorkerRegistry(registryPath),
-					log: (message: string) => viteServer.config.logger.info(message),
+					remoteBindingsDisabled: !ctx.resolvedPluginConfig.remoteBindings,
+					log: (message) => viteServer.config.logger.info(message),
 				});
 			}
 		},
@@ -156,4 +155,54 @@ export function addShortcuts(
 			extendTunnelExpiryShortcut,
 		],
 	});
+}
+
+/**
+ * Creates the small legacy display shape consumed by `printBindings` directly
+ * from input Container definitions and Worker export links.
+ */
+export function getWorkerContainersForDisplay(options: {
+	workerConfig: ParsedWorkerConfig | ParsedBuildOutputWorkerConfig;
+	containers: Array<ParsedContainerConfig | ParsedBuildOutputContainerConfig>;
+}): ContainerApp[] {
+	const containersByName = new Map(
+		options.containers.map((container) => [container.name, container])
+	);
+	const displayContainers: ContainerApp[] = [];
+	for (const [className, workerExport] of Object.entries(
+		options.workerConfig.exports ?? {}
+	)) {
+		if (
+			workerExport.type !== "durable-object" ||
+			!("container" in workerExport) ||
+			workerExport.container === undefined
+		) {
+			continue;
+		}
+		const container = containersByName.get(workerExport.container);
+		if (container === undefined) {
+			continue;
+		}
+		if (container.schedulingPolicy === "durable-object") {
+			displayContainers.push({
+				name: container.name,
+				class_name: className,
+				scheduling_policy: "durable_object",
+			});
+			continue;
+		}
+		const image = container.image;
+		displayContainers.push({
+			name: container.name,
+			class_name: className,
+			image:
+				"dockerfile" in image
+					? image.dockerfile
+					: "reference" in image
+						? image.reference
+						: image.localReference,
+			scheduling_policy: container.schedulingPolicy,
+		});
+	}
+	return displayContainers;
 }

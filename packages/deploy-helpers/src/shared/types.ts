@@ -9,25 +9,22 @@ import type {
 	CfModule,
 	CfModuleType,
 	CfWorkerSourceMap,
-	ComplianceConfig,
-	Config,
 	FetchKVGetValueFetcher,
 	FetchResultFetcher,
 	FetchListResultFetcher,
 	FetchPagedListResultFetcher,
 	Logger,
-	Route,
 	Entry,
-	ContainerApp,
 } from "@cloudflare/workers-utils";
-import type Cloudflare from "cloudflare";
+import type {
+	Config,
+	Route,
+	ContainerApp,
+	DurableObjectCodeUpdateStrategy,
+} from "@cloudflare/workers-utils/config";
 
-/**
- * client needs to handle logger and fetch/auth implementation
- * these are passed into this package to handle any API requests/logs
- */
+/** API, logging, and prompt implementations supplied by the consumer. */
 export type DeployHelpersContext = {
-	createCloudflareClient: (complianceConfig: ComplianceConfig) => Cloudflare;
 	fetchResult: FetchResultFetcher;
 	fetchListResult: FetchListResultFetcher;
 	fetchPagedListResult: FetchPagedListResultFetcher;
@@ -135,6 +132,8 @@ export type SharedDeployVersionsProps = {
 	skipProvisioningConfigWriteback: boolean;
 	/** From --strict arg. In strict mode, conflicting pre-upload checks abort instead of auto-continuing. */
 	strict: boolean;
+	/** Optional consumer-specific message shown when strict mode aborts in a non-interactive session. */
+	strictModeAbortMessage?: string;
 	/** Container configuration and locally built image state. */
 	containers: ContainerDeployConfig;
 	/** Whether the resolved Worker name differs from the pre-merge config/args name. */
@@ -160,6 +159,8 @@ export type DeployProps = SharedDeployVersionsProps & {
 	oldAssetTtl: number | undefined;
 	/** From --containers-rollout arg. Deploy-only. */
 	containersRollout: "immediate" | "gradual" | "none" | undefined;
+	/** Controls how Durable Object code updates are applied. */
+	durableObjectsCodeUpdateStrategy?: DurableObjectCodeUpdateStrategy;
 	/**
 	 * When true, an existing Worker with the same name aborts the deploy instead
 	 * of updating it, because this run cannot confirm the local project owns the
@@ -206,5 +207,11 @@ export type TriggerProps = {
 	routes: Route[];
 	firstDeploy: boolean;
 	dryRun: boolean;
+	showDiff?: boolean;
 	validated: boolean;
+	queueCreateCommand: (queueName: string) => string;
+	workersDevConfigFieldName: string;
+	workersDevConfigAssignment: (value: boolean) => string;
+	previewUrlsConfigFieldName: string;
+	previewUrlsConfigAssignment: (value: boolean) => string;
 };

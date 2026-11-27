@@ -5,6 +5,10 @@ import {
 	ANALYTICS_ENGINE_PLUGIN,
 	ANALYTICS_ENGINE_PLUGIN_NAME,
 } from "./analytics-engine";
+import {
+	ANALYTICS_SQL_PLUGIN,
+	ANALYTICS_SQL_PLUGIN_NAME,
+} from "./analytics-sql";
 import { ARTIFACTS_PLUGIN, ARTIFACTS_PLUGIN_NAME } from "./artifacts";
 import { ASSETS_PLUGIN } from "./assets";
 import { ASSETS_PLUGIN_NAME } from "./assets/constants";
@@ -25,6 +29,7 @@ import { FLAGSHIP_PLUGIN, FLAGSHIP_PLUGIN_NAME } from "./flagship";
 import { HELLO_WORLD_PLUGIN, HELLO_WORLD_PLUGIN_NAME } from "./hello-world";
 import { HYPERDRIVE_PLUGIN, HYPERDRIVE_PLUGIN_NAME } from "./hyperdrive";
 import { IMAGES_PLUGIN, IMAGES_PLUGIN_NAME } from "./images";
+import { K2_PLUGIN, K2_PLUGIN_NAME } from "./k2";
 import { KV_PLUGIN, KV_PLUGIN_NAME } from "./kv";
 import { MEDIA_PLUGIN, MEDIA_PLUGIN_NAME } from "./media";
 import { MTLS_PLUGIN, MTLS_PLUGIN_NAME } from "./mtls";
@@ -32,6 +37,7 @@ import { PIPELINE_PLUGIN, PIPELINES_PLUGIN_NAME } from "./pipelines";
 import { QUEUES_PLUGIN, QUEUES_PLUGIN_NAME } from "./queues";
 import { R2_PLUGIN, R2_PLUGIN_NAME } from "./r2";
 import { RATELIMIT_PLUGIN, RATELIMIT_PLUGIN_NAME } from "./ratelimit";
+import { REALTIMEKIT_PLUGIN, REALTIMEKIT_PLUGIN_NAME } from "./realtimekit";
 import { SECRET_STORE_PLUGIN, SECRET_STORE_PLUGIN_NAME } from "./secret-store";
 import { STREAM_PLUGIN, STREAM_PLUGIN_NAME } from "./stream";
 import { VECTORIZE_PLUGIN, VECTORIZE_PLUGIN_NAME } from "./vectorize";
@@ -47,7 +53,10 @@ import {
 } from "./worker-loader";
 import { WORKFLOWS_PLUGIN, WORKFLOWS_PLUGIN_NAME } from "./workflows";
 import type { ValueOf } from "../workers";
+import type { Plugin } from "./shared";
 
+// Keep a named Plugin import in the declarations so API Extractor can bundle it
+// instead of leaking an unresolved relative import into the published types.
 export const PLUGINS = {
 	[CORE_PLUGIN_NAME]: CORE_PLUGIN,
 	[CACHE_PLUGIN_NAME]: CACHE_PLUGIN,
@@ -61,9 +70,11 @@ export const PLUGINS = {
 	[ASSETS_PLUGIN_NAME]: ASSETS_PLUGIN,
 	[WORKFLOWS_PLUGIN_NAME]: WORKFLOWS_PLUGIN,
 	[PIPELINES_PLUGIN_NAME]: PIPELINE_PLUGIN,
+	[K2_PLUGIN_NAME]: K2_PLUGIN,
 	[SECRET_STORE_PLUGIN_NAME]: SECRET_STORE_PLUGIN,
 	[EMAIL_PLUGIN_NAME]: EMAIL_PLUGIN,
 	[ANALYTICS_ENGINE_PLUGIN_NAME]: ANALYTICS_ENGINE_PLUGIN,
+	[ANALYTICS_SQL_PLUGIN_NAME]: ANALYTICS_SQL_PLUGIN,
 	[AI_PLUGIN_NAME]: AI_PLUGIN,
 	[AGENT_MEMORY_PLUGIN_NAME]: AGENT_MEMORY_PLUGIN,
 	[AI_SEARCH_PLUGIN_NAME]: AI_SEARCH_PLUGIN,
@@ -77,11 +88,12 @@ export const PLUGINS = {
 	[MTLS_PLUGIN_NAME]: MTLS_PLUGIN,
 	[HELLO_WORLD_PLUGIN_NAME]: HELLO_WORLD_PLUGIN,
 	[FLAGSHIP_PLUGIN_NAME]: FLAGSHIP_PLUGIN,
+	[REALTIMEKIT_PLUGIN_NAME]: REALTIMEKIT_PLUGIN,
 	[ARTIFACTS_PLUGIN_NAME]: ARTIFACTS_PLUGIN,
 	[WORKER_LOADER_PLUGIN_NAME]: WORKER_LOADER_PLUGIN,
 	[MEDIA_PLUGIN_NAME]: MEDIA_PLUGIN,
 	[VERSION_METADATA_PLUGIN_NAME]: VERSION_METADATA_PLUGIN,
-};
+} satisfies Record<string, Plugin>;
 export type Plugins = typeof PLUGINS;
 
 export const PLUGIN_ENTRIES = Object.entries(PLUGINS) as [
@@ -99,18 +111,12 @@ export {
 	SERVICE_ENTRY,
 	getGlobalServices,
 	ProxyClient,
-	getFreshSourceMapSupport,
 	kCurrentWorker,
-	getNodeCompat,
 	compileModuleRules,
 	WorkerdStructuredLogSchema as workerdStructuredLogSchema,
 	INTROSPECT_SQLITE_METHOD,
 } from "./core";
-export type {
-	CompiledModuleRule,
-	GlobalServicesOptions,
-	NodeJSCompatMode,
-} from "./core";
+export type { CompiledModuleRule, GlobalServicesOptions } from "./core";
 export type {
 	ContainerPrivileges,
 	ContainerPrivilegesCache,
@@ -126,9 +132,11 @@ export * from "./ratelimit";
 export * from "./assets";
 export * from "./workflows";
 export * from "./pipelines";
+export * from "./k2";
 export * from "./secret-store";
 export * from "./email";
 export * from "./analytics-engine";
+export * from "./analytics-sql";
 export * from "./ai";
 export * from "./agent-memory";
 export * from "./ai-search";
@@ -142,6 +150,7 @@ export * from "./vpc-services";
 export * from "./mtls";
 export * from "./hello-world";
 export * from "./flagship";
+export * from "./realtimekit";
 export * from "./artifacts";
 export * from "./worker-loader";
 export * from "./media";

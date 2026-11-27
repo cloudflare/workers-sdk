@@ -50,6 +50,7 @@ export type DatabaseCreationResult = {
 export type DatabaseInfo = {
 	uuid: string;
 	name: string;
+	jurisdiction?: string;
 	version: "alpha" | "beta" | "production";
 	num_tables: number;
 	file_size: number;
@@ -140,6 +141,7 @@ export interface D1QueriesGraphQLResponse {
 			accounts: { d1QueriesAdaptiveGroups?: D1Queries[] }[];
 		};
 	};
+	errors?: { message?: string }[] | null;
 }
 
 export type ImportInitResponse = {

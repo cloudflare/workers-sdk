@@ -1,10 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getInstalledPackageVersion } from "@cloudflare/autoconfig";
-import {
-	DEFAULT_COMPAT_DATE,
-	findWranglerConfig,
-} from "@cloudflare/workers-utils";
+import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
+import { findWranglerConfig } from "@cloudflare/workers-utils/config";
 import {
 	normalizeString,
 	runInTempDir,

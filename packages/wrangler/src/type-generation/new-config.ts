@@ -7,7 +7,7 @@ import { RUNTIME_TYPES_MARKER } from "@cloudflare/runtime-types";
 import { logger } from "../logger";
 import { generateRuntimeTypes } from "./runtime";
 import type { NormalizedTypes } from "../experimental-config/load";
-import type { ParsedInputWorkerConfig } from "@cloudflare/config";
+import type { ParsedWorkerConfig } from "@cloudflare/config";
 
 /** Default generated types path for the experimental configuration. */
 const NEW_CONFIG_TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
@@ -20,7 +20,7 @@ const NEW_CONFIG_TYPES_OUTPUT_PATH = ".cloudflare/types/index.d.ts";
  */
 export async function regenerateNewConfigTypes(options: {
 	cloudflareConfigPath: string;
-	workerConfig: ParsedInputWorkerConfig;
+	workerConfig: ParsedWorkerConfig;
 	types: NormalizedTypes;
 }): Promise<void> {
 	if (!options.types.generate) {
@@ -47,7 +47,7 @@ export async function regenerateNewConfigTypes(options: {
 			: `./${relativeConfigPath}`;
 		content = generateTypes({
 			configPath: configImportPath,
-			packageName: "wrangler/experimental-config",
+			packageName: "cf/config",
 		});
 
 		if (options.types.includeRuntime) {

@@ -9,7 +9,7 @@
 			"passThroughEnv": ["PWD"]
 		},
 		"test:ci": {
-			"dependsOn": ["build"],
+			"dependsOn": ["build", "wrangler#build"],
 			"env": ["LC_ALL", "TZ"]
 		}
 	}

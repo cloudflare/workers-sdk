@@ -8,6 +8,7 @@ import { getOauthToken } from "./callback-server";
 import { getAPIToken, requireApiToken } from "./credentials";
 import { getOauthTokenViaDeviceFlow } from "./device-flow";
 import { getRevokeUrlFromEnv } from "./env-vars";
+import { ErrorAuthServerUnreachable } from "./errors";
 import { generateAuthUrl as defaultGenerateAuthUrl } from "./generate-auth-url";
 import { generateRandomState as defaultGenerateRandomState } from "./generate-random-state";
 import { readStoredAuthState, type OAuthFlowState } from "./state";
@@ -15,7 +16,7 @@ import { getOrCreateTemporaryPreviewAccount } from "./temporary";
 import { exchangeRefreshTokenForAccessToken } from "./token-exchange";
 import type { AuthConfigStorage } from "./config-file/auth";
 import type { TemporaryPreviewAccount } from "./config-file/temporary";
-import type { OAuthFlowContext } from "./context";
+import type { OAuthFlowContext, TemporaryAccountRequest } from "./context";
 import type {
 	ApiCredentials,
 	ComplianceConfig,
@@ -33,7 +34,9 @@ export type LoginOrRefreshFailureReason =
 	/** the stored token has expired, refresh failed, and the environment is non-interactive so a browser login cannot be started. */
 	| "token-expired-non-interactive"
 	/** the stored token has expired, refresh failed, and the interactive login attempt was unsuccessful. */
-	| "token-expired-login-failed";
+	| "token-expired-login-failed"
+	/** the stored token has expired and the auth server could not be reached to refresh it; the stored credentials were left untouched and no login was attempted. */
+	| "token-refresh-unreachable";
 
 /**
  * Discriminated union returned by {@link OAuthFlowAPI.loginOrRefreshIfRequired}.
@@ -177,7 +180,10 @@ export interface OAuthFlowAPI {
 	 * process (e.g. in tests) — each invocation starts a fresh temporary session.
 	 * No-op when the flow was created without a `temporary` context.
 	 */
-	setTemporaryAllowed(allowed: boolean): void;
+	setTemporaryAllowed(
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	): void;
 
 	/**
 	 * Whether `--temporary` is permitted for this invocation (see
@@ -226,7 +232,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		typeof ctx.clientId === "function" ? ctx.clientId() : ctx.clientId;
 	const consent = ctx.consent;
 
-	let temporaryAllowed = false;
+	let temporaryRequest: TemporaryAccountRequest | undefined;
 	let activeTemporaryAccount: TemporaryPreviewAccount | undefined;
 
 	const redirectUrl = new URL(ctx.redirectUri);
@@ -250,7 +256,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		if (complianceRegion === "fedramp_high") {
 			const configurationSource = props.complianceConfig?.compliance_region
 				? "`compliance_region` configuration property"
-				: "`CLOUDFLARE_API_ENVIRONMENT` environment variable";
+				: "`CLOUDFLARE_COMPLIANCE_REGION` environment variable";
 			throw new UserError(
 				dedent`
 				OAuth login is not supported in the \`${complianceRegion}\` compliance region.
@@ -321,15 +327,30 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 	}
 
-	async function refreshToken(profile?: string): Promise<boolean> {
-		// `exchangeRefreshTokenForAccessToken` reads the refresh token fresh from
-		// disk on every call, so we always pick up the latest rotation written by a
-		// sibling Wrangler process. Refresh tokens are single-use, so a long-lived
-		// process such as `wrangler dev` would otherwise send a stale value and get
-		// a 401 from the token endpoint.
+	/**
+	 * `"unreachable"` means no response arrived from the token endpoint, so the
+	 * refresh token may well still be valid: callers must not ask for a new login.
+	 */
+	async function refreshToken(
+		profile?: string
+	): Promise<"refreshed" | "rejected" | "unreachable"> {
 		const storage = getStorage(profile);
 
 		try {
+			// A sibling may have refreshed since the caller checked expiry. Use
+			// one fresh snapshot for both the expiry decision and the exchange.
+			const stored = readStoredAuthState({
+				warningLogger: ctx.logger,
+				storage,
+			});
+			if (
+				stored.accessToken &&
+				new Date() < new Date(stored.accessToken.expiry)
+			) {
+				// Reusing credentials must not write an older snapshot back to disk.
+				return "refreshed";
+			}
+
 			const {
 				token: { value: oauth_token, expiry: expiration_time } = {
 					value: "",
@@ -341,7 +362,8 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				ctx.logger,
 				ctx.isNonInteractiveOrCI,
 				getClientId(),
-				storage
+				stored.refreshToken,
+				ctx.cliDisplayName
 			);
 			storage.write({
 				oauth_token,
@@ -349,12 +371,17 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 				refresh_token,
 				scopes,
 			});
-			return true;
+			return "refreshed";
 		} catch (e) {
 			ctx.logger.debug(
 				`Token refresh failed: ${e instanceof Error ? e.message : String(e)}`
 			);
-			return false;
+			// The token request's timeout can also fire while the response body is
+			// still being read, after `fetchAuthToken` has already returned.
+			return e instanceof ErrorAuthServerUnreachable ||
+				(e instanceof Error && e.name === "TimeoutError")
+				? "unreachable"
+				: "rejected";
 		}
 	}
 
@@ -389,10 +416,15 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		} else if (isRefreshNeeded(props.profile)) {
 			// We're logged in, but the refresh token seems to have expired,
 			// so let's try to refresh it
-			const didRefresh = await refreshToken(props.profile);
-			if (didRefresh) {
+			const refreshed = await refreshToken(props.profile);
+			if (refreshed === "refreshed") {
 				// The token was refreshed, so we're done here
 				return { loggedIn: true };
+			}
+			if (refreshed === "unreachable") {
+				// A network failure says nothing about the refresh token, and a
+				// browser login would need the same unreachable server.
+				return { loggedIn: false, reason: "token-refresh-unreachable" };
 			}
 			// If the refresh token isn't valid, then we ask the user to login again
 			if (ctx.isNonInteractiveOrCI()) {
@@ -471,8 +503,7 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		const expired =
 			stored.accessToken && new Date() >= new Date(stored.accessToken.expiry);
 		if (expired) {
-			const didRefresh = await refreshToken();
-			if (!didRefresh) {
+			if ((await refreshToken()) !== "refreshed") {
 				return undefined;
 			}
 			// Re-read after the refresh has persisted the new token to disk.
@@ -509,13 +540,17 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 		});
 	}
 
-	function setTemporaryAllowed(allowed: boolean): void {
-		temporaryAllowed = allowed && ctx.temporary !== undefined;
+	function setTemporaryAllowed(
+		allowed: boolean,
+		request?: TemporaryAccountRequest
+	): void {
+		temporaryRequest =
+			allowed && ctx.temporary !== undefined ? (request ?? {}) : undefined;
 		activeTemporaryAccount = undefined;
 	}
 
 	function isTemporaryAllowed(): boolean {
-		return temporaryAllowed;
+		return temporaryRequest !== undefined;
 	}
 
 	function getActiveTemporaryAccount(): TemporaryPreviewAccount | undefined {
@@ -528,14 +563,14 @@ export function createOAuthFlow(ctx: OAuthFlowContext): OAuthFlowAPI {
 	}> {
 		if (!ctx.temporary) {
 			throw new UserError(
-				"Temporary preview accounts are not supported by this CLI.",
+				`Temporary preview accounts are not supported by ${ctx.cliDisplayName}.`,
 				{ telemetryMessage: "user temporary account unsupported" }
 			);
 		}
 
 		const result = await getOrCreateTemporaryPreviewAccount({
 			...ctx.temporary,
-			logger: ctx.logger,
+			...(temporaryRequest ? { request: temporaryRequest } : {}),
 		});
 		activeTemporaryAccount = result.account;
 		return result;

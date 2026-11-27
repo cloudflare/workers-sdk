@@ -333,7 +333,12 @@ describe("r2", () => {
 									name: "test-bucket",
 									locationHint: "weur",
 								});
-								return HttpResponse.json(createFetchResult({}));
+								return HttpResponse.json(
+									createFetchResult({
+										name: "test-bucket",
+										location: "weur",
+									})
+								);
 							},
 							{ once: true }
 						)
@@ -342,6 +347,95 @@ describe("r2", () => {
 
 					await runWrangler("r2 bucket create test-bucket --location weur");
 					expect(std.out).toMatchSnapshot();
+					expect(std.warn).toEqual("");
+				});
+
+				it("should report the location R2 returned when the hint was ignored", async ({
+					expect,
+				}) => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request }) => {
+								expect(await request.json()).toEqual({
+									name: "reused-bucket",
+									locationHint: "apac",
+								});
+								return HttpResponse.json(
+									createFetchResult({
+										name: "reused-bucket",
+										location: "ENAM",
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
+
+					await runWrangler("r2 bucket create reused-bucket --location apac");
+					expect(std.out).toContain(
+						"✅ Created bucket 'reused-bucket' with location ENAM and default storage class of Standard."
+					);
+					expect(std.out).not.toContain("location hint");
+					expect(std.warn).toContain(
+						'The location hint "apac" was not applied. The bucket location is "ENAM".'
+					);
+					expect(std.warn).toContain(
+						"https://developers.cloudflare.com/r2/reference/data-location/"
+					);
+				});
+
+				it("should treat a location hint as applied when only the case differs", async ({
+					expect,
+				}) => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async () => {
+								return HttpResponse.json(
+									createFetchResult({
+										name: "test-bucket",
+										location: "ENAM",
+									})
+								);
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
+
+					await runWrangler("r2 bucket create test-bucket --location enam");
+					expect(std.out).toContain(
+						"✅ Created bucket 'test-bucket' with location hint ENAM and default storage class of Standard."
+					);
+					expect(std.warn).toEqual("");
+				});
+
+				it("should not claim a location hint was applied when the API omits location", async ({
+					expect,
+				}) => {
+					msw.use(
+						http.post(
+							"*/accounts/:accountId/r2/buckets",
+							async ({ request }) => {
+								expect(await request.json()).toEqual({
+									name: "test-bucket",
+									locationHint: "apac",
+								});
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					writeWranglerConfig({}, configPath);
+
+					await runWrangler("r2 bucket create test-bucket --location apac");
+					expect(std.out).toContain(
+						"✅ Created bucket 'test-bucket' with default storage class of Standard."
+					);
+					expect(std.out).not.toContain("apac");
+					expect(std.warn).toEqual("");
 				});
 			});
 
@@ -859,7 +953,7 @@ describe("r2", () => {
 		describe("catalog", () => {
 			it("should show the correct help when an invalid command is passed", async () => {
 				await expect(() =>
-					runWrangler("r2 bucket catalog foo")
+					runWrangler("basin catalog foo")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Unknown argument: foo]`
 				);
@@ -889,19 +983,19 @@ describe("r2", () => {
 							{ once: true }
 						)
 					);
-					await runWrangler("r2 bucket catalog enable testBucket");
+					await runWrangler("basin catalog enable testBucket");
 					expect(std.out).toMatchInlineSnapshot(
 						`
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						✨ Successfully enabled data catalog on bucket 'testBucket'.
+						✨ Successfully enabled Basin Catalog on bucket 'testBucket'.
 
 						Catalog URI: 'https://catalog.cloudflarestorage.com/test-account-id/test-warehouse-name'
 						Warehouse: 'test-account-id_test-warehouse-name'
 
 						Use this Catalog URI with Iceberg-compatible query engines (Spark, PyIceberg etc.) to query data as tables.
-						Note: You will need a Cloudflare API token with 'R2 Data Catalog' permission to authenticate your client with this catalog.
+						Note: You will need a Cloudflare API token with 'Basin Catalog' permission to authenticate your client with this catalog.
 						For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/"
 					`
 					);
@@ -939,7 +1033,7 @@ describe("r2", () => {
 				it("should disable R2 catalog for the given bucket", async () => {
 					setIsTTY(true);
 					mockConfirm({
-						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'?",
+						text: "Are you sure you want to disable Basin Catalog for bucket 'testBucket'?",
 						result: true,
 					});
 					msw.use(
@@ -957,7 +1051,7 @@ describe("r2", () => {
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						Successfully disabled the data catalog on bucket 'testBucket'."
+						Successfully disabled Basin Catalog on bucket 'testBucket'."
 					`
 					);
 				});
@@ -965,7 +1059,7 @@ describe("r2", () => {
 				it("should inform user if the catalog was never enabled for the bucket", async () => {
 					setIsTTY(true);
 					mockConfirm({
-						text: "Are you sure you want to disable the data catalog for bucket 'testBucket'?",
+						text: "Are you sure you want to disable Basin Catalog for bucket 'testBucket'?",
 						result: true,
 					});
 					msw.use(
@@ -998,7 +1092,7 @@ describe("r2", () => {
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						Data catalog is not enabled for bucket 'testBucket'. Please use 'wrangler r2 bucket catalog enable testBucket' to first enable the data catalog on this bucket."
+						Basin Catalog is not enabled for bucket 'testBucket'. Please use 'wrangler basin catalog enable testBucket' to first enable Basin Catalog on this bucket."
 					`);
 				});
 			});
@@ -1045,7 +1139,7 @@ describe("r2", () => {
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						Getting data catalog status for 'test-bucket'...
+						Getting Basin Catalog status for 'test-bucket'...
 
 						Catalog URI:  https://catalog.cloudflarestorage.com/test-account-id/test-name
 						Warehouse:    test-account-id_test-name
@@ -1083,9 +1177,9 @@ describe("r2", () => {
 						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
-						Getting data catalog status for 'test-bucket'...
+						Getting Basin Catalog status for 'test-bucket'...
 
-						Data catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler r2 bucket catalog enable test-bucket' to first enable the data catalog on this bucket."
+						Basin Catalog is not enabled for bucket 'test-bucket'. Please use 'wrangler basin catalog enable test-bucket' to first enable Basin Catalog on this bucket."
 					`);
 				});
 			});
@@ -1147,7 +1241,7 @@ describe("r2", () => {
 							"
 							 ⛅️ wrangler x.x.x
 							──────────────────
-							✨ Successfully enabled file compaction for the data catalog for bucket 'testBucket'.
+							✨ Successfully enabled file compaction for Basin Catalog on bucket 'testBucket'.
 
 							Compaction will automatically combine small files into larger ones to improve query performance.
 							For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/about-compaction/"
@@ -1250,7 +1344,7 @@ describe("r2", () => {
 							)
 						).rejects.toThrowErrorMatchingInlineSnapshot(
 							`[Error: Both namespace and table must be provided together. You specified namespace without table. Retry by running:
-  wrangler r2 bucket catalog compaction enable testBucket <namespace> <table>]`
+  wrangler basin catalog compaction enable testBucket <namespace> <table>]`
 						);
 					});
 
@@ -1262,7 +1356,7 @@ describe("r2", () => {
 							)
 						).rejects.toThrowErrorMatchingInlineSnapshot(
 							`[Error: Both namespace and table must be provided together. You specified table without namespace. Retry by running:
-  wrangler r2 bucket catalog compaction enable testBucket <namespace> <table>]`
+  wrangler basin catalog compaction enable testBucket <namespace> <table>]`
 						);
 					});
 				});
@@ -1286,7 +1380,7 @@ describe("r2", () => {
 					it("should disable compaction with confirmation", async () => {
 						setIsTTY(true);
 						mockConfirm({
-							text: "Are you sure you want to disable file compaction for the data catalog for bucket 'testBucket'?",
+							text: "Are you sure you want to disable file compaction for Basin Catalog on bucket 'testBucket'?",
 							result: true,
 						});
 						msw.use(
@@ -1314,7 +1408,7 @@ describe("r2", () => {
 							"
 							 ⛅️ wrangler x.x.x
 							──────────────────
-							Successfully disabled file compaction for the data catalog for bucket 'testBucket'."
+							Successfully disabled file compaction for Basin Catalog on bucket 'testBucket'."
 						`
 						);
 					});
@@ -1322,7 +1416,7 @@ describe("r2", () => {
 					it("should cancel disable when confirmation is rejected", async () => {
 						setIsTTY(true);
 						mockConfirm({
-							text: "Are you sure you want to disable file compaction for the data catalog for bucket 'testBucket'?",
+							text: "Are you sure you want to disable file compaction for Basin Catalog on bucket 'testBucket'?",
 							result: false,
 						});
 						await runWrangler(
@@ -1450,7 +1544,7 @@ describe("r2", () => {
 							"
 							 ⛅️ wrangler x.x.x
 							──────────────────
-							✨ Successfully enabled snapshot expiration for the data catalog for bucket 'testBucket'.
+							✨ Successfully enabled snapshot expiration for Basin Catalog on bucket 'testBucket'.
 
 							Snapshot expiration will automatically delete old table snapshots to save storage costs.
 							For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/"
@@ -1501,7 +1595,7 @@ describe("r2", () => {
 							"
 							 ⛅️ wrangler x.x.x
 							──────────────────
-							✨ Successfully enabled snapshot expiration for the data catalog for bucket 'testBucket'.
+							✨ Successfully enabled snapshot expiration for Basin Catalog on bucket 'testBucket'.
 
 							Snapshot expiration will automatically delete old table snapshots to save storage costs.
 							For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/"
@@ -1620,7 +1714,7 @@ describe("r2", () => {
 					it("should disable snapshot expiration with confirmation", async () => {
 						setIsTTY(true);
 						mockConfirm({
-							text: "Are you sure you want to disable snapshot expiration for the data catalog for bucket 'testBucket'?",
+							text: "Are you sure you want to disable snapshot expiration for Basin Catalog on bucket 'testBucket'?",
 							result: true,
 						});
 						msw.use(
@@ -1648,7 +1742,7 @@ describe("r2", () => {
 							"
 							 ⛅️ wrangler x.x.x
 							──────────────────
-							Successfully disabled snapshot expiration for the data catalog for bucket 'testBucket'."
+							Successfully disabled snapshot expiration for Basin Catalog on bucket 'testBucket'."
 						`
 						);
 					});
@@ -1656,7 +1750,7 @@ describe("r2", () => {
 					it("should cancel disable when confirmation is rejected", async () => {
 						setIsTTY(true);
 						mockConfirm({
-							text: "Are you sure you want to disable snapshot expiration for the data catalog for bucket 'testBucket'?",
+							text: "Are you sure you want to disable snapshot expiration for Basin Catalog on bucket 'testBucket'?",
 							result: false,
 						});
 						await runWrangler(
@@ -1750,7 +1844,7 @@ describe("r2", () => {
 							"
 							 ⛅️ wrangler x.x.x
 							──────────────────
-							Successfully disabled snapshot expiration for the data catalog for bucket 'testBucket'."
+							Successfully disabled snapshot expiration for Basin Catalog on bucket 'testBucket'."
 						`
 						);
 					});
@@ -2902,6 +2996,98 @@ describe("r2", () => {
 						Adding lifecycle rule 'my-rule' to bucket 'my-bucket'...
 						✨ Added lifecycle rule 'my-rule' to bucket 'my-bucket'."
 					`);
+				});
+
+				it("uses each action's own condition when expiring and transitioning by age", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const prefix = "logs/";
+					let requestBody: unknown;
+
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async () => {
+								return HttpResponse.json(createFetchResult({ rules: [] }));
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request }) => {
+								requestBody = await request.json();
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-days 365 --ia-transition-days 30`
+					);
+					expect(requestBody).toEqual({
+						rules: [
+							{
+								id: ruleId,
+								enabled: true,
+								conditions: { prefix: prefix },
+								deleteObjectsTransition: {
+									condition: { type: "Age", maxAge: 31536000 },
+								},
+								storageClassTransitions: [
+									{
+										condition: { type: "Age", maxAge: 2592000 },
+										storageClass: "InfrequentAccess",
+									},
+								],
+							},
+						],
+					});
+				});
+
+				it("uses each action's own condition when mixing a date and an age", async () => {
+					const bucketName = "my-bucket";
+					const ruleId = "my-rule";
+					const prefix = "logs/";
+					let requestBody: unknown;
+
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async () => {
+								return HttpResponse.json(createFetchResult({ rules: [] }));
+							},
+							{ once: true }
+						),
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/lifecycle",
+							async ({ request }) => {
+								requestBody = await request.json();
+								return HttpResponse.json(createFetchResult({}));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(
+						`r2 bucket lifecycle add ${bucketName} --name ${ruleId} --prefix ${prefix} --expire-date 2027-01-01 --ia-transition-days 30`
+					);
+					expect(requestBody).toEqual({
+						rules: [
+							{
+								id: ruleId,
+								enabled: true,
+								conditions: { prefix: prefix },
+								deleteObjectsTransition: {
+									condition: { type: "Date", date: "2027-01-01T00:00:00.000Z" },
+								},
+								storageClassTransitions: [
+									{
+										condition: { type: "Age", maxAge: 2592000 },
+										storageClass: "InfrequentAccess",
+									},
+								],
+							},
+						],
+					});
 				});
 
 				it("it should add a date lifecycle rule using command-line arguments and id alias", async () => {

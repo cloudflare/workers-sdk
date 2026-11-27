@@ -18,11 +18,43 @@ export class MyWorkflow extends WorkflowEntrypoint {
   }
   export default {
 	async fetch(request, env, ctx) {
-		const workflow = await env.MY_WORKFLOW.create({id: "an-id"})
+		// Deterministic ids are unique: create() throws once the instance
+		// exists, so later requests read the existing instance instead.
+		let workflow;
+		try {
+			workflow = await env.MY_WORKFLOW.create({id: "an-id"})
+		} catch (e) {
+			if (!String(e).includes("instance.already_exists")) {
+				throw e;
+			}
+			workflow = await env.MY_WORKFLOW.get("an-id")
+		}
 
 		return new Response(JSON.stringify(await workflow.status()))
 	},
   };`;
+
+const COMPLETE_STATUS =
+	'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}';
+
+// Requests WORKFLOW_SCRIPT until the instance it creates reports that it is complete, or until
+// `timeoutMs` passes, and returns the last status. The first request returns the status as soon as
+// the instance is created, when the Workflow may still be running. The timeout starts once
+// Miniflare is ready, so a slow startup doesn't use it up.
+async function pollWorkflowStatus(mf: Miniflare, timeoutMs = 2000) {
+	await mf.ready;
+	const begin = performance.now();
+	let status = "";
+	while (performance.now() - begin < timeoutMs) {
+		const res = await mf.dispatchFetch("http://localhost");
+		status = await res.text();
+		if (status === COMPLETE_STATUS) {
+			break;
+		}
+		await scheduler.wait(50);
+	}
+	return status;
+}
 
 test("starts Workflows with user-provided experimental compatibility flag", async ({
 	expect,
@@ -55,10 +87,7 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 	});
 	useDispose(mf);
 
-	const res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe(
-		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
-	);
+	expect(await pollWorkflowStatus(mf)).toBe(COMPLETE_STATUS);
 });
 
 test("subscribes to Workflow instance events through an RPC target", async ({
@@ -253,30 +282,7 @@ test("persists Workflow data on file-system between runs", async ({
 	const mf = new Miniflare(opts);
 	useDispose(mf);
 
-	let res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe(
-		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
-	);
-
-	// there's no waitUntil in ava haha
-	const begin = performance.now();
-	let success = false;
-	let test = "";
-	while (performance.now() - begin < 2000) {
-		const res = await mf.dispatchFetch("http://localhost");
-		test = await res.text();
-		if (
-			test ===
-			'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
-		) {
-			success = true;
-			break;
-		}
-		await scheduler.wait(50);
-	}
-	expect(success, `Condition was not met in 2000ms - output is ${test}`).toBe(
-		true
-	);
+	expect(await pollWorkflowStatus(mf)).toBe(COMPLETE_STATUS);
 
 	// check if files were committed under the plugin subdirectory
 	const names = await fs.readdir(path.join(tmp, WORKFLOWS_PLUGIN_NAME));
@@ -288,10 +294,109 @@ test("persists Workflow data on file-system between runs", async ({
 	useDispose(mf2);
 
 	// state should be persisted now
-	res = await mf2.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe(
-		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
-	);
+	const res = await mf2.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe(COMPLETE_STATUS);
+});
+
+const BATCH_WORKFLOW_SCRIPT = () => `
+import { WorkflowEntrypoint } from "cloudflare:workers";
+export class BatchWorkflow extends WorkflowEntrypoint {
+	async run(event) {
+		return event.payload;
+	}
+}
+export default {
+	async fetch(_request, env) {
+		const existing = await env.BATCH_WORKFLOW.create({ id: "existing" });
+		await existing.status();
+
+		const explicit = await env.BATCH_WORKFLOW.createBatch({
+			instances: [
+				{ id: "fresh", params: "fresh-output" },
+				{ id: "existing" },
+				{ id: "fresh" },
+			],
+		});
+		const counted = await env.BATCH_WORKFLOW.createBatch({
+			count: 2,
+			params: "count-output",
+		});
+
+		return Response.json({
+			explicit: {
+				created: await Promise.all(
+					explicit.created.map(async (instance) => ({
+						id: instance.id,
+						status: (await instance.status()).status,
+					}))
+				),
+				errors: explicit.errors,
+			},
+			counted: await Promise.all(
+				counted.created.map(async (instance) => ({
+					id: instance.id,
+					status: (await instance.status()).status,
+				}))
+			),
+		});
+	},
+};`;
+
+test("supports object-form Workflow batches", async ({ expect }) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					name: "batch-worker",
+					compatibilityDate: "2024-11-20",
+					manifest: singleModuleManifest(BATCH_WORKFLOW_SCRIPT()),
+					env: {
+						BATCH_WORKFLOW: {
+							type: "workflow",
+							name: "BATCH_WORKFLOW",
+							worker: "batch-worker",
+							exportName: "BatchWorkflow",
+						},
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const response = await mf.dispatchFetch("http://localhost");
+	const result = (await response.json()) as {
+		explicit: {
+			created: { id: string; status: string }[];
+			errors: { index: number; id?: string; code: number; message: string }[];
+		};
+		counted: { id: string; status: string }[];
+	};
+
+	expect(result.explicit).toEqual({
+		created: [{ id: "fresh", status: expect.any(String) }],
+		errors: [
+			{
+				index: 1,
+				id: "existing",
+				code: 10405,
+				message: "workflows.api.error.instance.already_exists",
+			},
+			{
+				index: 2,
+				id: "fresh",
+				code: 10415,
+				message: "workflows.api.error.instance.duplicate_in_batch",
+			},
+		],
+	});
+	expect(result.counted).toEqual([
+		{ id: expect.any(String), status: expect.any(String) },
+		{ id: expect.any(String), status: expect.any(String) },
+	]);
+	expect(result.counted[0].id).not.toBe(result.counted[1].id);
 });
 
 const LIFECYCLE_WORKFLOW_SCRIPT = () => `
@@ -495,6 +600,29 @@ function updateLocalExplorerWorkflowInstanceStatus(
 }
 
 describe("workflow instance lifecycle methods", () => {
+	test("enforces binding-only Workflow step limits from unsafeConfig", async ({
+		expect,
+	}) => {
+		const options = lifecycleMiniflareOpts(await useTmp());
+		const binding = options.workers[0].config.env?.LIFECYCLE_WORKFLOW;
+		assert(binding?.type === "workflow");
+		binding.unsafeConfig = { limits: { steps: 1 } };
+		const mf = new Miniflare(options);
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch(
+			"http://localhost/create?id=limited"
+		);
+		expect(await response.json()).toMatchObject({ id: "limited" });
+		expect(await waitForStatus(mf, "limited", "errored")).toMatchObject({
+			error: {
+				message: expect.stringContaining(
+					"The limit of 1 steps has been reached"
+				),
+			},
+		});
+	});
+
 	test("pause and resume a running workflow", async ({ expect }) => {
 		const tmp = await useTmp();
 		const mf = new Miniflare(lifecycleMiniflareOpts(tmp));
@@ -587,6 +715,25 @@ describe("workflow instance lifecycle methods", () => {
 		);
 		expect(cronDeleteResponse.status).toBe(500);
 		expect(await cronDeleteResponse.text()).toContain("instance.not_found");
+	});
+
+	test("returns 404 when Explorer deletes a missing instance", async ({
+		expect,
+	}) => {
+		const tmp = await useTmp();
+		const mf = new Miniflare({
+			...lifecycleMiniflareOpts(tmp),
+			unsafeLocalExplorer: true,
+		});
+		useDispose(mf);
+
+		const response = await mf.dispatchFetch(
+			`http://localhost${CorePaths.EXPLORER}/api/workflows/LIFECYCLE_WORKFLOW/instances/never-created`,
+			{ method: "DELETE" }
+		);
+		const body = await response.text();
+		expect(response.status, body).toBe(404);
+		expect(await getPersistedInstanceFiles(tmp)).toHaveLength(0);
 	});
 
 	test("reports overlapping storage deletion as successful", async ({

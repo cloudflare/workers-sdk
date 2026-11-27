@@ -1,4 +1,4 @@
-import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { defaultWranglerConfig } from "@cloudflare/workers-utils/config";
 import { describe, it, vi } from "vitest";
 import {
 	getContainerMetadata,
@@ -9,12 +9,12 @@ import type {
 	ApiDeployment,
 	ApiVersion,
 } from "../src/deploy/helpers/versions-types";
+import type { CfWorkerInit } from "@cloudflare/workers-utils";
 import type {
-	CfWorkerInit,
 	Config,
 	ContainerApp,
 	DurableObjectContainerApp,
-} from "@cloudflare/workers-utils";
+} from "@cloudflare/workers-utils/config";
 
 vi.mock("../src/deploy/helpers/versions-api");
 

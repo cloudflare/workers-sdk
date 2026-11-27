@@ -38,7 +38,7 @@ import type {
 	Trigger,
 } from "../api";
 import type { StartDevOptions } from "../dev";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
 import type { ExpectStatic } from "vitest";
 import type { Mock, MockInstance } from "vitest";
 
@@ -134,7 +134,7 @@ async function expectedHostAndZone(
 	return config;
 }
 
-describe.sequential("wrangler dev", () => {
+describe("wrangler dev", { concurrent: false }, () => {
 	let spy: MockInstance;
 	let setSpy: MockInstance;
 	const { setIsTTY } = useMockIsTTY();
@@ -191,6 +191,8 @@ describe.sequential("wrangler dev", () => {
 
 	describe("Local Explorer agent hint", () => {
 		beforeEach(() => {
+			vi.stubEnv("TURBO_HASH", "");
+			vi.stubEnv("TURBO_IS_TUI", "");
 			writeWranglerConfig({
 				name: "test-worker",
 				main: "index.js",
@@ -1044,6 +1046,54 @@ describe.sequential("wrangler dev", () => {
 				"dev --local-upstream some-host.com"
 			);
 			expect(config.dev.origin?.hostname).toEqual("some-host.com");
+		});
+
+		it("should not infer the origin from routes with --infer-origin-from-routes=false", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toBeUndefined();
+		});
+
+		it("should still respect an explicit host with --infer-origin-from-routes=false", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+				dev: {
+					host: "2.some-host.com",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toEqual("2.some-host.com");
+		});
+
+		it("should ignore --infer-origin-from-routes=false in remote mode", async ({
+			expect,
+		}) => {
+			mockGetZones(expect, "4.some-host.com", [{ id: "some-zone-id-4" }]);
+			writeWranglerConfig({
+				main: "index.js",
+				route: "https://4.some-host.com/some/path/*",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			// The origin hostname doubles as the remote preview session's
+			// host, so the local-mode opt-out must not remove it.
+			const config = await runWranglerUntilConfig(
+				"dev --remote --infer-origin-from-routes=false"
+			);
+			expect(config.dev.origin?.hostname).toEqual("4.some-host.com");
 		});
 	});
 
@@ -2022,6 +2072,52 @@ describe.sequential("wrangler dev", () => {
 				"
 			`);
 		});
+
+		it("should still load a UTF-8 `.dev.vars` file that starts with a BOM", async ({
+			expect,
+		}) => {
+			fs.writeFileSync("index.js", `export default {};`);
+			fs.writeFileSync(
+				".dev.vars",
+				Buffer.concat([
+					Buffer.from([0xef, 0xbb, 0xbf]),
+					Buffer.from("API_KEY=abc\r\nOTHER=xyz\r\n"),
+				])
+			);
+			writeWranglerConfig({ main: "index.js" });
+
+			const config = await runWranglerUntilConfig("dev");
+
+			expect(config.bindings).toMatchObject({
+				API_KEY: { type: "secret_text", value: "abc" },
+				OTHER: { type: "secret_text", value: "xyz" },
+			});
+		});
+
+		it.for([
+			[
+				"UTF-16LE with a BOM",
+				Buffer.concat([
+					Buffer.from([0xff, 0xfe]),
+					Buffer.from("API_KEY=abc\r\n", "utf16le"),
+				]),
+			],
+			["UTF-16LE without a BOM", Buffer.from("API_KEY=abc\r\n", "utf16le")],
+		])(
+			"should error rather than load no variables when `.dev.vars` is %s",
+			async ([, contents], { expect }) => {
+				fs.writeFileSync("index.js", `export default {};`);
+				// This is what `"API_KEY=abc" > .dev.vars` writes in Windows PowerShell 5.1.
+				fs.writeFileSync(".dev.vars", contents);
+				writeWranglerConfig({ main: "index.js" });
+
+				await expect(runWranglerUntilConfig("dev")).rejects.toThrow();
+				expect(std.err).toContain(
+					'The file ".dev.vars" is not UTF-8 encoded, so its variables cannot be read.'
+				);
+				expect(std.out).not.toContain("Using secrets defined in .dev.vars");
+			}
+		);
 	});
 
 	describe("secrets config", () => {
@@ -2264,6 +2360,30 @@ describe.sequential("wrangler dev", () => {
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 ("(hidden)")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ("(hidden)")      Environment Variable      local"
 			`);
+		});
+
+		it("should warn and skip a `.env` file that is not UTF-8 encoded", async ({
+			expect,
+		}) => {
+			fs.writeFileSync(
+				".env",
+				Buffer.concat([
+					Buffer.from([0xff, 0xfe]),
+					Buffer.from("__DOT_ENV_LOCAL_DEV_VAR_1=utf16\r\n", "utf16le"),
+				])
+			);
+			await runWranglerUntilConfig("dev");
+			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(
+				`"Using secrets defined in .env.local"`
+			);
+			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ("(hidden)")          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ("(hidden)")      Environment Variable      local"
+			`);
+			expect(std.warn).toContain(
+				'The file ".env" is not UTF-8 encoded, so its variables cannot be read.'
+			);
+			expect(std.warn.match(/is not UTF-8 encoded/g)).toHaveLength(1);
 		});
 
 		it("should not load local dev `vars` from `.env` if there is a `.dev.vars` file", async ({
@@ -2688,6 +2808,41 @@ describe.sequential("wrangler dev", () => {
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("hyperdrive bindings", () => {
+		it("should report a `remote: true` Hyperdrive binding as remote", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				hyperdrive: [
+					{
+						binding: "HYPERDRIVE_REMOTE",
+						id: "remote-id",
+						remote: true,
+					},
+					{
+						binding: "HYPERDRIVE_LOCAL",
+						id: "local-id",
+						localConnectionString:
+							"postgres://user:pass@localhost:5432/database",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Your Worker has access to the following bindings:
+				Binding                                Resource               Mode
+				env.HYPERDRIVE_REMOTE (remote-id)      Hyperdrive Config      remote
+				env.HYPERDRIVE_LOCAL (local-id)        Hyperdrive Config      local
+
+				"
+			`);
 		});
 	});
 
@@ -3154,6 +3309,34 @@ describe.sequential("wrangler dev", () => {
 				expect(std.out).not.toContain("types might be out of date");
 				expect(std.out).not.toContain("types looked out of date");
 			});
+
+			it("should not warn about up to date types with CRLF line endings", async ({
+				expect,
+			}) => {
+				writeWranglerConfig({
+					main: "index.ts",
+					vars: { EXISTING_VAR: "existing value" },
+				});
+				fs.writeFileSync("index.ts", `export default {};`);
+
+				generateRuntimeTypesSpy.mockRestore();
+
+				await runWrangler("types");
+
+				// Simulate a checkout with `core.autocrlf=true` (the Git for Windows default)
+				const typesContent = fs.readFileSync(
+					DEFAULT_WORKERS_TYPES_FILE_PATH,
+					"utf-8"
+				);
+				fs.writeFileSync(
+					DEFAULT_WORKERS_TYPES_FILE_PATH,
+					typesContent.replace(/\n/g, "\r\n")
+				);
+
+				await runWranglerUntilConfig("dev");
+
+				expect(std.out).not.toContain("types might be out of date");
+			});
 		});
 	});
 
@@ -3170,6 +3353,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: true,
 				name: undefined,
+				allowedMail: undefined,
 			});
 		});
 
@@ -3187,6 +3371,37 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: true,
 				name: "my-tunnel",
+				allowedMail: undefined,
+			});
+		});
+
+		it("should reject --tunnel-allowed-mail with --tunnel-name", async ({
+			expect,
+		}) => {
+			await expect(
+				runWrangler(
+					"dev --tunnel --tunnel-name=my-tunnel --tunnel-allowed-mail=alice@example.com"
+				)
+			).rejects.toThrow(
+				"--tunnel-allowed-mail is only supported for Quick Tunnels"
+			);
+		});
+
+		it("should allow --tunnel-allowed-mail without enabling tunnel", async ({
+			expect,
+		}) => {
+			writeWranglerConfig({
+				main: "index.js",
+				compatibility_date: "2024-01-01",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --tunnel-allowed-mail=alice@example.com"
+			);
+			expect(config.input.dev?.tunnel).toEqual({
+				enabled: false,
+				name: undefined,
+				allowedMail: ["alice@example.com"],
 			});
 		});
 
@@ -3204,6 +3419,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: "my-tunnel",
+				allowedMail: undefined,
 			});
 		});
 
@@ -3219,6 +3435,7 @@ describe.sequential("wrangler dev", () => {
 			expect(config.input.dev?.tunnel).toEqual({
 				enabled: false,
 				name: undefined,
+				allowedMail: undefined,
 			});
 		});
 

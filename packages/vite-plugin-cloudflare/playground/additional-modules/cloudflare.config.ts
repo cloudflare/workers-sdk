@@ -1,4 +1,4 @@
-import { defineConfig } from "@cloudflare/vite-plugin/experimental-config";
+import { defineConfig } from "cf/config";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
 export default defineConfig({

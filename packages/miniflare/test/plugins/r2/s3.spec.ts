@@ -1,4 +1,6 @@
 import crypto from "node:crypto";
+import http from "node:http";
+import { text } from "node:stream/consumers";
 import { Sha256 } from "@aws-crypto/sha256-js";
 import {
 	AbortMultipartUploadCommand,
@@ -204,6 +206,107 @@ test("rejects anonymous requests", async ({ expect }) => {
 		"<Code>InvalidArgument</Code><Message>Authorization</Message>"
 	);
 });
+
+test.for([undefined, "", "identity", "gzip"])(
+	"verifies signatures against the original Accept-Encoding: %s",
+	async (acceptEncoding, { expect }) => {
+		const url = s3Url("bucket/signed-encoding.txt");
+		await (await bucket()).put("signed-encoding.txt", "signed encoding");
+		const signer = new SignatureV4({
+			credentials: CREDENTIALS,
+			region: "auto",
+			service: "s3",
+			sha256: Sha256,
+			uriEscapePath: false,
+		});
+		const signed = await signer.sign(
+			{
+				method: "GET",
+				protocol: url.protocol,
+				hostname: url.hostname,
+				path: url.pathname,
+				headers: {
+					host: url.host,
+					...(acceptEncoding !== undefined
+						? { "accept-encoding": acceptEncoding }
+						: {}),
+				},
+			},
+			{ signableHeaders: new Set(["accept-encoding"]) }
+		);
+		if (acceptEncoding === undefined) {
+			expect(signed.headers.authorization).not.toContain("accept-encoding");
+		} else {
+			expect(signed.headers.authorization).toContain(
+				"SignedHeaders=accept-encoding;"
+			);
+		}
+		const response = await new Promise<http.IncomingMessage>(
+			(resolve, reject) => {
+				http.get(url, { headers: signed.headers }, resolve).on("error", reject);
+			}
+		);
+		const body = await text(response);
+		expect(response.statusCode).toBe(200);
+		expect(body).toBe("signed encoding");
+	}
+);
+
+test.for([
+	{
+		name: "repeated lines signed with comma-space",
+		header: ["one", "two"],
+		signedValue: "one, two",
+	},
+	{
+		name: "single line containing a bare comma",
+		header: "one,two",
+		signedValue: "one,two",
+	},
+	{
+		name: "single line containing comma-space",
+		header: "one, two",
+		signedValue: "one, two",
+	},
+])(
+	"verifies signatures for comma-separated header values: $name",
+	async (options, { expect }) => {
+		const url = s3Url("bucket/repeated-headers.txt");
+		await (await bucket()).put("repeated-headers.txt", "repeated headers");
+		const signer = new SignatureV4({
+			credentials: CREDENTIALS,
+			region: "auto",
+			service: "s3",
+			sha256: Sha256,
+			uriEscapePath: false,
+		});
+		const signed = await signer.sign({
+			method: "GET",
+			protocol: url.protocol,
+			hostname: url.hostname,
+			path: url.pathname,
+			headers: {
+				host: url.host,
+				"x-test-header": options.signedValue,
+			},
+		});
+		expect(signed.headers.authorization).toContain(";x-test-header,");
+		const response = await new Promise<http.IncomingMessage>(
+			(resolve, reject) => {
+				http
+					.get(
+						url,
+						{ headers: { ...signed.headers, "x-test-header": options.header } },
+						resolve
+					)
+					.on("error", reject);
+			}
+		);
+		const body = await text(response);
+		expect(response.statusCode).toBe(200);
+		expect(body).toBe("repeated headers");
+	}
+);
 
 test("rejects a wrong secret with SignatureDoesNotMatch", async ({
 	expect,
@@ -510,6 +613,7 @@ test("PutObject stores body, metadata, and returns the ETag", async ({
 	expect,
 }) => {
 	const client = s3();
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
 	const put = await client.send(
 		new PutObjectCommand({
 			Bucket: "bucket",
@@ -517,7 +621,7 @@ test("PutObject stores body, metadata, and returns the ETag", async ({
 			Body: "0123456789",
 			ContentType: "text/markdown",
 			CacheControl: "max-age=60",
-			Metadata: { hello: "world" },
+			Metadata: customMetadata,
 		})
 	);
 	expect(put.ETag).toBe(
@@ -531,8 +635,22 @@ test("PutObject stores body, metadata, and returns the ETag", async ({
 	expect(await get.Body.transformToString()).toBe("0123456789");
 	expect(get.ContentType).toBe("text/markdown");
 	expect(get.CacheControl).toBe("max-age=60");
-	expect(get.Metadata).toEqual({ hello: "world" });
+	expect(get.Metadata).toEqual(customMetadata);
 	expect(get.AcceptRanges).toBe("bytes");
+
+	await expectSdkError(
+		client.send(
+			new PutObjectCommand({
+				Bucket: "bucket",
+				Key: "put.txt",
+				Body: "oversized metadata",
+				Metadata: { ...customMetadata, a: "" },
+			})
+		),
+		400,
+		"MetadataTooLarge",
+		expect
+	);
 });
 
 test("round-trips special-character keys", async ({ expect }) => {
@@ -1152,6 +1270,25 @@ test("DeleteObjects validates Quiet but ignores it", async ({ expect }) => {
 	await expectError(invalid, 400, "MalformedXML", expect);
 });
 
+test.for([
+	{
+		operation: "DeleteObjects",
+		url: "bucket?delete",
+		body: "<Delete><Object></Delete>",
+	},
+	{
+		operation: "CompleteMultipartUpload",
+		url: "bucket/key?uploadId=unused",
+		body: "<CompleteMultipartUpload><Part></CompleteMultipartUpload>",
+	},
+])(
+	"$operation rejects invalid XML syntax",
+	async ({ url, body }, { expect }) => {
+		const res = await s3Fetch(url, { method: "POST", body });
+		await expectError(res, 400, "MalformedXML", expect);
+	}
+);
+
 test("DeleteObjects rejects malformed XML", async ({ expect }) => {
 	const res = await s3Fetch("bucket?delete", {
 		method: "POST",
@@ -1183,6 +1320,24 @@ test("DeleteObjects rejects malformed XML", async ({ expect }) => {
 	await expectError(tooMany, 400, "MalformedXML", expect);
 });
 
+test.for(["<Extra></Extra>", "<Extra/>"])(
+	"DeleteObjects rejects an additional XML root: %s",
+	async (extraRoot, { expect }) => {
+		const r2 = await bucket();
+		const key = "batch/extra-root.txt";
+		await r2.put(key, "original");
+
+		const res = await s3Fetch("bucket?delete", {
+			method: "POST",
+			body: `<Delete><Object><Key>${key}</Key></Object></Delete>${extraRoot}`,
+		});
+		await expectError(res, 400, "MalformedXML", expect);
+
+		const object = await r2.get(key);
+		expect(await object?.text()).toBe("original");
+	}
+);
+
 test("CopyObject copies an object, preserving metadata", async ({ expect }) => {
 	const r2 = await bucket();
 	await r2.put("copy/src.txt", "copy me", {
@@ -1213,6 +1368,7 @@ test("CopyObject REPLACE directive uses request metadata", async ({
 	expect,
 }) => {
 	const r2 = await bucket();
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
 	await r2.put("copy/src2.txt", "data", {
 		httpMetadata: { contentType: "text/csv" },
 	});
@@ -1224,14 +1380,29 @@ test("CopyObject REPLACE directive uses request metadata", async ({
 			CopySource: "/bucket/copy/src2.txt",
 			MetadataDirective: "REPLACE",
 			ContentType: "application/json",
-			Metadata: { new: "1" },
+			Metadata: customMetadata,
 		})
 	);
 	const get = await client.send(
 		new GetObjectCommand({ Bucket: "bucket", Key: "copy/dst2.txt" })
 	);
 	expect(get.ContentType).toBe("application/json");
-	expect(get.Metadata).toEqual({ new: "1" });
+	expect(get.Metadata).toEqual(customMetadata);
+
+	await expectSdkError(
+		client.send(
+			new CopyObjectCommand({
+				Bucket: "bucket",
+				Key: "copy/dst2.txt",
+				CopySource: "/bucket/copy/src2.txt",
+				MetadataDirective: "REPLACE",
+				Metadata: { ...customMetadata, a: "" },
+			})
+		),
+		400,
+		"MetadataTooLarge",
+		expect
+	);
 });
 
 test("CopyObject works across buckets", async ({ expect }) => {
@@ -1358,12 +1529,25 @@ test("CopyObject decodes the copy source and allows self-copies", async ({
 
 test("multipart upload lifecycle", async ({ expect }) => {
 	const client = s3();
+	const customMetadata = { one: "x".repeat(4093), two: "y".repeat(4093) };
+	await expectSdkError(
+		client.send(
+			new CreateMultipartUploadCommand({
+				Bucket: "bucket",
+				Key: "mp/obj.bin",
+				Metadata: { ...customMetadata, a: "" },
+			})
+		),
+		400,
+		"MetadataTooLarge",
+		expect
+	);
 	const create = await client.send(
 		new CreateMultipartUploadCommand({
 			Bucket: "bucket",
 			Key: "mp/obj.bin",
 			ContentType: "application/x-thing",
-			Metadata: { mp: "1" },
+			Metadata: customMetadata,
 		})
 	);
 	expect(create.Bucket).toBe("bucket");
@@ -1400,7 +1584,7 @@ test("multipart upload lifecycle", async ({ expect }) => {
 	assert(get.Body !== undefined);
 	expect(await get.Body.transformToString()).toBe("part-one-data");
 	expect(get.ContentType).toBe("application/x-thing");
-	expect(get.Metadata).toEqual({ mp: "1" });
+	expect(get.Metadata).toEqual(customMetadata);
 
 	// The upload is gone after completion
 	await expectSdkError(
@@ -1417,6 +1601,30 @@ test("multipart upload lifecycle", async ({ expect }) => {
 		expect
 	);
 });
+
+test.for(["<Extra></Extra>", "<Extra/>"])(
+	"CompleteMultipartUpload rejects an additional XML root: %s",
+	async (extraRoot, { expect }) => {
+		const r2 = await bucket();
+		const key = "mp/extra-root.bin";
+		await r2.put(key, "original");
+		const upload = await r2.createMultipartUpload(key);
+		const part = await upload.uploadPart(1, "replacement");
+
+		const res = await s3Fetch(
+			`bucket/${key}?uploadId=${encodeURIComponent(upload.uploadId)}`,
+			{
+				method: "POST",
+				body: `<CompleteMultipartUpload><Part><PartNumber>1</PartNumber><ETag>"${part.etag}"</ETag></Part></CompleteMultipartUpload>${extraRoot}`,
+			}
+		);
+		await expectError(res, 400, "MalformedXML", expect);
+
+		const object = await r2.get(key);
+		expect(await object?.text()).toBe("original");
+		await upload.abort();
+	}
+);
 
 test("multipart error cases", async ({ expect }) => {
 	const client = s3();

@@ -3,16 +3,22 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
 	environments: {
-		worker: {
+		ssr: {
 			build: {
 				rollupOptions: {
 					output: {
-						// This is to test that entry file names with custom file extensions are correctly populated in the `main` field of the output `wrangler.json`
+						// Test that custom entry file extensions are represented correctly in Build Output.
 						entryFileNames: "[name].mjs",
 					},
 				},
 			},
 		},
 	},
-	plugins: [cloudflare({ inspectorPort: false, persistState: false })],
+	plugins: [
+		cloudflare({
+			types: { includeRuntime: false },
+			inspectorPort: false,
+			persistState: false,
+		}),
+	],
 });

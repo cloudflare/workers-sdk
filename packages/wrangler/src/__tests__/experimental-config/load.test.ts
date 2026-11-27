@@ -227,11 +227,11 @@ describe("loadNewConfig", () => {
 
 			const result = await loadNewConfig({ cwd: process.cwd(), args: {} });
 
-			expect(result.parsedConfig.containers.map(({ name }) => name)).toEqual([
+			expect(result.parsedConfig.containers?.map(({ name }) => name)).toEqual([
 				"api",
 				"sessions",
 			]);
-			expect(result.parsedConfig.containers[0]).toMatchObject({
+			expect(result.parsedConfig.containers?.[0]).toMatchObject({
 				name: "api",
 				image: { reference: "registry.example.com/api:latest" },
 			});
@@ -269,7 +269,6 @@ describe("loadNewConfig", () => {
 				{
 					name: "api",
 					image: "registry.example.com/api:latest",
-					max_instances: 20,
 				},
 			]);
 		});
@@ -310,9 +309,7 @@ describe("loadNewConfig", () => {
 			});
 		});
 
-		it("formats Zod errors as a bulleted list with dotted paths", async ({
-			expect,
-		}) => {
+		it("formats Zod errors with dotted paths", async ({ expect }) => {
 			await seed({
 				"cloudflare.config.ts":
 					'export default { worker: { name: 42, compatibilityDate: "2026-05-18" } };',
@@ -320,7 +317,7 @@ describe("loadNewConfig", () => {
 
 			await expect(
 				loadNewConfig({ cwd: process.cwd(), args: {} })
-			).rejects.toThrow(/\s*•\s+worker\.name:/);
+			).rejects.toThrow(/→ at worker\.name/);
 		});
 	});
 

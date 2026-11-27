@@ -2,9 +2,10 @@ import {
 	apply,
 	buildAndMaybePush,
 	listDurableObjects,
+	pushImageIfChanged,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { defaultWranglerConfig } from "@cloudflare/workers-utils/config";
 import { beforeEach, describe, test, vi } from "vitest";
 import { logger } from "../../logger";
 import { deployPreviewContainers } from "../../preview/containers";
@@ -14,7 +15,7 @@ import type {
 	SharedContainerConfig,
 } from "@cloudflare/containers-shared";
 import type { DeploymentResource } from "@cloudflare/deploy-helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 vi.mock("../../cloudchamber/common", async (importOriginal) => ({
 	...(await importOriginal<typeof import("../../cloudchamber/common")>()),
@@ -25,6 +26,7 @@ vi.mock("@cloudflare/containers-shared", async (importOriginal) => ({
 	apply: vi.fn(),
 	buildAndMaybePush: vi.fn(),
 	listDurableObjects: vi.fn(),
+	pushImageIfChanged: vi.fn(),
 }));
 
 const PREVIEW_APP_NAME = "test-worker_my-feature_MyContainer";
@@ -67,8 +69,12 @@ describe("deployPreviewContainers", () => {
 		vi.mocked(apply).mockReset();
 		vi.mocked(buildAndMaybePush).mockReset();
 		vi.mocked(listDurableObjects).mockReset();
+		vi.mocked(pushImageIfChanged).mockReset();
 		vi.mocked(listDurableObjects).mockResolvedValue([]);
 		vi.mocked(buildAndMaybePush).mockResolvedValue({ newTag: "built:tag" });
+		vi.mocked(pushImageIfChanged).mockResolvedValue({
+			remoteDigest: "registry.cloudflare.com/some-account-id/test@sha256:abc",
+		});
 	});
 
 	// Docker rejects uppercase characters in an image repository name, but the
@@ -99,6 +105,9 @@ describe("deployPreviewContainers", () => {
 		);
 		expect(vi.mocked(apply).mock.calls[0]?.[1]).toMatchObject({
 			name: PREVIEW_APP_NAME,
+		});
+		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
+			configFileName: "Wrangler config",
 		});
 	});
 
@@ -143,48 +152,50 @@ describe("deployPreviewContainers", () => {
 		});
 	});
 
-	// A cross-script binding names a Durable Object owned by another Worker, so
-	// its namespace must never be selected for this preview's container. The
-	// class-name-keyed map would otherwise let it overwrite the local entry.
-	test("should ignore a cross-script Durable Object binding that shares a class name", async ({
-		expect,
-	}) => {
-		const container = containerConfig();
-		const config = {
-			...defaultWranglerConfig,
-			containers: [container],
-		} as unknown as Config;
-		const deploymentWithCrossScriptBinding = {
-			id: "deployment-id",
-			env: {
-				MY_CONTAINER: {
-					type: "durable_object_namespace",
-					class_name: "MyContainer",
-					namespace_id: "preview-do-ns-id",
+	// Deployed namespaces, including the parent's, must never be selected for
+	// this preview's container. The class-name-keyed map would otherwise let a
+	// binding with an explicit script name overwrite the local entry.
+	test.for(["owner-worker", "test-worker"])(
+		"should ignore a binding to deployed Worker %s that shares a class name",
+		async (scriptName, { expect }) => {
+			const container = containerConfig();
+			const config = {
+				...defaultWranglerConfig,
+				name: "test-worker",
+				containers: [container],
+			} as unknown as Config;
+			const deploymentWithCrossScriptBinding = {
+				id: "deployment-id",
+				env: {
+					MY_CONTAINER: {
+						type: "durable_object_namespace",
+						class_name: "MyContainer",
+						namespace_id: "preview-do-ns-id",
+					},
+					// Declared last so an unfiltered map would select deployed storage
+					// instead of the preview's namespace, even for its parent Worker.
+					FOREIGN_CONTAINER: {
+						type: "durable_object_namespace",
+						class_name: "MyContainer",
+						namespace_id: "other-worker-do-ns-id",
+						script_name: scriptName,
+					},
 				},
-				// Same class name, implemented by another Worker. Declared last so
-				// an unfiltered map would end up holding this namespace_id.
-				FOREIGN_CONTAINER: {
-					type: "durable_object_namespace",
-					class_name: "MyContainer",
-					namespace_id: "other-worker-do-ns-id",
-					script_name: "owner-worker",
-				},
-			},
-		} as unknown as DeploymentResource;
+			} as unknown as DeploymentResource;
 
-		await deployPreviewContainers(
-			config,
-			[container],
-			deploymentWithCrossScriptBinding,
-			ACCOUNT_ID,
-			{ quiet: false }
-		);
+			await deployPreviewContainers(
+				config,
+				[container],
+				deploymentWithCrossScriptBinding,
+				ACCOUNT_ID,
+				{ quiet: false }
+			);
 
-		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
-			durable_object_namespace_id: "preview-do-ns-id",
-		});
-	});
+			expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
+				durable_object_namespace_id: "preview-do-ns-id",
+			});
+		}
+	);
 
 	test("should not build an image for a container configured with an image URI", async ({
 		expect,
@@ -209,6 +220,45 @@ describe("deployPreviewContainers", () => {
 		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
 			imageRef: {
 				newTag: "registry.cloudflare.com/some-account-id/test:latest",
+			},
+		});
+	});
+
+	test("should push a locally built Build Output image before applying it", async ({
+		expect,
+	}) => {
+		const container = {
+			...containerConfig(),
+			dockerfile: undefined,
+			image_build_context: undefined,
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
+		} as unknown as ContainerNormalizedConfig;
+		delete (container as Record<string, unknown>).dockerfile;
+		const config = {
+			...defaultWranglerConfig,
+			containers: [container],
+		} as unknown as Config;
+
+		await deployPreviewContainers(config, [container], deployment, ACCOUNT_ID, {
+			quiet: false,
+			localImageReferences: new Map([
+				["MyContainer", "cloudflare-build/project/test:build-id"],
+			]),
+		});
+
+		expect(pushImageIfChanged).toHaveBeenCalledWith({
+			pathToDocker: expect.any(String),
+			sourceTag: "cloudflare-build/project/test:build-id",
+			targetTag: "cloudflare-build/project/test:build-id",
+			accountId: ACCOUNT_ID,
+			complianceConfig: config,
+			containerConfig: container,
+			cleanupSourceTag: false,
+		});
+		expect(buildAndMaybePush).not.toHaveBeenCalled();
+		expect(vi.mocked(apply).mock.calls[0]?.[0]).toMatchObject({
+			imageRef: {
+				remoteDigest: "registry.cloudflare.com/some-account-id/test@sha256:abc",
 			},
 		});
 	});

@@ -227,6 +227,33 @@ describe("categoriseArgs", () => {
 });
 
 describe("COMMAND_ARG_ALLOW_LIST", () => {
+	it("omits event codes from deploy telemetry", ({ expect }) => {
+		const eventCode = "SECRET-EVENT-CODE";
+		const args = {
+			"event-code": eventCode,
+			eventCode,
+			temporary: true,
+			$0: "wrangler",
+			_: ["deploy"],
+		};
+		const argv = [
+			"node",
+			"wrangler",
+			"deploy",
+			"--temporary",
+			"--event-code",
+			eventCode,
+		];
+
+		const sanitizedArgs = sanitizeArgValues(
+			sanitizeArgKeys(args, argv),
+			getAllowedArgs(COMMAND_ARG_ALLOW_LIST, "deploy")
+		);
+
+		expect(sanitizedArgs).toEqual({});
+		expect(JSON.stringify(sanitizedArgs)).not.toContain(eventCode);
+	});
+
 	it("should pass boolean flag values through the full sanitisation pipeline for any command", ({
 		expect,
 	}) => {

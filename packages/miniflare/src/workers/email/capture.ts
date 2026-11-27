@@ -5,8 +5,6 @@
 // preserved first and body content is truncated to fit the remaining space.
 // Delivery always uses the full, untruncated message.
 
-export const RAW_EMAIL = "EmailMessage::raw";
-
 /**
  * Maximum size of an email-store SQLite row or string value.
  */

@@ -6,7 +6,8 @@ describe("renderInconsistentExportsAcrossVersionsError", () => {
 		expect,
 	}) => {
 		const out = renderInconsistentExportsAcrossVersionsError(
-			"All versions in a multi-version deployment must declare identical `exports`. Deploy the version that changes `exports` at 100% first, then split traffic."
+			"All versions in a multi-version deployment must declare identical `exports`. Deploy the version that changes `exports` at 100% first, then split traffic.",
+			"wrangler versions deploy <new-version-id>@100%"
 		);
 
 		expect(out).toMatchInlineSnapshot(`
@@ -27,7 +28,10 @@ describe("renderInconsistentExportsAcrossVersionsError", () => {
 		expect,
 	}) => {
 		const serverMessage = "Custom server message about exports mismatch.";
-		const out = renderInconsistentExportsAcrossVersionsError(serverMessage);
+		const out = renderInconsistentExportsAcrossVersionsError(
+			serverMessage,
+			"wrangler versions deploy <new-version-id>@100%"
+		);
 
 		// The server message is preserved as the first line so callers see EWC's
 		// own explanation before our suggested next-steps.
@@ -37,7 +41,10 @@ describe("renderInconsistentExportsAcrossVersionsError", () => {
 	it("links to the gradual-deployments docs page for Durable Objects", ({
 		expect,
 	}) => {
-		const out = renderInconsistentExportsAcrossVersionsError("anything");
+		const out = renderInconsistentExportsAcrossVersionsError(
+			"anything",
+			"wrangler versions deploy <new-version-id>@100%"
+		);
 
 		expect(out).toContain(
 			"https://developers.cloudflare.com/workers/configuration/versions-and-deployments/gradual-deployments/#gradual-deployments-for-durable-objects"

@@ -3,8 +3,8 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"cf-typegen": "wrangler types --include-runtime=false",
-		"check:type": "tsc --build",
+		"build:default": "vite build --app",
+		"check:type": "cf workers types --include-runtime=false && tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
 	},
@@ -12,8 +12,8 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"cf": "catalog:default",
 		"typescript": "catalog:default",
-		"vite": "catalog:default",
-		"wrangler": "workspace:*"
+		"vite": "catalog:default"
 	}
 }

@@ -12,7 +12,6 @@ const ACCOUNT_ID = "some-account-id";
 describe("getWorkersDevSubdomain", () => {
 	const confirm = vi.fn();
 	const fetchResult = vi.fn();
-	const getWorker = vi.fn();
 	const prompt = vi.fn();
 
 	beforeEach(() => {
@@ -33,24 +32,23 @@ describe("getWorkersDevSubdomain", () => {
 					if (path.endsWith("/workers/subdomain") && init?.method === "PUT") {
 						return { subdomain: "my-project" };
 					}
+					if (path.endsWith("/workers/workers/my-worker")) {
+						return {
+							subdomain: {
+								enabled: true,
+								previews_enabled: true,
+								url: "https://my-worker.example.workers.dev",
+								preview_url_suffix: "-my-worker.example.workers.dev",
+							},
+						};
+					}
 					throw new Error(
 						`Unexpected request: ${init?.method ?? "GET"} ${path}`
 					);
 				}
 			);
-		getWorker.mockReset().mockResolvedValue({
-			subdomain: {
-				enabled: true,
-				previews_enabled: true,
-				url: "https://my-worker.example.workers.dev",
-				preview_url_suffix: "-my-worker.example.workers.dev",
-			},
-		});
 		initDeployHelpersContext({
 			confirm,
-			createCloudflareClient: (() => ({
-				workers: { beta: { workers: { get: getWorker } } },
-			})) as never,
 			fetchKVGetValue: (() => {}) as never,
 			fetchListResult: (() => {}) as never,
 			fetchPagedListResult: (() => {}) as never,
@@ -96,14 +94,13 @@ describe("getWorkersDevSubdomain", () => {
 		).resolves.toBeUndefined();
 	});
 
-	it("gets the Worker subdomain through the Cloudflare SDK", async ({
-		expect,
-	}) => {
+	it("gets the Worker subdomain through the REST API", async ({ expect }) => {
 		const subdomain = await getWorkerSubdomain({}, ACCOUNT_ID, "my-worker");
 
-		expect(getWorker).toHaveBeenCalledWith("my-worker", {
-			account_id: ACCOUNT_ID,
-		});
+		expect(fetchResult).toHaveBeenCalledWith(
+			{},
+			`/accounts/${ACCOUNT_ID}/workers/workers/my-worker`
+		);
 		expect(subdomain).toEqual({
 			enabled: true,
 			previews_enabled: true,
@@ -111,4 +108,50 @@ describe("getWorkersDevSubdomain", () => {
 			preview_url_suffix: "-my-worker.example.workers.dev",
 		});
 	});
+
+	it("retries transient Worker subdomain lookup failures", async ({
+		expect,
+	}) => {
+		fetchResult.mockRejectedValueOnce(
+			new APIError({
+				status: 503,
+				text: "Service unavailable",
+				telemetryMessage: false,
+			})
+		);
+
+		await expect(
+			getWorkerSubdomain({}, ACCOUNT_ID, "my-worker")
+		).resolves.toEqual({
+			enabled: true,
+			previews_enabled: true,
+			url: "https://my-worker.example.workers.dev",
+			preview_url_suffix: "-my-worker.example.workers.dev",
+		});
+		expect(fetchResult).toHaveBeenCalledTimes(2);
+	});
+
+	it.for([
+		{ status: 404, code: 10007, fallbackToScriptOnNotFound: false },
+		{ status: 404, code: 10090, fallbackToScriptOnNotFound: true },
+		{ status: 403, code: 10000, fallbackToScriptOnNotFound: true },
+	])(
+		"does not fall back on lookup failure with %j",
+		async (options, { expect }) => {
+			const error = new APIError({
+				status: options.status,
+				text: "Worker lookup failed",
+				telemetryMessage: false,
+			});
+			error.code = options.code;
+			fetchResult.mockRejectedValueOnce(error);
+
+			await expect(
+				getWorkerSubdomain({}, ACCOUNT_ID, "my-worker", {
+					fallbackToScriptOnNotFound: options.fallbackToScriptOnNotFound,
+				})
+			).rejects.toBe(error);
+			expect(fetchResult).toHaveBeenCalledTimes(1);
+		}
+	);
 });

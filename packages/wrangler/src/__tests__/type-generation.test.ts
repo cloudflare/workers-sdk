@@ -1,9 +1,18 @@
 import * as fs from "node:fs";
 import { getRuntimeHeader } from "@cloudflare/runtime-types";
+import { removeDirSync } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+import {
+	createProgram,
+	flattenDiagnosticMessageText,
+	getPreEmitDiagnostics,
+} from "typescript";
 import { afterAll, beforeAll, beforeEach, describe, it, vi } from "vitest";
+import { version as workerdVersion } from "workerd";
 import { experimental_generateTypes } from "../api";
+import { readConfig } from "../config";
+import { getEntry } from "../deployment-bundle/entry";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
@@ -13,6 +22,7 @@ import {
 } from "../type-generation";
 import {
 	ENV_HEADER_COMMENT_PREFIX,
+	checkTypesDiff,
 	getEnvHeader,
 	throwMissingBindingError,
 	toEnvInterfaceName,
@@ -26,7 +36,7 @@ import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils";
+import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils/config";
 import type { MockInstance } from "vitest";
 
 describe("isValidIdentifier", () => {
@@ -98,6 +108,8 @@ describe("constructTSModuleGlob() should return a valid TS glob ", () => {
 		["file.foo", "file.foo"],
 		["folder/file.foo", "folder/file.foo"],
 		["folder/*", "folder/*"],
+		["folder/**/*.foo", "folder/*.foo"],
+		["folder/*/nested/*.foo", "*.foo"],
 		["folder/**", "folder/*"],
 		["folder/**/*", "folder/*"],
 	])("$1 -> $2", ([from, to], { expect }) => {
@@ -428,6 +440,13 @@ const bindingsConfigMock: Omit<
 			app_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 		},
 	],
+	realtimekit: [
+		{
+			binding: "RTK",
+			app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+			remote: true,
+		},
+	],
 	services: [
 		{ binding: "SERVICE_BINDING", service: "service_name" },
 		{
@@ -471,6 +490,7 @@ const bindingsConfigMock: Omit<
 	mtls_certificates: [
 		{ binding: "MTLS_BINDING", certificate_id: "MTLS_CERTIFICATE_ID" },
 	],
+	oidc_tokens: [{ binding: "OIDC_TOKEN_BINDING", audience: "api://example" }],
 	browser: {
 		binding: "BROWSER_BINDING",
 	},
@@ -527,6 +547,12 @@ const bindingsConfigMock: Omit<
 		{ type: "CompiledWasm", globs: ["**/*.wasm"], fallthrough: true },
 	],
 	pipelines: [{ binding: "PIPELINE", stream: "my-pipeline" }],
+	k2: [
+		{
+			binding: "K2_BINDING",
+			stream: "0123456789abcdef0123456789abcdef",
+		},
+	],
 	assets: {
 		binding: "ASSETS_BINDING",
 		directory: "/assets",
@@ -553,6 +579,7 @@ const bindingsConfigMock: Omit<
 		},
 	],
 	vpc_networks: [],
+	analytics: { binding: "ANALYTICS_SQL_BINDING" },
 	connect: [],
 };
 
@@ -584,6 +611,214 @@ describe("generate types - CLI", () => {
 		);
 	});
 
+	describe("main module inference", () => {
+		it.for(["src/index.ts", ".worker-src/index.ts", ".worker.ts"])(
+			"includes the main module by default for %s",
+			async (main, { expect }) => {
+				const directory = main.substring(0, main.lastIndexOf("/"));
+				if (directory) {
+					fs.mkdirSync(directory, { recursive: true });
+				}
+				fs.writeFileSync(main, "export default {};");
+				fs.writeFileSync("wrangler.jsonc", JSON.stringify({ main }));
+
+				await runWrangler("types --include-runtime=false");
+
+				expect(fs.readFileSync("worker-configuration.d.ts", "utf-8")).toContain(
+					`mainModule: typeof import("./${main.slice(0, -3)}");`
+				);
+				await runWrangler("types --check");
+				await expect(
+					runWrangler("types --check --include-main-module=false")
+				).rejects.toThrow("are out of date");
+			}
+		);
+
+		it.for([false, true])(
+			"keeps opted-out types stable before and after a build (per-environment: %s)",
+			async (perEnvironment, { expect }) => {
+				fs.writeFileSync(
+					"wrangler.jsonc",
+					JSON.stringify({
+						main: ".svelte-kit/cloudflare/_worker.js",
+						assets: { directory: ".svelte-kit/cloudflare", binding: "ASSETS" },
+						env: perEnvironment ? { staging: {} } : undefined,
+					})
+				);
+				const command =
+					"types --include-runtime=false --include-main-module=false";
+				await runWrangler(command);
+				const beforeBuild = fs.readFileSync(
+					"worker-configuration.d.ts",
+					"utf-8"
+				);
+				expect(beforeBuild).toContain("ASSETS: Fetcher;");
+				expect(beforeBuild).not.toContain("interface GlobalProps");
+
+				fs.mkdirSync(".svelte-kit/cloudflare", { recursive: true });
+				fs.writeFileSync(
+					".svelte-kit/cloudflare/_worker.js",
+					"export default { fetch() { return new Response('Hello'); } };"
+				);
+				await runWrangler("types --check");
+				await runWrangler(command);
+				expect(fs.readFileSync("worker-configuration.d.ts", "utf-8")).toBe(
+					beforeBuild
+				);
+				await expect(
+					runWrangler("types --check --include-main-module=true")
+				).rejects.toThrow("are out of date");
+
+				removeDirSync(".svelte-kit");
+				await runWrangler("types --check");
+			}
+		);
+
+		it.for([false, true])(
+			"preserves Durable Object namespace declarations and binding imports when opted out (per-environment: %s)",
+			async (perEnvironment, { expect }) => {
+				fs.writeFileSync(
+					"index.ts",
+					`import { DurableObject, WorkerEntrypoint, WorkflowEntrypoint } from "cloudflare:workers";
+					export class Counter extends DurableObject {}
+					export class Greeter extends WorkerEntrypoint {}
+					export class GreetingWorkflow extends WorkflowEntrypoint { async run(event) {} }
+					 export default {};`
+				);
+				fs.writeFileSync(
+					"wrangler.jsonc",
+					JSON.stringify({
+						name: "test-worker",
+						main: "index.ts",
+						durable_objects: {
+							bindings: [{ name: "COUNTER", class_name: "Counter" }],
+						},
+						migrations: [{ tag: "v1", new_sqlite_classes: ["Counter"] }],
+						services: [
+							{
+								binding: "SELF",
+								service: "test-worker",
+								entrypoint: "Greeter",
+							},
+						],
+						workflows: [
+							{
+								binding: "WORKFLOW",
+								name: "greeting",
+								class_name: "GreetingWorkflow",
+							},
+						],
+						env: perEnvironment ? { staging: {} } : undefined,
+					})
+				);
+
+				await runWrangler("types --include-main-module=false");
+				const content = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+				expect(content).not.toContain("mainModule:");
+				expect(content).toContain('durableNamespaces: "Counter";');
+				const optional = perEnvironment ? "?" : "";
+				expect(content).toContain(
+					`COUNTER${optional}: DurableObjectNamespace<import("./index").Counter>;`
+				);
+				expect(content).toContain(
+					`SELF${optional}: Service<typeof import("./index").Greeter>;`
+				);
+				expect(content).toContain(
+					`WORKFLOW${optional}: Workflow<Parameters<import("./index").GreetingWorkflow['run']>[0]['payload']>;`
+				);
+				expect(content).toContain("<runtime types go here>");
+			}
+		);
+
+		it.for([
+			{ main: undefined, perEnvironment: false },
+			{ main: undefined, perEnvironment: true },
+			{ main: ".svelte-kit/cloudflare/_worker.js", perEnvironment: false },
+			{ main: ".svelte-kit/cloudflare/_worker.js", perEnvironment: true },
+		])(
+			"preserves Durable Object metadata without a resolvable entrypoint (main: $main, per-environment: $perEnvironment)",
+			async ({ main, perEnvironment }, { expect }) => {
+				fs.writeFileSync(
+					"wrangler.jsonc",
+					JSON.stringify({
+						main,
+						durable_objects: {
+							bindings: [{ name: "COUNTER", class_name: "Counter" }],
+						},
+						migrations: [{ tag: "v1", new_sqlite_classes: ["Counter"] }],
+						env: perEnvironment ? { staging: {} } : undefined,
+					})
+				);
+
+				await runWrangler("types --include-runtime=false");
+				const content = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+				expect(content).toContain('durableNamespaces: "Counter";');
+				expect(content).not.toContain("mainModule:");
+				await runWrangler("types --check");
+			}
+		);
+
+		it.for([
+			"",
+			"--env-file=.env.production",
+			"--env-file=.env.production --env-file=.env.extra",
+			"--env=production",
+			"--env=production --env-file=.env.production",
+		])(
+			"preserves generation inputs across automatic regeneration (%s)",
+			async (flags, { expect }) => {
+				spy.mockResolvedValue({
+					runtimeHeader: getRuntimeHeader(workerdVersion, "2026-01-01"),
+					runtimeTypes: "<runtime types go here>",
+				});
+				fs.writeFileSync("index.ts", "export default {};");
+				fs.writeFileSync(".dev.vars", "DEV_SECRET=dev");
+				fs.writeFileSync(".dev.vars.production", "ENV_SECRET=production");
+				fs.writeFileSync(".env.production", "FILE_SECRET=production");
+				fs.writeFileSync(".env.extra", "EXTRA_SECRET=extra");
+				const config = {
+					main: "index.ts",
+					compatibility_date: "2026-01-01",
+					dev: { generate_types: true },
+					vars: { VALUE: "initial" },
+					env: { production: { vars: { VALUE: "initial" } } },
+				};
+				fs.writeFileSync("wrangler.jsonc", JSON.stringify(config));
+				await runWrangler(`types --include-main-module=false ${flags}`);
+
+				for (const value of ["updated", "updated again"]) {
+					config.vars.VALUE = value;
+					config.env.production.vars.VALUE = value;
+					fs.writeFileSync("wrangler.jsonc", JSON.stringify(config));
+					const resolvedConfig = readConfig({
+						config: "wrangler.jsonc",
+						env: "production",
+					});
+					const entry = await getEntry({}, resolvedConfig, "types");
+					expect(await checkTypesDiff(resolvedConfig, entry)).toBe(true);
+					const content = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+					expect(content).toContain("--include-main-module=false");
+					expect(content).toContain(flags);
+					expect(content).not.toContain("mainModule:");
+					expect(content).toContain(`VALUE: "${value}";`);
+					if (flags.includes("--env-file")) {
+						expect(content).toContain("FILE_SECRET: string;");
+						expect(content).not.toContain("DEV_SECRET:");
+						expect(content).not.toContain("ENV_SECRET:");
+					}
+					if (flags.includes(".env.extra")) {
+						expect(content).toContain("EXTRA_SECRET: string;");
+					}
+					if (flags === "--env=production") {
+						expect(content).toContain("ENV_SECRET: string;");
+						expect(content).not.toContain("DEV_SECRET:");
+					}
+					await runWrangler("types --check");
+				}
+			}
+		);
+	});
+
 	it("keeps the runtime header stable after trailing whitespace is removed", async ({
 		expect,
 	}) => {
@@ -612,6 +847,40 @@ describe("generate types - CLI", () => {
 
 		expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toBe(
 			cleanedContent
+		);
+	});
+
+	it("should report CRLF types files as up to date (--check)", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2024-11-06",
+				vars: { value: "test" },
+			}),
+			"utf-8"
+		);
+		spy.mockResolvedValue({
+			runtimeHeader: getRuntimeHeader(workerdVersion, "2024-11-06"),
+			runtimeTypes: "<runtime types go here>",
+		});
+
+		await runWrangler("types");
+		// Simulate a checkout with `core.autocrlf=true` (the Git for Windows default)
+		const generatedContent = fs.readFileSync(
+			"./worker-configuration.d.ts",
+			"utf-8"
+		);
+		fs.writeFileSync(
+			"./worker-configuration.d.ts",
+			generatedContent.replace(/\n/g, "\r\n")
+		);
+
+		await runWrangler("types --check");
+
+		expect(std.out).toContain(
+			"Types at worker-configuration.d.ts are up to date."
 		);
 	});
 
@@ -823,18 +1092,30 @@ describe("generate types - CLI", () => {
 				NAMESPACE_BINDING: DispatchNamespace;
 				MTLS_BINDING: Fetcher;
 				TEST_QUEUE_BINDING: Queue;
+				K2_BINDING: {
+					send(records:
+						| { content: ArrayBuffer; headers?: Record<string, string> }[]
+						| { content: Uint8Array; headers?: Record<string, string> }[]
+					): Promise<
+						| { success: true }
+						| { success: false; error: { code: number; message: string; retryable: boolean } }
+					>;
+				};
 				SECRET: SecretsStoreSecret;
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -943,18 +1224,30 @@ describe("generate types - CLI", () => {
 				NAMESPACE_BINDING: DispatchNamespace;
 				MTLS_BINDING: Fetcher;
 				TEST_QUEUE_BINDING: Queue;
+				K2_BINDING: {
+					send(records:
+						| { content: ArrayBuffer; headers?: Record<string, string> }[]
+						| { content: Uint8Array; headers?: Record<string, string> }[]
+					): Promise<
+						| { success: true }
+						| { success: false; error: { code: number; message: string; retryable: boolean } }
+					>;
+				};
 				SECRET: SecretsStoreSecret;
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -1126,18 +1419,30 @@ describe("generate types - CLI", () => {
 				NAMESPACE_BINDING: DispatchNamespace;
 				MTLS_BINDING: Fetcher;
 				TEST_QUEUE_BINDING: Queue;
+				K2_BINDING: {
+					send(records:
+						| { content: ArrayBuffer; headers?: Record<string, string> }[]
+						| { content: Uint8Array; headers?: Record<string, string> }[]
+					): Promise<
+						| { success: true }
+						| { success: false; error: { code: number; message: string; retryable: boolean } }
+					>;
+				};
 				SECRET: SecretsStoreSecret;
 				MY_ARTIFACTS: Artifacts;
 				HELLO_WORLD: HelloWorldBinding;
 				FLAGS: Flagship;
+				RTK: RealtimeKitBinding;
 				RATE_LIMITER: RateLimit;
 				WORKER_LOADER_BINDING: WorkerLoader;
 				VPC_SERVICE_BINDING: Fetcher;
+				OIDC_TOKEN_BINDING: OidcTokenBinding;
 				AI_SEARCH_NS_BINDING: AiSearchNamespace;
 				AI_SEARCH_BINDING: AiSearchInstance;
 				AGENT_MEMORY_BINDING: AgentMemoryNamespace;
 				LOGFWDR_SCHEMA: any;
 				BROWSER_BINDING: BrowserRun;
+				ANALYTICS_SQL_BINDING: AnalyticsSQLBinding;
 				AI_BINDING: Ai;
 				IMAGES_BINDING: ImagesBinding;
 				STREAM_BINDING: StreamBinding;
@@ -1334,7 +1639,7 @@ describe("generate types - CLI", () => {
 		expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8"))
 			.toMatchInlineSnapshot(`
 				"/* eslint-disable */
-				// Generated by Wrangler by running \`wrangler types\` (hash: 87f2cdaf48add6af8118936351f2fdf6)
+				// Generated by Wrangler by running \`wrangler types\` (hash: 50c3c64833b8f8973b8c4b22434d3614)
 				// Runtime types generated with workerd@
 				interface __BaseEnv_Env {
 					SOMETHING: "asdasdfasdf";
@@ -1349,14 +1654,37 @@ describe("generate types - CLI", () => {
 					interface Env extends __BaseEnv_Env {}
 				}
 				interface Env extends __BaseEnv_Env {}
-
+				declare module "*.txt" {
+					const value: string;
+					export default value;
+				}
+				declare module "*.html" {
+					const value: string;
+					export default value;
+				}
+				declare module "*.sql" {
+					const value: string;
+					export default value;
+				}
+				declare module "*.bin" {
+					const value: ArrayBuffer;
+					export default value;
+				}
+				declare module "*.wasm" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
+				declare module "*.wasm?module" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
 				// Begin runtime types
 				<runtime types go here>"
 			`);
 	});
 
-	describe("when nothing was found", () => {
-		it("should not create DTS file for service syntax workers if env only", async ({
+	describe("without configured project types", () => {
+		it("should create a DTS file with default module declarations for service syntax workers", async ({
 			expect,
 		}) => {
 			fs.writeFileSync(
@@ -1374,16 +1702,25 @@ describe("generate types - CLI", () => {
 			);
 
 			await runWrangler("types --include-runtime=false");
-			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
+			expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8")).toContain(
+				'declare module "*.html"'
+			);
+			expect(std.out).not.toContain('declare module "*.html"');
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Generating project types...
 
-				No project types to add.
+				export {};
+				declare global {
+
+				}
 
 				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
 				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
@@ -1410,7 +1747,32 @@ describe("generate types - CLI", () => {
 			expect(fs.readFileSync("./worker-configuration.d.ts", "utf8"))
 				.toMatchInlineSnapshot(`
 					"/* eslint-disable */
+					// Generated by Wrangler by running \`wrangler types\` (hash: daedd69ee0d89220db2ebf313a7839dd)
 					// Runtime types generated with workerd@
+					declare module "*.txt" {
+						const value: string;
+						export default value;
+					}
+					declare module "*.html" {
+						const value: string;
+						export default value;
+					}
+					declare module "*.sql" {
+						const value: string;
+						export default value;
+					}
+					declare module "*.bin" {
+						const value: ArrayBuffer;
+						export default value;
+					}
+					declare module "*.wasm" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
+					declare module "*.wasm?module" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
 					// Begin runtime types
 					<runtime types go here>"
 				`);
@@ -1420,7 +1782,10 @@ describe("generate types - CLI", () => {
 				──────────────────
 				Generating project types...
 
-				No project types to add.
+				export {};
+				declare global {
+
+				}
 
 				Generating runtime types...
 
@@ -1973,11 +2338,52 @@ describe("generate types - CLI", () => {
 		await runWrangler("types --include-runtime=false");
 
 		const generated = fs.readFileSync("worker-configuration.d.ts", "utf-8");
-		expect(generated).not.toContain("SANDBOX_IMAGE");
-		expect(generated).not.toContain("TOOLS_IMAGE");
-		expect(generated).not.toContain("EXPERIMENTAL_CLOUDFLARE_CONTAINER_IMAGES");
-		expect(generated).toContain(
-			"SANDBOX: DurableObjectNamespace /* Sandbox */;"
+		expect(generated).toContain(dedent`
+			interface __BaseEnv_Env {
+				SANDBOX: DurableObjectNamespace /* Sandbox */;
+			}
+		`);
+	});
+
+	it("should not generate an images binding for url_transformations alone", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				name: "test-name",
+				vars: { MY_VAR: "a" },
+				images: { url_transformations: { enabled: true } },
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+
+		const generated = fs.readFileSync("worker-configuration.d.ts", "utf-8");
+		expect(generated).toContain(dedent`
+			interface __BaseEnv_Env {
+				MY_VAR: "a";
+			}
+		`);
+		expect(generated).not.toContain("ImagesBinding");
+	});
+
+	it("should throw for an images block with neither binding nor url_transformations in an inactive environment", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				name: "test-name",
+				vars: { MY_VAR: "a" },
+				env: { staging: { images: {} } },
+			}),
+			"utf-8"
+		);
+
+		await expect(runWrangler("types --include-runtime=false")).rejects.toThrow(
+			'"env.staging.images" bindings should have a string "binding" field but got {}.'
 		);
 	});
 
@@ -3459,7 +3865,7 @@ describe("generate types - CLI", () => {
 				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8"))
 					.toMatchInlineSnapshot(`
 						"/* eslint-disable */
-						// Generated by Wrangler by running \`wrangler types cloudflare-env.d.ts\` (hash: d3ba65ad57f6692e19d214b1925cf9fc)
+						// Generated by Wrangler by running \`wrangler types cloudflare-env.d.ts\` (hash: fcbccec9749c2d308c656acbd6774e9b)
 						// Runtime types generated with workerd@
 						interface __BaseEnv_Env {
 							SOMETHING: "asdasdfasdf";
@@ -3471,7 +3877,30 @@ describe("generate types - CLI", () => {
 							interface Env extends __BaseEnv_Env {}
 						}
 						interface Env extends __BaseEnv_Env {}
-
+						declare module "*.txt" {
+							const value: string;
+							export default value;
+						}
+						declare module "*.html" {
+							const value: string;
+							export default value;
+						}
+						declare module "*.sql" {
+							const value: string;
+							export default value;
+						}
+						declare module "*.bin" {
+							const value: ArrayBuffer;
+							export default value;
+						}
+						declare module "*.wasm" {
+							const value: WebAssembly.Module;
+							export default value;
+						}
+						declare module "*.wasm?module" {
+							const value: WebAssembly.Module;
+							export default value;
+						}
 						// Begin runtime types
 						<runtime types go here>"
 					`);
@@ -3540,7 +3969,7 @@ describe("generate types - CLI", () => {
 			expect(fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8"))
 				.toMatchInlineSnapshot(`
 					"/* eslint-disable */
-					// Generated by Wrangler by running \`wrangler types --env-interface=MyCloudflareEnvInterface my-cloudflare-env-interface.d.ts\` (hash: 98b5807d9daed69f691128b816dc9f4d)
+					// Generated by Wrangler by running \`wrangler types --env-interface=MyCloudflareEnvInterface my-cloudflare-env-interface.d.ts\` (hash: 0459c01bccb746163afcb581d242e1d3)
 					// Runtime types generated with workerd@
 					interface __BaseEnv_MyCloudflareEnvInterface {
 						SOMETHING: "asdasdfasdf";
@@ -3552,7 +3981,30 @@ describe("generate types - CLI", () => {
 						interface Env extends __BaseEnv_MyCloudflareEnvInterface {}
 					}
 					interface MyCloudflareEnvInterface extends __BaseEnv_MyCloudflareEnvInterface {}
-
+					declare module "*.txt" {
+						const value: string;
+						export default value;
+					}
+					declare module "*.html" {
+						const value: string;
+						export default value;
+					}
+					declare module "*.sql" {
+						const value: string;
+						export default value;
+					}
+					declare module "*.bin" {
+						const value: ArrayBuffer;
+						export default value;
+					}
+					declare module "*.wasm" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
+					declare module "*.wasm?module" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
 					// Begin runtime types
 					<runtime types go here>"
 				`);
@@ -3689,6 +4141,56 @@ describe("generate types - CLI", () => {
 			interface __BaseEnv_Env {
 				VPC_API: Fetcher;
 				VPC_DATABASE: Fetcher;
+			}
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import("./index");
+				}
+				interface Env extends __BaseEnv_Env {}
+			}
+			interface Env extends __BaseEnv_Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should generate types for OIDC token bindings", async ({ expect }) => {
+		fs.writeFileSync(
+			"./index.ts",
+			`export default { async fetch(request, env) { return new Response(await env.API_TOKEN.getToken()); } };`
+		);
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				compatibility_date: "2022-01-12",
+				name: "test-oidc-tokens",
+				main: "./index.ts",
+				oidc_tokens: [
+					{ binding: "API_TOKEN", audience: "https://api.example.com" },
+					{
+						binding: "RSA_TOKEN",
+						audience: "api://token-exchange",
+						alg: "RS256",
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await runWrangler("types --include-runtime=false");
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			interface __BaseEnv_Env {
+				API_TOKEN: OidcTokenBinding;
+				RSA_TOKEN: OidcTokenBinding;
 			}
 			declare namespace Cloudflare {
 				interface GlobalProps {
@@ -3881,6 +4383,7 @@ export default { async fetch() { return new Response("ok"); } };`
 });
 
 describe("generate types - API", () => {
+	const std = mockConsoleMethods();
 	runInTempDir();
 
 	beforeEach(() => {
@@ -3899,6 +4402,32 @@ describe("generate types - API", () => {
 				runtimeHeader: "// Runtime types generated with workerd@",
 				runtimeTypes: "<runtime types go here>",
 			})
+		);
+	});
+
+	it("supports opting out of main module inference through the API", async ({
+		expect,
+	}) => {
+		fs.writeFileSync("index.ts", "export default {};");
+		fs.writeFileSync(
+			"wrangler.jsonc",
+			JSON.stringify({ main: "index.ts", vars: { VALUE: "hello" } })
+		);
+		const defaultResult = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		expect(defaultResult.env).toContain(
+			'mainModule: typeof import("./index");'
+		);
+
+		const result = await experimental_generateTypes({
+			includeMainModule: false,
+		});
+		expect(result.env).not.toContain("mainModule:");
+		expect(result.env).toContain('VALUE: "hello";');
+		expect(result.runtime).toBe("<runtime types go here>");
+		expect(result.content).toContain(
+			"wrangler types --include-main-module=false"
 		);
 	});
 
@@ -3927,6 +4456,832 @@ describe("generate types - API", () => {
 		);
 		expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
 	});
+
+	it("includes default module rules without explicit configuration", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+
+		for (const declaration of [
+			'declare module "*.txt"',
+			'declare module "*.html"',
+			'declare module "*.sql"',
+			'declare module "*.bin"',
+			'declare module "*.wasm"',
+			'declare module "*.wasm?module"',
+		]) {
+			expect(generated.content).toContain(declaration);
+		}
+	});
+
+	it("includes default module rules when generating per-environment types", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				env: {
+					staging: {
+						vars: { ENVIRONMENT: "staging" },
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+
+		expect(generated.content).toContain('declare module "*.html"');
+	});
+
+	it("includes module rules introduced by a named environment", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				env: {
+					staging: {
+						rules: [{ type: "Data", globs: ["**/*.asset"] }],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import asset from "./message.asset";
+
+				asset.byteLength;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("unions module types when an environment override suppresses a default rule", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				env: {
+					staging: {
+						rules: [
+							{
+								type: "Text",
+								globs: ["**/*.other"],
+								fallthrough: false,
+							},
+							{
+								type: "Data",
+								globs: ["assets/value.txt"],
+							},
+						],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "./assets/value.txt";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, ArrayBuffer | string>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("unions broader environment matches into scoped module declarations", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [{ type: "Data", globs: ["**/*.asset"] }],
+				env: {
+					staging: {
+						rules: [{ type: "Text", globs: ["text/**/*.asset"] }],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "text/message.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, ArrayBuffer | string>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("unions broader scoped rules into narrower environment declarations", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [{ type: "Data", globs: ["assets/**/*.asset"] }],
+				env: {
+					staging: {
+						rules: [{ type: "Text", globs: ["assets/text/**/*.asset"] }],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "assets/text/message.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, ArrayBuffer | string>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("uses broader scoped rules instead of recursive fallbacks for exact environment declarations", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{ type: "Data", globs: ["assets/**/*.asset"] },
+					{ type: "Text", globs: ["**/*.asset"] },
+				],
+				env: {
+					staging: {
+						rules: [
+							{
+								type: "CompiledWasm",
+								globs: ["assets/special.asset"],
+							},
+						],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "assets/special.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, ArrayBuffer | WebAssembly.Module>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("keeps recursive types after non-representable scoped rules", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Text",
+						globs: ["folder/*/nested/*.asset"],
+					},
+					{ type: "Data", globs: ["**/*.asset"] },
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "./other/message.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, string | ArrayBuffer>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("uses direct-import glob semantics for exact environment declarations", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				find_additional_modules: false,
+				no_bundle: true,
+				rules: [
+					{
+						type: "Text",
+						globs: ["folder/*/nested/*.asset"],
+					},
+					{ type: "Data", globs: ["**/*.asset"] },
+				],
+				env: {
+					staging: {
+						rules: [
+							{
+								type: "CompiledWasm",
+								globs: [
+									"folder/one/two/nested/message.asset",
+									"other/message.asset",
+								],
+							},
+						],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import inside from "folder/one/two/nested/message.asset";
+				import outside from "other/message.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Inside = Assert<Equal<typeof inside, string | WebAssembly.Module>>;
+				type Outside = Assert<Equal<typeof outside, ArrayBuffer | WebAssembly.Module>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("uses discovery glob semantics for exact environment declarations", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "CompiledWasm",
+						globs: ["folder/one/two/nested/message.asset"],
+					},
+				],
+				env: {
+					staging: {
+						no_bundle: true,
+						rules: [
+							{
+								type: "Text",
+								globs: ["folder/*/nested/*.asset"],
+							},
+							{ type: "Data", globs: ["**/*.asset"] },
+						],
+					},
+				},
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "folder/one/two/nested/message.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, WebAssembly.Module | ArrayBuffer>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("defaults module discovery on for unbundled module rules", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				no_bundle: true,
+				rules: [
+					{
+						type: "Text",
+						globs: ["folder/*/nested/*.asset"],
+					},
+					{
+						type: "Data",
+						globs: ["folder/one/two/nested/message.asset"],
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "folder/one/two/nested/message.asset";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type Value = Assert<Equal<typeof value, ArrayBuffer>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("gives configured rules precedence over overlapping default rules", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Data",
+						globs: ["**/*.txt"],
+						fallthrough: true,
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+
+		expect(generated.content).toContain(dedent`
+			declare module "*.txt" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+		`);
+		expect(generated.content.match(/declare module "\*\.txt"/g)).toHaveLength(
+			1
+		);
+	});
+
+	it("preserves representable directory scopes for same-extension rules", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Text",
+						globs: ["text/**/*.asset"],
+						fallthrough: true,
+					},
+					{
+						type: "Data",
+						globs: ["binary/**/*.asset"],
+						fallthrough: true,
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import text from "text/message.asset";
+				import binary from "binary/message.asset";
+
+				text.toUpperCase();
+				binary.byteLength;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("uses a safe union when relative imports cannot preserve directory scope", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Text",
+						globs: ["text/**/*.asset"],
+						fallthrough: true,
+					},
+					{
+						type: "Data",
+						globs: ["binary/**/*.asset"],
+						fallthrough: true,
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import text from "./text/message.asset";
+				import binary from "./binary/message.asset";
+
+				type Equal<Left, Right> =
+					(<Value>() => Value extends Left ? 1 : 2) extends
+					(<Value>() => Value extends Right ? 1 : 2) ? true : false;
+				type Assert<Value extends true> = Value;
+				type TextFallback = Assert<Equal<typeof text, string | ArrayBuffer>>;
+				type BinaryFallback = Assert<Equal<typeof binary, string | ArrayBuffer>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("uses a safe union when an exact rule overlaps a default rule", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Text",
+						globs: ["text/message.bin"],
+						fallthrough: true,
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		const generated = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+		fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+		fs.writeFileSync(
+			"./consumer.ts",
+			dedent`
+				import value from "./text/message.bin";
+
+				type Equal<Left, Right> =
+					(<Item>() => Item extends Left ? 1 : 2) extends
+					(<Item>() => Item extends Right ? 1 : 2) ? true : false;
+				type Assert<Item extends true> = Item;
+				type ValueFallback = Assert<Equal<typeof value, string | ArrayBuffer>>;
+			`,
+			"utf-8"
+		);
+
+		const diagnostics = getPreEmitDiagnostics(
+			createProgram(["./generated.d.ts", "./consumer.ts"], {
+				noEmit: true,
+				types: [],
+			})
+		).map((diagnostic) =>
+			flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+		);
+
+		expect(diagnostics).toEqual([]);
+	});
+
+	it("includes effective module rules in the generated types hash", async ({
+		expect,
+	}) => {
+		function writeConfig(fallthrough: boolean) {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					rules: [
+						{
+							type: "Text",
+							globs: ["**/*.custom"],
+							fallthrough,
+						},
+					],
+				}),
+				"utf-8"
+			);
+		}
+
+		writeConfig(false);
+		const withoutDefaultTextRules = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+
+		writeConfig(true);
+		const withDefaultTextRules = await experimental_generateTypes({
+			includeRuntime: false,
+		});
+
+		const hashPattern = /hash: (?<hash>[a-zA-Z0-9]+)\)/;
+		const hashWithoutDefaults =
+			withoutDefaultTextRules.content.match(hashPattern)?.groups?.hash;
+		const hashWithDefaults =
+			withDefaultTextRules.content.match(hashPattern)?.groups?.hash;
+
+		expect(hashWithoutDefaults).toBeDefined();
+		expect(hashWithDefaults).toBeDefined();
+		expect(hashWithoutDefaults).not.toBe(hashWithDefaults);
+	});
+
+	it("does not log warnings while resolving effective module rules", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				compatibility_date: "2026-01-01",
+				rules: [
+					{
+						type: "Text",
+						globs: ["**/*.custom"],
+					},
+				],
+			}),
+			"utf-8"
+		);
+
+		await experimental_generateTypes({ includeRuntime: false });
+
+		expect(std.warn).toBe("");
+	});
+
+	it.for([
+		{ name: "simple", environmentConfig: {} },
+		{
+			name: "per-environment",
+			environmentConfig: {
+				env: {
+					staging: {
+						vars: { ENVIRONMENT: "staging" },
+					},
+				},
+			},
+		},
+	])(
+		"generates valid service-worker types for $name output",
+		async ({ environmentConfig }, { expect }) => {
+			fs.writeFileSync(
+				"./index.ts",
+				'addEventListener("fetch", (event) => event.respondWith(new Response()));'
+			);
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					compatibility_date: "2026-01-01",
+					main: "./index.ts",
+					vars: { TEST_VALUE: "value" },
+					...environmentConfig,
+				}),
+				"utf-8"
+			);
+
+			const generated = await experimental_generateTypes({
+				includeRuntime: false,
+			});
+			expect(generated.content).not.toContain("export {};\ndeclare global {");
+			expect(generated.content).toContain('declare module "*.txt"');
+			fs.writeFileSync("./generated.d.ts", generated.content, "utf-8");
+			fs.writeFileSync(
+				"./consumer.ts",
+				'import text from "./message.txt";\ntext.toUpperCase();\nTEST_VALUE.toUpperCase();',
+				"utf-8"
+			);
+
+			const diagnostics = getPreEmitDiagnostics(
+				createProgram(["./generated.d.ts", "./consumer.ts"], {
+					noEmit: true,
+					types: [],
+				})
+			).map((diagnostic) =>
+				flattenDiagnosticMessageText(diagnostic.messageText, "\n")
+			);
+
+			expect(diagnostics).toEqual([]);
+		}
+	);
 
 	it("returns `runtime` output when `env` types are excluded", async ({
 		expect,

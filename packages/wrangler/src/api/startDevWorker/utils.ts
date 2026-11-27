@@ -18,6 +18,17 @@ export function assertNever(_value: never) {}
  */
 export const PREVIEW_TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
 
+/**
+ * How soon to try again after a proactive preview token refresh fails (e.g.
+ * the machine is offline). A failed refresh must not give up the retry cycle
+ * for good — otherwise a network outage longer than the API's own few quick
+ * retries (see `retryOnAPIFailure`) permanently strands the session even
+ * after connectivity returns, since nothing else re-triggers a refresh
+ * attempt for a `wrangler dev --remote` session that isn't otherwise
+ * reloading.
+ */
+export const PREVIEW_TOKEN_REFRESH_RETRY_INTERVAL = 60 * 1000;
+
 export type MaybePromise<T> = T | Promise<T>;
 export type DeferredPromise<T> = {
 	promise: Promise<T>;
@@ -384,7 +395,13 @@ export function convertWorkerMetadataBindingsToFlatBindings(
 				};
 				break;
 			}
+			case "k2": {
+				const b = binding as Extract<WorkerMetadataBinding, { type: "k2" }>;
+				output[name] = { type: "k2", stream: b.stream };
+				break;
+			}
 			case "browser":
+			case "analytics":
 			case "ai":
 			case "images":
 			case "stream":

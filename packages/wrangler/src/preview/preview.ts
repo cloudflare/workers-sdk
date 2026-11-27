@@ -3,6 +3,7 @@ import { getWranglerTmpDir } from "@cloudflare/workers-utils";
 import { getAssetsOptions } from "../assets";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { createCommand } from "../core/create-command";
+import { assertNoCloudflareBuildOutput } from "../deployment-bundle/cf-build-output-guard";
 import { getEntry } from "../deployment-bundle/entry";
 import { buildWorker } from "../deployment-bundle/maybe-build-worker";
 import { cleanupDestination } from "../deployment-bundle/merge-config-args";
@@ -67,7 +68,7 @@ export const previewCommand = createCommand({
 		},
 		"secrets-file": {
 			describe:
-				"Path to a file containing secrets to upload with the Preview deployment (JSON or .env format)",
+				"Path to a file containing secrets to upload with the Preview deployment (JSON or .env format). Dotenv values expand $VAR and ${VAR}; process environment values override file values. Only use trusted dotenv secrets files; they can read and upload any process environment value. Escape literal dollar signs with \\$ or use JSON.",
 			type: "string",
 			requiresArg: true,
 		},
@@ -78,6 +79,17 @@ export const previewCommand = createCommand({
 		suggestSkillsAfterHandler: (args) => args.json !== true,
 	},
 	handler: async function previewHandler(args, { config }) {
+		// Runs before authentication and any upload. `preview` has no `--dry-run`,
+		// so every invocation creates a Preview deployment.
+		assertNoCloudflareBuildOutput(
+			{
+				config,
+				explicitConfigPath: args.config,
+				scriptPath: args.script,
+			},
+			"preview"
+		);
+
 		const accountId = await requireAuth(config);
 		const productionBindingsExpectedInPreview =
 			getProductionBindingsExpectedInPreview(config);
@@ -124,6 +136,8 @@ export const previewCommand = createCommand({
 			buildResult,
 			assetsOptions,
 			{
+				deployCommand: "wrangler deploy",
+				previewCommand: "wrangler preview",
 				productionBindingsExpectedInPreview,
 				getNormalizedContainerOptions,
 				deployPreviewContainers,

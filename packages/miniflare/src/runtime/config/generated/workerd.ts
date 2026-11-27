@@ -9,7 +9,7 @@ export class Config extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Config",
 		id: "8794486c76aaa7d6",
-		size: new $.ObjectSize(8, 6),
+		size: new $.ObjectSize(8, 7),
 		defaultStructuredLogging: $.getBitMask(false, 0),
 	};
 	static _Services: $.ListCtor<Service>;
@@ -187,8 +187,236 @@ export class Config extends $.Struct {
 	set logging(value: LoggingOptions) {
 		$.utils.copyFrom(value, $.utils.getPointer(5, this));
 	}
+	_adoptCluster(value: $.Orphan<ClusterConfig>): void {
+		$.utils.adopt(value, $.utils.getPointer(6, this));
+	}
+	_disownCluster(): $.Orphan<ClusterConfig> {
+		return $.utils.disown(this.cluster);
+	}
+	/**
+	 * Set when this instance should join a cluster. Requires `--experimental`.
+	 *
+	 */
+	get cluster(): ClusterConfig {
+		return $.utils.getStruct(6, ClusterConfig, this);
+	}
+	_hasCluster(): boolean {
+		return !$.utils.isNull($.utils.getPointer(6, this));
+	}
+	_initCluster(): ClusterConfig {
+		return $.utils.initStructAt(6, ClusterConfig, this);
+	}
+	set cluster(value: ClusterConfig) {
+		$.utils.copyFrom(value, $.utils.getPointer(6, this));
+	}
 	toString(): string {
 		return "Config_" + super.toString();
+	}
+}
+/**
+ * workerd instances can work together in a cluster, to distribute Durable Objects among them.
+ * Each Durable Object runs on one instance at a time, its owner; any instance routes requests
+ * for it there.
+ *
+ * The cluster's shared state lives in an S3-compatible bucket: each instance renews a lease
+ * record naming its address, and each Durable Object's owner is a record claimed by a conditional
+ * write. Taking an object over from an owner whose lease expired bumps its ownership epoch.
+ * Instances need no shared filesystem: `durableObjectStorage.localDisk` is each instance's own
+ * disk. Durable Objects stored in memory stay local to each instance. The bucket's copy of an
+ * object replaces the instance's, so a `localDisk` already holding Durable Objects from before
+ * cluster mode is refused at startup; they are not imported.
+ *
+ * All instances in the cluster MUST have identical configuration: any instance may forward any
+ * request to any other and it must produce the same result. During a rolling upgrade, instances
+ * may differ in backwards-compatible ways.
+ *
+ * The bucket can also hold named deployments. Each deployment is an encoded `Config` that contains
+ * only services. A catalog record in the bucket selects the current version of every deployment.
+ *
+ * Each workerd process is one cluster instance. Each instance reads the catalog at startup and
+ * serves accepted deployments beside the services in its own config. It considers deployments
+ * in catalog order and skips a deployment as a whole when it breaks any of these rules, alone
+ * or against the instance's config or a deployment accepted before it. Instances with the same
+ * config and catalog skip the same deployments:
+ *
+ * - Service names must be unique across the instance's config and every deployment.
+ * - Actor namespace keys must also be unique. These keys are Durable Object `uniqueKey` values
+ *   and Workflow namespace keys. Each Durable Object `uniqueKey` must be one path component.
+ * - Every `Text` value must be valid UTF-8.
+ * - A deployment cannot define a `disk` service or a service named `internet`. It can refer to a
+ *   disk service in the instance's config by name.
+ * - A deployment cannot have `fromEnvironment` bindings, so it cannot read the instance's
+ *   environment variables.
+ *
+ * An instance also skips a deployment whose objects are missing, invalid, or larger than its
+ * bucket client can read. A catalog entry whose name is not a valid deployment name is unreadable
+ * and skipped in the same way.
+ *
+ * An error in a deployment's service, such as a worker that throws while loading, is logged with
+ * the deployment's name and does not stop the instance. The broken service fails requests and
+ * actor construction. Warnings from deployment services are also attributed to their
+ * deployments.
+ *
+ * A reference in the instance's own config to a service that neither that config nor a
+ * deployment that was read defines is treated as a deployment reference. It is logged,
+ * naming any unreadable deployments, and fails its requests without stopping the instance.
+ * A reference to a skipped deployment's service fails in the same way. When a deployment's
+ * service cannot satisfy a reference, the deployment's error names the referring service or
+ * socket.
+ *
+ * A tail whose service is missing or cannot handle requests is not started; the request it would
+ * tail proceeds. A broken deployment service's Durable Object namespace fails requests before
+ * the instance claims an object in the bucket and does not adopt dead peers' alarms.
+ *
+ * `--external-addr` and `--directory-path` overrides apply only to services in the instance's
+ * own config. An override that names only a deployment's service is unmatched and is an error in
+ * the instance's config.
+ *
+ * Only a failure to open the bucket or to reach or read its catalog ends the process. Run each
+ * instance under a supervisor that restarts it.
+ *
+ * `src/workerd/server/cluster/deploy.rs` documents the bucket layout for tools that write
+ * deployments.
+ *
+ * `workerd deploy` publishes a wrangler project or a Cap'n Proto config:
+ *
+ *     workerd deploy --experimental [<project>] --bucket s3://bucket/prefix
+ *
+ * See `workerd deploy --help` for details. A wrangler project's worker becomes a service named
+ * after the deployment. Its Durable Objects use the disk service named `do-storage`. Every
+ * instance that serves the project with Durable Objects must define this service in its own
+ * config.
+ *
+ * For a wrangler project, each Durable Object class gets the `uniqueKey` `<name>-<key>`. Here,
+ * `<name>` is the deployment name. `<key>` is the class's storage key from the project's
+ * migrations. The storage key defaults to the class name and stays the same after a rename.
+ * Deploying the project under another name creates separate Durable Objects. They start empty.
+ * A Cap'n Proto deployment's Durable Object `uniqueKey`s and every Workflow namespace key are
+ * used as written.
+ *
+ * An instance reads the catalog only at startup. Restart it to serve a published catalog
+ * revision. `workerd deploy` checks a deployment against the catalog's other deployments. It
+ * does not read any instance config.
+ *
+ * A deployment has the authority granted by each instance's config. Its services can reach the
+ * instance's network, container engine, and named services. Anyone who can publish deployments
+ * can run code with that authority on every instance. Restricting a writer to the deployment area
+ * of the bucket does not reduce that authority.
+ *
+ */
+export class ClusterConfig extends $.Struct {
+	static readonly _capnp = {
+		displayName: "ClusterConfig",
+		id: "f9cef8636c5b389e",
+		size: new $.ObjectSize(8, 5),
+		defaultUnsafePublicAddress: $.getBitMask(false, 0),
+	};
+	/**
+	 * The bucket that holds the cluster's shared state: `s3://bucket/prefix`.
+	 *
+	 */
+	get bucket(): string {
+		return $.utils.getText(0, this);
+	}
+	set bucket(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	_adoptBucketOptions(value: $.Orphan<$.List<string>>): void {
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownBucketOptions(): $.Orphan<$.List<string>> {
+		return $.utils.disown(this.bucketOptions);
+	}
+	/**
+	 * `key=value` settings for `bucket`: `aws_endpoint=https://...`, `aws_region=auto`,
+	 * `aws_access_key_id=...`, `aws_secret_access_key=...`, and `aws_token=...`. In place of the
+	 * last three, `aws_credentials_file=<path>` names a file of `AWS_ACCESS_KEY_ID=`,
+	 * `AWS_SECRET_ACCESS_KEY=` and `AWS_SESSION_TOKEN=` lines, reread whenever it changes, so
+	 * short-lived credentials rotate without a restart. Replace it by rename, not in place. Each
+	 * setting not given falls back to an environment variable: `AWS_ENDPOINT_URL`, `AWS_REGION`,
+	 * `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`, `AWS_CREDENTIALS_FILE`.
+	 *
+	 */
+	get bucketOptions(): $.List<string> {
+		return $.utils.getList(1, $.TextList, this);
+	}
+	_hasBucketOptions(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initBucketOptions(length: number): $.List<string> {
+		return $.utils.initList(1, $.TextList, length, this);
+	}
+	set bucketOptions(value: $.List<string>) {
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	/**
+	 * Where this instance listens for other instances: `host:port`, a port of 0 for an ephemeral
+	 * one. Overridden by `--cluster-addr`. Holders of `key` get full access to every service in the
+	 * process through it, and its traffic is not encrypted: only the cluster's instances should
+	 * reach it, on a private network (a VPC, WireGuard, Tailscale). A public IP is refused unless
+	 * `unsafePublicAddress` is set; a wildcard (`0.0.0.0`) listens on every interface, so firewall
+	 * the port.
+	 *
+	 */
+	get address(): string {
+		return $.utils.getText(2, this);
+	}
+	set address(value: string) {
+		$.utils.setText(2, value, this);
+	}
+	/**
+	 * The address other instances reach this one at, which goes in its lease record in the bucket.
+	 * Optional: by default, the address bound, with the port it got. Required when that is a
+	 * wildcard (`0.0.0.0:7000`) or not what peers can reach (NAT, a container). Overridden by
+	 * `--cluster-advertise`. A public IP is refused unless `unsafePublicAddress` is set.
+	 *
+	 */
+	get advertise(): string {
+		return $.utils.getText(4, this);
+	}
+	set advertise(value: string) {
+		$.utils.setText(4, value, this);
+	}
+	/**
+	 * A secret known only to members of the cluster, at least 32 bytes: random, such as the output
+	 * of `openssl rand -hex 32`. Each connection between instances opens with
+	 * a MAC keyed by it, over the target, a timestamp and a nonce, so a header seen on the wire
+	 * cannot be replayed; the instances' clocks must agree within 30 seconds. It also keys channel
+	 * tokens, which pass service and Durable Object stubs over RPC. Traffic is not encrypted: run
+	 * the cluster on a private network (a VPC, WireGuard, Tailscale).
+	 *
+	 * TODO(someday): Support some way to gradually roll out a rotated key.
+	 *
+	 */
+	get key(): string {
+		return $.utils.getText(3, this);
+	}
+	set key(value: string) {
+		$.utils.setText(3, value, this);
+	}
+	/**
+	 * Allow a public IP as `address` or `advertise`. Refused by default, since traffic between
+	 * instances is not encrypted. Private, loopback, link-local and shared (100.64.0.0/10, as
+	 * Tailscale uses) addresses, wildcards and hostnames are allowed.
+	 *
+	 */
+	get unsafePublicAddress(): boolean {
+		return $.utils.getBit(
+			0,
+			this,
+			ClusterConfig._capnp.defaultUnsafePublicAddress
+		);
+	}
+	set unsafePublicAddress(value: boolean) {
+		$.utils.setBit(
+			0,
+			value,
+			this,
+			ClusterConfig._capnp.defaultUnsafePublicAddress
+		);
+	}
+	toString(): string {
+		return "ClusterConfig_" + super.toString();
 	}
 }
 export class LoggingOptions extends $.Struct {
@@ -245,11 +473,28 @@ export class LoggingOptions extends $.Struct {
 		return "LoggingOptions_" + super.toString();
 	}
 }
+export const Socket_TcpTlsMode = {
+	/**
+	 * Perform the TLS handshake as soon as a connection is accepted. The `connect()` handler sees
+	 * only the decrypted stream, and its socket does not support `startTls()`.
+	 *
+	 */
+	IMPLICIT: 0,
+	/**
+	 * Accept connections in plaintext. The `connect()` handler's socket has secureTransport set to
+	 * "starttls" and the handler performs the TLS handshake as the server by calling `startTls()` at
+	 * the point in its protocol where the upgrade belongs.
+	 *
+	 */
+	START_TLS: 1,
+} as const;
+export type Socket_TcpTlsMode =
+	(typeof Socket_TcpTlsMode)[keyof typeof Socket_TcpTlsMode];
 export class Socket_Https extends $.Struct {
 	static readonly _capnp = {
 		displayName: "https",
 		id: "de123876383cbbdc",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	_adoptOptions(value: $.Orphan<HttpOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -295,7 +540,8 @@ export class Socket_Tcp extends $.Struct {
 	static readonly _capnp = {
 		displayName: "tcp",
 		id: "b59d8ecf6886b64c",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
+		defaultTlsMode: $.getUint16Mask(0),
 	};
 	_adoptTlsOptions(value: $.Orphan<TlsOptions>): void {
 		$.utils.adopt(value, $.utils.getPointer(2, this));
@@ -315,24 +561,85 @@ export class Socket_Tcp extends $.Struct {
 	set tlsOptions(value: TlsOptions) {
 		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
+	/**
+	 * How `tlsOptions` is applied to accepted connections. Ignored if `tlsOptions` is not set.
+	 *
+	 */
+	get tlsMode(): Socket_TcpTlsMode {
+		return $.utils.getUint16(
+			4,
+			this,
+			Socket_Tcp._capnp.defaultTlsMode
+		) as Socket_TcpTlsMode;
+	}
+	set tlsMode(value: Socket_TcpTlsMode) {
+		$.utils.setUint16(4, value, this, Socket_Tcp._capnp.defaultTlsMode);
+	}
 	toString(): string {
 		return "Socket_Tcp_" + super.toString();
+	}
+}
+/**
+ * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+ * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+ * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+ * datagram (see Socket.protocol).
+ *
+ * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+ * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+ *
+ */
+export class Socket_Udp extends $.Struct {
+	static readonly _capnp = {
+		displayName: "udp",
+		id: "95ae058885f84b2a",
+		size: new $.ObjectSize(16, 5),
+		defaultIdleTimeoutMs: $.getUint32Mask(30000),
+		defaultMaxPendingBytes: $.getUint32Mask(262144),
+	};
+	get idleTimeoutMs(): number {
+		return $.utils.getUint32(4, this, Socket_Udp._capnp.defaultIdleTimeoutMs);
+	}
+	set idleTimeoutMs(value: number) {
+		$.utils.setUint32(4, value, this, Socket_Udp._capnp.defaultIdleTimeoutMs);
+	}
+	get maxPendingBytes(): number {
+		return $.utils.getUint32(8, this, Socket_Udp._capnp.defaultMaxPendingBytes);
+	}
+	set maxPendingBytes(value: number) {
+		$.utils.setUint32(8, value, this, Socket_Udp._capnp.defaultMaxPendingBytes);
+	}
+	toString(): string {
+		return "Socket_Udp_" + super.toString();
 	}
 }
 export const Socket_Which = {
 	HTTP: 0,
 	HTTPS: 1,
 	TCP: 2,
+	/**
+	 * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+	 * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+	 * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+	 * datagram (see Socket.protocol).
+	 *
+	 * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+	 * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+	 *
+	 */
+	UDP: 3,
 } as const;
 export type Socket_Which = (typeof Socket_Which)[keyof typeof Socket_Which];
 export class Socket extends $.Struct {
 	static readonly HTTP = Socket_Which.HTTP;
 	static readonly HTTPS = Socket_Which.HTTPS;
 	static readonly TCP = Socket_Which.TCP;
+	static readonly UDP = Socket_Which.UDP;
+	static readonly TcpTlsMode = Socket_TcpTlsMode;
 	static readonly _capnp = {
 		displayName: "Socket",
 		id: "9a0eba45530ee79f",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(16, 5),
 	};
 	/**
 	 * Each socket has a unique name which can be used on the command line to override the socket's
@@ -360,6 +667,9 @@ export class Socket extends $.Struct {
 	 * - "unix-abstract:name": On Linux, listen on the given "abstract" Unix socket name.
 	 * - "example.com:80": Perform a DNS lookup to determine the address, and then listen on it. If
 	 *     this resolves to multiple addresses, listen on all of them.
+	 *
+	 * UDP sockets currently bind only the first address when a hostname resolves to multiple
+	 * addresses. Specify a numeric address when selecting the address family matters.
 	 *
 	 * (These are the formats supported by KJ's parseAddress().)
 	 *
@@ -422,6 +732,30 @@ export class Socket extends $.Struct {
 	}
 	set tcp(_: true) {
 		$.utils.setUint16(0, 2, this);
+	}
+	/**
+	 * Listen for UDP datagrams. Bindings to this service will only support the `connect()`
+	 * method, same as `tcp`; `fetch()` will throw an exception. Unlike `tcp`, the delivered
+	 * Socket's `readable`/`writable` are value-mode: each chunk read or written is exactly one
+	 * datagram (see Socket.protocol).
+	 *
+	 * Datagrams from a given peer address/port are grouped into one flow, dispatched to one
+	 * `connect()` call, until no datagram has been seen from that peer for `idleTimeoutMs`.
+	 *
+	 */
+	get udp(): Socket_Udp {
+		$.utils.testWhich("udp", $.utils.getUint16(0, this), 3, this);
+		return $.utils.getAs(Socket_Udp, this);
+	}
+	_initUdp(): Socket_Udp {
+		$.utils.setUint16(0, 3, this);
+		return $.utils.getAs(Socket_Udp, this);
+	}
+	get _isUdp(): boolean {
+		return $.utils.getUint16(0, this) === 3;
+	}
+	set udp(_: true) {
+		$.utils.setUint16(0, 3, this);
 	}
 	_adoptService(value: $.Orphan<ServiceDesignator>): void {
 		$.utils.adopt(value, $.utils.getPointer(4, this));
@@ -765,6 +1099,132 @@ export class ServiceDesignator extends $.Struct {
 	}
 	toString(): string {
 		return "ServiceDesignator_" + super.toString();
+	}
+}
+/**
+ * Minimal definition of a Workflow in the context of building a binding for it in `ctx.exports.*`
+ *
+ */
+export class WorkflowsEngine_Workflow extends $.Struct {
+	static readonly _capnp = {
+		displayName: "Workflow",
+		id: "82e47879abbb7e41",
+		size: new $.ObjectSize(0, 3),
+	};
+	/**
+	 * The name of the class extending `WorkflowEntrypoint`
+	 *
+	 */
+	get className(): string {
+		return $.utils.getText(0, this);
+	}
+	set className(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	/**
+	 * The name of the workflow
+	 *
+	 */
+	get name(): string {
+		return $.utils.getText(1, this);
+	}
+	set name(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	_adoptBindingService(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownBindingService(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.bindingService);
+	}
+	/**
+	 * Reference to the service implementing the Workflows public API.
+	 * This is used as the inner fetcher when building the Workflows binding
+	 *
+	 */
+	get bindingService(): ServiceDesignator {
+		return $.utils.getStruct(2, ServiceDesignator, this);
+	}
+	_hasBindingService(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	_initBindingService(): ServiceDesignator {
+		return $.utils.initStructAt(2, ServiceDesignator, this);
+	}
+	set bindingService(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
+	}
+	toString(): string {
+		return "WorkflowsEngine_Workflow_" + super.toString();
+	}
+}
+/**
+ * Defines an engine that allows running Workflows defined on this worker.
+ * These workflows are exposed through the `ctx.exports.*` mechanism
+ *
+ * Each Workflow gets assigned its own ActorNamespace, but all of them use the same underlying ActorClass
+ * to run the Workflows code.
+ *
+ * Additionally, a list of workflows can be given to specify which workflows can run or not,
+ * i.e., which workflows get a binding built for them.
+ *
+ */
+export class WorkflowsEngine extends $.Struct {
+	static readonly Workflow = WorkflowsEngine_Workflow;
+	static readonly _capnp = {
+		displayName: "WorkflowsEngine",
+		id: "a1ad8cc2170cdd0c",
+		size: new $.ObjectSize(0, 2),
+	};
+	static _Workflows: $.ListCtor<WorkflowsEngine_Workflow>;
+	_adoptActorClass(value: $.Orphan<ServiceDesignator>): void {
+		$.utils.adopt(value, $.utils.getPointer(0, this));
+	}
+	_disownActorClass(): $.Orphan<ServiceDesignator> {
+		return $.utils.disown(this.actorClass);
+	}
+	/**
+	 * The actor class implementing the Workflows engine which all local Workflow-related ActorNamespaces
+	 * use to instantiate actors
+	 *
+	 */
+	get actorClass(): ServiceDesignator {
+		return $.utils.getStruct(0, ServiceDesignator, this);
+	}
+	_hasActorClass(): boolean {
+		return !$.utils.isNull($.utils.getPointer(0, this));
+	}
+	_initActorClass(): ServiceDesignator {
+		return $.utils.initStructAt(0, ServiceDesignator, this);
+	}
+	set actorClass(value: ServiceDesignator) {
+		$.utils.copyFrom(value, $.utils.getPointer(0, this));
+	}
+	_adoptWorkflows(value: $.Orphan<$.List<WorkflowsEngine_Workflow>>): void {
+		$.utils.adopt(value, $.utils.getPointer(1, this));
+	}
+	_disownWorkflows(): $.Orphan<$.List<WorkflowsEngine_Workflow>> {
+		return $.utils.disown(this.workflows);
+	}
+	/**
+	 * List of local workflows that can run for this worker. This controls which workflows get a binding built
+	 * and placed on the `ctx.exports` object
+	 *
+	 */
+	get workflows(): $.List<WorkflowsEngine_Workflow> {
+		return $.utils.getList(1, WorkflowsEngine._Workflows, this);
+	}
+	_hasWorkflows(): boolean {
+		return !$.utils.isNull($.utils.getPointer(1, this));
+	}
+	_initWorkflows(length: number): $.List<WorkflowsEngine_Workflow> {
+		return $.utils.initList(1, WorkflowsEngine._Workflows, length, this);
+	}
+	set workflows(value: $.List<WorkflowsEngine_Workflow>) {
+		$.utils.copyFrom(value, $.utils.getPointer(1, this));
+	}
+	toString(): string {
+		return "WorkflowsEngine_" + super.toString();
 	}
 }
 export const Worker_Module_Which = {
@@ -1251,7 +1711,7 @@ export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
 	static readonly _capnp = {
 		displayName: "DurableObjectNamespaceDesignator",
 		id: "804f144ff477aac7",
-		size: new $.ObjectSize(0, 2),
+		size: new $.ObjectSize(0, 3),
 	};
 	/**
 	 * Exported class name that implements the Durable Object.
@@ -1280,6 +1740,21 @@ export class Worker_Binding_DurableObjectNamespaceDesignator extends $.Struct {
 	}
 	set serviceName(value: string) {
 		$.utils.setText(1, value, this);
+	}
+	_adoptObsolete2(value: $.Orphan<$.Pointer>): void {
+		$.utils.adopt(value, $.utils.getPointer(2, this));
+	}
+	_disownObsolete2(): $.Orphan<$.Pointer> {
+		return $.utils.disown(this.obsolete2);
+	}
+	get obsolete2(): $.Pointer {
+		return $.utils.getPointer(2, this);
+	}
+	_hasObsolete2(): boolean {
+		return !$.utils.isNull($.utils.getPointer(2, this));
+	}
+	set obsolete2(value: $.Pointer) {
+		$.utils.copyFrom(value, $.utils.getPointer(2, this));
 	}
 	toString(): string {
 		return (
@@ -1976,7 +2451,7 @@ export const Worker_Binding_Which = {
 	 * Takes the value of an environment variable from the system. The value specified here is
 	 * the name of a system environment variable. The value of the binding is obtained by invoking
 	 * `getenv()` with that name. If the environment variable isn't set, the binding value is
-	 * `null`.
+	 * `null`. A deployment in a cluster's bucket cannot have this binding. See `ClusterConfig`.
 	 *
 	 */
 	FROM_ENVIRONMENT: 14,
@@ -2484,7 +2959,7 @@ export class Worker_Binding extends $.Struct {
 	 * Takes the value of an environment variable from the system. The value specified here is
 	 * the name of a system environment variable. The value of the binding is obtained by invoking
 	 * `getenv()` with that name. If the environment variable isn't set, the binding value is
-	 * `null`.
+	 * `null`. A deployment in a cluster's bucket cannot have this binding. See `ClusterConfig`.
 	 *
 	 */
 	get fromEnvironment(): string {
@@ -3048,7 +3523,7 @@ export class Worker_DockerConfiguration extends $.Struct {
 	static readonly _capnp = {
 		displayName: "DockerConfiguration",
 		id: "e62f96c20d9fb872",
-		size: new $.ObjectSize(0, 2),
+		size: new $.ObjectSize(0, 3),
 	};
 	/**
 	 * Path to the Docker socket.
@@ -3072,6 +3547,26 @@ export class Worker_DockerConfiguration extends $.Struct {
 	}
 	set containerEgressInterceptorImage(value: string) {
 		$.utils.setText(1, value, this);
+	}
+	/**
+	 * Scopes the Docker resources workerd creates to a session chosen by the program that
+	 * supervises workerd, such as Miniflare. May contain only the characters Docker allows in
+	 * container names: letters, digits, `_`, `.` and `-`.
+	 *
+	 * When set, container and sidecar names include the session ID, so different sessions never
+	 * share or adopt each other's containers, while a workerd process started with the same
+	 * session adopts the containers an earlier one left running. Resources that do not outlive
+	 * the session carry the label `dev.workerd.session=<sessionId>`: application containers,
+	 * sidecars, snapshot helper containers, and snapshot clone volumes. The supervisor can remove
+	 * them by that label once the session ends. Snapshot volumes and container snapshot images
+	 * outlive sessions and are not labelled.
+	 *
+	 */
+	get sessionId(): string {
+		return $.utils.getText(2, this);
+	}
+	set sessionId(value: string) {
+		$.utils.setText(2, value, this);
 	}
 	toString(): string {
 		return "Worker_DockerConfiguration_" + super.toString();
@@ -3127,7 +3622,7 @@ export class Worker_DurableObjectStorage extends $.Struct {
 	static readonly _capnp = {
 		displayName: "durableObjectStorage",
 		id: "cc72b3faa57827d4",
-		size: new $.ObjectSize(8, 15),
+		size: new $.ObjectSize(8, 16),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(2, this) === 0;
@@ -3192,7 +3687,7 @@ export class Worker_ContainerEngine extends $.Struct {
 	static readonly _capnp = {
 		displayName: "containerEngine",
 		id: "82de68f58dc2eb24",
-		size: new $.ObjectSize(8, 15),
+		size: new $.ObjectSize(8, 16),
 	};
 	get _isNone(): boolean {
 		return $.utils.getUint16(4, this) === 0;
@@ -3289,7 +3784,7 @@ export class Worker extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Worker",
 		id: "acfa77e88fd97d1c",
-		size: new $.ObjectSize(8, 15),
+		size: new $.ObjectSize(8, 16),
 		defaultGlobalOutbound: $.readRawPointer(
 			new Uint8Array([
 				16, 7, 80, 1, 3, 0, 0, 17, 9, 74, 0, 1, 255, 105, 110, 116, 101, 114,
@@ -3654,6 +4149,28 @@ export class Worker extends $.Struct {
 	}
 	set accessBindingService(value: ServiceDesignator) {
 		$.utils.copyFrom(value, $.utils.getPointer(14, this));
+	}
+	_adoptWorkflowsEngine(value: $.Orphan<WorkflowsEngine>): void {
+		$.utils.adopt(value, $.utils.getPointer(15, this));
+	}
+	_disownWorkflowsEngine(): $.Orphan<WorkflowsEngine> {
+		return $.utils.disown(this.workflowsEngine);
+	}
+	/**
+	 * the externally-supplied service responsible for running Workflows defined in this worker
+	 *
+	 */
+	get workflowsEngine(): WorkflowsEngine {
+		return $.utils.getStruct(15, WorkflowsEngine, this);
+	}
+	_hasWorkflowsEngine(): boolean {
+		return !$.utils.isNull($.utils.getPointer(15, this));
+	}
+	_initWorkflowsEngine(): WorkflowsEngine {
+		return $.utils.initStructAt(15, WorkflowsEngine, this);
+	}
+	set workflowsEngine(value: WorkflowsEngine) {
+		$.utils.copyFrom(value, $.utils.getPointer(15, this));
 	}
 	toString(): string {
 		return "Worker_" + super.toString();
@@ -4637,6 +5154,7 @@ export class FallbackServiceRequest extends $.Struct {
 Config._Services = $.CompositeList(Service);
 Config._Sockets = $.CompositeList(Socket);
 Config._Extensions = $.CompositeList(Extension);
+WorkflowsEngine._Workflows = $.CompositeList(WorkflowsEngine_Workflow);
 Worker_Binding_WrappedBinding._InnerBindings = $.CompositeList(Worker_Binding);
 Worker_DurableObjectNamespace_ContainerOptions_ContainerPrivileges._Devices =
 	$.CompositeList(
