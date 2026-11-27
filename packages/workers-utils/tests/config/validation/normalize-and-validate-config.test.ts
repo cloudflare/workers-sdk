@@ -12124,6 +12124,58 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
+		it("should warn with a removal message on top-level type without flagging unexpected fields", ({
+			expect,
+		}) => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				// @ts-expect-error type has been removed
+				{ name: "test-worker", type: "javascript" },
+				undefined,
+				undefined,
+				{}
+			);
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(true);
+			expect(diagnostics.hasUnexpectedFields).toBe(false);
+			expect(diagnostics.renderWarnings()).toContain('Removed\x1b[0m: "type":');
+			expect(diagnostics.renderWarnings()).toContain("removed in Wrangler v4");
+		});
+
+		it("should warn with a removal message on top-level and env zone_id without flagging unexpected fields", ({
+			expect,
+		}) => {
+			const topLevel = normalizeAndValidateConfig(
+				// @ts-expect-error top-level zone_id has been removed
+				{ name: "test-worker", zone_id: "zone-123" },
+				undefined,
+				undefined,
+				{}
+			);
+			expect(topLevel.diagnostics.hasErrors()).toBe(false);
+			expect(topLevel.diagnostics.hasWarnings()).toBe(true);
+			expect(topLevel.diagnostics.hasUnexpectedFields).toBe(false);
+			expect(topLevel.diagnostics.renderWarnings()).toContain(
+				'Removed\x1b[0m: "zone_id":'
+			);
+			expect(topLevel.diagnostics.renderWarnings()).toContain(
+				"removed in Wrangler v4"
+			);
+
+			const namedEnv = normalizeAndValidateConfig(
+				// @ts-expect-error env zone_id has been removed
+				{ name: "test-worker", env: { ENV1: { zone_id: "zone-456" } } },
+				undefined,
+				undefined,
+				{ env: "ENV1" }
+			);
+			expect(namedEnv.diagnostics.hasErrors()).toBe(false);
+			expect(namedEnv.diagnostics.hasWarnings()).toBe(true);
+			expect(namedEnv.diagnostics.hasUnexpectedFields).toBe(false);
+			expect(namedEnv.diagnostics.renderWarnings()).toContain(
+				'Removed\x1b[0m: "zone_id":'
+			);
+		});
+
 		it("should error on invalid environment values", ({ expect }) => {
 			const expectedConfig: RawEnvironment = {
 				name: 111,

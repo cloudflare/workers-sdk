@@ -332,6 +332,17 @@ export function normalizeAndValidateConfig(
 		delete (rawConfig as Record<string, unknown>).legacy_env;
 	}
 
+	deprecated(
+		diagnostics,
+		rawConfig,
+		// @ts-expect-error Removed from the config type
+		"type",
+		`The "type" field was removed in Wrangler v4 and is no longer needed. Wrangler bundles JavaScript, TypeScript, JSX, and modules out of the box; for custom build steps, use the \`[build]\` configuration. Please remove "type" from your configuration file.`,
+		true,
+		"Removed",
+		"warning"
+	);
+
 	validateOptionalProperty(
 		diagnostics,
 		"",
@@ -1550,6 +1561,17 @@ function normalizeAndValidateEnvironment(
 		true,
 		"Removed",
 		"error"
+	);
+
+	deprecated(
+		diagnostics,
+		rawEnv,
+		// @ts-expect-error Removed from the config type
+		"zone_id",
+		`The top-level "zone_id" field was removed in Wrangler v4. Wrangler infers the zone from your route pattern automatically, or you can specify \`zone_id\` per route object in \`routes\` (for example, \`routes = [{ pattern = "example.com/*", zone_id = "..." }]\`). Please remove "zone_id" from your configuration file.`,
+		true,
+		"Removed",
+		"warning"
 	);
 
 	if (topLevelEnv === undefined || rawConfig?.unsafe === undefined) {
