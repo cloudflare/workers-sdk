@@ -50,20 +50,20 @@ export const wranglerToCfCodemod: Codemod = {
 				`Cannot migrate because ${path.join(details.projectPath, "cloudflare.config.ts")} already exists. Inspect and finish the existing migration; it will not be overwritten. Automated agents should read its TODOs and ask the user about unresolved choices.`
 			);
 		}
-		if (details.wranglerConfigPath === undefined) {
+		if (details.wranglerConfigFile === undefined) {
 			throw new Error(
 				`No Wrangler config found in ${context.cwd}. Pass --config with the exact config path.`
 			);
 		}
 
 		const [includedConfigPath] = await filterByFileRestrictions(context, [
-			details.wranglerConfigPath,
+			details.wranglerConfigFile.path,
 		]);
 		if (!includedConfigPath) {
 			return {
 				changedFiles: [],
 				message: `${path
-					.relative(context.cwd, details.wranglerConfigPath)
+					.relative(context.cwd, details.wranglerConfigFile.path)
 					.split(path.sep)
 					.join(path.posix.sep)} does not match any --files pattern.`,
 				status: "skipped",

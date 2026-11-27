@@ -842,22 +842,33 @@ describe("runAutoConfig()", () => {
 			expect(summary.frameworkConfiguration).toBeUndefined();
 		});
 
-		it("refuses a Pages project before changing anything", async ({
+		it("migrates a Pages project's Wrangler config, leaving its Pages settings to the user", async ({
 			expect,
 		}) => {
 			await seed({
 				...worker,
 				"wrangler.jsonc": JSON.stringify({
 					name: "my-site",
+					compatibility_date: "2026-09-24",
 					pages_build_output_dir: "./dist",
 				}),
 				"dist/index.html": "<h1>Hello World</h1>",
 			});
 
-			await expect(setUp()).rejects.toThrow(
-				"Automatically migrating from a Pages project to Workers is not yet supported."
-			);
-			expect(existsSync("cloudflare.config.ts")).toBe(false);
+			const summary = await setUp();
+
+			expect(summary.wranglerMigration).toMatchObject({
+				changedFiles: ["cloudflare.config.ts"],
+				followUps: [
+					expect.objectContaining({
+						blocking: true,
+						sourcePath: "pages_build_output_dir",
+					}),
+				],
+				status: "needs-intervention",
+			});
+			expect(summary.frameworkId).toBe("cloudflare-pages");
+			expect(summary.frameworkConfiguration).toBeUndefined();
 		});
 
 		it("previews the migration in a dry run without changing files", async ({

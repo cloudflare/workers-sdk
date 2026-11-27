@@ -1,6 +1,6 @@
 import path from "node:path";
 import { convertWranglerConfig } from "./config-converter";
-import { findSecretFiles, readWranglerConfig } from "./config-reader";
+import { findSecretFiles } from "./config-reader";
 import {
 	renderCloudflareConfig,
 	renderWranglerConfig,
@@ -24,6 +24,7 @@ import { MINIMUM_WRANGLER_VERSION } from "./wrangler-version";
 import type { DependencyToInstall } from "./install-dependencies";
 import type {
 	MigrationFollowUp,
+	WranglerConfigFile,
 	WranglerToCfMigrationOptions,
 	WranglerToCfMigrationResult,
 } from "./types";
@@ -57,13 +58,13 @@ function formatDependencies(packages: string[]): string {
 /**
  * Migrates one exact Wrangler configuration file to the new cf configuration.
  *
- * @param configPath Path to a Wrangler JSON, JSONC, or TOML configuration file.
+ * @param wranglerConfigFile A Wrangler JSON, JSONC, or TOML configuration file and its contents.
  * @param options Optional bundler selection and write-safety controls.
  *
  * @returns Generated file paths and any follow-up work left for the caller.
  */
 export async function migrateWranglerToCf(
-	configPath: string,
+	{ path: configPath, content: rawConfig }: WranglerConfigFile,
 	options: WranglerToCfMigrationOptions = {}
 ): Promise<WranglerToCfMigrationResult> {
 	const {
@@ -86,10 +87,7 @@ export async function migrateWranglerToCf(
 
 	await assertTargetsDoNotExist([cloudflareConfigPath]);
 
-	const [rawConfig, secretFiles] = await Promise.all([
-		options.wranglerConfig ?? readWranglerConfig(absoluteConfigPath),
-		findSecretFiles(projectDirectory),
-	]);
+	const secretFiles = await findSecretFiles(projectDirectory);
 	const convertedConfig = convertWranglerConfig(
 		rawConfig,
 		bundler,

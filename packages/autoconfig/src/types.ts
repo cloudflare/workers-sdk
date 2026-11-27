@@ -3,6 +3,7 @@ import type { Framework } from "./frameworks/framework-class";
 import type { BuildConfig } from "./frameworks/framework-class";
 import type {
 	MigrationBundler,
+	WranglerConfigFile,
 	WranglerToCfMigrationResult,
 } from "./wrangler-to-cf/types";
 import type { WorkerConfig } from "@cloudflare/config";
@@ -66,10 +67,8 @@ export type AutoConfigDetailsForNonConfiguredProject = Optional<
 	"outputDir"
 > & {
 	configured: false;
-	/** For the cf target, the Wrangler config that setup migrates to `cloudflare.config.ts` */
-	wranglerConfigPath?: string;
-	/** The contents of that Wrangler config, read once during detection */
-	wranglerConfig?: RawConfig;
+	/** The Wrangler config that setup migrates to `cloudflare.config.ts` */
+	wranglerConfigFile?: WranglerConfigFile;
 };
 
 export type AutoConfigDetails =

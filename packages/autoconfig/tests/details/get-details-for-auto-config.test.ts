@@ -117,8 +117,10 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			details.getDetailsForAutoConfig({ context })
 		).resolves.toMatchObject({
 			configured: false,
-			wranglerConfigPath: join(process.cwd(), "wrangler.jsonc"),
-			wranglerConfig: { name: "my-worker" },
+			wranglerConfigFile: {
+				path: join(process.cwd(), "wrangler.jsonc"),
+				content: { name: "my-worker" },
+			},
 			workerName: "my-worker",
 		});
 
@@ -128,7 +130,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 				wranglerConfigPath: "wrangler.jsonc",
 				context,
 			})
-		).resolves.not.toHaveProperty("wranglerConfigPath");
+		).resolves.not.toHaveProperty("wranglerConfigFile");
 	});
 
 	it("should refuse to choose between several root Wrangler configs", async ({
@@ -691,6 +693,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					configPath: "/tmp/wrangler.toml",
 					pages_build_output_dir: "./dist",
 				} as Config,
+				target: "wrangler",
 				context,
 			});
 
@@ -859,6 +862,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 						context: nonInteractiveContext,
 						target: "wrangler",
 						wranglerConfig: {
+							configPath: join(process.cwd(), "wrangler.toml"),
 							pages_build_output_dir: process.cwd(),
 						} as Config,
 					})

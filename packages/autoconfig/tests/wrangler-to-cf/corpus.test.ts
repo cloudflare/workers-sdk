@@ -3,8 +3,7 @@ import path from "node:path";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { globSync } from "tinyglobby";
 import { describe, it } from "vitest";
-import { migrateWranglerToCf } from "../../src/wrangler-to-cf";
-import { getSyntaxErrors } from "./test-helpers";
+import { getSyntaxErrors, migrateWranglerConfig } from "./test-helpers";
 import type { ExpectStatic } from "vitest";
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
@@ -66,7 +65,7 @@ describe("Wrangler configuration corpus", () => {
 				);
 				await writeFile(targetConfigPath, source);
 
-				const result = await migrateWranglerToCf(targetConfigPath, {
+				const result = await migrateWranglerConfig(targetConfigPath, {
 					bundler,
 				});
 				const cloudflareConfigPath = path.join(

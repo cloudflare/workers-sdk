@@ -15,7 +15,6 @@ import {
 import * as frameworkDetection from "../../src/details/framework-detection";
 import { runAutoConfig } from "../../src/run";
 import { createMockContext } from "../helpers/mock-context";
-import type { Config } from "@cloudflare/workers-utils/config";
 
 function invocation(binary: string): string {
 	return process.platform === "win32"
@@ -141,7 +140,36 @@ export default { plugins: [cloudflare()] };`,
 		});
 	});
 
-	it.for(["config", "cache", "functions"] as const)(
+	it("migrates the Wrangler config of a Pages project instead of setting it up through Vite", async ({
+		expect,
+	}) => {
+		await seedProject();
+		await rm("cloudflare.config.ts");
+		await rm("vite.config.ts");
+		await seed({
+			"public/index.html": "<h1>Pages</h1>",
+			"wrangler.jsonc": JSON.stringify({ pages_build_output_dir: "public" }),
+		});
+		const details = await getDetailsForAutoConfig({ context });
+
+		expect(details).toMatchObject({
+			configured: false,
+			framework: { id: "cloudflare-pages" },
+			outputDir: "public",
+			devCommand: undefined,
+			buildCommand: undefined,
+			env: undefined,
+		});
+		const summary = await runAutoConfig(details, {
+			target: "cf",
+			context,
+			dryRun: true,
+		});
+		expect(summary.wranglerMigration?.status).toBe("needs-intervention");
+		expect(summary.frameworkConfiguration).toBeUndefined();
+	});
+
+	it.for(["cache", "functions"] as const)(
 		"preserves Pages detected from %s instead of migrating it through Vite",
 		async (detection, { expect }) => {
 			await seedProject();
@@ -158,12 +186,7 @@ export default { plugins: [cloudflare()] };`,
 			const pagesContext = createMockContext({
 				getCacheFolder: () => cacheFolder,
 			});
-			const options = {
-				context: pagesContext,
-				...(detection === "config"
-					? { wranglerConfig: { pages_build_output_dir: "public" } as Config }
-					: {}),
-			};
+			const options = { context: pagesContext };
 			const details = await getDetailsForAutoConfig(options);
 
 			expect(details).toMatchObject({
@@ -197,9 +220,9 @@ export default { plugins: [cloudflare()] };`,
 		expect,
 	}) => {
 		await seedProject();
+		await seed({ ".cache/pages.json": "{}" });
 		const details = await getDetailsForAutoConfig({
-			context,
-			wranglerConfig: { pages_build_output_dir: "public" } as Config,
+			context: createMockContext({ getCacheFolder: () => resolve(".cache") }),
 		});
 
 		expect(details).toMatchObject({

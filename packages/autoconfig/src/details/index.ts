@@ -28,6 +28,7 @@ import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
 } from "../types";
+import type { WranglerConfigFile } from "../wrangler-to-cf/types";
 import type { DetectedFramework } from "./framework-detection";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { PackageJSON } from "@cloudflare/workers-utils";
@@ -218,19 +219,26 @@ export async function getDetailsForAutoConfig({
 	}
 
 	// An existing cloudflare.config.ts takes precedence, so a migrated project isn't migrated again
-	const wranglerConfigFile =
+	const configPathToRead =
 		target === "cf" && !hasCloudflareConfig
 			? wranglerConfigPath !== undefined
 				? resolve(projectPath, wranglerConfigPath)
 				: findWranglerConfigFile(projectPath)
 			: undefined;
-
-	const wranglerRawConfig = readWranglerConfig(wranglerConfigFile);
+	// Wrangler passes the config it has parsed; the cf target reads the file it migrates
+	const wranglerConfigFile: WranglerConfigFile | undefined =
+		configPathToRead !== undefined
+			? {
+					path: configPathToRead,
+					content: readWranglerConfig(configPathToRead),
+				}
+			: target === "wrangler" && wranglerConfig?.configPath !== undefined
+				? { path: wranglerConfig.configPath, content: wranglerConfig }
+				: undefined;
 
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
 		await detectFramework(projectPath, context, {
-			// Wrangler's parsed config, or the one setup migrates
-			wranglerConfig: wranglerConfig ?? wranglerRawConfig,
+			wranglerConfig: wranglerConfigFile?.content,
 			target,
 		});
 	const nodeModulesPaths = getNodeModulesPaths(projectPath, workspaceRoot);
@@ -332,8 +340,8 @@ export async function getDetailsForAutoConfig({
 				),
 		env: framework.env,
 		workerName: getWorkerName(
-			// A migrated project keeps its Wrangler Worker name
-			wranglerRawConfig?.name ?? packageJson?.name,
+			// A project with a Wrangler config keeps its Worker name
+			wranglerConfigFile?.content.name ?? packageJson?.name,
 			projectPath
 		),
 	};
@@ -364,8 +372,8 @@ export async function getDetailsForAutoConfig({
 		outputDir,
 		configured: false,
 		isWorkspaceRoot,
-		wranglerConfigPath: wranglerConfigFile,
-		wranglerConfig: wranglerRawConfig,
+		// Only the cf target migrates a Wrangler config
+		wranglerConfigFile: target === "cf" ? wranglerConfigFile : undefined,
 	};
 }
 

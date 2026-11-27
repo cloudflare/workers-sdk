@@ -102,10 +102,10 @@ export async function runAutoConfig(
 	autoConfigDetails = updatedAutoConfigDetails;
 	assertNonConfigured(autoConfigDetails);
 
-	const { framework, outputDir, projectPath, wranglerConfigPath } =
+	const { framework, outputDir, projectPath, wranglerConfigFile } =
 		autoConfigDetails;
 	// A project with a Wrangler config gets its config migrated. Setting up its framework follows separately.
-	const setUpFramework = wranglerConfigPath === undefined;
+	const setUpFramework = wranglerConfigFile === undefined;
 	if (setUpFramework) {
 		validateFrameworkTargetSupport(framework, target);
 	}
@@ -115,11 +115,7 @@ export async function runAutoConfig(
 			autoConfigDetails.framework.id,
 			target
 		);
-		// Pages projects aren't supported, even with a Wrangler config
-		if (
-			!frameworkIsSupported &&
-			(setUpFramework || framework.id === "cloudflare-pages")
-		) {
+		if (!frameworkIsSupported && setUpFramework) {
 			throw new FatalError(
 				autoConfigDetails.framework.id === "cloudflare-pages"
 					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to Workers is not yet supported.`
@@ -208,8 +204,6 @@ export async function runAutoConfig(
 				? "vite"
 				: "wrangler"),
 		installDependencies,
-		// Detection already read the Wrangler config
-		wranglerConfig: autoConfigDetails.wranglerConfig,
 	} as const;
 	if (
 		target === "cf" &&
@@ -271,10 +265,10 @@ export async function runAutoConfig(
 	}
 
 	if (dryRun) {
-		if (wranglerConfigPath !== undefined) {
+		if (wranglerConfigFile !== undefined) {
 			const { migrateWranglerToCf } = await import("./wrangler-to-cf");
 			autoConfigSummary.wranglerMigration = await migrateWranglerToCf(
-				wranglerConfigPath,
+				wranglerConfigFile,
 				{ ...migrationOptions, dryRun: true }
 			);
 		}
@@ -357,11 +351,11 @@ export async function runAutoConfig(
 	}
 
 	if (target === "cf") {
-		if (wranglerConfigPath !== undefined) {
+		if (wranglerConfigFile !== undefined) {
 			// Loaded on use, so that importing autoconfig doesn't load the migration
 			const { migrateWranglerToCf } = await import("./wrangler-to-cf");
 			autoConfigSummary.wranglerMigration = await migrateWranglerToCf(
-				wranglerConfigPath,
+				wranglerConfigFile,
 				migrationOptions
 			);
 		} else if (workerConfig !== null) {
@@ -771,9 +765,9 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	if (target === "cf" && autoConfigDetails.wranglerConfigPath !== undefined) {
+	if (target === "cf" && autoConfigDetails.wranglerConfigFile !== undefined) {
 		logger.log(
-			`📄 Migrate ${relative(autoConfigDetails.projectPath, autoConfigDetails.wranglerConfigPath)} to cloudflare.config.ts`
+			`📄 Migrate ${relative(autoConfigDetails.projectPath, autoConfigDetails.wranglerConfigFile.path)} to cloudflare.config.ts`
 		);
 		logger.log("");
 	} else if (target === "cf" && workerConfig) {
@@ -813,7 +807,7 @@ export async function buildOperationsSummary(
 
 	if (
 		autoConfigDetails.framework &&
-		autoConfigDetails.wranglerConfigPath === undefined &&
+		autoConfigDetails.wranglerConfigFile === undefined &&
 		!(autoConfigDetails.framework instanceof Static) &&
 		!autoConfigDetails.framework.isConfigured(autoConfigDetails.projectPath, {
 			target,
