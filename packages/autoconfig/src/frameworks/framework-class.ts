@@ -4,6 +4,7 @@ import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { getInstalledPackageVersion } from "./utils/packages";
 import type { AutoConfigFrameworkPackageInfo, FrameworkInfo } from ".";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
+import type { WranglerConfig } from "../types";
 import type { WorkerConfig } from "@cloudflare/config";
 import type { PackageManager } from "@cloudflare/workers-utils";
 
@@ -108,8 +109,8 @@ export type ConfigurationOptions = {
 	packageManager: PackageManager;
 	isWorkspaceRoot: boolean;
 	context: AutoConfigContext;
-	/** The project's own Wrangler configuration file, for a project that already runs on Workers */
-	wranglerConfigPath?: string;
+	/** The project's Wrangler configuration, for a project that already runs on Workers */
+	wranglerConfig?: WranglerConfig;
 };
 
 export type PackageJsonScriptsOverrides = {

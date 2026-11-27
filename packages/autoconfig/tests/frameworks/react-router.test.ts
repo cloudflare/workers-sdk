@@ -261,15 +261,10 @@ describe("React Router framework configure()", () => {
 		it("uses the Worker entry the Wrangler config names", async ({
 			expect,
 		}) => {
-			await writeFile(
-				resolve("wrangler.jsonc"),
-				JSON.stringify({ main: "./server/worker.ts" })
-			);
-
 			const framework = createFramework("7.16.0");
 			const result = await framework.configure({
 				...getBaseOptions(),
-				wranglerConfigPath: resolve("wrangler.jsonc"),
+				wranglerConfig: { main: "./server/worker.ts" },
 			});
 
 			expect(result.workerConfig).toEqual({ entrypoint: "./server/worker.ts" });

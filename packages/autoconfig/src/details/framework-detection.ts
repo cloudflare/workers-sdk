@@ -18,9 +18,9 @@ import dedent from "ts-dedent";
 import { isFrameworkSupported, isKnownFramework } from "../frameworks";
 import { staticFramework } from "../frameworks/all-frameworks";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
+import type { WranglerConfig } from "../types";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { TelemetryMessage } from "@cloudflare/workers-utils";
-import type { Config } from "@cloudflare/workers-utils/config";
 import type { Settings } from "@netlify/build-info";
 
 /**
@@ -54,7 +54,7 @@ export async function detectFramework(
 		wranglerConfig,
 		target = "cf",
 	}: {
-		wranglerConfig?: Config;
+		wranglerConfig?: WranglerConfig;
 		target?: AutoConfigTarget;
 	} = {}
 ): Promise<{
@@ -324,7 +324,7 @@ export type DetectedFramework = {
 async function isPagesProject(
 	projectPath: string,
 	context: AutoConfigContext,
-	wranglerConfig: Config | undefined,
+	wranglerConfig: WranglerConfig | undefined,
 	detectedFramework?: DetectedFramework | undefined
 ): Promise<boolean> {
 	if (wranglerConfig?.pages_build_output_dir) {
