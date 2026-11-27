@@ -5,6 +5,8 @@ import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
 import { createServer } from "vite";
 import { afterEach, beforeEach, describe, test, vi } from "vitest";
 
+const EMAIL_BODY = "Subject: Café\r\n\r\nHello!";
+
 describe("local runtime bindings through Vite", () => {
 	runInTempDir();
 	afterEach(() => vi.unstubAllEnvs());
@@ -24,9 +26,29 @@ describe("local runtime bindings through Vite", () => {
 				kv_namespaces: [{ binding: "KV", id: "runtime-kv" }],
 			}),
 			"index.js": `
+				import { EmailMessage } from "cloudflare:email";
 				export default {
 					async fetch(request, env) {
 						switch (new URL(request.url).pathname) {
+							case "/realtimekit": {
+								try {
+									await env.RTK.createMeeting({ title: "Standup" });
+									return new Response("Unexpected local RealtimeKit simulator");
+								} catch (error) {
+									return Response.json(error.message);
+								}
+							}
+							case "/email-string":
+							case "/email-stream": {
+								const body = ${JSON.stringify(EMAIL_BODY)};
+								const input = new URL(request.url).pathname === "/email-string"
+									? body : new Blob([body]).stream();
+								const message = new EmailMessage("sender@example.com", "recipient@example.com", input);
+								if (!(message.raw instanceof ReadableStream)) {
+									throw new Error("Expected EmailMessage.raw to be a ReadableStream");
+								}
+								return Response.json(await new Response(message.raw).text());
+							}
 							case "/stream": {
 								const video = await env.STREAM.upload(new Response(new Uint8Array([0, 1, 2, 3])).body);
 								const captions = env.STREAM.video(video.id).captions;
@@ -58,6 +80,9 @@ describe("local runtime bindings through Vite", () => {
 	});
 
 	test.for([
+		{ path: "/realtimekit", result: "Binding RTK needs to be run remotely" },
+		{ path: "/email-string", result: EMAIL_BODY },
+		{ path: "/email-stream", result: EMAIL_BODY },
 		{
 			path: "/stream",
 			result: {
@@ -75,9 +100,22 @@ describe("local runtime bindings through Vite", () => {
 				missing: null,
 			},
 		},
-	])(
+	] as const)(
 		"serves $path with the released runtime behavior",
 		async ({ path, result }, { expect, onTestFinished }) => {
+			if (path === "/realtimekit") {
+				const config: Record<string, unknown> = JSON.parse(
+					await fs.readFile("wrangler.json", "utf8")
+				);
+				config.realtimekit = [
+					{
+						binding: "RTK",
+						app_id: "2da1c5c6-8e8f-4119-b89e-18558e051486",
+						remote: true,
+					},
+				];
+				await fs.writeFile("wrangler.json", JSON.stringify(config));
+			}
 			const server = await createServer({
 				root: process.cwd(),
 				configFile: false,
@@ -96,11 +134,16 @@ describe("local runtime bindings through Vite", () => {
 			const url = server.resolvedUrls?.local[0];
 			assert(url);
 			const response = await fetch(new URL(path, url));
-			expect(response.status).toBe(200);
+			expect(response.status, await response.clone().text()).toBe(200);
 			expect(await response.json()).toEqual(
-				path === "/stream"
-					? { ...result, missing: expect.stringContaining("Caption not found") }
-					: result
+				path === "/realtimekit"
+					? expect.stringContaining("Binding RTK needs to be run remotely")
+					: path === "/stream"
+						? {
+								...result,
+								missing: expect.stringContaining("Caption not found"),
+							}
+						: result
 			);
 		}
 	);
