@@ -134,6 +134,13 @@ export interface CliDescriptor {
 	persistAccountSelection?: boolean;
 
 	/**
+	 * Whether a configured `account_id` takes precedence over
+	 * `CLOUDFLARE_ACCOUNT_ID`. When disabled, the environment variable wins, as
+	 * other `CLOUDFLARE_*` variables do. Defaults to `false`.
+	 */
+	preferConfiguredAccountId?: boolean;
+
+	/**
 	 * Filename prefix for the cached account selection in the config cache
 	 * (e.g. `"wrangler-account"` → `wrangler-account.json`). Always JSON.
 	 */

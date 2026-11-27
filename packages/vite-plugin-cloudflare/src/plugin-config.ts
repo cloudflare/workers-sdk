@@ -265,6 +265,51 @@ function resolveWorkerType(options: {
 	};
 }
 
+// `CLOUDFLARE_*` values copied from environment files into `process.env`, by
+// name, so the next load can tell them apart from values set in the shell.
+const copiedCloudflareEnv = new Map<string, string>();
+
+/**
+ * Load the environment files and copy their `CLOUDFLARE_*` values into
+ * `process.env`, where Cloudflare tooling reads them.
+ *
+ * Vite reloads the config in the same process when an environment file
+ * changes. `loadEnv` gives `process.env` precedence over the files, so values
+ * copied by the previous load are removed first. Otherwise a value removed from
+ * or changed in a file would keep its old value. A value that has since changed
+ * in `process.env` is left alone.
+ *
+ * TODO: Replace this process-global compatibility bridge by explicitly passing
+ * typed Cloudflare tool settings to the services that consume them.
+ *
+ * @param envDir - The resolved environment directory, or `false` to skip files.
+ * @param mode - The mode whose environment files are loaded, if any.
+ * @returns The loaded values and their sources.
+ */
+async function loadLocalEnv(
+	envDir: string | false,
+	mode?: string
+): Promise<LoadedEnv> {
+	for (const [name, value] of copiedCloudflareEnv) {
+		if (process.env[name] === value) {
+			delete process.env[name];
+		}
+	}
+	copiedCloudflareEnv.clear();
+
+	const localEnv = await loadEnv(envDir, mode);
+	for (const [name, value] of Object.entries(localEnv.values)) {
+		if (
+			name.startsWith("CLOUDFLARE_") &&
+			localEnv.sources[name]?.type === "file"
+		) {
+			process.env[name] = value;
+			copiedCloudflareEnv.set(name, value);
+		}
+	}
+	return localEnv;
+}
+
 export async function resolvePluginConfig(
 	pluginConfig: PluginConfig,
 	userConfig: vite.UserConfig,
@@ -290,19 +335,9 @@ export async function resolvePluginConfig(
 		: undefined;
 	const localEnvMode = preview ? preview.rootConfig.buildContext.mode : mode;
 	const [localEnv, devVars] = await Promise.all([
-		loadEnv(envDir, localEnvMode),
+		loadLocalEnv(envDir, localEnvMode),
 		loadDevVars(envDir, localEnvMode),
 	]);
-	// TODO: Replace this process-global compatibility bridge by explicitly
-	// passing typed Cloudflare tool settings to the services that consume them.
-	Object.assign(
-		process.env,
-		Object.fromEntries(
-			Object.entries(localEnv.values).filter(([name]) =>
-				name.startsWith("CLOUDFLARE_")
-			)
-		)
-	);
 	const types = normalizeTypes(pluginConfig.types);
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,

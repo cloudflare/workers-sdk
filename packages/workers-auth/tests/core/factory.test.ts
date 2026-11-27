@@ -485,3 +485,86 @@ describe("account selection persistence", () => {
 		expect(fetchInternalBase).toHaveBeenCalledTimes(2);
 	});
 });
+
+describe("account precedence", () => {
+	runInTempDir();
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		flow.getActiveProfile.mockReturnValue("default");
+		flow.getActiveTemporaryAccount.mockReturnValue(undefined);
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "environment-account");
+	});
+
+	it("prefers CLOUDFLARE_ACCOUNT_ID to a configured account for cf", ({
+		expect,
+	}) => {
+		expect(CF_CLI.preferConfiguredAccountId).toBeUndefined();
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+
+		expect(auth.getActiveAccountId({ account_id: "configured-account" })).toBe(
+			"environment-account"
+		);
+	});
+
+	it("prefers a configured account to CLOUDFLARE_ACCOUNT_ID for Wrangler", ({
+		expect,
+	}) => {
+		expect(WRANGLER_CLI.preferConfiguredAccountId).toBe(true);
+		const auth = createCloudflareAuth(WRANGLER_CLI, createTestContext());
+
+		expect(auth.getActiveAccountId({ account_id: "configured-account" })).toBe(
+			"configured-account"
+		);
+	});
+
+	it.for([CF_CLI, WRANGLER_CLI])(
+		"uses the configured account without CLOUDFLARE_ACCOUNT_ID for $cliName",
+		(descriptor, { expect }) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", undefined);
+			const auth = createCloudflareAuth(descriptor, createTestContext());
+
+			expect(
+				auth.getActiveAccountId({ account_id: "configured-account" })
+			).toBe("configured-account");
+		}
+	);
+
+	it("resolves cf's environment account without selecting one", async ({
+		expect,
+	}) => {
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+
+		await expect(
+			auth.getOrSelectAccountId({
+				...COMPLIANCE_CONFIG,
+				account_id: "configured-account",
+			})
+		).resolves.toBe("environment-account");
+		expect(fetchInternalBase).not.toHaveBeenCalled();
+	});
+
+	it("ignores an invalid CLOUDFLARE_ACCOUNT_ID when Wrangler has a configured account", ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "invalid account");
+		const auth = createCloudflareAuth(WRANGLER_CLI, createTestContext());
+
+		expect(auth.getActiveAccountId({ account_id: "configured-account" })).toBe(
+			"configured-account"
+		);
+	});
+
+	it("rejects an invalid CLOUDFLARE_ACCOUNT_ID for cf with a configured account", ({
+		expect,
+	}) => {
+		vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "invalid account");
+		const auth = createCloudflareAuth(CF_CLI, createTestContext());
+
+		expect(() =>
+			auth.getActiveAccountId({ account_id: "configured-account" })
+		).toThrow(
+			'Invalid account ID "invalid account" set in the `CLOUDFLARE_ACCOUNT_ID` environment variable.'
+		);
+	});
+});

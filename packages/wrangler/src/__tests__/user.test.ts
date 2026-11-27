@@ -32,6 +32,7 @@ import {
 	readAuthConfigFile,
 	readAuthCredentials,
 	requireAuth,
+	withCfAuth,
 	writeAuthConfigFile,
 	writeAuthCredentials,
 } from "../user";
@@ -2227,6 +2228,17 @@ describe("User", () => {
 
 			const result = getActiveAccountId({ account_id: "from-config" });
 			expect(result).toBe("from-config");
+		});
+
+		it("should prefer env var over config.account_id under cf-wrangler", ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "from-env");
+
+			const result = withCfAuth("default", () =>
+				getActiveAccountId({ account_id: "from-config" })
+			);
+			expect(result).toBe("from-env");
 		});
 
 		it("should prefer env var over cache", ({ expect }) => {

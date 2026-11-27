@@ -58,6 +58,32 @@ test("plugin contexts share auth until the Vite project is disposed", async ({
 	expect(createCfAuth).toHaveBeenCalledTimes(2);
 });
 
+test("plugin contexts create new auth when CLOUDFLARE_API_TOKEN changes", ({
+	expect,
+	onTestFinished,
+}) => {
+	onTestFinished(() => {
+		vi.unstubAllEnvs();
+	});
+	vi.mocked(createCfAuth).mockClear();
+	const context = new PluginContext({
+		restartingDevServerCount: 0,
+		tunnelHostnames: new Set<string>(),
+	});
+	const logger = createLogger(createViteLogger("silent"));
+	vi.stubEnv("CLOUDFLARE_API_TOKEN", "first-token");
+	context.getCloudflareAuth("/project", logger);
+	// The same token reuses the auth
+	context.getCloudflareAuth("/project", logger);
+	expect(createCfAuth).toHaveBeenCalledOnce();
+
+	// The token changes, such as when Vite restarts after an edit to a `.env`
+	// file, so the new auth selects an account the new token can reach
+	vi.stubEnv("CLOUDFLARE_API_TOKEN", "second-token");
+	context.getCloudflareAuth("/project", logger);
+	expect(createCfAuth).toHaveBeenCalledTimes(2);
+});
+
 test("remote bindings auth uses the cf profile for the project", async ({
 	expect,
 }) => {
@@ -82,6 +108,32 @@ test("remote bindings auth uses the cf profile for the project", async ({
 	expect(
 		getRemoteBindingsAuth("/project", "other-account", getAuth).key
 	).not.toBe(auth.key);
+});
+
+test("remote bindings auth changes its key when the account or token variable changes", ({
+	expect,
+	onTestFinished,
+}) => {
+	onTestFinished(() => {
+		vi.unstubAllEnvs();
+	});
+	const logger = createLogger(createViteLogger("silent"));
+	const getAuth = () => createAuth("/project", logger);
+	const getKey = () =>
+		getRemoteBindingsAuth("/project", "account-id", getAuth).key;
+	vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "first-account");
+	vi.stubEnv("CLOUDFLARE_API_TOKEN", "first-token");
+	const firstKey = getKey();
+
+	// Vite restarts with new values after an edit to a `.env` file
+	vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "second-account");
+	const accountKey = getKey();
+	vi.stubEnv("CLOUDFLARE_API_TOKEN", "second-token");
+	const tokenKey = getKey();
+
+	expect(accountKey).not.toBe(firstKey);
+	expect(tokenKey).not.toBe(accountKey);
+	expect(tokenKey).not.toContain("second-token");
 });
 
 test("account selection explains how to configure the account", async ({
