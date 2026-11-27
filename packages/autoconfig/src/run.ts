@@ -253,7 +253,7 @@ export async function runAutoConfig(
 			newProjectFiles.length > 0
 				? await context.dialogs.confirm(
 						`Proceed with setup and create ${newProjectFiles.join(" and ")}${scaffold?.createTsconfig === "fallback" ? " and install TypeScript if needed" : ""}?`,
-						{ defaultValue: false, fallbackValue: true }
+						{ defaultValue: true, fallbackValue: true }
 					)
 				: await context.dialogs.confirm("Proceed with setup?");
 		if (!confirmed) {

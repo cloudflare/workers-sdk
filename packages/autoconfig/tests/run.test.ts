@@ -269,7 +269,7 @@ describe("runAutoConfig()", () => {
 
 		expect(context.dialogs.confirm).toHaveBeenLastCalledWith(
 			"Proceed with setup and create package.json and tsconfig.json?",
-			{ defaultValue: false, fallbackValue: true }
+			{ defaultValue: true, fallbackValue: true }
 		);
 		expect(cliPackages.installPackages).toHaveBeenCalledWith(
 			"npm",
@@ -336,7 +336,7 @@ describe("runAutoConfig()", () => {
 
 		expect(context.dialogs.confirm).toHaveBeenLastCalledWith(
 			"Proceed with setup and create tsconfig.json?",
-			{ defaultValue: false, fallbackValue: true }
+			{ defaultValue: true, fallbackValue: true }
 		);
 		expect(readFileSync("package.json", "utf8")).toBe(packageJson);
 		for (const file of [
@@ -1418,7 +1418,7 @@ describe("runAutoConfig()", () => {
 
 			expect(context.dialogs.confirm).toHaveBeenLastCalledWith(
 				"Proceed with setup and create tsconfig.json (if the framework doesn't create one) and install TypeScript if needed?",
-				{ defaultValue: false, fallbackValue: true }
+				{ defaultValue: true, fallbackValue: true }
 			);
 			expect(std.out).toContain(
 				"After framework setup, create tsconfig.json and install TypeScript if either is still missing."
