@@ -693,7 +693,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					configPath: "/tmp/wrangler.toml",
 					pages_build_output_dir: "./dist",
 				} as Config,
-				target: "wrangler",
 				context,
 			});
 

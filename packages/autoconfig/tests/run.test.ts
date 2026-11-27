@@ -24,6 +24,7 @@ import type {
 	ConfigurationResults,
 } from "../src/frameworks/framework-class";
 import type { AutoConfigOptions } from "../src/types";
+import type { Config } from "@cloudflare/workers-utils/config";
 
 class ExternalWorkerConfigFramework extends Framework {
 	configure(): ConfigurationResults {
@@ -869,6 +870,41 @@ describe("runAutoConfig()", () => {
 			});
 			expect(summary.frameworkId).toBe("cloudflare-pages");
 			expect(summary.frameworkConfiguration).toBeUndefined();
+		});
+
+		it("doesn't migrate the Wrangler config on the wrangler target", async ({
+			expect,
+		}) => {
+			await seed({
+				...worker,
+				"wrangler.jsonc": JSON.stringify({
+					name: "my-site",
+					pages_build_output_dir: "./dist",
+				}),
+				"dist/index.html": "<h1>Hello World</h1>",
+			});
+			const context = createMockContext();
+			const details = await getDetailsForAutoConfig({
+				wranglerConfig: {
+					configPath: join(process.cwd(), "wrangler.jsonc"),
+					name: "my-site",
+					pages_build_output_dir: "./dist",
+				} as Config,
+				target: "wrangler",
+				context,
+			});
+
+			await expect(
+				runAutoConfig(details, {
+					target: "wrangler",
+					context,
+					runBuild: false,
+					skipConfirmations: true,
+				})
+			).rejects.toThrow(
+				"Automatically migrating from a Pages project to Workers is not yet supported."
+			);
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
 		});
 
 		it("previews the migration in a dry run without changing files", async ({

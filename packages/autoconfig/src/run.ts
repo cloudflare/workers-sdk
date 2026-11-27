@@ -104,8 +104,10 @@ export async function runAutoConfig(
 
 	const { framework, outputDir, projectPath, wranglerConfigFile } =
 		autoConfigDetails;
-	// A project with a Wrangler config gets its config migrated. Setting up its framework follows separately.
-	const setUpFramework = wranglerConfigFile === undefined;
+	// cf migrates a project's Wrangler config. Setting up its framework follows separately.
+	const migrateWranglerConfig =
+		target === "cf" && wranglerConfigFile !== undefined;
+	const setUpFramework = !migrateWranglerConfig;
 	if (setUpFramework) {
 		validateFrameworkTargetSupport(framework, target);
 	}
@@ -265,7 +267,7 @@ export async function runAutoConfig(
 	}
 
 	if (dryRun) {
-		if (wranglerConfigFile !== undefined) {
+		if (migrateWranglerConfig) {
 			const { migrateWranglerToCf } = await import("./wrangler-to-cf");
 			autoConfigSummary.wranglerMigration = await migrateWranglerToCf(
 				wranglerConfigFile,
@@ -351,7 +353,7 @@ export async function runAutoConfig(
 	}
 
 	if (target === "cf") {
-		if (wranglerConfigFile !== undefined) {
+		if (migrateWranglerConfig) {
 			// Loaded on use, so that importing autoconfig doesn't load the migration
 			const { migrateWranglerToCf } = await import("./wrangler-to-cf");
 			autoConfigSummary.wranglerMigration = await migrateWranglerToCf(
@@ -807,7 +809,7 @@ export async function buildOperationsSummary(
 
 	if (
 		autoConfigDetails.framework &&
-		autoConfigDetails.wranglerConfigFile === undefined &&
+		(target !== "cf" || autoConfigDetails.wranglerConfigFile === undefined) &&
 		!(autoConfigDetails.framework instanceof Static) &&
 		!autoConfigDetails.framework.isConfigured(autoConfigDetails.projectPath, {
 			target,

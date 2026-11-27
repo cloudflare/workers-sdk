@@ -176,8 +176,8 @@ export async function getDetailsForAutoConfig({
 	/** The parsed wrangler configuration for the project (if any). */
 	wranglerConfig?: Config;
 	/**
-	 * For the cf target, the Wrangler config to migrate, inside `projectPath` and relative to it.
-	 * Defaults to the one at the project root. Ignored if `cloudflare.config.ts` exists.
+	 * The project's Wrangler config, inside `projectPath` and relative to it. Defaults to the one at the
+	 * project root. Not used when `wranglerConfig` is passed, or when the cf target finds `cloudflare.config.ts`.
 	 */
 	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
@@ -218,22 +218,22 @@ export async function getDetailsForAutoConfig({
 		};
 	}
 
+	// The project's Wrangler config: the one the caller has parsed, otherwise the one found here.
 	// An existing cloudflare.config.ts takes precedence, so a migrated project isn't migrated again
 	const configPathToRead =
-		target === "cf" && !hasCloudflareConfig
+		wranglerConfig === undefined && !hasCloudflareConfig
 			? wranglerConfigPath !== undefined
 				? resolve(projectPath, wranglerConfigPath)
 				: findWranglerConfigFile(projectPath)
 			: undefined;
-	// Wrangler passes the config it has parsed; the cf target reads the file it migrates
 	const wranglerConfigFile: WranglerConfigFile | undefined =
-		configPathToRead !== undefined
-			? {
-					path: configPathToRead,
-					content: readWranglerConfig(configPathToRead),
-				}
-			: target === "wrangler" && wranglerConfig?.configPath !== undefined
-				? { path: wranglerConfig.configPath, content: wranglerConfig }
+		wranglerConfig?.configPath !== undefined
+			? { path: wranglerConfig.configPath, content: wranglerConfig }
+			: configPathToRead !== undefined
+				? {
+						path: configPathToRead,
+						content: readWranglerConfig(configPathToRead),
+					}
 				: undefined;
 
 	const { detectedFramework, packageManager, isWorkspaceRoot, workspaceRoot } =
@@ -372,8 +372,7 @@ export async function getDetailsForAutoConfig({
 		outputDir,
 		configured: false,
 		isWorkspaceRoot,
-		// Only the cf target migrates a Wrangler config
-		wranglerConfigFile: target === "cf" ? wranglerConfigFile : undefined,
+		wranglerConfigFile,
 	};
 }
 

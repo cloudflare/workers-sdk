@@ -67,7 +67,7 @@ export type AutoConfigDetailsForNonConfiguredProject = Optional<
 	"outputDir"
 > & {
 	configured: false;
-	/** The Wrangler config that setup migrates to `cloudflare.config.ts` */
+	/** The project's Wrangler config, which setup for cf migrates to `cloudflare.config.ts` */
 	wranglerConfigFile?: WranglerConfigFile;
 };
 
