@@ -915,11 +915,32 @@ const BaseWorkerSchema = z.strictObject({
 	exports: z.record(z.string(), ExportSchema).optional(),
 });
 
+/** Add a location hint when an unknown field is recognized in another schema. */
+function misplacedFieldError(
+	issue: z.core.$ZodRawIssue,
+	targetShape: z.ZodRawShape,
+	location: string
+): string | undefined {
+	if (issue.code !== "unrecognized_keys") {
+		return;
+	}
+
+	const hints = issue.keys
+		.filter((key) => Object.hasOwn(targetShape, key))
+		.map((key) => `${JSON.stringify(key)} belongs ${location}.`);
+	if (hints.length === 0) {
+		return;
+	}
+
+	const keys = issue.keys.map((key) => JSON.stringify(key)).join(", ");
+	return `Unrecognized key${issue.keys.length === 1 ? "" : "s"}: ${keys}. ${hints.join(" ")}`;
+}
+
 /**
- * Worker schema — parses Worker definitions from user-authored
- * `cloudflare.config.ts` files, after the config loader has resolved
- * `defineWorker()` references and module entrypoints. Adds an optional string
- * `entrypoint` field to the base schema.
+ * Worker schema — parses resolved Worker definitions, including standalone
+ * Worker options. The config loader resolves `defineWorker()` references and
+ * module entrypoints before parsing. Adds an optional string `entrypoint` field
+ * to the base schema.
  */
 export const WorkerConfigSchema = BaseWorkerSchema.extend({
 	entrypoint: z.string().optional(),
@@ -994,13 +1015,29 @@ function validateConfigRelationships(
 	}
 }
 
+/** Project-level placement hints do not apply to standalone Worker configs. */
+const CloudflareConfigWorkerSchema = z.strictObject(WorkerConfigSchema.shape, {
+	error: (issue): string | undefined =>
+		misplacedFieldError(
+			issue,
+			CloudflareConfigSchema.shape,
+			'at the top level of the config, outside "worker"'
+		),
+});
+
 /** The resolved project configuration, including relationships between resources. */
 export const CloudflareConfigSchema = z
-	.strictObject({
-		...SettingsSchema.shape,
-		worker: WorkerConfigSchema.optional(),
-		containers: z.array(ContainerConfigSchema).optional(),
-	})
+	.strictObject(
+		{
+			...SettingsSchema.shape,
+			worker: CloudflareConfigWorkerSchema.optional(),
+			containers: z.array(ContainerConfigSchema).optional(),
+		},
+		{
+			error: (issue): string | undefined =>
+				misplacedFieldError(issue, WorkerConfigSchema.shape, 'inside "worker"'),
+		}
+	)
 	.superRefine(validateConfigRelationships);
 
 export type ParsedCloudflareConfig = z.output<typeof CloudflareConfigSchema>;
