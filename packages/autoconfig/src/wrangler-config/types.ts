@@ -11,7 +11,7 @@ export interface BundlerMigrationOptions {
 	dryRun?: boolean;
 	/**
 	 * The folder the project's build writes to, relative to the Wrangler config, as detection reports
-	 * it (`outputDir`). With Vite, a Wrangler assets directory inside it needs no follow-up.
+	 * it (`outputDir`). With Vite, a Wrangler assets directory that is this folder needs no follow-up.
 	 */
 	outputDir?: string;
 	/** Whether to install cf and install or upgrade Vite plugin and Wrangler dependencies when needed. Required dependency changes become blocking follow-ups when false. */
