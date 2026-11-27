@@ -1,5 +1,108 @@
 # wrangler
 
+## 4.169.0
+
+### Minor Changes
+
+- [#17183](https://github.com/cloudflare/workers-sdk/pull/17183) [`ebc7b50`](https://github.com/cloudflare/workers-sdk/commit/ebc7b509c659bef9ad413112f0907b8f815eae22) Thanks [@gpanders](https://github.com/gpanders)! - Accept `linux/arm64` images in `wrangler containers push` and `wrangler containers build`
+
+  `wrangler containers push` now accepts local images built for `linux/amd64` or `linux/arm64`. `wrangler containers build --platform` accepts the same two platforms. The default platform is still `linux/amd64`.
+
+- [#17088](https://github.com/cloudflare/workers-sdk/pull/17088) [`43da328`](https://github.com/cloudflare/workers-sdk/commit/43da3289c5f715c03143d31fde6dc46b4d90b28b) Thanks [@efalcao](https://github.com/efalcao)! - Add the `oidc_tokens` binding
+
+  An OIDC token binding issues short-lived OpenID Connect tokens for the Worker's own identity, for one audience. Exchange them for cloud credentials, or send them to an API as a bearer token, instead of storing long-lived credentials as secrets:
+
+  ```jsonc
+  "oidc_tokens": [{ "binding": "API_TOKEN", "audience": "https://api.example.com" }]
+  ```
+
+  `env.API_TOKEN.getToken()` returns a newly signed JWT. Set `"alg": "RS256"` for verifiers that don't accept the default, ES256. Wrangler validates the audience (1 to 2048 printable ASCII characters, no whitespace), uploads the binding, generates its `OidcTokenBinding` type, and prints it in the bindings table. After a deploy, `wrangler deploy` prints the issuer and subject to put in the verifier's trust policy. The subject contains the Worker's immutable ID, which the deploy output doesn't otherwise show. The binding isn't available in local development yet. Accounts must be enabled for the binding before they can deploy it.
+
+- [#17161](https://github.com/cloudflare/workers-sdk/pull/17161) [`e46c7c6`](https://github.com/cloudflare/workers-sdk/commit/e46c7c6a4c9c797f5d8f40827c9f2e4ef8e3fd6c) Thanks [@thisisamank](https://github.com/thisisamank)! - Add RealtimeKit bindings
+
+  Bind an existing RealtimeKit app to a Worker in your Wrangler configuration file:
+
+  ```jsonc
+  {
+    "realtimekit": [
+      {
+        "binding": "RTK",
+        "app_id": "<APP_ID>",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+  RealtimeKit has no local simulator, so set `remote: true` to use the real app during local development. Calls during development, including calls on returned meetings, go through the existing remote bindings proxy. The experimental configuration API supports `bindings.realtimeKit({ id: "<APP_ID>", dev: { remote: true } })`, and the `wrangler-to-cf` codemod converts `realtimekit` entries. Deployments upload only the binding name and `app_id`. `wrangler types` generates `RealtimeKitBinding` for these bindings.
+
+### Patch Changes
+
+- [#17203](https://github.com/cloudflare/workers-sdk/pull/17203) [`41bacf7`](https://github.com/cloudflare/workers-sdk/commit/41bacf7ce166b2151c858e06289d1711e41e4ff9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Accept `fedramp-high` in `CLOUDFLARE_COMPLIANCE_REGION`
+
+  `cloudflare.config.ts` writes the FedRAMP High region as `fedramp-high`, but `CLOUDFLARE_COMPLIANCE_REGION` only accepted `fedramp_high` and rejected the other spelling with `Expected "fedramp-high" to be one of ["public","fedramp_high"]`. Both spellings are now accepted and mean the same region, so a value copied from `cloudflare.config.ts` into `CLOUDFLARE_COMPLIANCE_REGION` works.
+
+- [#17075](https://github.com/cloudflare/workers-sdk/pull/17075) [`4475a8e`](https://github.com/cloudflare/workers-sdk/commit/4475a8ec6b4e80b0c6821c8e690acb23d43cc28c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use `database_id` for D1 bindings in Worker uploads
+
+  Worker upload metadata now matches the Workers API schema. Pages bundles continue to use `id` for compatibility with the Pages API. No configuration changes are needed: programmatic config still uses `bindings.d1({ id })`, and Wrangler config files still use `database_id`.
+
+- [#17140](https://github.com/cloudflare/workers-sdk/pull/17140) [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-24
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17160](https://github.com/cloudflare/workers-sdk/pull/17160) [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-25
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17220](https://github.com/cloudflare/workers-sdk/pull/17220) [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-27
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17140](https://github.com/cloudflare/workers-sdk/pull/17140) [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261123.1 | ^5.20261124.1 |
+  | workerd                   | 1.20261123.1  | 1.20261124.1  |
+
+- [#17160](https://github.com/cloudflare/workers-sdk/pull/17160) [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261124.1 | ^5.20261125.1 |
+  | workerd                   | 1.20261124.1  | 1.20261125.1  |
+
+- [#17220](https://github.com/cloudflare/workers-sdk/pull/17220) [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency                | From          | To            |
+  | ------------------------- | ------------- | ------------- |
+  | @cloudflare/workers-types | ^5.20261125.1 | ^5.20261127.1 |
+  | workerd                   | 1.20261125.1  | 1.20261127.1  |
+
+- [#17146](https://github.com/cloudflare/workers-sdk/pull/17146) [`31984b2`](https://github.com/cloudflare/workers-sdk/commit/31984b2462a91051cfa2d1e1045a879cc29a42bd) Thanks [@edmundhung](https://github.com/edmundhung)! - Wait for the Worker to start before `wrangler dev` tells a parent process that it is ready
+
+  Requests sent right after that signal could otherwise wait for the Worker to start, and time out on slow machines.
+
+- [#17203](https://github.com/cloudflare/workers-sdk/pull/17203) [`41bacf7`](https://github.com/cloudflare/workers-sdk/commit/41bacf7ce166b2151c858e06289d1711e41e4ff9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Name `CLOUDFLARE_COMPLIANCE_REGION` in the FedRAMP High OAuth login error
+
+  When OAuth login was refused because the environment set the FedRAMP High compliance region, the error told you to remove the `CLOUDFLARE_API_ENVIRONMENT` environment variable, which doesn't set the region. It now names `CLOUDFLARE_COMPLIANCE_REGION`.
+
+- [#17205](https://github.com/cloudflare/workers-sdk/pull/17205) [`e351be9`](https://github.com/cloudflare/workers-sdk/commit/e351be9ab21247e6e6e7dbc81b148f17368a7ac1) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Prefer `CLOUDFLARE_ACCOUNT_ID` to the configured `accountId` in the Cloudflare Vite and Vitest plugins and in `cf dev`
+
+  When resolving an account for remote bindings, and for tunnels in the Vite plugin, the plugins and `cf dev` used the `accountId` in `cloudflare.config.ts` even when `CLOUDFLARE_ACCOUNT_ID` was set to a different account. This was the reverse of other `cf` commands, where the environment variable takes precedence. `CLOUDFLARE_ACCOUNT_ID` now takes precedence there too.
+
+  `wrangler` commands, and Vitest plugin projects that use a Wrangler configuration file, are unchanged: the configured `account_id` still takes precedence.
+
+- Updated dependencies [[`07d2051`](https://github.com/cloudflare/workers-sdk/commit/07d205105ff2667cbfe3babd52aa0ae38187cf80), [`41bacf7`](https://github.com/cloudflare/workers-sdk/commit/41bacf7ce166b2151c858e06289d1711e41e4ff9), [`4475a8e`](https://github.com/cloudflare/workers-sdk/commit/4475a8ec6b4e80b0c6821c8e690acb23d43cc28c), [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497), [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f), [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6), [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497), [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f), [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6), [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497), [`927f070`](https://github.com/cloudflare/workers-sdk/commit/927f070ee0589a2567a76f2000dcff60b1b3d2eb), [`43da328`](https://github.com/cloudflare/workers-sdk/commit/43da3289c5f715c03143d31fde6dc46b4d90b28b), [`e46c7c6`](https://github.com/cloudflare/workers-sdk/commit/e46c7c6a4c9c797f5d8f40827c9f2e4ef8e3fd6c)]:
+  - miniflare@5.20261127.0-beta
+  - @cloudflare/workers-utils@0.58.0
+
 ## 4.168.0
 
 ### Minor Changes
