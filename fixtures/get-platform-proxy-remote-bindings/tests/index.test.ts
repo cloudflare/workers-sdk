@@ -339,12 +339,13 @@ test.for([
 	{
 		status: 400,
 		code: 10000,
-		message: "remote session could not be authenticated",
+		message: "Token cannot create an edge preview for this account",
 	},
 	{ status: 403, code: 9999, message: "Account access denied" },
 	{ status: 404, code: 9999, message: "Account not found" },
+	{ status: 503, code: 9999, message: "Workers subdomain lookup unavailable" },
 ])(
-	"getPlatformProxy fails remote Hyperdrive startup for an API rejection ($status)",
+	"getPlatformProxy handles remote Hyperdrive startup API errors ($status)",
 	async ({ status, code, message }, { expect }) => {
 		const directory = mkdtempSync(
 			join(tmpdir(), "platform-proxy-api-rejection-")
@@ -353,6 +354,12 @@ test.for([
 		const requested = vi.fn();
 		const server = createServer((request, response) => {
 			requested(request.url);
+			if (status === 503 && request.url?.endsWith("/subdomain/edge-preview")) {
+				response
+					.writeHead(200, { "Content-Type": "application/json" })
+					.end(JSON.stringify({ success: true, result: { token: "preview" } }));
+				return;
+			}
 			response
 				.writeHead(status, { "Content-Type": "application/json" })
 				.end(JSON.stringify({ success: false, errors: [{ code, message }] }));
@@ -372,12 +379,29 @@ test.for([
 					account_id: "a".repeat(32),
 					compatibility_date: "2025-06-01",
 					hyperdrive: [{ binding: "DB", id: "b".repeat(32), remote: true }],
+					kv_namespaces: [{ binding: "LOCAL_KV", id: "c".repeat(32) }],
 				})
 			);
-			const startupError = await getPlatformProxy({
+			const proxy = getPlatformProxy<{ LOCAL_KV: KVNamespace }>({
 				configPath,
 				persist: false,
-			}).then(
+			});
+			if (status === 503) {
+				const { env, dispose } = await proxy;
+				try {
+					await env.LOCAL_KV.put("key", "value");
+					expect(await env.LOCAL_KV.get("key")).toBe("value");
+					expect(
+						requested.mock.calls
+							.map(([url]) => url)
+							.filter((url) => url?.endsWith("/workers/subdomain")).length
+					).toBeGreaterThan(1);
+				} finally {
+					await dispose();
+				}
+				return;
+			}
+			const startupError = await proxy.then(
 				async ({ dispose }) => {
 					await dispose();
 				},

@@ -259,7 +259,7 @@ export async function createPreviewSession(
 			host,
 		};
 	} catch (e) {
-		if (!(e instanceof ParseError)) {
+		if (!(e instanceof ParseError) || e instanceof APIError) {
 			throw e;
 		} else {
 			throw new UserError(

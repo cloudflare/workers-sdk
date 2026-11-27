@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+	ErrorAuthServerUnreachable,
 	resetCredentialStorageState,
 	setKeyProviderFactoryForTesting,
 } from "@cloudflare/workers-auth";
@@ -1085,9 +1086,11 @@ describe("User", () => {
 			});
 			mockExchangeRefreshTokenForAccessToken({ respondWith: "networkError" });
 
-			await expect(
-				requireAuth({} as Config)
-			).rejects.toThrowErrorMatchingInlineSnapshot(
+			const authResult = requireAuth({} as Config);
+			await expect(authResult).rejects.toBeInstanceOf(
+				ErrorAuthServerUnreachable
+			);
+			await expect(authResult).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Your auth token has expired and could not be refreshed because the Cloudflare auth server could not be reached. This is usually a network problem (connectivity, proxy, or IPv6), not an invalid login: your stored credentials were left unchanged. Check your connection and try again.]`
 			);
 

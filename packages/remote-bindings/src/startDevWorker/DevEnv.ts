@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { EventEmitter } from "node:events";
+import { ErrorAuthServerUnreachable } from "@cloudflare/workers-auth";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { MiniflareCoreError } from "miniflare";
 import { logger } from "../logger";
@@ -92,10 +93,15 @@ export class DevEnv extends EventEmitter {
 							apiError.status === 401 ||
 							apiError.status === 403 ||
 							apiError.status === 404)
-					: cause instanceof UserError;
+					: cause instanceof UserError &&
+						!(cause instanceof ErrorAuthServerUnreachable);
 			const message =
-				definitive && cause instanceof APIError
-					? [cause.message, ...cause.notes.map(({ text }) => text)].join("\n")
+				definitive && apiError instanceof APIError
+					? [
+							...(cause === apiError ? [] : [cause.message]),
+							apiError.message,
+							...apiError.notes.map(({ text }) => text),
+						].join("\n")
 					: cause.message;
 			this.proxy.connectionFailed(message, definitive);
 		}
