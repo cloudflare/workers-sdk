@@ -1,5 +1,33 @@
 # @cloudflare/containers-shared
 
+## 0.28.0
+
+### Minor Changes
+
+- [#17183](https://github.com/cloudflare/workers-sdk/pull/17183) [`ebc7b50`](https://github.com/cloudflare/workers-sdk/commit/ebc7b509c659bef9ad413112f0907b8f815eae22) Thanks [@gpanders](https://github.com/gpanders)! - Accept `linux/arm64` images in `wrangler containers push` and `wrangler containers build`
+
+  `wrangler containers push` now accepts local images built for `linux/amd64` or `linux/arm64`. `wrangler containers build --platform` accepts the same two platforms. The default platform is still `linux/amd64`.
+
+### Patch Changes
+
+- [#17140](https://github.com/cloudflare/workers-sdk/pull/17140) [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-24
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17160](https://github.com/cloudflare/workers-sdk/pull/17160) [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-25
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17220](https://github.com/cloudflare/workers-sdk/pull/17220) [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-27
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- Updated dependencies [[`41bacf7`](https://github.com/cloudflare/workers-sdk/commit/41bacf7ce166b2151c858e06289d1711e41e4ff9), [`4475a8e`](https://github.com/cloudflare/workers-sdk/commit/4475a8ec6b4e80b0c6821c8e690acb23d43cc28c), [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497), [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f), [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6), [`43da328`](https://github.com/cloudflare/workers-sdk/commit/43da3289c5f715c03143d31fde6dc46b4d90b28b), [`e46c7c6`](https://github.com/cloudflare/workers-sdk/commit/e46c7c6a4c9c797f5d8f40827c9f2e4ef8e3fd6c)]:
+  - @cloudflare/workers-utils@0.58.0
+  - @cloudflare/build-output-utils@1.0.0-rc.5
+  - @cloudflare/cli-shared-helpers@0.3.14
+  - @cloudflare/config@1.0.0-rc.5
+
 ## 0.27.2
 
 ### Patch Changes

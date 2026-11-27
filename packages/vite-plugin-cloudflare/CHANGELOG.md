@@ -1,5 +1,65 @@
 # @cloudflare/vite-plugin
 
+## 2.0.0-rc.6
+
+### Minor Changes
+
+- [#17161](https://github.com/cloudflare/workers-sdk/pull/17161) [`e46c7c6`](https://github.com/cloudflare/workers-sdk/commit/e46c7c6a4c9c797f5d8f40827c9f2e4ef8e3fd6c) Thanks [@thisisamank](https://github.com/thisisamank)! - Add RealtimeKit bindings
+
+  Bind an existing RealtimeKit app to a Worker in your Wrangler configuration file:
+
+  ```jsonc
+  {
+    "realtimekit": [
+      {
+        "binding": "RTK",
+        "app_id": "<APP_ID>",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+  RealtimeKit has no local simulator, so set `remote: true` to use the real app during local development. Calls during development, including calls on returned meetings, go through the existing remote bindings proxy. The experimental configuration API supports `bindings.realtimeKit({ id: "<APP_ID>", dev: { remote: true } })`, and the `wrangler-to-cf` codemod converts `realtimekit` entries. Deployments upload only the binding name and `app_id`. `wrangler types` generates `RealtimeKitBinding` for these bindings.
+
+### Patch Changes
+
+- [#17203](https://github.com/cloudflare/workers-sdk/pull/17203) [`41bacf7`](https://github.com/cloudflare/workers-sdk/commit/41bacf7ce166b2151c858e06289d1711e41e4ff9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Accept `fedramp-high` in `CLOUDFLARE_COMPLIANCE_REGION`
+
+  `cloudflare.config.ts` writes the FedRAMP High region as `fedramp-high`, but `CLOUDFLARE_COMPLIANCE_REGION` only accepted `fedramp_high` and rejected the other spelling with `Expected "fedramp-high" to be one of ["public","fedramp_high"]`. Both spellings are now accepted and mean the same region, so a value copied from `cloudflare.config.ts` into `CLOUDFLARE_COMPLIANCE_REGION` works.
+
+- [#17140](https://github.com/cloudflare/workers-sdk/pull/17140) [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-24
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17160](https://github.com/cloudflare/workers-sdk/pull/17160) [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-25
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17220](https://github.com/cloudflare/workers-sdk/pull/17220) [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-27
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17205](https://github.com/cloudflare/workers-sdk/pull/17205) [`e351be9`](https://github.com/cloudflare/workers-sdk/commit/e351be9ab21247e6e6e7dbc81b148f17368a7ac1) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Prefer `CLOUDFLARE_ACCOUNT_ID` to the configured `accountId` in the Cloudflare Vite and Vitest plugins and in `cf dev`
+
+  When resolving an account for remote bindings, and for tunnels in the Vite plugin, the plugins and `cf dev` used the `accountId` in `cloudflare.config.ts` even when `CLOUDFLARE_ACCOUNT_ID` was set to a different account. This was the reverse of other `cf` commands, where the environment variable takes precedence. `CLOUDFLARE_ACCOUNT_ID` now takes precedence there too.
+
+  `wrangler` commands, and Vitest plugin projects that use a Wrangler configuration file, are unchanged: the configured `account_id` still takes precedence.
+
+- [#17166](https://github.com/cloudflare/workers-sdk/pull/17166) [`927f070`](https://github.com/cloudflare/workers-sdk/commit/927f070ee0589a2567a76f2000dcff60b1b3d2eb) Thanks [@edmundhung](https://github.com/edmundhung)! - Load only `.env`, `.env.local` and `.dev.vars` when previewing Build Output that records no mode
+
+  This matches `cf deploy`. Build Output from the Vite plugin always records a mode, so it loads the same files as before.
+
+- [#17205](https://github.com/cloudflare/workers-sdk/pull/17205) [`e351be9`](https://github.com/cloudflare/workers-sdk/commit/e351be9ab21247e6e6e7dbc81b148f17368a7ac1) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Apply changes to `CLOUDFLARE_*` variables in `.env` files when Vite restarts
+
+  The plugin copies `CLOUDFLARE_*` variables from `.env` files into `process.env`. When a `.env` file changes, Vite restarts in the same process. The values copied before the restart then took precedence over the edited file, as if they had been set in the shell. A variable changed in or removed from a `.env` file now takes effect after the restart. Variables set in the shell still take precedence.
+
+- Updated dependencies [[`07d2051`](https://github.com/cloudflare/workers-sdk/commit/07d205105ff2667cbfe3babd52aa0ae38187cf80), [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497), [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f), [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6), [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497), [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f), [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6), [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497), [`927f070`](https://github.com/cloudflare/workers-sdk/commit/927f070ee0589a2567a76f2000dcff60b1b3d2eb), [`43da328`](https://github.com/cloudflare/workers-sdk/commit/43da3289c5f715c03143d31fde6dc46b4d90b28b), [`e46c7c6`](https://github.com/cloudflare/workers-sdk/commit/e46c7c6a4c9c797f5d8f40827c9f2e4ef8e3fd6c)]:
+  - miniflare@5.20261127.0-beta
+  - @cloudflare/build-output-utils@1.0.0-rc.5
+  - @cloudflare/config@1.0.0-rc.5
+  - @cloudflare/runtime-types@0.1.35
+
 ## 2.0.0-rc.5
 
 ### Patch Changes

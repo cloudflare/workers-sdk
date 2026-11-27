@@ -1,5 +1,59 @@
 # @cloudflare/workers-utils
 
+## 0.58.0
+
+### Minor Changes
+
+- [#17088](https://github.com/cloudflare/workers-sdk/pull/17088) [`43da328`](https://github.com/cloudflare/workers-sdk/commit/43da3289c5f715c03143d31fde6dc46b4d90b28b) Thanks [@efalcao](https://github.com/efalcao)! - Add the `oidc_tokens` binding
+
+  An OIDC token binding issues short-lived OpenID Connect tokens for the Worker's own identity, for one audience. Exchange them for cloud credentials, or send them to an API as a bearer token, instead of storing long-lived credentials as secrets:
+
+  ```jsonc
+  "oidc_tokens": [{ "binding": "API_TOKEN", "audience": "https://api.example.com" }]
+  ```
+
+  `env.API_TOKEN.getToken()` returns a newly signed JWT. Set `"alg": "RS256"` for verifiers that don't accept the default, ES256. Wrangler validates the audience (1 to 2048 printable ASCII characters, no whitespace), uploads the binding, generates its `OidcTokenBinding` type, and prints it in the bindings table. After a deploy, `wrangler deploy` prints the issuer and subject to put in the verifier's trust policy. The subject contains the Worker's immutable ID, which the deploy output doesn't otherwise show. The binding isn't available in local development yet. Accounts must be enabled for the binding before they can deploy it.
+
+- [#17161](https://github.com/cloudflare/workers-sdk/pull/17161) [`e46c7c6`](https://github.com/cloudflare/workers-sdk/commit/e46c7c6a4c9c797f5d8f40827c9f2e4ef8e3fd6c) Thanks [@thisisamank](https://github.com/thisisamank)! - Add RealtimeKit bindings
+
+  Bind an existing RealtimeKit app to a Worker in your Wrangler configuration file:
+
+  ```jsonc
+  {
+    "realtimekit": [
+      {
+        "binding": "RTK",
+        "app_id": "<APP_ID>",
+        "remote": true
+      }
+    ]
+  }
+  ```
+
+  RealtimeKit has no local simulator, so set `remote: true` to use the real app during local development. Calls during development, including calls on returned meetings, go through the existing remote bindings proxy. The experimental configuration API supports `bindings.realtimeKit({ id: "<APP_ID>", dev: { remote: true } })`, and the `wrangler-to-cf` codemod converts `realtimekit` entries. Deployments upload only the binding name and `app_id`. `wrangler types` generates `RealtimeKitBinding` for these bindings.
+
+### Patch Changes
+
+- [#17203](https://github.com/cloudflare/workers-sdk/pull/17203) [`41bacf7`](https://github.com/cloudflare/workers-sdk/commit/41bacf7ce166b2151c858e06289d1711e41e4ff9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Accept `fedramp-high` in `CLOUDFLARE_COMPLIANCE_REGION`
+
+  `cloudflare.config.ts` writes the FedRAMP High region as `fedramp-high`, but `CLOUDFLARE_COMPLIANCE_REGION` only accepted `fedramp_high` and rejected the other spelling with `Expected "fedramp-high" to be one of ["public","fedramp_high"]`. Both spellings are now accepted and mean the same region, so a value copied from `cloudflare.config.ts` into `CLOUDFLARE_COMPLIANCE_REGION` works.
+
+- [#17075](https://github.com/cloudflare/workers-sdk/pull/17075) [`4475a8e`](https://github.com/cloudflare/workers-sdk/commit/4475a8ec6b4e80b0c6821c8e690acb23d43cc28c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use `database_id` for D1 bindings in Worker uploads
+
+  Worker upload metadata now matches the Workers API schema. Pages bundles continue to use `id` for compatibility with the Pages API. No configuration changes are needed: programmatic config still uses `bindings.d1({ id })`, and Wrangler config files still use `database_id`.
+
+- [#17140](https://github.com/cloudflare/workers-sdk/pull/17140) [`b645124`](https://github.com/cloudflare/workers-sdk/commit/b6451243417e541f61f239c6275b20c59927b497) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-24
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17160](https://github.com/cloudflare/workers-sdk/pull/17160) [`8d3e953`](https://github.com/cloudflare/workers-sdk/commit/8d3e9538d67c46cab48201c97e2fcdff7edf451f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-25
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
+- [#17220](https://github.com/cloudflare/workers-sdk/pull/17220) [`b89dfcf`](https://github.com/cloudflare/workers-sdk/commit/b89dfcf23a473860649138dd5641141d7569cca6) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update `DEFAULT_COMPAT_DATE` to 2026-11-27
+
+  Use the bundled workerd release's compatibility date by default when scaffolding new projects or when no compatibility date is configured.
+
 ## 0.57.0
 
 ### Minor Changes
