@@ -61,10 +61,10 @@ The options object and all of its fields are optional. The defaults are the Vite
 
 ### Convert Wrangler config in memory
 
-Tools that already hold a parsed Wrangler configuration can convert it without files or a project. Import `convertWranglerConfig` from the `@cloudflare/codemods/wrangler-to-cf` entry point, which loads only the converter:
+Tools that already hold a parsed Wrangler configuration can convert it without files or a project. Import `convertWranglerConfig` from the `@cloudflare/autoconfig/wrangler-to-cf` entry point, which loads only the converter:
 
 ```ts
-import { convertWranglerConfig } from "@cloudflare/codemods/wrangler-to-cf";
+import { convertWranglerConfig } from "@cloudflare/autoconfig/wrangler-to-cf";
 
 const { base, environments, followUps } = convertWranglerConfig(rawConfig);
 ```

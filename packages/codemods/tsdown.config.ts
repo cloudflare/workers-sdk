@@ -4,7 +4,6 @@ export default defineConfig({
 	entry: {
 		bin: "src/bin.ts",
 		index: "src/index.ts",
-		"wrangler-to-cf": "src/wrangler-to-cf.ts",
 	},
 	// Build the entry points together so their bundled dependencies are shared.
 	clean: true,
