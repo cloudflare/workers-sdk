@@ -152,6 +152,7 @@ export async function getDetailsForAutoConfig({
 	/**
 	 * The project's Wrangler configuration file, for example one with a custom name. Without a
 	 * `wranglerConfig`, detection reads this file, or else the one in the project folder, if any.
+	 * Relative paths are resolved against `projectPath`.
 	 */
 	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
@@ -179,7 +180,7 @@ export async function getDetailsForAutoConfig({
 		providedWranglerConfig ??
 		(wranglerConfigPath === undefined
 			? readProjectWranglerConfig(projectPath)
-			: readWranglerConfigFile(wranglerConfigPath));
+			: readWranglerConfigFile(resolve(projectPath, wranglerConfigPath)));
 
 	if (
 		target === "wrangler" &&
