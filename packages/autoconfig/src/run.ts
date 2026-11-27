@@ -278,6 +278,7 @@ export async function runAutoConfig(
 					.replaceAll(/\s+/g, "-")
 			),
 			private: true,
+			type: "module",
 		};
 		await writeFile(packageJsonPath, `${JSON.stringify(manifest, null, 2)}\n`, {
 			flag: "wx",

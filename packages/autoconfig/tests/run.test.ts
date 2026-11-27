@@ -73,12 +73,13 @@ describe("runAutoConfig()", () => {
 		vi.spyOn(cliPackages, "installWrangler").mockResolvedValue();
 	});
 
-	it("creates loadable configs without changing how existing CommonJS scripts run", async ({
+	it("creates loadable configs without changing CommonJS scripts in an existing package", async ({
 		expect,
 	}) => {
 		await seed({
 			"index.html": "static site",
 			".env": "SECRET=secret",
+			"package.json": JSON.stringify({ name: "static-site" }),
 			"legacy.js":
 				'module.exports = require("node:path").basename(__filename);',
 			"node_modules/wrangler/package.json": JSON.stringify({
@@ -113,6 +114,7 @@ describe("runAutoConfig()", () => {
 		const requireFromProject = createRequire(
 			join(process.cwd(), "package.json")
 		);
+		expect(requireFromProject("./package.json")).not.toHaveProperty("type");
 		expect(requireFromProject("./legacy.js")).toBe("legacy.js");
 		expect(cliPackages.installPackages).toHaveBeenCalledWith(
 			"npm",
@@ -248,8 +250,8 @@ describe("runAutoConfig()", () => {
 			expect(manifest).toMatchObject({
 				name: "site",
 				private: true,
+				type: "module",
 			});
-			expect(manifest).not.toHaveProperty("type");
 			await writeFile(
 				packageJsonPath,
 				JSON.stringify({
@@ -289,6 +291,7 @@ describe("runAutoConfig()", () => {
 			deploy: "cf deploy",
 		});
 		expect(JSON.parse(readFileSync(packageJsonPath, "utf8"))).toMatchObject({
+			type: "module",
 			scripts: summary.scripts,
 			devDependencies: { cf: "^0.8.0", typescript: "^6.0.0" },
 		});
