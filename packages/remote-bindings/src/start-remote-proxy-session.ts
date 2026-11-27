@@ -27,8 +27,6 @@ export type StartRemoteProxySessionOptions = {
 	workerName?: string;
 	/** Resolves the account ID and API token for the session. */
 	auth: AsyncHook<CfAccount>;
-	/** Defer authentication and the remote preview until the first binding call. */
-	lazy?: boolean;
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 	/** Consumer name used in actionable error messages. */
@@ -120,9 +118,7 @@ export async function startRemoteProxySession(
 		);
 	}
 
-	if (!options.lazy) {
-		options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
-	}
+	options.logger.log(chalk.dim("⎔ Establishing remote connection..."));
 	initLogger(getInternalLogger(options.logger));
 	const rawBindings = toRawBindings(bindings);
 	const workerConfig = {
@@ -136,7 +132,6 @@ export async function startRemoteProxySession(
 		complianceRegion: options.complianceRegion,
 		bindings: rawBindings,
 		auth: options.auth,
-		lazy: options.lazy,
 		server: { port: 0, secure: false },
 	};
 
@@ -174,9 +169,7 @@ export async function startRemoteProxySession(
 	try {
 		const maybeError = await Promise.race([
 			maybeErrorPromise,
-			options.lazy
-				? devEnv.proxy.ready.promise.then(() => undefined)
-				: devEnv.proxy.localServerReady.promise,
+			devEnv.proxy.localServerReady.promise,
 		]);
 
 		if (maybeError && maybeError.error) {
@@ -214,25 +207,11 @@ export async function startRemoteProxySession(
 	} finally {
 		devEnv.removeListener("error", onStartupError);
 	}
-	if (options.lazy) {
-		devEnv.on("error", (error: unknown) => {
-			// As at startup, show an authentication failure's actionable guidance
-			// rather than the innermost API error, which doesn't explain the fix.
-			const details =
-				findRemoteSessionAuthError(error)?.message ??
-				formatRemoteProxySessionError(error) ??
-				"unknown error";
-			options.logger.warn(`Could not connect remote bindings: ${details}`);
-			options.logger.debug(error);
-		});
-	}
 	let disposePromise: Promise<void> | undefined;
 	const updateBindings = async (
 		newBindings: StartDevWorkerInput["bindings"]
 	) => {
-		const reloadComplete = options.lazy
-			? undefined
-			: events.once(devEnv, "reloadComplete");
+		const reloadComplete = events.once(devEnv, "reloadComplete");
 		devEnv.update({
 			...workerConfig,
 			bindings: toRawBindings(newBindings),

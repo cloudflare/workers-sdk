@@ -20,29 +20,6 @@ const config: StartDevWorkerOptions = {
 };
 
 describe("DevEnv", () => {
-	it("uses the latest binding configuration when a lazy session is first called", ({
-		expect,
-	}) => {
-		const lazyConfig = { ...config, lazy: true };
-		const devEnv = new DevEnv(lazyConfig);
-		const onBundleComplete =
-			vi.fn<RemoteRuntimeController["onBundleComplete"]>();
-		devEnv.runtime = {
-			onUpdateStart: vi.fn(),
-			onBundleComplete,
-		} as unknown as RemoteRuntimeController;
-		vi.spyOn(devEnv.proxy, "pause").mockImplementation(() => {});
-		devEnv.update(lazyConfig);
-		const bindings = { AI: { type: "ai" as const } };
-		devEnv.update({ ...lazyConfig, bindings });
-		expect(onBundleComplete).not.toHaveBeenCalled();
-		devEnv.proxy.onProxyWorkerMessage({ type: "requestConnection" });
-		expect(onBundleComplete).toHaveBeenCalledOnce();
-		expect(onBundleComplete).toHaveBeenCalledWith(
-			expect.objectContaining({ config: expect.objectContaining({ bindings }) })
-		);
-	});
-
 	it("changes the uploaded source for every update", ({ expect }) => {
 		function captureUpdates(devEnv: DevEnv) {
 			const onBundleComplete =

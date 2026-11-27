@@ -7,7 +7,6 @@ import {
 	E2E_ACCOUNT_WORKERS_DEV_DOMAIN,
 } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
-import { fetchText } from "../helpers/fetch-text";
 import { waitForLong } from "../helpers/wait-for";
 
 describe.skipIf(!CLOUDFLARE_ACCOUNT_ID || !E2E_ACCESS_WORKER_PREFIX)(
@@ -55,12 +54,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID || !E2E_ACCESS_WORKER_PREFIX)(
 					CLOUDFLARE_ACCESS_CLIENT_SECRET: undefined,
 				},
 			});
-
-			// AI is a remote-only binding, so the remote session (and its Access
-			// probe) is only established on the first binding call. The request
-			// itself fails once Access is detected, so its response is ignored.
-			const { url } = await worker.waitForReady();
-			await fetchText(url, 30_000);
 
 			await waitForLong(
 				() =>

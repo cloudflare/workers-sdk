@@ -1,8 +1,5 @@
 import assert from "node:assert";
-import {
-	getBindingLocalSupport,
-	resolveBindingRemote,
-} from "@cloudflare/workers-utils/config";
+import { resolveBindingRemote } from "@cloudflare/workers-utils/config";
 import { getRemoteBindings } from "./config-bindings";
 import { startRemoteProxySession } from "./start-remote-proxy-session";
 import type { ConfigBindings } from "./config-bindings";
@@ -66,8 +63,6 @@ export type RemoteProxySessionData = {
 	remoteBindings: Record<string, Binding>;
 	auth?: AsyncHook<CfAccount>;
 	authKey?: string;
-	/** Whether this session establishes its remote connection on the first call. */
-	lazy?: boolean;
 };
 
 export type RemoteBindingsContext = {
@@ -98,16 +93,11 @@ export async function maybeStartOrUpdateRemoteProxySession(
 	) {
 		return null;
 	}
-	const lazy =
-		Object.keys(remoteBindings).length === 0
-			? (preExistingRemoteProxySessionData?.lazy ?? false)
-			: Object.values(remoteBindings).every(isRemoteOnlyBinding);
 	const authSameAsBefore =
-		(key !== undefined ||
+		key !== undefined ||
 		preExistingRemoteProxySessionData?.authKey !== undefined
 			? key === preExistingRemoteProxySessionData?.authKey
-			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth)) &&
-		lazy === (preExistingRemoteProxySessionData?.lazy ?? false);
+			: deepStrictEqual(hook, preExistingRemoteProxySessionData?.auth);
 	let remoteProxySession = preExistingRemoteProxySessionData?.session;
 
 	if (!authSameAsBefore) {
@@ -120,7 +110,6 @@ export async function maybeStartOrUpdateRemoteProxySession(
 			complianceRegion: workerConfigObject.complianceRegion,
 			cliDisplayName: context.cliDisplayName,
 			auth: hook,
-			lazy,
 			logger: context.logger,
 		});
 	} else {
@@ -137,7 +126,6 @@ export async function maybeStartOrUpdateRemoteProxySession(
 						complianceRegion: workerConfigObject.complianceRegion,
 						cliDisplayName: context.cliDisplayName,
 						auth: hook,
-						lazy,
 						logger: context.logger,
 					});
 				}
@@ -156,16 +144,7 @@ export async function maybeStartOrUpdateRemoteProxySession(
 		remoteBindings,
 		auth: hook,
 		authKey: key,
-		lazy,
 	};
-}
-
-function isRemoteOnlyBinding(binding: Binding): boolean {
-	const support = getBindingLocalSupport(binding.type);
-	return (
-		support === "remote" ||
-		support === "DO-NOT-USE-this-resource-will-never-have-a-local-simulator"
-	);
 }
 
 function deepStrictEqual(source: unknown, target: unknown): boolean {
