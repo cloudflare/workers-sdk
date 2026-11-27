@@ -138,7 +138,8 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await expect(
 			details.getDetailsForAutoConfig({
 				projectPath,
-				wranglerConfigPath,
+				// Relative to the project folder, not the current one
+				wranglerConfigPath: "custom.jsonc",
 				context,
 			})
 		).resolves.toMatchObject({
