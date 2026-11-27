@@ -861,11 +861,11 @@ describe("runAutoConfig()", () => {
 				changedFiles: ["cloudflare.config.ts"],
 				followUps: [
 					expect.objectContaining({
-						blocking: true,
+						blocking: false,
 						sourcePath: "pages_build_output_dir",
 					}),
 				],
-				status: "needs-intervention",
+				status: "complete",
 			});
 			expect(summary.frameworkId).toBe("cloudflare-pages");
 			expect(summary.frameworkConfiguration).toBeUndefined();

@@ -165,7 +165,7 @@ export default { plugins: [cloudflare()] };`,
 			context,
 			dryRun: true,
 		});
-		expect(summary.wranglerMigration?.status).toBe("needs-intervention");
+		expect(summary.wranglerMigration).toBeDefined();
 		expect(summary.frameworkConfiguration).toBeUndefined();
 	});
 

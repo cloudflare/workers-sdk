@@ -357,20 +357,24 @@ export function convertWorkerConfig(
 		report(dependenciesInstrumentationFollowUp);
 	}
 
-	const unsupportedFields: Array<[string, string]> = [
+	const unsupportedFields: Array<
+		[field: string, label: string, blocking?: boolean]
+	> = [
 		["cloudchamber", "Cloudchamber configuration"],
 		["keep_vars", "keep_vars"],
-		["pages_build_output_dir", "Pages configuration"],
+		// A Pages project's Wrangler config is migrated as best effort
+		["pages_build_output_dir", "Pages configuration", false],
 		["site", "Workers Sites configuration"],
 		["unsafe_hello_world", "unsafe_hello_world bindings"],
 	];
-	for (const [field, label] of unsupportedFields) {
+	for (const [field, label, blocking] of unsupportedFields) {
 		if (hasOwn(source, field)) {
 			report(
 				createFollowUp(
 					"unsupported-field",
 					`The ${label} is not supported by the new config and was not migrated.`,
 					{
+						blocking,
 						docsUrl: CONFIGURATION_DOCS_URL,
 						sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}${field}`,
 					}
