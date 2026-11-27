@@ -36,10 +36,11 @@ export async function isEmailReplyable(
 		// If this email _is_ part of an existing reply chain, we need to validate the References header
 		// according to https://datatracker.ietf.org/doc/html/rfc5322#section-3.6.4
 
-		// Email Routing does not support more than 100 entries in the References header
+		// Email Routing does not support more than 100 entries in the References header,
+		// so an email with exactly 100 entries can still be replied to.
 		// Instead of parsing the References header according to https://datatracker.ietf.org/doc/html/rfc5322#section-3.6.4
 		// we instead count the occurrences of the `@` symbol, which occurs once per email
-		if ((email.references.match(/@/g)?.length ?? 0) >= 100) {
+		if ((email.references.match(/@/g)?.length ?? 0) > 100) {
 			await log(
 				red(
 					'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/'
