@@ -12136,7 +12136,7 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.hasWarnings()).toBe(true);
-			expect(diagnostics.hasUnexpectedFields).toBe(false);
+			expect(diagnostics.hasUnexpectedFieldsInTree()).toBe(false);
 			expect(diagnostics.renderWarnings()).toContain('Removed\x1b[0m: "type":');
 			expect(diagnostics.renderWarnings()).toContain("removed in Wrangler v4");
 		});
@@ -12153,7 +12153,7 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(topLevel.diagnostics.hasErrors()).toBe(false);
 			expect(topLevel.diagnostics.hasWarnings()).toBe(true);
-			expect(topLevel.diagnostics.hasUnexpectedFields).toBe(false);
+			expect(topLevel.diagnostics.hasUnexpectedFieldsInTree()).toBe(false);
 			expect(topLevel.diagnostics.renderWarnings()).toContain(
 				'Removed\x1b[0m: "zone_id":'
 			);
@@ -12170,9 +12170,12 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(namedEnv.diagnostics.hasErrors()).toBe(false);
 			expect(namedEnv.diagnostics.hasWarnings()).toBe(true);
-			expect(namedEnv.diagnostics.hasUnexpectedFields).toBe(false);
+			expect(namedEnv.diagnostics.hasUnexpectedFieldsInTree()).toBe(false);
 			expect(namedEnv.diagnostics.renderWarnings()).toContain(
 				'Removed\x1b[0m: "zone_id":'
+			);
+			expect(namedEnv.diagnostics.renderWarnings()).not.toContain(
+				'top-level "zone_id"'
 			);
 		});
 

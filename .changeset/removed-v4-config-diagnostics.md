@@ -1,5 +1,8 @@
 ---
 "@cloudflare/workers-utils": patch
+"wrangler": patch
 ---
 
-Emit explicit removal diagnostics for Wrangler v4 removed `type` and top-level `zone_id` config fields instead of reporting them as unexpected fields with a misleading "Try upgrading Wrangler" hint.
+Emit explicit removal warnings for removed `type` and `zone_id` configuration fields
+
+Legacy Wrangler v3 `type` and `zone_id` fields now emit explicit removal warnings with migration guidance instead of being flagged as unexpected fields with a misleading "Try upgrading Wrangler" hint.
