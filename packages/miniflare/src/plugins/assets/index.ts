@@ -387,24 +387,50 @@ const walk = async (dir: string) => {
 		}
 	);
 	let counter = 0;
-	async function walkDirectory(directory: string): Promise<void> {
+	async function walkDirectory(
+		directory: string,
+		realDirectory: string,
+		ancestors: ReadonlySet<string>
+	): Promise<void> {
 		const entries = await fs.readdir(directory, { withFileTypes: true });
 		await Promise.all(
 			entries.map(async (entry) => {
 				const filepath = path.join(directory, entry.name);
 				const relativeFilepath = path.relative(dir, filepath);
 				const assetPath = relativeFilepath.split(path.sep).join("/");
+				const realChild = path.join(realDirectory, entry.name);
 				if (entry.isDirectory()) {
 					if (!assetsIgnoreFunction(`${assetPath}/`)) {
-						await walkDirectory(filepath);
+						await walkDirectory(
+							filepath,
+							realChild,
+							new Set(ancestors).add(realChild)
+						);
 					}
 					return;
 				}
-				if (assetsIgnoreFunction(assetPath)) {
+				const ignoredAsFile = assetsIgnoreFunction(assetPath);
+				const isSymlink = entry.isSymbolicLink();
+				const ignoredAsDirectory =
+					!isSymlink || assetsIgnoreFunction(`${assetPath}/`);
+				if (ignoredAsFile && ignoredAsDirectory) {
 					return;
 				}
 				const filestat = await fs.stat(filepath);
-				if (!filestat.isFile()) {
+				if (isSymlink && filestat.isDirectory()) {
+					if (!ignoredAsDirectory) {
+						const target = await fs.realpath(filepath);
+						if (!ancestors.has(target)) {
+							await walkDirectory(
+								filepath,
+								target,
+								new Set(ancestors).add(target)
+							);
+						}
+					}
+					return;
+				}
+				if (ignoredAsFile || !filestat.isFile()) {
 					return;
 				}
 				// TODO: Warn about _worker.js
@@ -467,7 +493,8 @@ const walk = async (dir: string) => {
 			})
 		);
 	}
-	await walkDirectory(dir);
+	const realRoot = await fs.realpath(dir);
+	await walkDirectory(dir, realRoot, new Set([realRoot]));
 	if (counter > MAX_ASSET_COUNT) {
 		throw new Error(
 			`Maximum number of assets exceeded.\n` +

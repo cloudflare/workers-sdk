@@ -227,7 +227,42 @@ test("serves nested HTML under a directory-only allowlist", async ({
 	expect(ignored.status).toBe(404);
 });
 
-test("skips symlinked asset directories, even when they point back to the asset root", async ({
+test("serves directory symlink aliases and applies ignore rules to their URL paths", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const assets = path.join(tmp, "public");
+	const target = path.join(tmp, "shared");
+	await fs.mkdir(assets);
+	await fs.mkdir(target);
+	await fs.writeFile(path.join(target, "asset.txt"), "included");
+	await fs.writeFile(
+		path.join(assets, ".assetsignore"),
+		"/ignored/\n/first/asset.txt\n"
+	);
+	for (const name of ["first", "second", "third", "ignored"]) {
+		await fs.symlink(target, path.join(assets, name), "junction");
+	}
+
+	const mf = new Miniflare(makeOptions(assets));
+	useDispose(mf);
+	for (const name of ["second", "third"]) {
+		const response = await mf.dispatchFetch(
+			`http://example.com/${name}/asset.txt`
+		);
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("included");
+	}
+	for (const name of ["first", "ignored"]) {
+		const response = await mf.dispatchFetch(
+			`http://example.com/${name}/asset.txt`
+		);
+		await response.arrayBuffer();
+		expect(response.status).toBe(404);
+	}
+});
+
+test("skips directory symlinks that point back to an ancestor", async ({
 	expect,
 }) => {
 	const tmp = await useTmp();
