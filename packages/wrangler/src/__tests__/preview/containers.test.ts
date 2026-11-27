@@ -1,4 +1,11 @@
 import {
+	getLogLevel,
+	logRaw,
+	setLogLevel,
+} from "@cloudflare/cli-shared-helpers";
+import {
+	ApplicationsService,
+	InstanceType,
 	apply,
 	buildAndMaybePush,
 	listDurableObjects,
@@ -6,9 +13,10 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils/config";
-import { beforeEach, describe, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { logger } from "../../logger";
 import { deployPreviewContainers } from "../../preview/containers";
+import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import type {
 	ContainerNormalizedConfig,
@@ -44,11 +52,12 @@ function containerConfig(
 		rollout_kind: "full_auto",
 		rollout_active_grace_period: 0,
 		constraints: {},
-		instance_type: "dev",
+		instance_type: InstanceType.LITE,
+		observability: { logs_enabled: true },
 		dockerfile: "/abs/path/Dockerfile",
 		image_build_context: "/abs/path",
 		...overrides,
-	} as ContainerNormalizedConfig;
+	};
 }
 
 const deployment = {
@@ -64,8 +73,13 @@ const deployment = {
 
 describe("deployPreviewContainers", () => {
 	const std = mockConsoleMethods();
+	const cliOut = collectCLIOutput();
+	const defaultLogLevel = getLogLevel();
+
+	afterEach(() => setLogLevel(defaultLogLevel));
 
 	beforeEach(() => {
+		setLogLevel("log");
 		vi.mocked(apply).mockReset();
 		vi.mocked(buildAndMaybePush).mockReset();
 		vi.mocked(listDurableObjects).mockReset();
@@ -284,4 +298,97 @@ describe("deployPreviewContainers", () => {
 		expect(std.warn).toContain("a container warning");
 		expect(std.out).toBe("");
 	});
+
+	test.for([false, true])(
+		"isolates overlapping container output (second quiet=%s)",
+		async (secondQuiet, { expect, onTestFinished }) => {
+			const container = containerConfig();
+			const config = {
+				...defaultWranglerConfig,
+				containers: [container],
+			} as unknown as Config;
+			const firstStarted = Promise.withResolvers<void>();
+			const secondStarted = Promise.withResolvers<void>();
+			const releaseFirst = Promise.withResolvers<void>();
+			const releaseSecond = Promise.withResolvers<void>();
+			const { apply: applyApplication } = await vi.importActual<
+				typeof import("@cloudflare/containers-shared")
+			>("@cloudflare/containers-shared");
+			const list = vi
+				.spyOn(ApplicationsService, "listApplications")
+				.mockResolvedValue([]);
+			const create = vi
+				.spyOn(ApplicationsService, "createApplication")
+				.mockResolvedValue({
+					id: "app-id",
+					name: PREVIEW_APP_NAME,
+					account_id: ACCOUNT_ID,
+					created_at: "2026-01-01T00:00:00Z",
+					version: 1,
+					scheduling_policy: SchedulingPolicy.DEFAULT,
+					instances: 0,
+					configuration: { image: "built:tag" },
+				});
+			onTestFinished(() => {
+				list.mockRestore();
+				create.mockRestore();
+			});
+			vi.mocked(apply)
+				.mockImplementationOnce(async (...args) => {
+					firstStarted.resolve();
+					await releaseFirst.promise;
+					logger.log("first container progress");
+					logger.warn("first container warning");
+					await applyApplication(...args);
+				})
+				.mockImplementationOnce(async (...args) => {
+					secondStarted.resolve();
+					await releaseSecond.promise;
+					logger.log("second container progress");
+					logger.warn("second container warning");
+					await applyApplication(...args);
+				});
+
+			const first = deployPreviewContainers(
+				config,
+				[container],
+				deployment,
+				ACCOUNT_ID,
+				{ quiet: true }
+			);
+			await firstStarted.promise;
+			const second = deployPreviewContainers(
+				config,
+				[container],
+				deployment,
+				ACCOUNT_ID,
+				{ quiet: secondQuiet }
+			);
+			await secondStarted.promise;
+			logRaw("outside progress during deployments");
+			releaseFirst.resolve();
+			await first;
+			const outputAfterFirst = cliOut.out;
+			logRaw("outside progress after first deployment");
+			releaseSecond.resolve();
+			await second;
+
+			expect(outputAfterFirst).toBe("outside progress during deployments\n");
+			expect(cliOut.out).toContain("outside progress after first deployment");
+			expect(create).toHaveBeenCalledTimes(2);
+			expect(std.out).not.toContain("first container progress");
+			if (secondQuiet) {
+				expect(cliOut.out).toBe(
+					"outside progress during deployments\noutside progress after first deployment\n"
+				);
+				expect(std.out).not.toContain("second container progress");
+			} else {
+				expect(cliOut.out).toContain("Created application");
+				expect(std.out).toContain("second container progress");
+			}
+			expect(std.warn).toContain("first container warning");
+			expect(std.warn).toContain("second container warning");
+			expect(getLogLevel()).toBe("log");
+		}
+	);
 });
