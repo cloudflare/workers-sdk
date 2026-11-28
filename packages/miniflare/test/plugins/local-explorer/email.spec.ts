@@ -3,8 +3,9 @@ import { mkdtempSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { getWorkerRegistry, LogLevel, Miniflare } from "miniflare";
+import { fetch, getWorkerRegistry, LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
+import { Client } from "undici";
 import {
 	afterAll,
 	beforeAll,
@@ -2789,52 +2790,41 @@ describe("Local Explorer email API", () => {
 				messageIds.push(messageId);
 			}
 
-			const firstPage = await expectValidResponse(
-				await mf.dispatchFetch(`${BASE_URL}/local/email/routing?per_page=100`),
-				zEmailListRoutingResponse,
-				expect
+			const url = new URL(
+				`${CorePaths.EXPLORER}/api/local/email/routing`,
+				await mf.ready
 			);
-			const firstCursor = firstPage.result_info?.cursor;
-			expect(firstCursor).toEqual(expect.any(String));
-			const secondPage = await expectValidResponse(
-				await mf.dispatchFetch(
-					`${BASE_URL}/local/email/routing?per_page=100&cursor=${encodeURIComponent(String(firstCursor))}`
-				),
-				zEmailListRoutingResponse,
-				expect
-			);
-			const secondCursor = secondPage.result_info?.cursor;
-			expect(secondCursor).toEqual(expect.any(String));
-			const thirdPage = await expectValidResponse(
-				await mf.dispatchFetch(
-					`${BASE_URL}/local/email/routing?per_page=100&cursor=${encodeURIComponent(String(secondCursor))}`
-				),
-				zEmailListRoutingResponse,
-				expect
-			);
-			const pages = [firstPage, secondPage, thirdPage].map(({ result }) =>
-				getListResult(result)
-			);
-			expect(pages.map((page) => page.length)).toEqual([100, 100, 1]);
-			expect(pages.flat().map(({ messageId }) => messageId)).toEqual(
-				messageIds.toReversed()
-			);
-			expect(firstPage.result_info).toMatchObject({
-				count: 100,
-				per_page: 100,
-				has_more: true,
-			});
-			expect(secondPage.result_info).toMatchObject({
-				count: 100,
-				per_page: 100,
-				has_more: true,
-			});
-			expect(thirdPage.result_info).toMatchObject({
-				count: 1,
-				per_page: 100,
-				has_more: false,
-			});
-			expect(thirdPage.result_info?.cursor).toBeUndefined();
+			url.searchParams.set("per_page", "100");
+			const dispatcher = new Client(url.origin, { pipelining: 0 });
+			const receivedMessageIds: string[] = [];
+			try {
+				for (const count of [100, 100, 1]) {
+					const page = await expectValidResponse(
+						await fetch(url, { dispatcher }),
+						zEmailListRoutingResponse,
+						expect
+					);
+					const items = getListResult(page.result);
+					const hasMore = count === 100;
+					expect(items).toHaveLength(count);
+					expect(page.result_info).toMatchObject({
+						count,
+						per_page: 100,
+						has_more: hasMore,
+					});
+					const cursor = page.result_info?.cursor;
+					if (hasMore) {
+						expect(cursor).toEqual(expect.any(String));
+						url.searchParams.set("cursor", String(cursor));
+					} else {
+						expect(cursor).toBeUndefined();
+					}
+					receivedMessageIds.push(...items.map(({ messageId }) => messageId));
+				}
+			} finally {
+				await dispatcher.destroy();
+			}
+			expect(receivedMessageIds).toEqual(messageIds.toReversed());
 		}
 	);
 
