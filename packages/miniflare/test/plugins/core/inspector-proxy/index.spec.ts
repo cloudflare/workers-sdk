@@ -861,7 +861,13 @@ test.for([
 		await mf.setOptions({ ...options, inspectorPort: 0, inspectorHost });
 		await closed;
 		const url = await mf.getInspectorURL();
-		expect(url.port).not.toBe(new URL(`http://${host}`).port);
+		if (inspectorHost === undefined) {
+			expect(url.port).not.toBe(new URL(`http://${host}`).port);
+		} else {
+			// The old server closes before the new one listens, so the port may
+			// be the same
+			expect(url.hostname).toBe(inspectorHost);
+		}
 		const res = await mf.dispatchFetch("http://localhost");
 		expect(await res.text()).toBe("body");
 	}
