@@ -34,6 +34,8 @@ export interface WriteAssetsOptions {
 	sourceDirectory: string;
 	/** Return true to copy an entry, or false to omit it and its descendants. Paths are relative to the source and use forward slashes. */
 	filter?: (relativePath: string) => boolean | Promise<boolean>;
+	/** Called once per skipped entry with its relative, slash-separated path. */
+	onSkip?: (relativePath: string) => void;
 }
 
 /**
@@ -50,18 +52,23 @@ export async function writeAssets({
 	root,
 	sourceDirectory,
 	filter,
+	onSkip,
 }: WriteAssetsOptions): Promise<void> {
 	const assetsDir = getWorkerAssetsDir(root);
 	const copyOptions = {
 		recursive: true,
 		force: false,
 		dereference: true,
-		filter: (source: string) => {
+		filter: async (source: string) => {
 			const relative = path
 				.relative(sourceDirectory, source)
 				.split(path.sep)
 				.join("/");
-			return relative === "" || (filter?.(relative) ?? true);
+			const included = relative === "" || ((await filter?.(relative)) ?? true);
+			if (!included) {
+				onSkip?.(relative);
+			}
+			return included;
 		},
 	};
 	await fsp.mkdir(assetsDir, { recursive: true });
@@ -73,15 +80,17 @@ export async function writeAssets({
 
 	const entries = await fsp.readdir(sourceDirectory);
 	await Promise.all(
-		entries
-			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
-			.map((entry) =>
-				fsp.cp(
-					path.join(sourceDirectory, entry),
-					path.join(assetsDir, entry),
-					copyOptions
-				)
-			)
+		entries.map((entry) => {
+			if (entry === path.dirname(BUILD_OUTPUT_ROOT)) {
+				onSkip?.(entry);
+				return;
+			}
+			return fsp.cp(
+				path.join(sourceDirectory, entry),
+				path.join(assetsDir, entry),
+				copyOptions
+			);
+		})
 	);
 }
 

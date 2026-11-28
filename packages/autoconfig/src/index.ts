@@ -10,6 +10,7 @@ export {
 	assertProjectCommandsAvailable,
 } from "./details";
 export { runAutoConfig, buildOperationsSummary } from "./run";
+export { getScaffoldedAssetsIgnorePatterns } from "./assets-ignore";
 
 export { Framework } from "./frameworks/framework-class";
 export type {
