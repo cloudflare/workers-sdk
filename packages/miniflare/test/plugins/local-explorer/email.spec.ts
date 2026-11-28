@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { subscribe, unsubscribe } from "node:diagnostics_channel";
 import { mkdtempSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -55,6 +56,7 @@ import type {
 	StoredRoutingEmailMetadata,
 } from "../../../src/workers/email/storage";
 import type { MiniflareOptions } from "miniflare";
+import type { Socket } from "node:net";
 
 const BASE_URL = `http://localhost${CorePaths.EXPLORER}/api`;
 const WORKER_NAME = "email-worker";
@@ -2773,14 +2775,51 @@ describe("Local Explorer email API", () => {
 	test(
 		"retains all received emails and paginates results",
 		{ retry: 0 },
-		async ({ expect }) => {
+		async ({ expect, onTestFinished }) => {
 			const startedAt = performance.now();
+			const trace = process.env.CI && process.platform === "win32";
 			const reportProgress = (stage: string) => {
-				if (process.env.CI && process.platform === "win32") {
+				if (trace) {
 					const elapsed = Math.round(performance.now() - startedAt);
 					process.stderr.write(`[email pagination +${elapsed}ms] ${stage}\n`);
 				}
 			};
+			if (trace) {
+				const runtimeOrigin = (await mf.ready).origin;
+				const routingPath = new URL(`${BASE_URL}/local/email/routing`).pathname;
+				const lastUsed = new WeakMap<Socket, number>();
+				const headers = "undici:client:sendHeaders";
+				const onSendHeaders = (message: unknown) => {
+					const { request, socket } = message as {
+						request: { origin: string; method: string; path: string };
+						socket: Socket;
+					};
+					if (request.origin !== runtimeOrigin) {
+						return;
+					}
+					const now = performance.now();
+					const previous = lastUsed.get(socket);
+					lastUsed.set(socket, now);
+					if (
+						request.method === "GET" &&
+						request.path.startsWith(`${routingPath}?`)
+					) {
+						reportProgress(
+							`Sending page GET on port ${socket.localPort} (${socket.bytesWritten} bytes already written): ${previous === undefined ? "no earlier request observed on this socket" : `previous request sent ${Math.round(now - previous)}ms ago`}`
+						);
+					}
+				};
+				const logStart = log.logs.length;
+				subscribe(headers, onSendHeaders);
+				onTestFinished(() => {
+					unsubscribe(headers, onSendHeaders);
+					for (const [, message] of log.logs.slice(logStart)) {
+						if (message.includes("runtime crashed unexpectedly")) {
+							reportProgress(message);
+						}
+					}
+				});
+			}
 			reportProgress("Clearing email store");
 			await clearEmailStore(mf);
 			reportProgress("Seeding 201 emails");
