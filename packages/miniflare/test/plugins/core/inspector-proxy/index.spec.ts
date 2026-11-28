@@ -1,11 +1,12 @@
 import events from "node:events";
 import http from "node:http";
+import net from "node:net";
 import { setTimeout } from "node:timers/promises";
-import getPort from "get-port";
-import { fetch, Miniflare, MiniflareCoreError } from "miniflare";
+import { fetch, LogLevel, Miniflare, MiniflareCoreError } from "miniflare";
 import { beforeAll, type ExpectStatic, test, vi } from "vitest";
-import WebSocket from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 import { InspectorProxyController } from "../../../../src/plugins/core/inspector-proxy";
+import { InspectorProxy } from "../../../../src/plugins/core/inspector-proxy/inspector-proxy";
 import {
 	singleModuleManifest,
 	TestLog,
@@ -80,6 +81,190 @@ test("InspectorProxy: closes server and preserves bind failure", async ({
 	expect(close).toHaveBeenCalledOnce();
 });
 
+test("InspectorProxy: keeps serving, and can retry, when a new port fails to bind", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const blocker = net.createServer();
+	const blockedPort = await listenOnRandomPort(blocker);
+	onTestFinished(() => closeServer(blocker));
+	// Stands in for workerd's inspector, which lists no workers
+	const runtime = http.createServer((_req, res) => res.end("[]"));
+	const runtimePort = await listenOnRandomPort(runtime);
+	onTestFinished(() => closeServer(runtime));
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		new TestLog(),
+		new Set()
+	);
+	onTestFinished(() => controller.dispose());
+	const url = await controller.getInspectorURL();
+
+	const update = (port: number) =>
+		controller.updateConnection(port, "127.0.0.1", runtimePort, new Set());
+	await expect(update(blockedPort)).rejects.toMatchObject({
+		code: "EADDRINUSE",
+	});
+	expect(await controller.getInspectorURL()).toEqual(url);
+	const res = await fetch(`http://${url.host}/json/version`);
+	expect(res.status).toBe(200);
+
+	// A retry tries to listen again, rather than failing on the old state
+	await expect(update(blockedPort)).rejects.toMatchObject({
+		code: "EADDRINUSE",
+	});
+	await update(0);
+	expect(await controller.getInspectorURL()).toEqual(url);
+});
+
+test("InspectorProxy: debugs the new runtime through the old port when moving the inspector fails", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const blocker = net.createServer();
+	const blockedPort = await listenOnRandomPort(blocker);
+	onTestFinished(() => closeServer(blocker));
+	const worker = (name: string) => ({
+		config: {
+			name,
+			compatibilityDate: "2025-05-01",
+			manifest: singleModuleManifest(
+				`export default { fetch() { return new Response("body"); } }`
+			),
+		},
+		dev: { unsafeInspectorProxy: true },
+	});
+	const mf = new Miniflare({ inspectorPort: 0, workers: [worker("a")] });
+	useDispose(mf);
+	const host = await getInspectorHostReady(mf);
+
+	// The runtime restarts with worker "b" before the inspector fails to move
+	await expect(
+		mf.setOptions({ inspectorPort: blockedPort, workers: [worker("b")] })
+	).rejects.toMatchObject({ code: "EADDRINUSE" });
+
+	const res = await fetch(`http://${host}/json`);
+	const inspectors = (await res.json()) as { webSocketDebuggerUrl: string }[];
+	expect(inspectors.map((inspector) => inspector.webSocketDebuggerUrl)).toEqual(
+		[`ws://${host}/b`]
+	);
+
+	const ws = new WebSocket(`ws://${host}/b`);
+	const messages = events.on(ws, "message");
+	async function nextMessage() {
+		const messageEvent = (await messages.next()).value;
+		return JSON.parse(messageEvent[0].toString());
+	}
+	await events.once(ws, "open");
+	ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
+	expect(await nextMessagesUntilResponse(nextMessage, 0)).toContainEqual(
+		userScriptParsedEvent(expect)
+	);
+	ws.close();
+});
+
+test("InspectorProxy: listens again after failing to move to another host on the same port", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// Stands in for workerd's inspector, which lists no workers
+	const runtime = http.createServer((_req, res) => res.end("[]"));
+	const runtimePort = await listenOnRandomPort(runtime);
+	onTestFinished(() => closeServer(runtime));
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		new TestLog(),
+		new Set()
+	);
+	onTestFinished(() => controller.dispose());
+	const { port } = await controller.getInspectorURL();
+
+	// The old server has to close before the same port can be used on another
+	// host, so a failure leaves nothing listening
+	await expect(
+		controller.updateConnection(
+			parseInt(port),
+			"192.0.2.1",
+			runtimePort,
+			new Set()
+		)
+	).rejects.toMatchObject({ address: "192.0.2.1", syscall: "listen" });
+	await expect(controller.getInspectorURL()).rejects.toThrow(
+		"Unable to acquire a port"
+	);
+
+	// The options went back to port 0 on 127.0.0.1, and the server listens
+	// again even though they are unchanged
+	await controller.updateConnection(0, "127.0.0.1", runtimePort, new Set());
+	const url = await controller.getInspectorURL();
+	const res = await fetch(`http://${url.host}/json/version`);
+	expect(res.status).toBe(200);
+});
+
+test("InspectorProxy: stops serving the old host when moving to another host fails", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// Stands in for workerd's inspector, which lists no workers
+	const runtime = http.createServer((_req, res) => res.end("[]"));
+	const runtimePort = await listenOnRandomPort(runtime);
+	onTestFinished(() => closeServer(runtime));
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		new TestLog(),
+		new Set()
+	);
+	const { host } = await controller.getInspectorURL();
+
+	// The old host may be reachable from places the new one isn't, so it
+	// mustn't keep serving the restarted runtime's Workers
+	await expect(
+		controller.updateConnection(0, "192.0.2.1", runtimePort, new Set())
+	).rejects.toMatchObject({ address: "192.0.2.1", syscall: "listen" });
+	await expect(fetch(`http://${host}/json/version`)).rejects.toThrow();
+	await expect(controller.getInspectorURL()).rejects.toThrow(
+		"Unable to acquire a port"
+	);
+	await controller.dispose();
+});
+
+test("InspectorProxy: a failed inspector move doesn't block requests once the inspector is disabled", async ({
+	expect,
+}) => {
+	const worker = {
+		config: {
+			name: "",
+			compatibilityDate: "2025-05-01",
+		},
+		legacy: {
+			serviceWorkerScript:
+				'addEventListener("fetch", (event) => event.respondWith(new Response("body")));',
+		},
+	};
+	const options: MiniflareOptions = {
+		workers: [{ ...worker, dev: { unsafeInspectorProxy: true } }],
+	};
+	const mf = new Miniflare({ ...options, inspectorPort: 0 });
+	useDispose(mf);
+	const host = await useFixedInspectorPort(mf, options);
+	const { port } = new URL(`http://${host}`);
+
+	await expect(
+		mf.setOptions({
+			...options,
+			inspectorPort: parseInt(port),
+			inspectorHost: "192.0.2.1",
+		})
+	).rejects.toMatchObject({ address: "192.0.2.1", syscall: "listen" });
+
+	await mf.setOptions({ workers: [worker] });
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("body");
+});
+
 test("InspectorProxy: propagates bind failure through Miniflare", async ({
 	expect,
 }) => {
@@ -107,6 +292,105 @@ test("InspectorProxy: propagates bind failure through Miniflare", async ({
 	await expect(mf.dispose()).rejects.toBe(bindError);
 });
 
+test("InspectorProxy: handles the runtime resetting its connection", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// Miniflare kills workerd whenever it restarts or is disposed, which can
+	// reset the proxy's connection to workerd's inspector
+	const runtime = net.createServer((socket) => socket.resetAndDestroy());
+	const port = await listenOnRandomPort(runtime);
+	onTestFinished(() => closeServer(runtime));
+	const log = new TestLog();
+	const runtimeWs = new WebSocket(`ws://127.0.0.1:${port}`);
+	const proxy = new InspectorProxy(log, "worker", runtimeWs);
+
+	await new Promise((resolve) => runtimeWs.once("close", resolve));
+	// The reset surfaces as EPIPE instead if it lands while the handshake is
+	// still being written
+	expect(log.logsAtLevel(LogLevel.DEBUG)).toContainEqual(
+		expect.stringMatching(/ECONNRESET|EPIPE/)
+	);
+	await proxy.dispose();
+});
+
+test("InspectorProxy: can be disposed before the runtime connection opens", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// Accept connections, but never answer the WebSocket handshake
+	const sockets = new Set<net.Socket>();
+	const runtime = net.createServer((socket) => sockets.add(socket));
+	const port = await listenOnRandomPort(runtime);
+	onTestFinished(() => {
+		sockets.forEach((socket) => socket.destroy());
+		return closeServer(runtime);
+	});
+	const log = new TestLog();
+	const runtimeWs = new WebSocket(`ws://127.0.0.1:${port}`);
+	const proxy = new InspectorProxy(log, "worker", runtimeWs);
+	await vi.waitFor(() => expect(sockets.size).toBe(1));
+
+	await proxy.dispose();
+	await new Promise((resolve) => runtimeWs.once("close", resolve));
+	expect(log.logsAtLevel(LogLevel.DEBUG)).toContainEqual(
+		expect.stringContaining("closed before the connection was established")
+	);
+});
+
+test("InspectorProxy: forwards DevTools messages sent before the runtime connection opens", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// Hold the runtime's WebSocket handshake until DevTools has sent a message
+	let acceptRuntime = () => {};
+	const runtimeAccepted = new Promise<void>((resolve) => {
+		acceptRuntime = resolve;
+	});
+	const runtime = new WebSocketServer({
+		host: "127.0.0.1",
+		port: 0,
+		verifyClient: (_info, callback) =>
+			void runtimeAccepted.then(() => callback(true)),
+	});
+	const devtools = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+	await Promise.all([
+		events.once(runtime, "listening"),
+		events.once(devtools, "listening"),
+	]);
+	onTestFinished(() => {
+		runtime.clients.forEach((client) => client.terminate());
+		devtools.clients.forEach((client) => client.terminate());
+		runtime.close();
+		devtools.close();
+	});
+	const runtimePort = (runtime.address() as net.AddressInfo).port;
+	const devtoolsPort = (devtools.address() as net.AddressInfo).port;
+	const proxy = new InspectorProxy(
+		new TestLog(),
+		"worker",
+		new WebSocket(`ws://127.0.0.1:${runtimePort}`)
+	);
+	onTestFinished(() => proxy.dispose());
+
+	const devtoolsClient = new WebSocket(`ws://127.0.0.1:${devtoolsPort}`);
+	const devtoolsClientOpen = events.once(devtoolsClient, "open");
+	const [devtoolsWs] = (await events.once(devtools, "connection")) as [
+		WebSocket,
+	];
+	proxy.onDevtoolsConnected(devtoolsWs, true);
+	await devtoolsClientOpen;
+	const message = { id: 1, method: "Debugger.enable" };
+	devtoolsClient.send(JSON.stringify(message));
+	await events.once(devtoolsWs, "message");
+
+	const runtimeConnection = events.once(runtime, "connection");
+	acceptRuntime();
+	const [runtimeWs] = (await runtimeConnection) as [WebSocket];
+	const [data] = (await events.once(runtimeWs, "message")) as [Buffer];
+	expect(JSON.parse(data.toString())).toEqual(message);
+});
+
 test("InspectorProxy: /json/version should provide details about the inspector version", async ({
 	expect,
 }) => {
@@ -125,9 +409,9 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 	});
 	useDispose(mf);
 
-	const port = await getInspectorPortReady(mf);
+	const host = await getInspectorHostReady(mf);
 
-	const res = await fetch(`http://localhost:${port}/json/version`);
+	const res = await fetch(`http://${host}/json/version`);
 	expect(res.headers.get("content-type")).toBe("application/json");
 
 	const versionDetails = (await res.json()) as Record<string, string>;
@@ -156,9 +440,9 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 	});
 	useDispose(mf);
 
-	const port = await getInspectorPortReady(mf);
+	const host = await getInspectorHostReady(mf);
 
-	const res = await fetch(`http://localhost:${port}/json`);
+	const res = await fetch(`http://${host}/json`);
 	const inspectors = (await res.json()) as Record<string, string>[];
 
 	expect(res.headers.get("content-type")).toBe("application/json");
@@ -167,7 +451,7 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 
 	expect(inspectors[0]["description"]).toBe("workers");
 	expect(inspectors[0]["title"]).toBe("Cloudflare Worker");
-	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://localhost:${port}/`);
+	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://${host}/`);
 });
 
 test("InspectorProxy: proxy port validation", async ({ expect }) => {
@@ -227,9 +511,9 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 	});
 	useDispose(mf);
 
-	const port = await getInspectorPortReady(mf);
+	const host = await getInspectorHostReady(mf);
 
-	const res = await fetch(`http://localhost:${port}/json`);
+	const res = await fetch(`http://${host}/json`);
 	expect(res.headers.get("content-type")).toBe("application/json");
 
 	const inspectors = (await res.json()) as Record<string, string>[];
@@ -238,16 +522,16 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 
 	expect(inspectors[0]["description"]).toBe("workers");
 	expect(inspectors[0]["title"]).toBe("Cloudflare Worker");
-	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://localhost:${port}/`);
+	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://${host}/`);
 	expect(inspectors[1]["description"]).toBe("workers");
 	expect(inspectors[1]["title"]).toBe("Cloudflare Worker: extra-worker-a");
 	expect(inspectors[1]["webSocketDebuggerUrl"]).toBe(
-		`ws://localhost:${port}/extra-worker-a`
+		`ws://${host}/extra-worker-a`
 	);
 	expect(inspectors[2]["description"]).toBe("workers");
 	expect(inspectors[2]["title"]).toBe("Cloudflare Worker: extra-worker-b");
 	expect(inspectors[2]["webSocketDebuggerUrl"]).toBe(
-		`ws://localhost:${port}/extra-worker-b`
+		`ws://${host}/extra-worker-b`
 	);
 });
 
@@ -284,9 +568,9 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 	});
 	useDispose(mf);
 
-	const port = await getInspectorPortReady(mf);
+	const host = await getInspectorHostReady(mf);
 
-	const res = await fetch(`http://localhost:${port}/json`);
+	const res = await fetch(`http://${host}/json`);
 	expect(res.headers.get("content-type")).toBe("application/json");
 
 	const inspectors = (await res.json()) as Record<string, string>[];
@@ -295,18 +579,17 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 
 	expect(inspectors[0]["description"]).toBe("workers");
 	expect(inspectors[0]["title"]).toBe("Cloudflare Worker");
-	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://localhost:${port}/`);
+	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://${host}/`);
 	expect(inspectors[1]["description"]).toBe("workers");
 	expect(inspectors[1]["title"]).toBe("Cloudflare Worker: extra-worker-b");
 	expect(inspectors[1]["webSocketDebuggerUrl"]).toBe(
-		`ws://localhost:${port}/extra-worker-b`
+		`ws://${host}/extra-worker-b`
 	);
 });
 
 test("InspectorProxy: should allow inspector port updating via miniflare#setOptions", async ({
 	expect,
 }) => {
-	const initialInspectorPort = await getPort();
 	const options: MiniflareOptions = {
 		workers: [
 			{
@@ -319,30 +602,26 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 			},
 		],
 	};
-	const mf = new Miniflare({ ...options, inspectorPort: initialInspectorPort });
+	const mf = new Miniflare({ ...options, inspectorPort: 0 });
 	useDispose(mf);
 
-	expect(await getInspectorPortReady(mf)).toBe(initialInspectorPort);
+	const initialHost = await useFixedInspectorPort(mf, options);
 
-	let res = await fetch(
-		`http://localhost:${initialInspectorPort}/json/version`
-	);
+	let res = await fetch(`http://${initialHost}/json/version`);
 	expect(res.status).toBe(200);
 
-	const newInspectorPort = await getPort();
-	await mf.setOptions({ ...options, inspectorPort: newInspectorPort });
+	await mf.setOptions({ ...options, inspectorPort: 0 });
 
-	expect(initialInspectorPort).not.toBe(newInspectorPort);
+	const newHost = await getInspectorHostReady(mf);
+	expect(newHost).not.toBe(initialHost);
 
-	expect(await getInspectorPortReady(mf)).toBe(newInspectorPort);
-
-	res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
+	res = await fetch(`http://${newHost}/json/version`);
 	expect(res.status).toBe(200);
 
 	await vi.waitFor(
 		async () => {
 			try {
-				await fetch(`http://localhost:${initialInspectorPort}/json/version`);
+				await fetch(`http://${initialHost}/json/version`);
 				// Old inspector port still responding
 				throw new Error("Old inspector port still responding");
 			} catch (e) {
@@ -379,21 +658,19 @@ test("InspectorProxy: should keep the same inspector port on miniflare#setOption
 	const mf = new Miniflare(options);
 	useDispose(mf);
 
-	const oldPort = await getInspectorPortReady(mf);
+	const oldHost = await getInspectorHostReady(mf);
 
 	await mf.setOptions({ ...options, cf: false });
 
-	const newPort = await getInspectorPortReady(mf);
+	const newHost = await getInspectorHostReady(mf);
 
-	expect(oldPort).toBe(newPort);
+	expect(oldHost).toBe(newHost);
 });
 
 test("InspectorProxy: should not keep the same inspector port on miniflare#setOptions calls changing inspectorPort to 0", async ({
 	expect,
 }) => {
-	const initialInspectorPort = await getPort();
 	const options: MiniflareOptions = {
-		inspectorPort: initialInspectorPort,
 		workers: [
 			{
 				config: {
@@ -405,22 +682,20 @@ test("InspectorProxy: should not keep the same inspector port on miniflare#setOp
 			},
 		],
 	};
-	const mf = new Miniflare(options);
+	const mf = new Miniflare({ ...options, inspectorPort: 0 });
 	useDispose(mf);
 
-	expect(await getInspectorPortReady(mf)).toBe(initialInspectorPort);
+	const initialHost = await useFixedInspectorPort(mf, options);
 
 	await mf.setOptions({ ...options, inspectorPort: 0 });
-	const newInspectorPort = await getInspectorPortReady(mf);
+	const newHost = await getInspectorHostReady(mf);
 
-	expect(initialInspectorPort).not.toBe(newInspectorPort);
+	expect(initialHost).not.toBe(newHost);
 
-	const res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
+	const res = await fetch(`http://${newHost}/json/version`);
 	expect(res.status).toBe(200);
 
-	await expect(
-		fetch(`http://localhost:${initialInspectorPort}/json/version`)
-	).rejects.toThrow();
+	await expect(fetch(`http://${initialHost}/json/version`)).rejects.toThrow();
 });
 
 test("InspectorProxy: should allow debugging a single worker", async ({
@@ -448,10 +723,10 @@ test("InspectorProxy: should allow debugging a single worker", async ({
 	});
 	useDispose(mf);
 
-	const port = await getInspectorPortReady(mf);
+	const host = await getInspectorHostReady(mf);
 
 	// Connect inspector WebSocket
-	const ws = new WebSocket(`ws://localhost:${port}`);
+	const ws = new WebSocket(`ws://${host}`);
 	const messages = events.on(ws, "message");
 	async function nextMessage() {
 		const messageEvent = (await messages.next()).value;
@@ -503,12 +778,12 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 			},
 		],
 	};
-	const mf = new Miniflare({ ...options, inspectorPort: await getPort() });
+	const mf = new Miniflare({ ...options, inspectorPort: 0 });
 	useDispose(mf);
 
-	const testDebuggingWorkerOn = async (port: number) => {
+	const testDebuggingWorkerOn = async (host: string) => {
 		// Connect inspector WebSocket
-		const ws = new WebSocket(`ws://localhost:${port}`);
+		const ws = new WebSocket(`ws://${host}`);
 		const messages = events.on(ws, "message");
 		async function nextMessage() {
 			const messageEvent = (await messages.next()).value;
@@ -540,18 +815,63 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 		ws.close();
 	};
 
-	const initialInspectorPort = await getInspectorPortReady(mf);
+	const initialHost = await useFixedInspectorPort(mf, options);
 
-	await testDebuggingWorkerOn(initialInspectorPort);
+	await testDebuggingWorkerOn(initialHost);
 
-	await mf.setOptions({ ...options, inspectorPort: await getPort() });
+	await mf.setOptions({ ...options, inspectorPort: 0 });
 
-	const newInspectorPort = await getInspectorPortReady(mf);
+	const newHost = await getInspectorHostReady(mf);
 
-	expect(initialInspectorPort).not.toBe(newInspectorPort);
+	expect(initialHost).not.toBe(newHost);
 
-	await testDebuggingWorkerOn(newInspectorPort);
+	await testDebuggingWorkerOn(newHost);
 });
+
+test.for([
+	{ change: "port", inspectorHost: undefined },
+	{ change: "host", inspectorHost: "localhost" },
+])(
+	"InspectorProxy: moves the inspector to another $change while DevTools are attached",
+	async ({ inspectorHost }, { expect }) => {
+		const options: MiniflareOptions = {
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("body"); } }`
+						),
+					},
+					dev: { unsafeInspectorProxy: true },
+				},
+			],
+		};
+		const mf = new Miniflare({ ...options, inspectorPort: 0 });
+		useDispose(mf);
+		const host = await useFixedInspectorPort(mf, options);
+
+		const ws = new WebSocket(`ws://${host}`);
+		const closed = new Promise((resolve) => ws.once("close", resolve));
+		await events.once(ws, "open");
+
+		// Retiring the old server waits for its connections to close, and
+		// upgraded DevTools connections don't close with the server
+		await mf.setOptions({ ...options, inspectorPort: 0, inspectorHost });
+		await closed;
+		const url = await mf.getInspectorURL();
+		if (inspectorHost === undefined) {
+			expect(url.port).not.toBe(new URL(`http://${host}`).port);
+		} else {
+			// The old server closes before the new one listens, so the port may
+			// be the same
+			expect(url.hostname).toBe(inspectorHost);
+		}
+		const res = await mf.dispatchFetch("http://localhost");
+		expect(await res.text()).toBe("body");
+	}
+);
 
 test("InspectorProxy: should allow debugging multiple workers", async ({
 	expect,
@@ -598,12 +918,12 @@ test("InspectorProxy: should allow debugging multiple workers", async ({
 	});
 	useDispose(mf);
 
-	const port = await getInspectorPortReady(mf);
+	const host = await getInspectorHostReady(mf);
 
 	// Connect inspector WebSockets
 	const webSockets = {
-		["worker-a"]: new WebSocket(`ws://localhost:${port}/worker-a`),
-		["worker-b"]: new WebSocket(`ws://localhost:${port}/worker-b`),
+		["worker-a"]: new WebSocket(`ws://${host}/worker-a`),
+		["worker-b"]: new WebSocket(`ws://${host}/worker-b`),
 	};
 	const messages = {
 		["worker-a"]: events.on(webSockets["worker-a"], "message"),
@@ -711,7 +1031,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 
 	await mf.ready;
 
-	mf.setOptions({
+	await mf.setOptions({
 		inspectorPort: 0,
 		workers: [
 			{
@@ -752,12 +1072,12 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 		],
 	});
 
-	const port = await getInspectorPortReady(mf);
+	const host = await getInspectorHostReady(mf);
 
 	// Connect inspector WebSockets
 	const webSockets = {
-		["worker-a"]: new WebSocket(`ws://localhost:${port}/worker-a`),
-		["worker-b"]: new WebSocket(`ws://localhost:${port}/worker-b`),
+		["worker-a"]: new WebSocket(`ws://${host}/worker-a`),
+		["worker-b"]: new WebSocket(`ws://${host}/worker-b`),
 	};
 	const messages = {
 		["worker-a"]: events.on(webSockets["worker-a"], "message"),
@@ -874,10 +1194,10 @@ test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 	});
 	useDispose(mf);
 
-	const port = await getInspectorPortReady(mf);
+	const host = await getInspectorHostReady(mf);
 
 	// Connect inspector WebSocket
-	const ws = new WebSocket(`ws://localhost:${port}`);
+	const ws = new WebSocket(`ws://${host}`);
 	const messages = events.on(ws, "message");
 	async function nextMessage() {
 		const messageEvent = (await messages.next()).value;
@@ -921,7 +1241,15 @@ test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 	expect(await res.text()).toBe(`body:${LARGE_STRING}`);
 });
 
-async function getInspectorPortReady(mf: Miniflare) {
+/**
+ * Returns the `host:port` the inspector proxy listens on.
+ *
+ * Tests connect to this address rather than to `localhost`. The proxy listens
+ * on 127.0.0.1 only, and Node tries `localhost`'s IPv6 address, ::1, first. If
+ * another server listens on the same port number on ::1, as concurrently
+ * running tests' servers can, requests to `localhost` reach that server.
+ */
+async function getInspectorHostReady(mf: Miniflare): Promise<string> {
 	await mf.ready;
 
 	// when the inspector proxy is created there are some ws message exchanges between it
@@ -929,8 +1257,46 @@ async function getInspectorPortReady(mf: Miniflare) {
 	// wait a bit here to avoid such problems
 	await setTimeout(150);
 
-	const { port } = await mf.getInspectorURL();
-	return parseInt(port);
+	const { host } = await mf.getInspectorURL();
+	return host;
+}
+
+/**
+ * Sets `mf`'s `inspectorPort`, which must start as 0, to the port the
+ * inspector proxy was given, and returns the proxy's `host:port`.
+ *
+ * Tests use this to start from a fixed port. Choosing a free port up front and
+ * passing it to Miniflare would let another process take it before Miniflare
+ * listens on it.
+ */
+async function useFixedInspectorPort(
+	mf: Miniflare,
+	options: MiniflareOptions
+): Promise<string> {
+	const host = await getInspectorHostReady(mf);
+	const { port } = new URL(`http://${host}`);
+	await mf.setOptions({ ...options, inspectorPort: parseInt(port) });
+	const fixedHost = await getInspectorHostReady(mf);
+	if (fixedHost !== host) {
+		throw new Error(`Inspector moved from ${host} to ${fixedHost}`);
+	}
+	return host;
+}
+
+function listenOnRandomPort(server: net.Server): Promise<number> {
+	return new Promise((resolve, reject) => {
+		server.once("error", reject);
+		server.listen(0, "127.0.0.1", () => {
+			server.off("error", reject);
+			resolve((server.address() as net.AddressInfo).port);
+		});
+	});
+}
+
+function closeServer(server: net.Server): Promise<void> {
+	return new Promise((resolve, reject) =>
+		server.close((error) => (error ? reject(error) : resolve()))
+	);
 }
 
 type InspectorMessage = { id?: number; method?: string; params?: unknown };

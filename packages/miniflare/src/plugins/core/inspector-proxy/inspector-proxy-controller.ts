@@ -22,17 +22,24 @@ export class InspectorProxyController {
 	#proxies: InspectorProxy[] = [];
 
 	#server: Promise<Server>;
+	/** The DevTools WebSocket server attached to each HTTP server */
+	#devtoolsWebSocketServers = new WeakMap<Server, WebSocketServer>();
 
 	async #getInspectorPort() {
-		const server = await this.#server;
-		const address = server.address();
-		if (address && typeof address !== "string") {
-			return address.port;
-		} else {
-			throw new Error(
-				`Unable to acquire a port to listen on - address: "${address}"`
-			);
+		// Rethrows the error if the server failed to listen
+		await this.#server;
+		const port = await this.#getListeningPort();
+		if (port === undefined) {
+			throw new Error("Unable to acquire a port to listen on");
 		}
+		return port;
+	}
+
+	/** The port the server listens on, or `undefined` if it isn't listening */
+	async #getListeningPort(): Promise<number | undefined> {
+		const server = await this.#server.catch(() => undefined);
+		const address = server?.address();
+		return address && typeof address !== "string" ? address.port : undefined;
 	}
 
 	constructor(
@@ -71,10 +78,45 @@ export class InspectorProxyController {
 		return server;
 	}
 
-	async #restartServer() {
-		const server = await this.#server;
-		await this.#closeServer(server);
-		await this.#startListening(server);
+	/**
+	 * Moves the server to the current host and port options.
+	 *
+	 * On the same host, the new server listens before the old one closes, so
+	 * the inspector stays reachable throughout, and port 0 can't be given the
+	 * old port back. When the host changes, the old server closes first: the
+	 * new port may be the old one, and if the new server fails to listen, the
+	 * old host, which may be reachable from the network, mustn't keep serving.
+	 *
+	 * If the new server can't listen, the old server and the options stay as
+	 * they were, so a later update tries again. The old server keeps serving
+	 * unless it was closed first.
+	 */
+	async #restartServer(previousOptions: { port: number; host: string }) {
+		const oldServer = await this.#server.catch(() => undefined);
+		const closeFirst = this.inspectorHostOption !== previousOptions.host;
+		if (oldServer !== undefined && closeFirst) {
+			await this.#closeServer(oldServer);
+		}
+		const newServer = this.#createServer();
+		void newServer.catch(() => {});
+		try {
+			await newServer;
+		} catch (error) {
+			if (oldServer === undefined) {
+				this.#server = newServer;
+			} else {
+				// Keep a server that has listened before, even if closed. Miniflare
+				// waits on `#server` for readiness, also once the inspector is
+				// disabled, so a failed listen must not stay stored there.
+				this.inspectorPortOption = previousOptions.port;
+				this.inspectorHostOption = previousOptions.host;
+			}
+			throw error;
+		}
+		this.#server = newServer;
+		if (oldServer?.listening) {
+			await this.#closeServer(oldServer);
+		}
 	}
 
 	/**
@@ -100,7 +142,7 @@ export class InspectorProxyController {
 	}
 
 	async #closeServer(server: Server) {
-		server.closeAllConnections();
+		this.#closeAllConnections(server);
 		return await new Promise<void>((resolve) => {
 			// We'll resolve whether or not the close had an error.
 			server.close((err) => {
@@ -112,8 +154,22 @@ export class InspectorProxyController {
 		});
 	}
 
+	/**
+	 * Closes the server's connections so `close()` doesn't wait for them.
+	 * `closeAllConnections()` doesn't close upgraded connections, so DevTools
+	 * WebSocket connections are terminated separately.
+	 */
+	#closeAllConnections(server: Server) {
+		server.closeAllConnections();
+		for (const devtoolsWs of this.#devtoolsWebSocketServers.get(server)
+			?.clients ?? []) {
+			devtoolsWs.terminate();
+		}
+	}
+
 	#initializeWebSocketServer(server: Server) {
 		const devtoolsWebSocketServer = new WebSocketServer({ server });
+		this.#devtoolsWebSocketServers.set(server, devtoolsWebSocketServer);
 		devtoolsWebSocketServer.on("error", (error) => this.log.error(error));
 
 		devtoolsWebSocketServer.on("connection", (devtoolsWs, upgradeRequest) => {
@@ -285,17 +341,51 @@ export class InspectorProxyController {
 		workerNamesToProxy: Set<string>
 	) {
 		this.workerNamesToProxy = workerNamesToProxy;
+		const hostChanged = this.inspectorHostOption !== inspectorHostOption;
+		const portChanged = this.inspectorPortOption !== inspectorPortOption;
+		// A fixed port the server already listens on, such as one it was given
+		// through port 0, needs no restart. Closing and listening again would let
+		// another process take the port in between.
+		const alreadyListening =
+			!hostChanged &&
+			portChanged &&
+			inspectorPortOption !== 0 &&
+			inspectorPortOption === (await this.#getListeningPort());
+		// A server that listened before but has been closed by a failed restart
+		// listens again, even if the options haven't changed since
+		const closedAfterFailedRestart =
+			(await this.#server.then(
+				() => true,
+				() => false
+			)) && (await this.#getListeningPort()) === undefined;
+		const previousOptions = {
+			port: this.inspectorPortOption,
+			host: this.inspectorHostOption,
+		};
+		this.inspectorPortOption = inspectorPortOption;
+		this.inspectorHostOption = inspectorHostOption;
+		let restartError: unknown;
 		if (
-			this.inspectorPortOption !== inspectorPortOption ||
-			this.inspectorHostOption !== inspectorHostOption
+			((hostChanged || portChanged) && !alreadyListening) ||
+			closedAfterFailedRestart
 		) {
-			this.inspectorPortOption = inspectorPortOption;
-			this.inspectorHostOption = inspectorHostOption;
-
-			await this.#restartServer();
+			try {
+				await this.#restartServer(previousOptions);
+			} catch (error) {
+				restartError = error;
+			}
+		}
+		// The runtime has already been replaced, so connect to it even if the
+		// server failed to move. The server that kept listening then serves
+		// the new runtime's Workers, not the stopped one's.
+		await this.#connectToRuntime(runtimeInspectorPort);
+		if (restartError !== undefined) {
+			throw restartError;
 		}
 		await this.#server;
+	}
 
+	async #connectToRuntime(runtimeInspectorPort: number) {
 		const workerdInspectorJson = (await fetch(
 			`http://127.0.0.1:${runtimeInspectorPort}/json`
 		).then((resp) => resp.json())) as {
@@ -341,10 +431,14 @@ export class InspectorProxyController {
 		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
 
 		const server = await this.#server;
+		// A failed move to another host leaves a server that has already closed
+		if (!server.listening) {
+			return;
+		}
 		// Force-close active connections so server.close() resolves immediately.
 		// Without this, active HTTP keep-alive or WebSocket connections prevent
 		// the close callback from firing, hanging the dispose.
-		server.closeAllConnections();
+		this.#closeAllConnections(server);
 		return new Promise((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});

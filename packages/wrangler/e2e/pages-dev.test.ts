@@ -1,7 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { DEFAULT_COMPAT_DATE } from "@cloudflare/workers-utils";
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
@@ -10,8 +9,9 @@ import { fetchText } from "./helpers/fetch-text";
 import { normalizeOutput } from "./helpers/normalize";
 import { waitFor } from "./helpers/wait-for";
 
-const port = await getPort();
-const inspectorPort = await getPort();
+// Let wrangler listen on ports it chooses itself; tests read the URL it reports
+const port = 0;
+const inspectorPort = 0;
 const cmd = "wrangler pages dev";
 describe("wrangler pages dev", { concurrent: false }, () => {
 	it("should redirect Unicode HTML paths and serve the decoded filename", async ({

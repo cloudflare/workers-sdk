@@ -1,6 +1,5 @@
 import events from "node:events";
 import path from "node:path";
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
 import { assert, beforeEach, describe, it, onTestFinished, vi } from "vitest";
@@ -298,7 +297,7 @@ describe("DevEnv", { concurrent: false }, () => {
 
 				dev: {
 					remote,
-					server: { port: await getPort() },
+					server: { port: 0 },
 					inspector: false,
 				},
 			});
@@ -307,24 +306,45 @@ describe("DevEnv", { concurrent: false }, () => {
 			let res = await worker.fetch("http://dummy");
 			await expect(res.text()).resolves.toBe("body:1");
 
-			const oldPort = worker.config.dev?.server?.port;
-			let undiciRes = await undici.fetch(`http://127.0.0.1:${oldPort}`);
-			await expect(undiciRes.text()).resolves.toBe("body:1");
-
+			// Start from a fixed port without choosing one up front, which would
+			// let another process take it before the server listens on it: set
+			// the port to the one the server got through port 0
+			const oldPort = (await worker.url).port;
 			await worker.patchConfig({
 				dev: {
 					...worker.config.dev,
 					remote,
-					server: { port: await getPort() /* new port */ },
+					server: { port: parseInt(oldPort) },
 					inspector: false,
 				},
 			});
-			const newPort = worker.config.dev?.server?.port;
+			res = await worker.fetch("http://dummy");
+			await expect(res.text()).resolves.toBe("body:1");
+			expect((await worker.url).port).toBe(oldPort);
+			let undiciRes = await undici.fetch(`http://127.0.0.1:${oldPort}`);
+			await expect(undiciRes.text()).resolves.toBe("body:1");
 
+			// Moving from a fixed port to port 0 gives the server a new port
+			await worker.patchConfig({
+				dev: {
+					...worker.config.dev,
+					remote,
+					server: { port: 0 },
+					inspector: false,
+				},
+			});
 			res = await worker.fetch("http://dummy");
 			await expect(res.text()).resolves.toBe("body:1");
 
-			undiciRes = await undici.fetch(`http://127.0.0.1:${newPort}`);
+			// With port 0 the server may listen on only one of `localhost`'s
+			// addresses, so fetch the URL it reports
+			const newUrl = await waitFor(async () => {
+				const url = await worker.url;
+				expect(url.port).not.toBe(oldPort);
+				return url;
+			});
+
+			undiciRes = await undici.fetch(newUrl);
 			await expect(undiciRes.text()).resolves.toBe("body:1");
 
 			await expect(undici.fetch(`http://127.0.0.1:${oldPort}`)).rejects.toThrow(

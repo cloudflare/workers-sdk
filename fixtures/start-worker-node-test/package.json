@@ -12,7 +12,6 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/is-even": "^1.0.2",
-		"get-port": "^7.1.0",
 		"is-even": "^1.0.0",
 		"miniflare": "workspace:*",
 		"wrangler": "workspace:*"
