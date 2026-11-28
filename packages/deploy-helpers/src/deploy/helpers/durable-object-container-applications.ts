@@ -603,6 +603,14 @@ export async function prepareDurableObjectContainerApplications(
 		versionsUploadCommand,
 	}: PrepareDurableObjectContainerApplicationsArgs
 ): Promise<PreparedContainerImages> {
+	// Without Durable Object-managed Containers there is nothing to validate or
+	// prepare. The checks below replay `migrations` from an empty state, which
+	// rejects already-applied histories that delete or rename a class no
+	// earlier tag creates, so they must not run for every Worker.
+	if (durableObjectContainerConfig.length === 0) {
+		return {};
+	}
+
 	validateDurableObjectContainerApplications(
 		{ ...config, name: scriptName },
 		durableObjectContainerConfig,
