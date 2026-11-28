@@ -571,7 +571,10 @@ import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
 if (proxy) {
 	setGlobalDispatcher(
-		new EnvHttpProxyAgent({ noProxy: noProxy || "localhost,127.0.0.1,::1" })
+		new EnvHttpProxyAgent({
+			allowH2: false,
+			noProxy: noProxy || "localhost,127.0.0.1,::1",
+		})
 	);
 	logger.warn(
 		`Proxy environment variables detected. We'll use your proxy for fetch requests.`

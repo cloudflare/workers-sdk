@@ -91,7 +91,15 @@ jobs:
         with:
           node-version: 20
 
-      - name: Check for error message on Node.js < v22.19
+      - name: Check for error message on Node.js v20
+        run: node packages/wrangler/src/__tests__/test-old-node-version.js error
+
+      - name: Use Node.js v22.18
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: '22.18.0'
+
+      - name: Check for error message just below the Node.js minimum
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
       - name: Upload turbo logs
@@ -251,7 +259,6 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Run tests (Wrangler and Miniflare shard)
-        id: runtime-tests
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'runtime'
         # Use Vitest's complete file partition: three shards on Windows, two elsewhere.
         # Keep Miniflare's single worker and Wrangler's per-file isolation.
@@ -265,23 +272,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
-
-      - name: Repeat Miniflare email pagination coverage on Windows (temporary)
-        if: always() && (steps.runtime-tests.outcome == 'success' || steps.runtime-tests.outcome == 'failure') && github.event.pull_request.number == 17250 && matrix.os == 'windows-latest' && matrix.suite == 'runtime' && matrix.shard == 2
-        shell: bash
-        env:
-          CI_OS: ${{ matrix.description }}
-        run: |
-          failures=0
-          for attempt in 1 2 3 4 5; do
-            echo "::group::Miniflare email spec attempt $attempt of 5"
-            if ! pnpm --filter miniflare exec vitest run test/plugins/local-explorer/email.spec.ts --retry=0; then
-              failures=$((failures + 1))
-            fi
-            echo "::endgroup::"
-          done
-          echo "$((5 - failures))/5 Miniflare email spec runs passed" >> "$GITHUB_STEP_SUMMARY"
-          test "$failures" -eq 0
 
       - name: Test release source maps (Miniflare and Vite plugin)
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.suite == 'packages-and-tools' && matrix.os == 'ubuntu-latest'

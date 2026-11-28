@@ -4584,6 +4584,83 @@ test("Miniflare: logs post-restart callback failures", async ({ expect }) => {
 	expect(await response.text()).toBe("ok");
 });
 
+test.skipIf(!process.allowedNodeEnvironmentFlags.has("--use-env-proxy"))(
+	"Miniflare: external redirects respect Node's startup proxy",
+	async ({ expect, onTestFinished }) => {
+		const { http: destination } = await useServer((req, res) => {
+			res.end("direct");
+		});
+		const proxy = http.createServer((request, response) => {
+			if (request.url !== destination.href) {
+				response.statusCode = 502;
+			}
+			response.end("proxied");
+		});
+		proxy.on("connect", (request, socket) => {
+			if (request.url !== destination.host) {
+				socket.end("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+				return;
+			}
+			socket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
+			socket.once("data", () => {
+				socket.end(
+					"HTTP/1.1 200 OK\r\nContent-Length: 7\r\nConnection: close\r\n\r\nproxied"
+				);
+			});
+		});
+		proxy.listen(0, "127.0.0.1");
+		await once(proxy, "listening");
+		onTestFinished(() => util.promisify(proxy.close).call(proxy));
+		const address = proxy.address();
+		assert(address && typeof address !== "string");
+		const proxyURL = `http://127.0.0.1:${address.port}`;
+		const options = {
+			cf: false,
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`export default {
+							fetch() { return Response.redirect(${JSON.stringify(destination.href)}); }
+						}`),
+					},
+				},
+			],
+		};
+		const execFile = util.promisify(childProcess.execFile);
+		const { stdout } = await execFile(
+			process.execPath,
+			[
+				"-e",
+				`const { Miniflare } = require(${JSON.stringify(require.resolve("miniflare"))});
+				(async () => {
+					const mf = new Miniflare(${JSON.stringify(options)});
+					try {
+						const native = await fetch(${JSON.stringify(destination.href)});
+						const redirect = await mf.dispatchFetch("http://placeholder/");
+						console.log(JSON.stringify([await native.text(), await redirect.text()]));
+					} finally {
+						await mf.dispose();
+					}
+				})().catch((error) => { console.error(error); process.exitCode = 1; });`,
+			],
+			{
+				env: {
+					...process.env,
+					NODE_USE_ENV_PROXY: "1",
+					HTTP_PROXY: proxyURL,
+					http_proxy: proxyURL,
+					NO_PROXY: "",
+					no_proxy: "",
+				},
+				timeout: 15_000,
+			}
+		);
+		expect(JSON.parse(stdout)).toEqual(["proxied", "proxied"]);
+	}
+);
+
 test("Miniflare: exits cleanly", async ({ expect }) => {
 	const miniflarePath = require.resolve("miniflare");
 	const result = childProcess.spawn(
@@ -5692,9 +5769,13 @@ test("Miniflare: dispatchFetch() replays a known-length body after HTTP 421", as
 					name: "",
 					compatibilityDate: "2025-05-01",
 					manifest: singleModuleManifest(`export default {
+			attempt: 0,
 			async fetch(request) {
 				const body = await request.text();
-				return new Response("body=" + body, { status: 421 });
+				const attempt = ++this.attempt;
+				return Response.json({ attempt, length: request.headers.get("content-length"), body }, {
+					status: attempt === 1 ? 421 : 200,
+				});
 			}
 		}`),
 				},
@@ -5708,7 +5789,6 @@ test("Miniflare: dispatchFetch() replays a known-length body after HTTP 421", as
 		body: "{}",
 		redirect: "manual",
 	});
-	expect(res.status).toBe(421);
-	expect(res.headers.get("location")).toBeNull();
-	expect(await res.text()).toBe("body={}");
+	expect(res.status).toBe(200);
+	expect(await res.json()).toEqual({ attempt: 2, length: "2", body: "{}" });
 });

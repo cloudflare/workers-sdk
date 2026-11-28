@@ -1,3 +1,4 @@
+import "./http/startup-proxy";
 import assert from "node:assert";
 import crypto from "node:crypto";
 import dgram from "node:dgram";
