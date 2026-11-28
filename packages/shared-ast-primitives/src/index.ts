@@ -66,9 +66,9 @@ export function parseTs(src: string): recast.types.namedTypes.File {
 // Selects the correct parser based on the file extension
 export function parseFile(filePath: string) {
 	const lang = path.extname(filePath).slice(1);
-	// The TypeScript parser doesn't accept JSX, which `.tsx` files can contain
+	// The TypeScript parser doesn't accept JSX, which `.jsx` and `.tsx` files can contain
 	const parser =
-		lang === "js"
+		lang === "js" || lang === "jsx"
 			? babelParser
 			: lang === "tsx"
 				? babelTsParser

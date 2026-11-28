@@ -44,15 +44,26 @@ describe("Svelte configuration parsing", () => {
 });
 
 describe("parseFile", () => {
-	test("parses JSX in a .tsx file", ({ expect }) => {
-		const file = join(mkdtempSync(join(tmpdir(), "parse-file-")), "index.tsx");
-		writeFileSync(
-			file,
-			"const app: App = new App();\napp.get(() => <h1>Hello</h1>);\nexport default app;\n"
-		);
+	test.for([
+		["jsx", "const app = new App();"],
+		["tsx", "const app: App = new App();"],
+	] as const)(
+		"parses JSX in a .%s file",
+		([extension, declaration], { expect }) => {
+			const file = join(
+				mkdtempSync(join(tmpdir(), "parse-file-")),
+				`index.${extension}`
+			);
+			writeFileSync(
+				file,
+				`${declaration}\napp.get(() => <h1>Hello</h1>);\nexport default app;\n`
+			);
 
-		expect(parseFile(file)?.body.at(-1)?.type).toBe("ExportDefaultDeclaration");
-	});
+			expect(parseFile(file)?.body.at(-1)?.type).toBe(
+				"ExportDefaultDeclaration"
+			);
+		}
+	);
 });
 
 describe("mergeObjectProperties", () => {
