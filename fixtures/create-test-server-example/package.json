@@ -1,0 +1,33 @@
+{
+	"name": "@fixture/create-test-server-example",
+	"private": true,
+	"description": "Integration tests with the createTestServer() API",
+	"type": "module",
+	"scripts": {
+		"check:type": "tsc",
+		"build": "vite build workers/api && vite build workers/web && vite build workers/mock-browser",
+		"playwright:install": "pnpm playwright install chromium",
+		"pretest:ci": "pnpm playwright:install",
+		"pretest:playwright": "pnpm playwright:install",
+		"test:playwright": "playwright test",
+		"test:vitest": "vitest run",
+		"test:ci": "vitest run && playwright test",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
+	},
+	"devDependencies": {
+		"@cloudflare/test-server": "workspace:*",
+		"@cloudflare/vite-plugin": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@playwright/test": "catalog:default",
+		"@types/node": "catalog:default",
+		"cf": "catalog:default",
+		"msw": "catalog:default",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}

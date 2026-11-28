@@ -64,7 +64,7 @@ describe("getFixtureShard", () => {
 			for (const name of [
 				"dev-registry",
 				"entrypoints-rpc-tests",
-				"create-test-harness-example",
+				"create-test-server-example",
 				"browser-run",
 				"new-fixture",
 			]) {

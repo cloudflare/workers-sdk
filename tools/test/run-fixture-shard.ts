@@ -10,7 +10,7 @@ import { parseTestShard } from "./vitest-shard.cjs";
 // Estimates only affect scheduling; every eligible package is always assigned.
 const estimatedSeconds: Record<string, number> = {
 	"dev-registry": 250,
-	"create-test-harness-example": 120,
+	"create-test-server-example": 120,
 	"entrypoints-rpc-tests": 80,
 	"vitest-plugin-examples": 80,
 	"get-platform-proxy": 60,
