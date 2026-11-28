@@ -1,4 +1,4 @@
-From bcba740e8dd373acf74a8d7f82d93107e2bf4a08 Mon Sep 17 00:00:00 2001
+From d6566fcd0e63e5ba297ccb286e35732dde6f11db Mon Sep 17 00:00:00 2001
 From: Workers DevProd <workers-devprod@cloudflare.com>
 Date: Fri, 25 Oct 2024 15:04:17 +0100
 Subject: [PATCH 3/8] Add ping to improve connection stability. Without this,
@@ -6,40 +6,36 @@ Subject: [PATCH 3/8] Add ping to improve connection stability. Without this,
  Playground
 
 ---
- front_end/core/protocol_client/InspectorBackend.ts | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ front_end/core/protocol_client/InspectorBackend.ts | 5 +++++
+ 1 file changed, 5 insertions(+)
 
 diff --git a/front_end/core/protocol_client/InspectorBackend.ts b/front_end/core/protocol_client/InspectorBackend.ts
-index 32948c2dbd..27dfa1abe3 100644
+index 8c7691a6e4..081ae4ee77 100644
 --- a/front_end/core/protocol_client/InspectorBackend.ts
 +++ b/front_end/core/protocol_client/InspectorBackend.ts
-@@ -256,6 +256,7 @@ export class SessionRouter {
-     proxyConnection: ((Connection | undefined)|null),
+@@ -187,10 +187,14 @@ export class SessionRouter implements CDPConnectionObserver {
+   readonly #sessions = new Map<string, {
+     target: TargetBase,
    }>();
-   #pendingScripts: Array<() => void> = [];
 +  #pingInterval: ReturnType<typeof setInterval>;
  
-   constructor(connection: Connection) {
-     this.#connectionInternal = connection;
-@@ -266,11 +267,18 @@ export class SessionRouter {
-     this.#connectionInternal.setOnMessage(this.onMessage.bind(this));
- 
-     this.#connectionInternal.setOnDisconnect(reason => {
-+      clearInterval(this.#pingInterval);
-       const session = this.#sessions.get('');
-       if (session) {
-         session.target.dispose(reason);
-       }
-     });
+   constructor(connection: CDPConnection) {
+     this.#connection = connection;
+     this.#connection.observe(this);
 +    this.#pingInterval = setInterval(() => {
-+      this.#connectionInternal.sendRawMessage(JSON.stringify({
-+        method: 'Runtime.getIsolateId',
-+        id: this.nextMessageId(),
-+      }));
++      void this.#connection.send('Runtime.getIsolateId', undefined, undefined);
 +    }, 10_000);
    }
  
-   registerSession(target: TargetBase, sessionId: string, proxyConnection?: Connection|null): void {
+   registerSession(target: TargetBase, sessionId: string): void {
+@@ -209,6 +213,7 @@ export class SessionRouter implements CDPConnectionObserver {
+   }
+ 
+   onDisconnect(reason: string): void {
++    clearInterval(this.#pingInterval);
+     const session = this.#sessions.get('');
+     if (session) {
+       session.target.dispose(reason);
 -- 
-2.39.5 (Apple Git-154)
+2.50.1 (Apple Git-155)
 
