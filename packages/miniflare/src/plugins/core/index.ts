@@ -955,6 +955,9 @@ export function getGlobalServices({
 					// Keep custom error names and properties (for example Artifacts
 					// `code`) when binding errors reach `ProxyServer` for Node callers.
 					"enhanced_error_serialization",
+					// Accept `Request`s with `cache: "no-cache"` from Node callers, as
+					// later compatibility dates do
+					"cache_no_cache_enabled",
 				],
 				bindings: serviceEntryBindings,
 				durableObjectNamespaces: [

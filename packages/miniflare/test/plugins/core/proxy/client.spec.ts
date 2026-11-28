@@ -146,6 +146,282 @@ describe("ProxyClient", () => {
 		});
 	});
 
+	test("supports Workers RPC pipelining, callbacks and properties", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						// For `cache: "no-cache"`
+						compatibilityDate: "2025-08-07",
+						manifest: singleModuleManifest(`
+							import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
+							class Counter extends RpcTarget {
+								#count = 0;
+								increment() { return ++this.#count; }
+							}
+							export default class extends WorkerEntrypoint {
+								get property() { return "value"; }
+								getCounter() { return new Counter(); }
+								async callback(fn) { return \`called with \${await fn("arg")}\`; }
+								increment(counter) { return counter.increment(); }
+								text(response) { return response.text(); }
+								colo(request) { return request.cf?.colo; }
+								cache(request) { return request.cache; }
+							}
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: {
+				property: Promise<string>;
+				getCounter(): Promise<{ increment(): Promise<number> }> & {
+					increment(): Promise<number>;
+				};
+				callback(fn: (value: string) => string): Promise<string>;
+				increment(counter: { increment(): Promise<number> }): Promise<number>;
+				text(response: Response | Blob | object): Promise<string>;
+				colo(request: Request): Promise<string>;
+				cache(request: globalThis.Request): Promise<string>;
+			};
+		}>();
+		// Service bindings aren't functions, like in `workerd`, and are reused
+		expect(typeof BINDING).toBe("object");
+		expect((await mf.getBindings()).BINDING).toBe(BINDING);
+		expect("property" in BINDING).toBe(true);
+		expect(`${BINDING}`).toBe("[object Object]");
+		expect((BINDING as Partial<Disposable>)[Symbol.dispose]).toBeUndefined();
+		expect(await BINDING.property).toBe("value");
+		expect(await BINDING.getCounter().increment()).toBe(1);
+		expect(await BINDING.callback((value) => value.toUpperCase())).toBe(
+			"called with ARG"
+		);
+
+		// Returned stubs can be passed back, and still used afterwards
+		const counter = await BINDING.getCounter();
+		expect(await BINDING.increment(counter)).toBe(1);
+		expect(await counter.increment()).toBe(2);
+		// Miniflare's `Request`, `Response` and `Headers` can be sent
+		expect(await BINDING.text(new Response("body"))).toBe("body");
+		// So can Node's, including subclasses Cap'n Web can't serialise itself
+		class AppRequest extends globalThis.Request {}
+		const keepalive = new AppRequest("http://x", {
+			method: "POST",
+			body: "body",
+			keepalive: true,
+		});
+		expect(await BINDING.text(keepalive)).toBe("body");
+		const noStore = new globalThis.Request("http://x", { cache: "no-store" });
+		expect(await BINDING.cache(noStore)).toBe("no-store");
+		const noCache = new globalThis.Request("http://x", { cache: "no-cache" });
+		expect(await BINDING.cache(noCache)).toBe("no-cache");
+		expect(
+			await BINDING.colo(new Request("http://x", { cf: { colo: "LHR" } }))
+		).toBe("LHR");
+		// `Blob#slice()` returns a `Blob` subclass in Node.js 22
+		expect(await BINDING.text(new Blob(["abc"]).slice(1))).toBe("bc");
+
+		// Like `workerd`, values that can't be sent throw when calling
+		const caches = await mf.getCaches();
+		expect(() => BINDING.text(caches)).toThrow(
+			'Could not serialize object of type "CacheStorage"'
+		);
+		const reload = new globalThis.Request("http://x", { cache: "reload" });
+		expect(() => BINDING.cache(reload)).toThrow("Unsupported cache mode");
+		const redirect = new globalThis.Request("http://x", { redirect: "error" });
+		expect(() => BINDING.cache(redirect)).toThrow("Invalid redirect value");
+		const cyclic: Record<string, unknown> = {};
+		cyclic.self = cyclic;
+		expect(() => BINDING.text(cyclic)).toThrow(
+			"Cannot send cyclic values over Workers RPC"
+		);
+	});
+
+	test("handles Workers RPC messages over workerd's WebSocket message limit", async ({
+		expect,
+	}) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							export default class extends WorkerEntrypoint {
+								size(value) { return value.length ?? value.size; }
+								async streamSize(stream) {
+									return (await new Response(stream).arrayBuffer()).byteLength;
+								}
+								async bodySize(response) { return (await response.arrayBuffer()).byteLength; }
+								async callback(fn) { return (await fn()).length; }
+							}
+						`),
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: {
+				size(value: Uint8Array | number[] | Blob): Promise<number>;
+				streamSize(stream: ReadableStream, ...rest: unknown[]): Promise<number>;
+				bodySize(body: Response | globalThis.Request): Promise<number>;
+				callback(fn: () => string): Promise<number>;
+			};
+		}>();
+		// Base64 encoded, this is over 32 MiB. Like other values that can't be
+		// sent, this throws when calling.
+		expect(() => BINDING.size(new Uint8Array(25 * 1024 * 1024))).toThrow(
+			RangeError
+		);
+		// Numbers and structure count towards the limit too
+		expect(() => BINDING.size(new Array(5_000_000).fill(123456))).toThrow(
+			RangeError
+		);
+		// Rejected before it was sent, so the session is still usable
+		expect(await BINDING.size(new Uint8Array(1))).toBe(1);
+		// Streams' chunks are sent in separate messages, and large ones are split
+		const streamSize = 30 * 1024 * 1024;
+		const stream = new Blob([new Uint8Array(streamSize)]).stream();
+		expect(await BINDING.streamSize(stream)).toBe(streamSize);
+		// Including bodies, which Node.js reads in one chunk here
+		const body = new Uint8Array(streamSize);
+		expect(await BINDING.bodySize(new Response(body))).toBe(streamSize);
+		const request = new globalThis.Request("http://x", {
+			method: "POST",
+			body,
+		});
+		expect(await BINDING.bodySize(request)).toBe(streamSize);
+		// Like in `workerd`, blobs count towards the limit, but their chunks are
+		// split too
+		const blob = new Blob([new Uint8Array(streamSize)]);
+		expect(await BINDING.size(blob)).toBe(streamSize);
+		const largeBlob = new Blob([new Uint8Array(33 * 1024 * 1024)]);
+		expect(() => BINDING.size(largeBlob)).toThrow(RangeError);
+		// Rejected calls don't lock stream arguments, so they can be retried
+		const retried = new Blob(["abc"]).stream();
+		expect(() =>
+			BINDING.streamSize(retried, new Array(5_000_000).fill(123456))
+		).toThrow(RangeError);
+		expect(await BINDING.streamSize(retried)).toBe(3);
+		// Locked streams are rejected, rather than sent without data
+		const locked = new Blob(["abc"]).stream();
+		locked.getReader();
+		expect(() => BINDING.streamSize(locked)).toThrow(TypeError);
+
+		// Callback results can't be checked before they're sent, so `workerd`
+		// closes the session. Bindings get a new one on their next use.
+		const large = "x".repeat(40 * 1024 * 1024);
+		await expect(BINDING.callback(() => large).then()).rejects.toThrow();
+		expect(await BINDING.size(new Uint8Array(1))).toBe(1);
+	});
+
+	test("rejects pending Workers RPC results once poisoned", async ({
+		expect,
+	}) => {
+		const opts: ConstructorParameters<typeof Miniflare>[0] = {
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						env: { BINDING: { type: "worker", worker: "binding" } },
+					},
+					legacy: { serviceWorkerScript: nullScript },
+				},
+				{
+					config: {
+						name: "binding",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkerEntrypoint } from "cloudflare:workers";
+							export default class extends WorkerEntrypoint {
+								ping() { return "pong"; }
+							}
+						`),
+					},
+				},
+			],
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
+
+		const { BINDING } = await mf.getBindings<{
+			BINDING: { ping(): Promise<string> };
+		}>();
+		const pending = BINDING.ping();
+		await mf.setOptions(opts);
+		// Use `then()` directly, as `expect().rejects` calls functions, and Workers
+		// RPC results are callable
+		await expect(pending.then()).rejects.toThrow(
+			"Attempted to use poisoned stub"
+		);
+	});
+
+	test("returns Workers RPC stubs from native methods", async ({ expect }) => {
+		const mf = new Miniflare({
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(`
+							import { WorkflowEntrypoint } from "cloudflare:workers";
+							export class MyWorkflow extends WorkflowEntrypoint {
+								async run() { return "done"; }
+							}
+							export default { fetch() { return new Response(null, { status: 404 }); } };
+						`),
+						env: {
+							WORKFLOW: {
+								type: "workflow",
+								name: "WORKFLOW",
+								worker: "",
+								exportName: "MyWorkflow",
+							},
+						},
+					},
+				},
+			],
+		});
+		useDispose(mf);
+
+		const { WORKFLOW } = await mf.getBindings<{
+			WORKFLOW: {
+				unsafeGetInstanceModifier(
+					id: string
+				): Promise<{ disableSleeps(): Promise<void> }>;
+			};
+		}>();
+		// The modifier is an `RpcStub`, which must be returned without calling it
+		const modifier = await WORKFLOW.unsafeGetInstanceModifier("id");
+		await expect(modifier.disableSleeps()).resolves.toBeUndefined();
+	});
+
 	test("preserves original URL for service binding fetch", async ({
 		expect,
 	}) => {
@@ -422,6 +698,21 @@ describe("ProxyClient", () => {
 			}
 		}
 		await asyncUserFunction();
+
+		async function rpcUserFunction() {
+			try {
+				const stub = ns.get(ns.idFromName("name")) as unknown as {
+					missing(): Promise<void>;
+				};
+				await stub.missing();
+				throw new Error("Test failed");
+			} catch (e) {
+				assert(hasStack(e));
+				expect(e.stack).toMatch(/rpcUserFunction/);
+				expect(e.stack).not.toMatch(/RpcProxyHandler/);
+			}
+		}
+		await rpcUserFunction();
 	});
 	test("can access ReadableStream property multiple times", async ({
 		expect,
