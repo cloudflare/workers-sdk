@@ -245,7 +245,8 @@ export default defineConfig({
 		{
 			files: ["packages/miniflare/src/workers/shared/zod.worker.ts"],
 			rules: {
-				"no-restricted-imports": "off",
+				// Allows `zod`, which the bridge re-exports, but still forbids get-port
+				"no-restricted-imports": ["error", { paths: [getPortRestriction] }],
 			},
 		},
 		// Existing uses of get-port that can't yet let the listener choose the port.

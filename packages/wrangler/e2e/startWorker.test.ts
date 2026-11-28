@@ -336,13 +336,15 @@ describe("DevEnv", { concurrent: false }, () => {
 			res = await worker.fetch("http://dummy");
 			await expect(res.text()).resolves.toBe("body:1");
 
-			const newPort = await waitFor(async () => {
-				const { port } = await worker.url;
-				expect(port).not.toBe(oldPort);
-				return port;
+			// With port 0 the server may listen on only one of `localhost`'s
+			// addresses, so fetch the URL it reports
+			const newUrl = await waitFor(async () => {
+				const url = await worker.url;
+				expect(url.port).not.toBe(oldPort);
+				return url;
 			});
 
-			undiciRes = await undici.fetch(`http://127.0.0.1:${newPort}`);
+			undiciRes = await undici.fetch(newUrl);
 			await expect(undiciRes.text()).resolves.toBe("body:1");
 
 			await expect(undici.fetch(`http://127.0.0.1:${oldPort}`)).rejects.toThrow(

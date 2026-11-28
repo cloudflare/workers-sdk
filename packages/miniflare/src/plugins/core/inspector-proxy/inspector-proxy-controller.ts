@@ -24,15 +24,20 @@ export class InspectorProxyController {
 	#server: Promise<Server>;
 
 	async #getInspectorPort() {
-		const server = await this.#server;
-		const address = server.address();
-		if (address && typeof address !== "string") {
-			return address.port;
-		} else {
-			throw new Error(
-				`Unable to acquire a port to listen on - address: "${address}"`
-			);
+		// Rethrows the error if the server failed to listen
+		await this.#server;
+		const port = await this.#getListeningPort();
+		if (port === undefined) {
+			throw new Error("Unable to acquire a port to listen on");
 		}
+		return port;
+	}
+
+	/** The port the server listens on, or `undefined` if it isn't listening */
+	async #getListeningPort(): Promise<number | undefined> {
+		const server = await this.#server.catch(() => undefined);
+		const address = server?.address();
+		return address && typeof address !== "string" ? address.port : undefined;
 	}
 
 	constructor(
@@ -71,10 +76,41 @@ export class InspectorProxyController {
 		return server;
 	}
 
-	async #restartServer() {
-		const server = await this.#server;
-		await this.#closeServer(server);
-		await this.#startListening(server);
+	/**
+	 * Moves the server to the current host and port options.
+	 *
+	 * The new server listens before the old one closes, so the inspector stays
+	 * reachable throughout, and port 0 can't be given the old port back. That
+	 * isn't possible when the new port is the old one on a different host: then
+	 * the old server closes first.
+	 *
+	 * If the new server can't listen, the old one keeps serving where it was.
+	 */
+	async #restartServer(previousOptions: { port: number; host: string }) {
+		const oldServer = await this.#server.catch(() => undefined);
+		const oldPort = await this.#getListeningPort();
+		const closeFirst =
+			this.inspectorPortOption !== 0 && this.inspectorPortOption === oldPort;
+		if (oldServer !== undefined && closeFirst) {
+			await this.#closeServer(oldServer);
+		}
+		const newServer = this.#createServer();
+		void newServer.catch(() => {});
+		try {
+			await newServer;
+		} catch (error) {
+			if (oldServer !== undefined && !closeFirst) {
+				this.inspectorPortOption = previousOptions.port;
+				this.inspectorHostOption = previousOptions.host;
+			} else {
+				this.#server = newServer;
+			}
+			throw error;
+		}
+		this.#server = newServer;
+		if (oldServer !== undefined && !closeFirst) {
+			await this.#closeServer(oldServer);
+		}
 	}
 
 	/**
@@ -294,11 +330,15 @@ export class InspectorProxyController {
 			!hostChanged &&
 			portChanged &&
 			inspectorPortOption !== 0 &&
-			inspectorPortOption === (await this.#getInspectorPort());
+			inspectorPortOption === (await this.#getListeningPort());
+		const previousOptions = {
+			port: this.inspectorPortOption,
+			host: this.inspectorHostOption,
+		};
 		this.inspectorPortOption = inspectorPortOption;
 		this.inspectorHostOption = inspectorHostOption;
 		if ((hostChanged || portChanged) && !alreadyListening) {
-			await this.#restartServer();
+			await this.#restartServer(previousOptions);
 		}
 		await this.#server;
 

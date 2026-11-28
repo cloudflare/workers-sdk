@@ -81,6 +81,43 @@ test("InspectorProxy: closes server and preserves bind failure", async ({
 	expect(close).toHaveBeenCalledOnce();
 });
 
+test("InspectorProxy: keeps serving, and can retry, when a new port fails to bind", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const blocker = net.createServer();
+	const blockedPort = await listenOnRandomPort(blocker);
+	onTestFinished(() => closeServer(blocker));
+	// Stands in for workerd's inspector, which lists no workers
+	const runtime = http.createServer((_req, res) => res.end("[]"));
+	const runtimePort = await listenOnRandomPort(runtime);
+	onTestFinished(() => closeServer(runtime));
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		new TestLog(),
+		new Set()
+	);
+	onTestFinished(() => controller.dispose());
+	const url = await controller.getInspectorURL();
+
+	const update = (port: number) =>
+		controller.updateConnection(port, "127.0.0.1", runtimePort, new Set());
+	await expect(update(blockedPort)).rejects.toMatchObject({
+		code: "EADDRINUSE",
+	});
+	expect(await controller.getInspectorURL()).toEqual(url);
+	const res = await fetch(`http://${url.host}/json/version`);
+	expect(res.status).toBe(200);
+
+	// A retry tries to listen again, rather than failing on the old state
+	await expect(update(blockedPort)).rejects.toMatchObject({
+		code: "EADDRINUSE",
+	});
+	await update(0);
+	expect(await controller.getInspectorURL()).toEqual(url);
+});
+
 test("InspectorProxy: propagates bind failure through Miniflare", async ({
 	expect,
 }) => {
