@@ -1,5 +1,13 @@
 # @cloudflare/codemods
 
+## 0.11.0
+
+### Minor Changes
+
+- [#17222](https://github.com/cloudflare/workers-sdk/pull/17222) [`89bc2d5`](https://github.com/cloudflare/workers-sdk/commit/89bc2d562ee0fb30f70e0577e338a8234d503fcb) Thanks [@edmundhung](https://github.com/edmundhung)! - Move the `convertWranglerConfig` entry point to `@cloudflare/autoconfig/wrangler-to-cf`
+
+  Import `convertWranglerConfig` from `@cloudflare/autoconfig/wrangler-to-cf` instead of `@cloudflare/codemods/wrangler-to-cf`. The `wrangler-to-cf` codemod works as before.
+
 ## 0.10.0
 
 ### Minor Changes
