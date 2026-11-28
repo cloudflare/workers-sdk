@@ -154,15 +154,15 @@ function convertUndiciHeadersToStandard(
 		const standardHeaders = new undici.Headers();
 		for (const [name, value] of Object.entries(headers)) {
 			if (!ignored.includes(name)) {
-				if (!value) {
+				if (value === undefined || value === "") {
 					continue;
 				}
-				if (typeof value === "string") {
-					standardHeaders.append(name, value);
-				} else {
+				if (Array.isArray(value)) {
 					for (const v of value) {
 						standardHeaders.append(name, v);
 					}
+				} else {
+					standardHeaders.append(name, String(value));
 				}
 			}
 		}
