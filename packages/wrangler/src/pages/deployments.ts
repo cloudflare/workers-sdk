@@ -174,6 +174,15 @@ export const pagesDeploymentDeleteCommand = createCommand({
 			);
 		}
 
+		if (!force && !isInteractive) {
+			throw new UserError(
+				"The --force flag is required to delete a deployment in non-interactive mode.",
+				{
+					telemetryMessage: "pages deployments delete force required",
+				}
+			);
+		}
+
 		const confirmed =
 			force ||
 			(await confirm(
@@ -182,6 +191,7 @@ export const pagesDeploymentDeleteCommand = createCommand({
 			));
 
 		if (!confirmed) {
+			logger.log("Not deleting.");
 			return;
 		}
 
