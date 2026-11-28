@@ -74,6 +74,93 @@ describe("cloudflare.config.ts", () => {
 		}
 	});
 
+	test("explains when a top-level field is placed under worker", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			`export default {
+				worker: {
+					name: "test",
+					compatibilityDate: "2026-11-23",
+					accountId: "xyz",
+				},
+			};`
+		);
+
+		await expect(resolvePluginConfig({}, { root }, viteEnv)).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Invalid \`cloudflare.config.ts\`:
+			✖ Unrecognized key: "accountId". "accountId" belongs at the top level of the config, outside "worker".
+			  → at worker]
+		`);
+	});
+
+	test("does not suggest the top level for an unknown field under worker", async ({
+		expect,
+	}) => {
+		fs.writeFileSync(
+			path.join(root, "cloudflare.config.ts"),
+			`export default {
+				worker: {
+					name: "test",
+					compatibilityDate: "2026-11-23",
+					unknownSetting: true,
+				},
+			};`
+		);
+
+		await expect(resolvePluginConfig({}, { root }, viteEnv)).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: Invalid \`cloudflare.config.ts\`:
+			✖ Unrecognized key: "unknownSetting"
+			  → at worker]
+		`);
+	});
+
+	test.for([
+		["auxiliary", "accountId"],
+		["prerender", "accountId"],
+		["auxiliary", "worker"],
+		["prerender", "worker"],
+	] as const)(
+		"does not suggest the project root for a %s Worker with an invalid %s field",
+		async ([workerType, key], { expect }) => {
+			seedWorker();
+			const workerConfig = {
+				name: "non-entry-worker",
+				compatibilityDate: "2026-11-23",
+				entrypoint: "./src/index.ts",
+			};
+			const config =
+				key === "worker"
+					? { worker: workerConfig }
+					: { ...workerConfig, accountId: "xyz" };
+			const pluginConfig =
+				workerType === "auxiliary"
+					? { auxiliaryWorkers: [{ config }] }
+					: { prerenderWorker: { config } };
+
+			await expect(
+				resolvePluginConfig(
+					// @ts-expect-error Exercise runtime validation for a project config passed as a standalone Worker.
+					pluginConfig,
+					{ root },
+					viteBuildEnv
+				)
+			).rejects.toMatchObject({
+				issues: expect.arrayContaining([
+					{
+						code: "unrecognized_keys",
+						keys: [key],
+						path: [],
+						message: `Unrecognized key: "${key}"`,
+					},
+				]),
+			});
+		}
+	);
+
 	test("is the default config source", async ({ expect }) => {
 		seedWorker();
 		const result = (await resolvePluginConfig(
