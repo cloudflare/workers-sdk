@@ -215,9 +215,10 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	let outputDir = configured
-		? undefined
-		: requestedOutputDir !== undefined && framework.id === staticFramework.id
+	let outputDir =
+		!configured &&
+		requestedOutputDir !== undefined &&
+		framework.id === staticFramework.id
 			? normalizeOutputDir(projectPath, requestedOutputDir)
 			: (detectedFramework.dist ?? (await findAssetsDir(projectPath)));
 
@@ -291,6 +292,7 @@ export async function getDetailsForAutoConfig({
 	if (configured) {
 		return {
 			...baseDetails,
+			outputDir,
 			configured: true,
 			isWorkspaceRoot,
 		};

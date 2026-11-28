@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import * as cliPackages from "@cloudflare/cli-shared-helpers/packages";
-import { loadAndParseConfig, loadConfig } from "@cloudflare/config";
+import { loadAndParseConfig } from "@cloudflare/config";
 import {
 	NpmPackageManager,
 	PnpmPackageManager,
@@ -82,11 +82,6 @@ describe("runAutoConfig()", () => {
 			"package.json": JSON.stringify({ name: "static-site" }),
 			"legacy.js":
 				'module.exports = require("node:path").basename(__filename);',
-			"node_modules/wrangler/package.json": JSON.stringify({
-				exports: { "./experimental-config": "./experimental-config.mjs" },
-			}),
-			"node_modules/wrangler/experimental-config.mjs":
-				"export function defineWranglerConfig(config) { return config; }",
 		});
 		const context = createMockContext();
 		const details = await getDetailsForAutoConfig({
@@ -107,10 +102,7 @@ describe("runAutoConfig()", () => {
 			{ isPreview: false, mode: undefined }
 		);
 		expect(result.success).toBe(true);
-		const { config } = await loadConfig(
-			join(process.cwd(), "wrangler.config.ts")
-		);
-		expect(config).toEqual({ assetsDirectory: "." });
+		expect(existsSync("wrangler.config.ts")).toBe(false);
 		const requireFromProject = createRequire(
 			join(process.cwd(), "package.json")
 		);
@@ -215,11 +207,7 @@ describe("runAutoConfig()", () => {
 				isWorkspaceRoot: false,
 			}
 		);
-		expect(cliPackages.installWrangler).toHaveBeenCalledWith(
-			"pnpm",
-			false,
-			projectPath
-		);
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
 		expect(
 			JSON.parse(readFileSync(join(projectPath, "package.json"), "utf8"))
 		).toMatchObject({ name: "static-app", scripts: { deploy: "cf deploy" } });
@@ -280,11 +268,7 @@ describe("runAutoConfig()", () => {
 				isWorkspaceRoot: false,
 			}
 		);
-		expect(cliPackages.installWrangler).toHaveBeenCalledWith(
-			"npm",
-			false,
-			projectPath
-		);
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
 		expect(summary.scripts).toEqual({
 			dev: "cf dev",
 			build: "cf build",
@@ -674,15 +658,9 @@ describe("runAutoConfig()", () => {
 		expect(readFileSync("cloudflare.config.ts", "utf8")).toContain(
 			'import type { CloudflareConfig } from "cf/config";\n\nexport default {\n  worker: {\n    "name": "my-static-app"'
 		);
-		expect(readFileSync("wrangler.config.ts", "utf8")).toContain(
-			'import { defineWranglerConfig } from "wrangler/experimental-config";\n\nexport default defineWranglerConfig({\n  "assetsDirectory": "public"'
-		);
+		expect(existsSync("wrangler.config.ts")).toBe(false);
 		expect(existsSync("wrangler.jsonc")).toBe(false);
-		expect(cliPackages.installWrangler).toHaveBeenCalledWith(
-			"npm",
-			false,
-			process.cwd()
-		);
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
 		expect(context.runCommand).toHaveBeenCalledWith(
 			"npx framework build",
 			process.cwd(),
@@ -694,7 +672,9 @@ describe("runAutoConfig()", () => {
 		);
 	});
 
-	it("installs cf and Wrangler for cf projects", async ({ expect }) => {
+	it("installs cf without Wrangler for a static cf project", async ({
+		expect,
+	}) => {
 		const packageJson = { name: "my-static-app" };
 		await seed({
 			"package.json": JSON.stringify(packageJson),
@@ -727,11 +707,7 @@ describe("runAutoConfig()", () => {
 				isWorkspaceRoot: false,
 			}
 		);
-		expect(cliPackages.installWrangler).toHaveBeenCalledWith(
-			"npm",
-			false,
-			process.cwd()
-		);
+		expect(cliPackages.installWrangler).not.toHaveBeenCalled();
 	});
 
 	it("does not reinstall existing cf or TypeScript dependencies", async ({
