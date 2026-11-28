@@ -154,15 +154,15 @@ function convertUndiciHeadersToStandard(
 		const standardHeaders = new undici.Headers();
 		for (const [name, value] of Object.entries(headers)) {
 			if (!ignored.includes(name)) {
-				if (!value) {
+				if (value === undefined || value === "") {
 					continue;
 				}
-				if (typeof value === "string") {
-					standardHeaders.append(name, value);
-				} else {
+				if (Array.isArray(value)) {
 					for (const v of value) {
 						standardHeaders.append(name, v);
 					}
+				} else {
+					standardHeaders.append(name, String(value));
 				}
 			}
 		}
@@ -261,44 +261,6 @@ export class DispatchFetchDispatcher extends undici.Dispatcher {
 			// Reuse successful connections for every method to avoid consuming one
 			// ephemeral port per dispatch, but surface failures instead of retrying
 			options.reset = false;
-
-			// undici 7 still invokes these callbacks. The published types mark them
-			// deprecated, so the names live on a local shape and the lint rule
-			// does not see the deprecated declarations.
-			const legacy = handler as {
-				onHeaders?(
-					status: number,
-					rawHeaders: Buffer[],
-					resume: () => void,
-					statusText: string
-				): boolean;
-				onError?(err: Error): void;
-			};
-			const onHeaders = legacy.onHeaders;
-			const onError = legacy.onError;
-			if (onHeaders !== undefined && onError !== undefined) {
-				let responseStatus = 0;
-				legacy.onHeaders = function (status, rawHeaders, resume, statusText) {
-					if (status >= 200) {
-						// 1xx replies arrive here before the final status;
-						// keep the final status >= 200
-						responseStatus = status;
-					}
-					return onHeaders.call(this, status, rawHeaders, resume, statusText);
-				};
-				legacy.onError = function (err) {
-					// A 421 retry aborts this connection. Ignore that abort so the
-					// replayed body still matches Content-Length.
-					const retryAbort =
-						responseStatus === 421 &&
-						err instanceof DOMException &&
-						err.name === "AbortError";
-					if (retryAbort) {
-						return;
-					}
-					return onError.call(this, err);
-				};
-			}
 
 			// Dispatch with runtime dispatcher to avoid certificate errors if using
 			// self-signed certificate
