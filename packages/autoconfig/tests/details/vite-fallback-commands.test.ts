@@ -107,6 +107,42 @@ export default { plugins: [cloudflare()] };`,
 		});
 	});
 
+	it.for([false, true])(
+		"reads BOM manifests without overriding the Vite+ runner (Vite+: %s)",
+		async (vitePlus, { expect }) => {
+			const binary = await seedProject(vitePlus);
+			await seed({
+				"package.json":
+					"\uFEFF" +
+					JSON.stringify({
+						devDependencies: {
+							"@cloudflare/vite-plugin": "beta",
+							...(vitePlus ? { "vite-plus": "1.5.0" } : {}),
+						},
+						scripts: {
+							dev: "vite --configLoader native",
+							build: "vite build --configLoader native",
+						},
+					}),
+				"vite.config.js": "export default {};",
+			});
+			await omitFrameworkCommands();
+			const details = await getDetailsForAutoConfig({ context });
+			const [major, minor] = process.versions.node.split(".").map(Number);
+			if (!vitePlus && (major > 22 || (major === 22 && minor >= 7))) {
+				expect(details).toMatchObject({
+					devCommand: "npm run dev --",
+					buildCommand: "npm run build --",
+				});
+			} else {
+				expect(details).toMatchObject({
+					devCommand: `${invocation(binary)} dev`,
+					buildCommand: `${invocation(binary)} build`,
+				});
+			}
+		}
+	);
+
 	it("uses native commands for a configured unsupported framework", async ({
 		expect,
 	}) => {
@@ -465,6 +501,35 @@ export default { plugins: [cloudflare()] };`,
 			expect(missing.commandError?.code).toBe("vite-plugin-not-installed");
 		}
 	);
+
+	it("keeps the workspace Vite+ runner instead of legacy native-loader scripts", async ({
+		expect,
+	}) => {
+		const binary = await seedProject(true);
+		await seed({
+			"package.json": JSON.stringify({
+				workspaces: ["apps/*"],
+				devDependencies: { "vite-plus": "*" },
+			}),
+			"apps/site/package.json": JSON.stringify({
+				name: "site",
+				devDependencies: { "@cloudflare/vite-plugin": "beta" },
+				scripts: {
+					dev: "vite --configLoader native",
+					build: "vite build --configLoader native",
+				},
+			}),
+			"apps/site/cloudflare.config.ts": "export default {};",
+			"apps/site/vite.config.js": "export default {};",
+		});
+		const projectPath = resolve("apps/site");
+		await omitFrameworkCommands(projectPath);
+		const details = await getDetailsForAutoConfig({ projectPath, context });
+		expect(details).toMatchObject({
+			devCommand: `${invocation(binary)} dev`,
+			buildCommand: `${invocation(binary)} build`,
+		});
+	});
 
 	it.for([false, true])(
 		"uses a custom config with an app plugin declaration and root tooling (Vite+: %s)",

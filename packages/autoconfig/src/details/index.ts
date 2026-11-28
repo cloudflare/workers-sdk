@@ -19,6 +19,11 @@ import {
 	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
+import {
+	getViteConfigPath,
+	hasViteConfig,
+	usesNativeJsViteConfig,
+} from "../frameworks/utils/vite-config";
 import { detectFramework } from "./framework-detection";
 import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
@@ -260,6 +265,15 @@ export async function getDetailsForAutoConfig({
 		outputDir = "dist";
 	}
 
+	const useNativeLoaderScripts =
+		target === "cf" &&
+		framework.id === "vite" &&
+		packageJson !== undefined &&
+		viteCommands?.runner !== "vite-plus" &&
+		hasViteConfig(projectPath) &&
+		getViteConfigPath(projectPath).endsWith(".js") &&
+		usesNativeJsViteConfig(projectPath);
+	const { type: packageManagerName } = packageManager;
 	const baseDetails = {
 		projectPath,
 		framework,
@@ -270,20 +284,24 @@ export async function getDetailsForAutoConfig({
 		commandError: viteCommands?.error,
 		devCommand: useStaticAssets
 			? undefined
-			: getProjectCommand(
-					detectedFramework.devCommand ?? fallbackCommands?.devCommand,
-					packageManager,
-					packageJson,
-					target
-				),
+			: useNativeLoaderScripts
+				? `${packageManagerName} run dev${packageManagerName === "npm" ? " --" : ""}`
+				: getProjectCommand(
+						detectedFramework.devCommand ?? fallbackCommands?.devCommand,
+						packageManager,
+						packageJson,
+						target
+					),
 		buildCommand: useStaticAssets
 			? undefined
-			: getProjectCommand(
-					detectedFramework.buildCommand ?? fallbackCommands?.buildCommand,
-					packageManager,
-					packageJson,
-					target
-				),
+			: useNativeLoaderScripts
+				? `${packageManagerName} run build${packageManagerName === "npm" ? " --" : ""}`
+				: getProjectCommand(
+						detectedFramework.buildCommand ?? fallbackCommands?.buildCommand,
+						packageManager,
+						packageJson,
+						target
+					),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
