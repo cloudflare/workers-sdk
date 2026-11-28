@@ -32,8 +32,8 @@ function createPoolWorker(): CloudflarePoolWorker {
 	Object.defineProperty(worker, "debug", {
 		value: util.debuglog("vitest-plugin"),
 	});
-	Object.defineProperty(worker, "moduleFetchRequestIds", {
-		value: new Set<string>(),
+	Object.defineProperty(worker, "moduleFetchRequests", {
+		value: new Map(),
 	});
 	return worker;
 }
