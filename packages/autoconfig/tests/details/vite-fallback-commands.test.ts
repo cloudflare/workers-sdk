@@ -288,9 +288,9 @@ export default { plugins: [cloudflare()] };`,
 		await rm("cloudflare.config.ts");
 		await seed({
 			"package.json": JSON.stringify({
-				dependencies: { gatsby: "5", "@cloudflare/vite-plugin": "beta" },
+				dependencies: { "ember-cli": "6", "@cloudflare/vite-plugin": "beta" },
 			}),
-			"public/index.html": "<h1>Gatsby</h1>",
+			"public/index.html": "<h1>Ember</h1>",
 		});
 		const details = await getDetailsForAutoConfig({ context });
 

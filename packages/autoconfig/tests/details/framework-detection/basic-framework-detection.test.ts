@@ -78,7 +78,7 @@ describe("detectFramework() / basic framework detection", () => {
 		await seed({
 			"package.json": JSON.stringify({
 				scripts: { build: "cf build", dev: "cf dev" },
-				dependencies: { gatsby: "5" },
+				dependencies: { "ember-cli": "6" },
 			}),
 			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
 		});
@@ -86,9 +86,24 @@ describe("detectFramework() / basic framework detection", () => {
 		const result = await detectFramework(process.cwd(), context);
 
 		expect(result.detectedFramework).toMatchObject({
-			framework: { id: "gatsby" },
+			framework: { id: "ember" },
 			buildCommand: undefined,
 			devCommand: undefined,
+		});
+	});
+
+	it("keeps only the build command of an unknown static site generator when targeting cf", async ({
+		expect,
+	}) => {
+		await seed({ "hugo.toml": 'title = "Site"\n' });
+
+		const result = await detectFramework(process.cwd(), context);
+
+		expect(result.detectedFramework).toMatchObject({
+			framework: { id: "hugo" },
+			buildCommand: "hugo",
+			devCommand: undefined,
+			dist: "public",
 		});
 	});
 

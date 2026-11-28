@@ -51,8 +51,8 @@ type AutoConfigDetailsBase = {
 
 export type AutoConfigDetailsForConfiguredProject = Optional<
 	AutoConfigDetailsBase,
-	// If AutoConfig detects that the project is already configured it's unnecessary to check
-	// what framework is being used nor the output directory, so in this case thee fields are optional
+	// A configured project still reports the framework and output directory that AutoConfig
+	// detects, but either may be missing, since the project doesn't need setting up
 	"framework" | "outputDir"
 > & {
 	configured: true;

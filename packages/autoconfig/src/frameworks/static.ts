@@ -5,9 +5,10 @@ import type {
 } from "./framework-class";
 
 export class Static extends Framework {
-	configure({ outputDir }: ConfigurationOptions): ConfigurationResults {
+	configure({ outputDir, target }: ConfigurationOptions): ConfigurationResults {
 		return {
-			buildTool: "wrangler",
+			// cf writes the assets of a static site itself, without Wrangler
+			buildTool: target === "cf" ? undefined : "wrangler",
 			workerConfig: {},
 			buildConfig: { assetsDirectory: outputDir },
 		};

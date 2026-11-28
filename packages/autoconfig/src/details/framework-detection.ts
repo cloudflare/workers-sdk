@@ -131,15 +131,28 @@ export async function detectFramework(
 		// @netlify/build-info prefers package.json scripts over the framework's
 		// built-in commands. cf needs direct commands for supported frameworks, but
 		// delegates unsupported frameworks to an installed Cloudflare dev server and
-		// must not execute their generic package scripts.
-		const detectedFrameworkSettings = frameworkIsSupported
-			? project.frameworks
-					.get(maybeDetectedFramework.baseDirectory ?? "")
-					?.find(({ id }) => id === frameworkId)
+		// must not execute their generic package scripts. cf deploys an unknown static
+		// site generator as static assets, so it runs the generator's own build first.
+		const frameworkSettings = project.frameworks
+			.get(maybeDetectedFramework.baseDirectory ?? "")
+			?.find(({ id }) => id === frameworkId);
+		const isUnknownStaticSiteGenerator =
+			!isKnownFramework(frameworkId, target) &&
+			`${frameworkSettings?.category}` === "static_site_generator";
+		const buildCommand =
+			frameworkIsSupported || isUnknownStaticSiteGenerator
+				? frameworkSettings?.build?.command
+				: undefined;
+		maybeDetectedFramework.devCommand = frameworkIsSupported
+			? frameworkSettings?.dev?.command
 			: undefined;
-		maybeDetectedFramework.devCommand = detectedFrameworkSettings?.dev?.command;
+		// A framework without a build command of its own gets the generic
+		// `<package manager> run build` script from @netlify/build-info, which cf must not run either
 		maybeDetectedFramework.buildCommand =
-			detectedFrameworkSettings?.build?.command;
+			buildCommand ===
+			`${project.packageManager?.runCommand ?? "npm run"} build`
+				? undefined
+				: buildCommand;
 	}
 
 	if (

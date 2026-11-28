@@ -104,6 +104,23 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		).resolves.toMatchObject({ configured: false });
 	});
 
+	it("reports the output directory of a static site that has a Cloudflare config", async ({
+		expect,
+	}) => {
+		await seed({
+			"cloudflare.config.ts": "export default {};",
+			"public/index.html": "<h1>Hello World</h1>",
+		});
+
+		await expect(
+			details.getDetailsForAutoConfig({ context })
+		).resolves.toMatchObject({
+			configured: true,
+			framework: { id: "static" },
+			outputDir: "public",
+		});
+	});
+
 	it("should detect commands without using the package dev script when a Cloudflare config exists", async ({
 		expect,
 	}) => {
