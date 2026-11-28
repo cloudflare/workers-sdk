@@ -79,6 +79,10 @@ export async function fetch(
 		});
 		ws.once("unexpected-response", (_, req) => {
 			const headers = convertUndiciHeadersToStandard(req.headers);
+			// Nothing else uses this connection, and once the body is read it has no
+			// `error` listener left, so a reset from the runtime would throw.
+			const socket = req.socket;
+			req.once("end", () => socket?.destroy());
 			const response = new Response(req, {
 				status: req.statusCode,
 				headers,

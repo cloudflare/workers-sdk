@@ -183,7 +183,7 @@ test.for(["dev", "preview"] as const)(
 				);
 				try {
 					await expect(once(foreignClient, "open")).rejects.toThrow(
-						"socket hang up"
+						"Unexpected server response: 403"
 					);
 				} finally {
 					foreignClient.terminate();

@@ -1,6 +1,7 @@
 import { once } from "node:events";
 import http from "node:http";
 import net from "node:net";
+import { text } from "node:stream/consumers";
 import { DeferredPromise, Headers, Miniflare, Response } from "miniflare";
 import {
 	afterEach,
@@ -31,13 +32,28 @@ describe("handleWebSocket", () => {
 		}
 	}`;
 
-	beforeEach(() => {
-		miniflare = undefined;
-		httpServer = http.createServer((_req, res) => res.end("OK"));
-		httpServer.on("connection", (socket) => {
+	const REJECTION_BODY = "unauthorized".repeat(512);
+	const REJECTING_WORKER_SCRIPT = `export default {
+		fetch() {
+			return new Response(${JSON.stringify(REJECTION_BODY)}, {
+				status: 401,
+				headers: { "x-worker-response": "denied" },
+			});
+		}
+	}`;
+
+	function createTestServer(options: http.ServerOptions = {}) {
+		const server = http.createServer(options, (_req, res) => res.end("OK"));
+		server.on("connection", (socket) => {
 			serverSockets.add(socket);
 			socket.on("close", () => serverSockets.delete(socket));
 		});
+		return server;
+	}
+
+	beforeEach(() => {
+		miniflare = undefined;
+		httpServer = createTestServer();
 	});
 
 	/**
@@ -663,18 +679,16 @@ describe("handleWebSocket", () => {
 		socket.destroy();
 	});
 
-	test("destroys an unclaimed upgrade when the Worker does not route it", async () => {
-		const mf = await listen();
-		vi.spyOn(mf, "dispatchFetch").mockResolvedValue(
-			new Response("not found", { status: 404 })
-		);
+	test("sends the full Worker rejection and closes the socket under backpressure", async ({
+		expect,
+	}) => {
+		httpServer = createTestServer({ highWaterMark: 4096 });
+		startMiniflare(REJECTING_WORKER_SCRIPT);
+		await listen();
 
 		const socket = await connect();
-		const closed = new Promise<void>((resolve) =>
-			socket.on("close", () => resolve())
-		);
 		socket.write(
-			"GET /unrouted HTTP/1.1\r\n" +
+			"GET / HTTP/1.1\r\n" +
 				`Host: 127.0.0.1:${port}\r\n` +
 				"Upgrade: websocket\r\n" +
 				"Connection: Upgrade\r\n" +
@@ -682,6 +696,98 @@ describe("handleWebSocket", () => {
 				"Sec-WebSocket-Version: 13\r\n\r\n"
 		);
 
-		await closed;
+		const raw = await text(socket);
+		const [headers, body] = raw.split("\r\n\r\n", 2);
+		expect(headers).toMatch(/^HTTP\/1\.1 401 /);
+		expect(headers).toContain("\r\nx-worker-response: denied");
+		expect(headers).toMatch(/\r\nconnection: close(\r\n|$)/i);
+		expect(body).toBe(REJECTION_BODY);
+	});
+
+	test("sends the Worker's redirect unchanged instead of following it", async ({
+		expect,
+	}) => {
+		startMiniflare(`export default {
+			fetch(request) {
+				if (new URL(request.url).pathname === "/login") {
+					return new Response("<h1>login page</h1>", {
+						headers: { "content-type": "text/html" },
+					});
+				}
+				return new Response(null, {
+					status: 302,
+					headers: { Location: "/login" },
+				});
+			}
+		}`);
+		await listen();
+
+		const socket = await connect();
+		socket.write(
+			"GET / HTTP/1.1\r\n" +
+				`Host: 127.0.0.1:${port}\r\n` +
+				"Upgrade: websocket\r\n" +
+				"Connection: Upgrade\r\n" +
+				"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" +
+				"Sec-WebSocket-Version: 13\r\n\r\n"
+		);
+
+		const raw = await text(socket);
+		expect(raw).toMatch(/^HTTP\/1\.1 302 /);
+		expect(raw).toContain("\r\nlocation: /login\r\n");
+		expect(raw).not.toContain("<h1>login page</h1>");
+	});
+
+	test("reports the Worker's 401 as an unexpected response to a WebSocket client", async ({
+		expect,
+	}) => {
+		startMiniflare(REJECTING_WORKER_SCRIPT);
+		await listen();
+
+		const client = new WebSocket(`ws://127.0.0.1:${port}/`);
+		onTestFinished(() => client.terminate());
+		const upgradeResponse = await new Promise<http.IncomingMessage>(
+			(resolve, reject) => {
+				client.once("unexpected-response", (_request, response) =>
+					resolve(response)
+				);
+				client.once("error", reject);
+			}
+		);
+		upgradeResponse.resume();
+		expect(upgradeResponse.statusCode).toBe(401);
+	});
+
+	test("sends the Worker rejection after a completed keep-alive response on the same socket", async ({
+		expect,
+	}) => {
+		startMiniflare(REJECTING_WORKER_SCRIPT);
+		await listen();
+		const agent = new http.Agent({ keepAlive: true, maxSockets: 1 });
+		onTestFinished(() => agent.destroy());
+
+		function get(path: string, headers?: http.OutgoingHttpHeaders) {
+			return new Promise<http.IncomingMessage>((resolve, reject) => {
+				http
+					.get({ hostname: "127.0.0.1", port, path, agent, headers }, resolve)
+					.once("error", reject);
+			});
+		}
+
+		const page = await get("/ok");
+		const socket = page.socket;
+		expect(page.statusCode).toBe(200);
+		expect(await text(page)).toBe("OK");
+
+		const rejection = await get("/reject", {
+			Upgrade: "websocket",
+			Connection: "Upgrade",
+			"Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+			"Sec-WebSocket-Version": "13",
+		});
+		expect(rejection.socket).toBe(socket);
+		expect(rejection.statusCode).toBe(401);
+		expect(rejection.headers["x-worker-response"]).toBe("denied");
+		expect(await text(rejection)).toBe(REJECTION_BODY);
 	});
 });
