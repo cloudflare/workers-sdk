@@ -849,10 +849,13 @@ function addProductBindings(
 			worker: targetWorkerName,
 			exportName: workflow.className,
 			unsafeConfig:
-				workflow.events === undefined && workflow.stepLimit === undefined
+				workflow.events === undefined &&
+				workflow.stepLimit === undefined &&
+				workflow.schedules === undefined
 					? undefined
 					: {
 							events: workflow.events,
+							schedules: workflow.schedules,
 							...(workflow.stepLimit === undefined
 								? {}
 								: { limits: { steps: workflow.stepLimit } }),

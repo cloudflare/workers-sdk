@@ -89,6 +89,43 @@ test("starts Workflows with user-provided experimental compatibility flag", asyn
 
 	expect(await pollWorkflowStatus(mf)).toBe(COMPLETE_STATUS);
 });
+test("accepts a workflow with cron schedules configured", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const mf = new Miniflare({
+		resourcePersistencePath: tmp,
+		workers: [
+			{
+				config: {
+					name: "workflow-compatibility-flags-worker",
+					compatibilityDate: "2024-11-20",
+					compatibilityFlags: [
+						"nodejs_compat",
+						"experimental",
+						"enhanced_error_serialization",
+					],
+					manifest: singleModuleManifest(WORKFLOW_SCRIPT()),
+					env: {
+						MY_WORKFLOW: {
+							type: "workflow",
+							name: "MY_WORKFLOW",
+							worker: "workflow-compatibility-flags-worker",
+							exportName: "MyWorkflow",
+							unsafeConfig: { schedules: ["0 * * * *", "*/15 * * * *"] },
+						},
+					},
+				},
+			},
+		],
+	});
+	useDispose(mf);
+
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe(
+		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
+	);
+});
 
 test("subscribes to Workflow instance events through an RPC target", async ({
 	expect,

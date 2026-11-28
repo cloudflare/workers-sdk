@@ -482,6 +482,7 @@ const V4WorkerOptionsShapeSchema = z.object({
 				scriptName: z.string().optional(),
 				external: z.boolean().optional(),
 				stepLimit: z.number().int().min(1).optional(),
+				schedules: z.string().array().optional(),
 			})
 		)
 		.optional(),
@@ -929,6 +930,7 @@ export type V4WorkerOptionsShape = {
 			external?: boolean;
 			events?: ArtifactsEventSubscription[];
 			stepLimit?: number;
+			schedules?: string[];
 		}
 	>;
 	workflowExports?: Record<

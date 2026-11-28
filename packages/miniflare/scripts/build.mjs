@@ -30,7 +30,7 @@
  *   worker-metafiles/          esbuild metafiles for each worker (for bundle analysis)
  */
 
-import { cpSync, existsSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { removeDir } from "@cloudflare/workers-utils/fs-helpers";
@@ -183,6 +183,22 @@ const aliasZodToMiniflareExtensionPlugin = {
 };
 
 /**
+ * Keeps `.wasm` imports external in worker sub-builds so the bundled worker
+ * imports the wasm by basename; the workflows plugin registers it as a separate
+ * `CompiledWasm` module (the workerd-native way to embed WASM).
+ * @type {esbuild.Plugin}
+ */
+const externalWasmPlugin = {
+	name: "external-wasm",
+	setup(build) {
+		build.onResolve({ filter: /\.wasm$/ }, (args) => ({
+			path: "./" + path.basename(args.path),
+			external: true,
+		}));
+	},
+};
+
+/**
  * Cache of esbuild build contexts for worker sub-builds. In watch mode,
  * these are reused across rebuilds for incremental compilation.
  * @type {Map<string, esbuild.BuildContext>}
@@ -254,6 +270,7 @@ const embedWorkersPlugin = {
 					outdir: build.initialOptions.outdir,
 					outbase: pkgRoot,
 					plugins: [
+						externalWasmPlugin,
 						// Shared extension workers need node:* → node-internal:*
 						...(args.path === miniflareSharedExtensionPath ||
 						args.path === miniflareZodExtensionPath
@@ -347,6 +364,28 @@ function copyLocalExplorerUi(outPath, pkgRoot) {
 			"Expected local-explorer-ui to be at " + localExplorerUiSrc
 		);
 	}
+}
+
+/**
+ * Copy the vendored saffron WASM into dist so the workflows plugin can register
+ * it as a `CompiledWasm` module for the SAFFRON service (mirrors copyLocalExplorerUi).
+ * @param {string} outPath  The miniflare dist output directory (dist/)
+ * @param {string} pkgRoot  The miniflare package root
+ */
+function copySaffron(outPath, pkgRoot) {
+	const saffronWasmSrc = path.join(
+		pkgRoot,
+		"../workflows-shared/src/vendor/saffron/saffron_bg.wasm"
+	);
+
+	if (!existsSync(saffronWasmSrc)) {
+		throw new Error("Expected vendored saffron wasm at " + saffronWasmSrc);
+	}
+
+	const saffronDest = path.join(outPath, "saffron");
+	mkdirSync(saffronDest, { recursive: true });
+	cpSync(saffronWasmSrc, path.join(saffronDest, "saffron_bg.wasm"));
+	console.log("Copied saffron wasm to", saffronDest);
 }
 
 // --- Sourcemap post-processing ---
@@ -473,6 +512,7 @@ async function buildPackage() {
 	}
 
 	copyLocalExplorerUi(outPath, pkgRoot);
+	copySaffron(outPath, pkgRoot);
 	if (sourcemap) {
 		await patchSourcemaps(outPath);
 	}
