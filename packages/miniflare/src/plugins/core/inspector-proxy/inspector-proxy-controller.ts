@@ -84,7 +84,9 @@ export class InspectorProxyController {
 	 * isn't possible when the new port is the old one on a different host: then
 	 * the old server closes first.
 	 *
-	 * If the new server can't listen, the old one keeps serving where it was.
+	 * If the new server can't listen, the old server and the options stay as
+	 * they were, so a later update tries again. The old server keeps serving
+	 * unless it was closed first.
 	 */
 	async #restartServer(previousOptions: { port: number; host: string }) {
 		const oldServer = await this.#server.catch(() => undefined);
@@ -99,16 +101,19 @@ export class InspectorProxyController {
 		try {
 			await newServer;
 		} catch (error) {
-			if (oldServer !== undefined && !closeFirst) {
+			if (oldServer === undefined) {
+				this.#server = newServer;
+			} else {
+				// Keep a server that has listened before, even if closed. Miniflare
+				// waits on `#server` for readiness, also once the inspector is
+				// disabled, so a failed listen must not stay stored there.
 				this.inspectorPortOption = previousOptions.port;
 				this.inspectorHostOption = previousOptions.host;
-			} else {
-				this.#server = newServer;
 			}
 			throw error;
 		}
 		this.#server = newServer;
-		if (oldServer !== undefined && !closeFirst) {
+		if (oldServer?.listening) {
 			await this.#closeServer(oldServer);
 		}
 	}
@@ -331,17 +336,41 @@ export class InspectorProxyController {
 			portChanged &&
 			inspectorPortOption !== 0 &&
 			inspectorPortOption === (await this.#getListeningPort());
+		// A server that listened before but has been closed by a failed restart
+		// listens again, even if the options haven't changed since
+		const closedAfterFailedRestart =
+			(await this.#server.then(
+				() => true,
+				() => false
+			)) && (await this.#getListeningPort()) === undefined;
 		const previousOptions = {
 			port: this.inspectorPortOption,
 			host: this.inspectorHostOption,
 		};
 		this.inspectorPortOption = inspectorPortOption;
 		this.inspectorHostOption = inspectorHostOption;
-		if ((hostChanged || portChanged) && !alreadyListening) {
-			await this.#restartServer(previousOptions);
+		let restartError: unknown;
+		if (
+			((hostChanged || portChanged) && !alreadyListening) ||
+			closedAfterFailedRestart
+		) {
+			try {
+				await this.#restartServer(previousOptions);
+			} catch (error) {
+				restartError = error;
+			}
+		}
+		// The runtime has already been replaced, so connect to it even if the
+		// server failed to move. The server that kept listening then serves
+		// the new runtime's Workers, not the stopped one's.
+		await this.#connectToRuntime(runtimeInspectorPort);
+		if (restartError !== undefined) {
+			throw restartError;
 		}
 		await this.#server;
+	}
 
+	async #connectToRuntime(runtimeInspectorPort: number) {
 		const workerdInspectorJson = (await fetch(
 			`http://127.0.0.1:${runtimeInspectorPort}/json`
 		).then((resp) => resp.json())) as {

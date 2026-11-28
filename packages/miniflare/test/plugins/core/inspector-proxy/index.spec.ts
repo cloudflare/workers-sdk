@@ -118,6 +118,125 @@ test("InspectorProxy: keeps serving, and can retry, when a new port fails to bin
 	expect(await controller.getInspectorURL()).toEqual(url);
 });
 
+test("InspectorProxy: debugs the new runtime through the old port when moving the inspector fails", async ({
+	expect,
+	onTestFinished,
+}) => {
+	const blocker = net.createServer();
+	const blockedPort = await listenOnRandomPort(blocker);
+	onTestFinished(() => closeServer(blocker));
+	const worker = (name: string) => ({
+		config: {
+			name,
+			compatibilityDate: "2025-05-01",
+			manifest: singleModuleManifest(
+				`export default { fetch() { return new Response("body"); } }`
+			),
+		},
+		dev: { unsafeInspectorProxy: true },
+	});
+	const mf = new Miniflare({ inspectorPort: 0, workers: [worker("a")] });
+	useDispose(mf);
+	const host = await getInspectorHostReady(mf);
+
+	// The runtime restarts with worker "b" before the inspector fails to move
+	await expect(
+		mf.setOptions({ inspectorPort: blockedPort, workers: [worker("b")] })
+	).rejects.toMatchObject({ code: "EADDRINUSE" });
+
+	const res = await fetch(`http://${host}/json`);
+	const inspectors = (await res.json()) as { webSocketDebuggerUrl: string }[];
+	expect(inspectors.map((inspector) => inspector.webSocketDebuggerUrl)).toEqual(
+		[`ws://${host}/b`]
+	);
+
+	const ws = new WebSocket(`ws://${host}/b`);
+	const messages = events.on(ws, "message");
+	async function nextMessage() {
+		const messageEvent = (await messages.next()).value;
+		return JSON.parse(messageEvent[0].toString());
+	}
+	await events.once(ws, "open");
+	ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
+	expect(await nextMessagesUntilResponse(nextMessage, 0)).toContainEqual(
+		userScriptParsedEvent(expect)
+	);
+	ws.close();
+});
+
+test("InspectorProxy: listens again after failing to move to another host on the same port", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// Stands in for workerd's inspector, which lists no workers
+	const runtime = http.createServer((_req, res) => res.end("[]"));
+	const runtimePort = await listenOnRandomPort(runtime);
+	onTestFinished(() => closeServer(runtime));
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		new TestLog(),
+		new Set()
+	);
+	onTestFinished(() => controller.dispose());
+	const { port } = await controller.getInspectorURL();
+
+	// The old server has to close before the same port can be used on another
+	// host, so a failure leaves nothing listening
+	await expect(
+		controller.updateConnection(
+			parseInt(port),
+			"192.0.2.1",
+			runtimePort,
+			new Set()
+		)
+	).rejects.toMatchObject({ address: "192.0.2.1", syscall: "listen" });
+	await expect(controller.getInspectorURL()).rejects.toThrow(
+		"Unable to acquire a port"
+	);
+
+	// The options went back to port 0 on 127.0.0.1, and the server listens
+	// again even though they are unchanged
+	await controller.updateConnection(0, "127.0.0.1", runtimePort, new Set());
+	const url = await controller.getInspectorURL();
+	const res = await fetch(`http://${url.host}/json/version`);
+	expect(res.status).toBe(200);
+});
+
+test("InspectorProxy: a failed inspector move doesn't block requests once the inspector is disabled", async ({
+	expect,
+}) => {
+	const worker = {
+		config: {
+			name: "",
+			compatibilityDate: "2025-05-01",
+		},
+		legacy: {
+			serviceWorkerScript:
+				'addEventListener("fetch", (event) => event.respondWith(new Response("body")));',
+		},
+	};
+	const options: MiniflareOptions = {
+		workers: [{ ...worker, dev: { unsafeInspectorProxy: true } }],
+	};
+	const mf = new Miniflare({ ...options, inspectorPort: 0 });
+	useDispose(mf);
+	const host = await useFixedInspectorPort(mf, options);
+	const { port } = new URL(`http://${host}`);
+
+	await expect(
+		mf.setOptions({
+			...options,
+			inspectorPort: parseInt(port),
+			inspectorHost: "192.0.2.1",
+		})
+	).rejects.toMatchObject({ address: "192.0.2.1", syscall: "listen" });
+
+	await mf.setOptions({ workers: [worker] });
+	const res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("body");
+});
+
 test("InspectorProxy: propagates bind failure through Miniflare", async ({
 	expect,
 }) => {
