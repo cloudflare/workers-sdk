@@ -195,6 +195,55 @@ describe("asset-server handler", () => {
 		}
 	});
 
+	describe("repeated slashes in the request path", () => {
+		const metadata = createMetadataObject({
+			deploymentId: "mock-deployment-id",
+			redirects: {
+				invalid: [],
+				rules: [
+					{ from: "/old", to: "/secure/page", status: 301, lineNumber: 1 },
+				],
+			},
+			headers: {
+				invalid: [],
+				rules: [
+					{
+						path: "/secure/*",
+						headers: { "x-frame-options": "DENY" },
+						unsetHeaders: [],
+					},
+				],
+			},
+		}) as Metadata;
+		const findAssetEntryForPath = async (path: string) =>
+			path === "/secure/page" ? "secure-page" : null;
+
+		test.for(["//secure/page", "/secure//page", "//secure///page"])(
+			"serves the asset and applies _headers rules for %s",
+			async (path, { expect }) => {
+				const { response } = await getTestResponse({
+					request: `https://example.com${path}`,
+					metadata,
+					findAssetEntryForPath,
+				});
+
+				expect(response.status).toBe(200);
+				expect(response.headers.get("x-frame-options")).toBe("DENY");
+			}
+		);
+
+		test("matches _redirects rules", async ({ expect }) => {
+			const { response } = await getTestResponse({
+				request: "https://example.com//old?keep=1",
+				metadata,
+				findAssetEntryForPath,
+			});
+
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe("/secure/page?keep=1");
+		});
+	});
+
 	test("Match exact pathnames, before any HTML redirection", async ({
 		expect,
 	}) => {
@@ -1243,7 +1292,7 @@ describe("asset-server handler", () => {
 
 				expect(response.status).toBe(302);
 				expect(response.headers.get("Location")).toBe(
-					`${protocol}://other.example//images/logo.png?next=https://example.com/a//b#section//one`
+					`${protocol}://other.example/images/logo.png?next=https://example.com/a//b#section//one`
 				);
 			}
 		);
@@ -1270,7 +1319,7 @@ describe("asset-server handler", () => {
 				"/old/*",
 				"/old//images/logo.png",
 				"https://other.example/:splat",
-				"https://other.example//images/logo.png",
+				"https://other.example/images/logo.png",
 			],
 		])(
 			"normalizes the pathname of %s -> %s (%s)",
@@ -1284,6 +1333,28 @@ describe("asset-server handler", () => {
 
 				expect(response.status).toBe(302);
 				expect(response.headers.get("Location")).toBe(location);
+			}
+		);
+
+		test.for([
+			["/old", 301, "/new"],
+			["/rewrite", 200, null],
+		] as const)(
+			"matches %s with malformed percent-escapes in the query",
+			async ([from, status, location], { expect }) => {
+				const { response } = await getTestResponse({
+					request: `https://foo.com${from}?sub=%RAND%`,
+					metadata: createMetadataObjectWithRedirects([
+						{ from, to: "/new", status },
+					]),
+					findAssetEntryForPath: async (path) =>
+						path === "/new" ? "new" : null,
+				});
+
+				expect(response.status).toBe(status);
+				expect(response.headers.get("Location")).toBe(
+					location && `${location}?sub=%RAND%`
+				);
 			}
 		);
 
