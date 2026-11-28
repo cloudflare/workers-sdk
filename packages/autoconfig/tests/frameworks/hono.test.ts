@@ -144,7 +144,7 @@ export default defineConfig({
 		});
 
 		await expect(configure({ dryRun: true })).rejects.toThrow(
-			"cf can't set up a Hono build that combines several entry files automatically yet: `src/index.ts`, `src/cron.ts`."
+			"cf can't set up a Hono build that combines several entry files automatically yet: `./src/index.ts`, `src/cron.ts`."
 		);
 	});
 

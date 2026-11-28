@@ -62,17 +62,10 @@ export class Hono extends Framework {
 			: { names: [], buildEntries: [], devServerEntries: [] };
 		// Hono's build plugin combines the handlers of every entry file into one Worker, which a
 		// single entry point can't do
-		const buildEntryFiles = new Set(
-			honoVitePlugins.buildEntries
-				.map((file) => resolve(projectPath, file))
-				.filter((file) => existsSync(file))
-		);
-		if (buildEntryFiles.size > 1) {
+		if (honoVitePlugins.buildEntries.length > 1) {
 			throw new AutoConfigFrameworkConfigurationError(
-				`cf can't set up a Hono build that combines several entry files automatically yet: ${[
-					...buildEntryFiles,
-				]
-					.map((file) => `\`${toProjectPath(projectPath, file)}\``)
+				`cf can't set up a Hono build that combines several entry files automatically yet: ${honoVitePlugins.buildEntries
+					.map((file) => `\`${file}\``)
 					.join(", ")}.`,
 				{ telemetryMessage: "autoconfig hono multiple build entries" }
 			);
@@ -234,7 +227,7 @@ function findEntrypoint(
 		);
 	}
 
-	const entrypoint = toProjectPath(projectPath, entry);
+	const entrypoint = relative(projectPath, entry).split(sep).join(posix.sep);
 	if (!hasDefaultExport(entry)) {
 		throw new AutoConfigFrameworkConfigurationError(
 			`\`${entrypoint}\` doesn't export the Hono app, so it can't run as a Worker. Export the app with \`export default app\`, and start any Node.js server from a separate file.`,
@@ -243,10 +236,6 @@ function findEntrypoint(
 	}
 
 	return entrypoint;
-}
-
-function toProjectPath(projectPath: string, file: string): string {
-	return relative(projectPath, file).split(sep).join(posix.sep);
 }
 
 function hasDefaultExport(file: string): boolean {
