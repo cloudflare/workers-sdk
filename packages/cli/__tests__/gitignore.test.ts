@@ -370,7 +370,7 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
 		`);
 	});
 
-	test("should only append additional entries that are not already present as exact lines", ({
+	test("should skip additional entries covered by existing patterns without broadening directory-only entries", ({
 		expect,
 	}) => {
 		mockIgnoreFile(
@@ -383,10 +383,18 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
       !.env.example
       /functions
       .git
+      node_modules
+      .cloudflare/
     `
 		);
 		maybeAppendWranglerToGitIgnoreLikeFile("my-project/.assetsignore", {
-			additionalEntries: ["/functions", ".git", ".npmrc"],
+			additionalEntries: [
+				"/functions",
+				".git",
+				".npmrc",
+				"node_modules/",
+				".cloudflare",
+			],
 		});
 
 		expect(appendFileSyncMock.mock.calls).toMatchInlineSnapshot(`
@@ -395,10 +403,26 @@ describe("maybeAppendWranglerToGitIgnoreLikeFile", () => {
 			    "my-project/.assetsignore",
 			    "
 			.npmrc
+			.cloudflare
 			",
 			  ],
 			]
 		`);
+	});
+
+	test("preserves a later exception to an existing additional ignore rule", ({
+		expect,
+	}) => {
+		const filePath = "my-project/.gitignore";
+		mockIgnoreFile(
+			filePath,
+			".wrangler\n.dev.vars*\n!.dev.vars.example\n.env*\n!.env.example\nnode_modules\n!/node_modules/\n"
+		);
+		maybeAppendWranglerToGitIgnoreLikeFile(filePath, {
+			additionalEntries: ["node_modules/"],
+		});
+
+		expect(appendFileSyncMock).not.toHaveBeenCalled();
 	});
 
 	test("should not append an additional entry twice when it is repeated or already queued", ({

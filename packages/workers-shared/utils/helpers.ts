@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { stat } from "node:fs/promises";
 import { isAbsolute, resolve, sep } from "node:path";
 import { TextDecoder } from "node:util";
 import ignore from "ignore";
@@ -100,8 +101,8 @@ function readAssetsIgnoreFile(filePath: string): string | undefined {
 /**
  * Create a function for filtering out ignored assets.
  *
- * The generated function takes an asset path, relative to the asset directory,
- * and returns true if the asset should not be ignored.
+ * The generated filter returns true if a path relative to the asset directory
+ * should be ignored.
  */
 export async function createAssetsIgnoreFunction(dir: string) {
 	const cfAssetIgnorePath = resolve(dir, CF_ASSETS_IGNORE_FILENAME);
@@ -118,11 +119,34 @@ export async function createAssetsIgnoreFunction(dir: string) {
 	const assetsIgnore = readAssetsIgnoreFile(cfAssetIgnorePath);
 	if (assetsIgnore !== undefined) {
 		assetsIgnoreFilePresent = true;
-		ignorePatterns.push(...assetsIgnore.split("\n"));
+		ignorePatterns.push(...assetsIgnore.split(/\r?\n/));
 	}
 
 	return {
 		assetsIgnoreFunction: createPatternMatcher(ignorePatterns, true),
 		assetsIgnoreFilePresent,
+	};
+}
+
+/** Create a copy filter that honors `.assetsignore` and preserves root asset metadata. */
+export async function createAssetsCopyFilter(dir: string) {
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
+	return async (relativePath: string): Promise<boolean> => {
+		if (
+			[
+				CF_ASSETS_IGNORE_FILENAME,
+				HEADERS_FILENAME,
+				REDIRECTS_FILENAME,
+			].includes(relativePath)
+		) {
+			return true;
+		}
+		const ignoredAsFile = assetsIgnoreFunction(relativePath);
+		const ignoredAsDirectory = assetsIgnoreFunction(`${relativePath}/`);
+		if (ignoredAsFile === ignoredAsDirectory) {
+			return !ignoredAsFile;
+		}
+		const stats = await stat(resolve(dir, relativePath));
+		return !(stats.isDirectory() ? ignoredAsDirectory : ignoredAsFile);
 	};
 }

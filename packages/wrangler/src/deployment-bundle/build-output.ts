@@ -5,7 +5,7 @@ import {
 	writeAssets,
 	writeWorkerConfig,
 } from "@cloudflare/build-output-utils";
-import { UserError } from "@cloudflare/workers-utils";
+import { createAssetsCopyFilter, UserError } from "@cloudflare/workers-utils";
 import type {
 	ModuleType,
 	ParsedWorkerConfig,
@@ -43,11 +43,16 @@ export async function writeWorkerOutput({
 			? writeBundle({ root, buildResult })
 			: Promise.resolve(undefined),
 		assetsOptions
-			? writeAssets({ root, sourceDirectory: assetsOptions.directory })
+			? writeWorkerAssets(root, assetsOptions.directory)
 			: Promise.resolve(),
 	]);
 
 	await writeWorkerConfig({ root, config: workerConfig, manifest });
+}
+
+async function writeWorkerAssets(root: string, sourceDirectory: string) {
+	const filter = await createAssetsCopyFilter(sourceDirectory);
+	await writeAssets({ root, sourceDirectory, filter });
 }
 
 async function writeBundle({

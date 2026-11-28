@@ -55,9 +55,9 @@ export class Vite extends Framework {
 			});
 
 			if (hasViteConfig(projectPath)) {
-				transformViteConfig(projectPath);
+				transformViteConfig(projectPath, { target });
 			} else {
-				createViteConfig(projectPath);
+				createViteConfig(projectPath, target);
 			}
 		}
 
@@ -77,11 +77,12 @@ export class Vite extends Framework {
  * configured. Used when a Vite project has no config file (e.g. projects
  * scaffolded with `npm create vite@latest --template vanilla`).
  *
- * The file extension (`.ts` or `.js`) is chosen based on whether the project
- * has a `tsconfig.json`.
+ * Use an explicit ESM extension for cf so the config can load the ESM-only
+ * plugin without changing the project's package.json module type.
  */
-function createViteConfig(projectPath: string): void {
-	const ext = usesTypescript(projectPath) ? "ts" : "js";
+function createViteConfig(projectPath: string, target: AutoConfigTarget): void {
+	const ext =
+		target === "cf" ? "mts" : usesTypescript(projectPath) ? "ts" : "js";
 	const filePath = join(projectPath, `vite.config.${ext}`);
 	const content = `import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";

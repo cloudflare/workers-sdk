@@ -38,6 +38,7 @@ export async function installCloudflareVitePlugin({
 		// the latest version of 6.x, in this way it will be compatible
 		// with the vite plugin (likely without causing any inconvenience)
 		await installPackages(packageManager, ["vite@^6.1.0"], {
+			cwd: projectPath,
 			dev: true,
 			startText:
 				"Updating the version of vite to be compatible with the Cloudflare Vite Plugin",
@@ -47,6 +48,7 @@ export async function installCloudflareVitePlugin({
 	}
 
 	await installPackages(packageManager, [packageSpecifier], {
+		cwd: projectPath,
 		dev: true,
 		startText: "Installing the Cloudflare Vite plugin",
 		doneText: `${brandColor(`installed`)} ${dim(packageSpecifier)}`,

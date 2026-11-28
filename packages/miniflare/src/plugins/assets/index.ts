@@ -376,7 +376,6 @@ export type AssetReverseMap = {
  * NB: This runs every time the dev server restarts.
  */
 const walk = async (dir: string) => {
-	const files = await fs.readdir(dir, { recursive: true });
 	const manifest: ManifestEntry[] = [];
 	const assetsReverseMap: AssetReverseMap = {};
 	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir).catch(
@@ -388,20 +387,46 @@ const walk = async (dir: string) => {
 		}
 	);
 	let counter = 0;
-	await Promise.all(
-		files.map(async (file) => {
-			if (assetsIgnoreFunction(file)) {
-				return;
-			}
-			/** absolute file path */
-			const filepath = path.join(dir, file);
-			const relativeFilepath = path.relative(dir, filepath);
-			const filestat = await fs.stat(filepath);
-
-			// TODO: decide whether to follow symbolic links
-			if (filestat.isSymbolicLink() || filestat.isDirectory()) {
-				return;
-			} else {
+	async function walkDirectory(
+		directory: string,
+		realDirectory: string,
+		ancestors: ReadonlySet<string>
+	): Promise<void> {
+		if (ancestors.has(realDirectory)) {
+			return;
+		}
+		const nextAncestors = new Set(ancestors).add(realDirectory);
+		const entries = await fs.readdir(directory, { withFileTypes: true });
+		await Promise.all(
+			entries.map(async (entry) => {
+				const filepath = path.join(directory, entry.name);
+				const relativeFilepath = path.relative(dir, filepath);
+				const assetPath = relativeFilepath.split(path.sep).join("/");
+				const realChild = path.join(realDirectory, entry.name);
+				if (entry.isDirectory()) {
+					if (!assetsIgnoreFunction(`${assetPath}/`)) {
+						await walkDirectory(filepath, realChild, nextAncestors);
+					}
+					return;
+				}
+				const ignoredAsFile = assetsIgnoreFunction(assetPath);
+				const isSymlink = entry.isSymbolicLink();
+				const ignoredAsDirectory =
+					!isSymlink || assetsIgnoreFunction(`${assetPath}/`);
+				if (ignoredAsFile && ignoredAsDirectory) {
+					return;
+				}
+				const filestat = await fs.stat(filepath);
+				if (isSymlink && filestat.isDirectory()) {
+					if (!ignoredAsDirectory) {
+						const target = await fs.realpath(filepath);
+						await walkDirectory(filepath, target, nextAncestors);
+					}
+					return;
+				}
+				if (ignoredAsFile || !filestat.isFile()) {
+					return;
+				}
 				// TODO: Warn about _worker.js
 
 				if (filestat.size > MAX_ASSET_SIZE) {
@@ -455,13 +480,15 @@ const walk = async (dir: string) => {
 					contentHash,
 				});
 				assetsReverseMap[bytesToHex(contentHash)] = {
-					filePath: relativeFilepath.split(path.sep).join("/"),
+					filePath: assetPath,
 					contentType: getContentType(filepath),
 				};
 				counter++;
-			}
-		})
-	);
+			})
+		);
+	}
+	const realRoot = await fs.realpath(dir);
+	await walkDirectory(dir, realRoot, new Set());
 	if (counter > MAX_ASSET_COUNT) {
 		throw new Error(
 			`Maximum number of assets exceeded.\n` +

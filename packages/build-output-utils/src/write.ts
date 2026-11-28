@@ -32,12 +32,15 @@ export async function cleanBuildOutputDir(root: string): Promise<void> {
 export interface WriteAssetsOptions {
 	root: string;
 	sourceDirectory: string;
+	/** Return true to copy an entry, or false to omit it and its descendants. Paths are relative to the source and use forward slashes. */
+	filter?: (relativePath: string) => boolean | Promise<boolean>;
 }
 
 /**
  * Copy static assets into the Build Output Specification tree.
  *
  * Symlinks are dereferenced so the output remains portable and self-contained.
+ * Broken symlinks are not supported unless excluded by the filter.
  *
  * When the project root is itself the asset source, the reserved
  * `.cloudflare` directory is omitted so the nested output is not copied into
@@ -46,16 +49,25 @@ export interface WriteAssetsOptions {
 export async function writeAssets({
 	root,
 	sourceDirectory,
+	filter,
 }: WriteAssetsOptions): Promise<void> {
 	const assetsDir = getWorkerAssetsDir(root);
+	const copyOptions = {
+		recursive: true,
+		force: false,
+		dereference: true,
+		filter: (source: string) => {
+			const relative = path
+				.relative(sourceDirectory, source)
+				.split(path.sep)
+				.join("/");
+			return relative === "" || (filter?.(relative) ?? true);
+		},
+	};
 	await fsp.mkdir(assetsDir, { recursive: true });
 
 	if (path.resolve(sourceDirectory) !== path.resolve(root)) {
-		await fsp.cp(sourceDirectory, assetsDir, {
-			recursive: true,
-			force: false,
-			dereference: true,
-		});
+		await fsp.cp(sourceDirectory, assetsDir, copyOptions);
 		return;
 	}
 
@@ -64,11 +76,11 @@ export async function writeAssets({
 		entries
 			.filter((entry) => entry !== path.dirname(BUILD_OUTPUT_ROOT))
 			.map((entry) =>
-				fsp.cp(path.join(sourceDirectory, entry), path.join(assetsDir, entry), {
-					recursive: true,
-					force: false,
-					dereference: true,
-				})
+				fsp.cp(
+					path.join(sourceDirectory, entry),
+					path.join(assetsDir, entry),
+					copyOptions
+				)
 			)
 	);
 }

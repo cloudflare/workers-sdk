@@ -39,8 +39,9 @@ export const PROJECT_ROOT_ASSETS_IGNORE_ENTRIES = [
  * @param filePath Absolute or relative path to the ignore file to update.
  * @param options
  * @param options.additionalEntries Further entries to append after the
- * Wrangler ones, each added only if it is not already an exact line in the
- * file or queued to be added.
+ * Wrangler ones. An existing or queued entry without a trailing slash also
+ * covers the corresponding non-negated directory-only entry. This checks for
+ * existing rules rather than evaluating them, so later exceptions still apply.
  * @param options.requireEnvWildcard When `true`, only an existing `.env*` line
  * counts as covering environment files. Narrower patterns such as `.env` or
  * `.env.local` would leave other variants (for example `.env.production`)
@@ -120,16 +121,21 @@ export function maybeAppendWranglerToGitIgnoreLikeFile(
 		wranglerGitIgnoreFilesToAdd.push("!.env.example");
 	}
 
-	const existingLines = new Set(
-		existingGitIgnoreContent.split(/\r?\n/).map((line) => line.trim())
-	);
+	const existingLines = new Set([
+		...existingGitIgnoreContent.split(/\r?\n/).map((line) => line.trim()),
+		...wranglerGitIgnoreFilesToAdd,
+	]);
 	for (const entry of additionalEntries) {
 		if (
-			!existingLines.has(entry) &&
-			!wranglerGitIgnoreFilesToAdd.includes(entry)
+			existingLines.has(entry) ||
+			(entry.endsWith("/") &&
+				!entry.startsWith("!") &&
+				existingLines.has(entry.slice(0, -1)))
 		) {
-			wranglerGitIgnoreFilesToAdd.push(entry);
+			continue;
 		}
+		wranglerGitIgnoreFilesToAdd.push(entry);
+		existingLines.add(entry);
 	}
 
 	if (wranglerGitIgnoreFilesToAdd.length === 0) {

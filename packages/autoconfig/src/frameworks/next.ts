@@ -94,6 +94,7 @@ async function configureWithVinext({
 		buildTool: "vite",
 		// `vinext init` creates the cloudflare.config.ts file
 		workerConfig: null,
+		createsCloudflareConfig: true,
 		buildCommandOverride: `${npx} vite build`,
 	};
 }

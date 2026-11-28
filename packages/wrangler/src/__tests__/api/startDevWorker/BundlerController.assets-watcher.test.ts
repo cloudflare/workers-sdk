@@ -1,5 +1,7 @@
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
+import { existsSync } from "node:fs";
+import { rename, stat, unlink } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { runInTempDir, seed } from "@cloudflare/workers-utils/test-helpers";
@@ -16,7 +18,7 @@ import { BundlerController } from "../../../api/startDevWorker/BundlerController
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { StartDevWorkerOptions } from "../../../api";
-import type { FSWatcher, Matcher } from "chokidar";
+import type { FSWatcher } from "chokidar";
 
 // Mock chokidar so we can drive watcher events and errors directly, without
 // depending on the filesystem delivering them.
@@ -122,9 +124,23 @@ function mockWatchers(expect: ExpectStatic, { closeDelayMs = 0 } = {}) {
 			assert(watcher);
 			return watcher;
 		},
-		ignoredDirs(index: number): (Matcher | undefined)[] {
+		ignoredDirs(index: number): string[] {
 			const ignored = calls[index]?.ignored;
-			return Array.isArray(ignored) ? ignored : [ignored];
+			return (Array.isArray(ignored) ? ignored : [ignored]).filter(
+				(entry) => typeof entry === "string"
+			);
+		},
+		async ignoresAsset(index: number, relativePath: string, withStats = true) {
+			const ignored = calls[index]?.ignored;
+			const matcher = (Array.isArray(ignored) ? ignored : [ignored]).find(
+				(entry) => typeof entry === "function"
+			);
+			assert(matcher);
+			const absolutePath = path.resolve(relativePath);
+			return matcher(
+				absolutePath,
+				withStats ? await stat(absolutePath) : undefined
+			);
 		},
 	};
 }
@@ -265,8 +281,20 @@ describe("BundlerController — assets watcher", () => {
 		}
 	);
 
-	test("ignores the dev session write directories", async ({ expect }) => {
+	test("uses .assetsignore rules to watch the project root and reloads when they change", async ({
+		expect,
+	}) => {
 		const watchers = mockWatchers(expect);
+		await seed({
+			".assetsignore":
+				"node_modules\n/.cloudflare/\n*.bak\n*private*\n!private/\n",
+			".cloudflare/config.json": "{}",
+			"node_modules/example/index.js": "export {};",
+			"private/index.html": "<h1>Visible</h1>",
+			"index.bak": "Ignored",
+			_headers: "/\n  X-Test: yes\n",
+			_redirects: "/old /new 302\n",
+		});
 
 		const projectRoot = path.resolve(".");
 		const firstBundle = bus.waitFor("bundleComplete");
@@ -275,12 +303,140 @@ describe("BundlerController — assets watcher", () => {
 			config: assetsAt(projectRoot),
 		});
 		await firstBundle;
-		await watchers.at(0);
-
+		const firstWatcher = await watchers.at(0);
 		expect(watchers.ignoredDirs(0)).toEqual([
 			path.join(projectRoot, ".wrangler"),
 			path.join(projectRoot, ".wrangler/state"),
 		]);
+		for (const ignoredPath of ["node_modules", ".cloudflare", "index.bak"]) {
+			expect(await watchers.ignoresAsset(0, ignoredPath), ignoredPath).toBe(
+				true
+			);
+		}
+		for (const watchedPath of [
+			".assetsignore",
+			"_headers",
+			"_redirects",
+			"private",
+		]) {
+			expect(await watchers.ignoresAsset(0, watchedPath), watchedPath).toBe(
+				false
+			);
+		}
+		expect(await watchers.ignoresAsset(0, "node_modules", false)).toBe(true);
+		expect(await watchers.ignoresAsset(0, "private", false)).toBe(false);
+
+		const ignoreReload = bus.waitFor("bundleComplete");
+		await seed({
+			".assetsignore":
+				"node_modules\n/.cloudflare/\n!/node_modules/\n!/.cloudflare/\n",
+		});
+		firstWatcher.emit("all", "change", path.resolve(".assetsignore"));
+		await ignoreReload;
+		await watchers.at(1);
+		expect(firstWatcher.close).toHaveBeenCalled();
+		expect(await watchers.ignoresAsset(1, ".cloudflare")).toBe(false);
+		expect(await watchers.ignoresAsset(1, "node_modules")).toBe(false);
+	});
+
+	test.for([
+		{ name: "uppercase entries only", addLowercaseFiles: false },
+		{ name: "both spellings present", addLowercaseFiles: true },
+	])(
+		"only watches differently cased metadata if the lowercase lookup finds it ($name)",
+		async ({ addLowercaseFiles }, { expect, skip }) => {
+			const watchers = mockWatchers(expect);
+			const metadataPaths = [
+				"assets/.ASSETSIGNORE",
+				"assets/_HEADERS",
+				"assets/_REDIRECTS",
+			];
+			await seed(
+				Object.fromEntries(metadataPaths.map((filePath) => [filePath, ""]))
+			);
+			const caseInsensitive = existsSync("assets/.assetsignore");
+			if (addLowercaseFiles) {
+				if (caseInsensitive) {
+					skip("Requires a case-sensitive filesystem");
+				}
+				await seed(
+					Object.fromEntries(
+						metadataPaths.map((filePath) => [filePath.toLowerCase(), ""])
+					)
+				);
+			}
+
+			controller.onConfigUpdate({
+				type: "configUpdate",
+				config: assetsConfig(),
+			});
+			await watchers.at(0);
+			for (const metadataPath of metadataPaths) {
+				expect(await watchers.ignoresAsset(0, metadataPath), metadataPath).toBe(
+					!caseInsensitive
+				);
+				expect(
+					await watchers.ignoresAsset(
+						0,
+						metadataPath.toLowerCase(),
+						caseInsensitive || addLowercaseFiles
+					)
+				).toBe(false);
+			}
+		}
+	);
+
+	test("reloads when a file changes in a newly unignored directory", async ({
+		expect,
+	}) => {
+		const { watch: realWatch } =
+			await vi.importActual<typeof import("chokidar")>("chokidar");
+		const readyWatchers: FSWatcher[] = [];
+		vi.mocked(watch).mockImplementation((paths, options) => {
+			const watcher = realWatch(paths, { ...options, usePolling: true });
+			watcher.once("ready", () => readyWatchers.push(watcher));
+			return watcher;
+		});
+
+		const lowercaseIgnoreFile = "assets/.assetsignore";
+		const uppercaseIgnoreFile = "assets/.ASSETSIGNORE";
+		await seed({
+			[uppercaseIgnoreFile]: "drafts/\n",
+			"assets/drafts/index.html": "Draft",
+		});
+		const ignoreFile = existsSync(lowercaseIgnoreFile)
+			? uppercaseIgnoreFile
+			: lowercaseIgnoreFile;
+		if (ignoreFile === lowercaseIgnoreFile) {
+			await rename(uppercaseIgnoreFile, lowercaseIgnoreFile);
+		}
+
+		const assetsDir = path.resolve("assets");
+		const draftsDir = path.join(assetsDir, "drafts");
+		const firstBundle = bus.waitFor("bundleComplete");
+		controller.onConfigUpdate({
+			type: "configUpdate",
+			config: assetsAt(assetsDir),
+		});
+		await firstBundle;
+		await expect.poll(() => readyWatchers.length).toBe(1);
+		expect(readyWatchers[0]?.getWatched()[draftsDir]).toBeUndefined();
+
+		const ignoreReload = bus.waitFor("bundleComplete");
+		await seed({ [ignoreFile]: "" });
+		await ignoreReload;
+		await expect
+			.poll(() => readyWatchers[1]?.getWatched()[draftsDir])
+			.toContain("index.html");
+
+		const assetReload = bus.waitFor("bundleComplete");
+		await seed({ "assets/drafts/index.html": "Published" });
+		await assetReload;
+
+		const ignoreRemovalReload = bus.waitFor("bundleComplete");
+		await unlink(ignoreFile);
+		await ignoreRemovalReload;
+		await expect.poll(() => readyWatchers.length).toBe(3);
 	});
 
 	test("ignores a persist directory inside the assets tree", async ({

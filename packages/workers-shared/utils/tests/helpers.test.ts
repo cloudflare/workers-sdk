@@ -1,9 +1,10 @@
 import { mkdtempSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it } from "vitest";
 import {
+	createAssetsCopyFilter,
 	createAssetsIgnoreFunction,
 	getContentType,
 	InvalidAssetsIgnoreError,
@@ -61,7 +62,7 @@ describe("assets", () => {
 		});
 
 		it.for(["", "\ufeff"])(
-			"reads UTF-8 patterns with an optional BOM (%j)",
+			"reads CRLF-separated UTF-8 patterns with an optional BOM (%j)",
 			async (bom, { expect }) => {
 				await writeFile(
 					join(tmpDir, ".assetsignore"),
@@ -105,6 +106,32 @@ describe("assets", () => {
 			expect(assetsIgnoreFilePresent).toBe(true);
 			expect(assetsIgnoreFunction("keep.txt")).toBe(false);
 			expect(assetsIgnoreFunction(".assetsignore")).toBe(true);
+		});
+	});
+
+	describe("createAssetsCopyFilter", () => {
+		it("keeps root asset metadata even when the rules exclude it", async ({
+			expect,
+		}) => {
+			await writeFile(join(tmpDir, ".assetsignore"), "*\n");
+			const filter = await createAssetsCopyFilter(tmpDir);
+
+			await expect(filter(".assetsignore")).resolves.toBe(true);
+			await expect(filter("_headers")).resolves.toBe(true);
+			await expect(filter("_redirects")).resolves.toBe(true);
+			await expect(filter("nested/_headers")).resolves.toBe(false);
+		});
+
+		it("applies directory-only rules according to the entry's actual type", async ({
+			expect,
+		}) => {
+			await writeFile(join(tmpDir, ".assetsignore"), "/cache-*/\n");
+			await writeFile(join(tmpDir, "cache-file"), "asset");
+			await mkdir(join(tmpDir, "cache-directory"));
+			const filter = await createAssetsCopyFilter(tmpDir);
+
+			await expect(filter("cache-file")).resolves.toBe(true);
+			await expect(filter("cache-directory")).resolves.toBe(false);
 		});
 	});
 });

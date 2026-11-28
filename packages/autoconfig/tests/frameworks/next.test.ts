@@ -93,6 +93,7 @@ describe("Next.js framework configure()", () => {
 			expect(results).toEqual({
 				buildTool: "vite",
 				workerConfig: null,
+				createsCloudflareConfig: true,
 				buildCommandOverride: "npx vite build",
 			});
 			expect(framework.configurationDescription).toBe(

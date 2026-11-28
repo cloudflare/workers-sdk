@@ -174,6 +174,65 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
+		it.for(["js", "ts"])(
+			"uses an idempotent dynamic import for a typeless package's .%s config",
+			async (extension, { expect }) => {
+				const file = `vite.config.${extension}`;
+				const manifest = '{"name":"vite-app"}\n';
+				await writeFile("package.json", manifest);
+				await writeFile(
+					file,
+					'import { defineConfig } from "vite"; export default defineConfig({ plugins: [] });'
+				);
+				transformViteConfig(".", { target: "cf", viteEnvironmentName: "ssr" });
+				const config = readFileSync(file, "utf8");
+				expect(config).toContain('import("@cloudflare/vite-plugin").then(');
+				expect(config).toContain('name: "ssr"');
+				expect(checkIfViteConfigUsesCloudflarePlugin(".")).toBe(true);
+				transformViteConfig(".", { target: "cf", viteEnvironmentName: "ssr" });
+				expect(readFileSync(file, "utf8")).toBe(config);
+				expect(readFileSync("package.json", "utf8")).toBe(manifest);
+			}
+		);
+
+		it("keeps the static plugin import for an ESM package", async ({
+			expect,
+		}) => {
+			await writeFile("package.json", '{"type":"module"}');
+			await writeFile(
+				"vite.config.ts",
+				'import { defineConfig } from "vite"; export default defineConfig({ plugins: [] });'
+			);
+			transformViteConfig(".", { target: "cf" });
+			expect(readFileSync("vite.config.ts", "utf8")).toContain(
+				'import { cloudflare } from "@cloudflare/vite-plugin"'
+			);
+		});
+
+		it.for([undefined, "module"])(
+			"reuses an existing static plugin import (package type: %s)",
+			async (type, { expect }) => {
+				const config = `import { cloudflare } from "@cloudflare/vite-plugin";
+import { defineConfig } from "vite";
+export default defineConfig({ plugins: [] });
+`;
+				await writeFile(
+					"package.json",
+					JSON.stringify({ name: "vite-app", type })
+				);
+				await writeFile("vite.config.ts", config);
+
+				transformViteConfig(".", { target: "cf" });
+
+				const result = readFileSync("vite.config.ts", "utf8");
+				expect(result.replaceAll("\r\n", "\n").trimEnd()).toBe(
+					config.replace("plugins: []", "plugins: [cloudflare()]").trimEnd()
+				);
+				transformViteConfig(".", { target: "cf" });
+				expect(readFileSync("vite.config.ts", "utf8")).toBe(result);
+			}
+		);
+
 		it.for(["cjs", "cts"])(
 			"does not insert ESM imports into a .%s file even with ESM syntax",
 			async (extension, { expect }) => {

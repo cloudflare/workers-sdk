@@ -130,8 +130,8 @@ describe("Vite framework", () => {
 				expect.anything()
 			);
 
-			expect(existsSync("vite.config.js")).toBe(true);
-			const content = readFileSync("vite.config.js", "utf-8");
+			expect(existsSync("vite.config.mts")).toBe(true);
+			const content = readFileSync("vite.config.mts", "utf-8");
 			expect(content).toContain(
 				'import { cloudflare } from "@cloudflare/vite-plugin"'
 			);
@@ -156,13 +156,13 @@ describe("Vite framework", () => {
 			);
 		});
 
-		it("uses .ts extension when the project has a tsconfig.json", async ({
+		it("uses .ts extension for Wrangler when the project has a tsconfig.json", async ({
 			expect,
 		}) => {
 			await writeFile("tsconfig.json", "{}");
 
 			const framework = new Vite({ id: "vite", name: "Vite" });
-			await framework.configure(BASE_OPTIONS);
+			await framework.configure({ ...BASE_OPTIONS, target: "wrangler" });
 
 			expect(existsSync("vite.config.ts")).toBe(true);
 			expect(existsSync("vite.config.js")).toBe(false);
@@ -203,6 +203,7 @@ export default defineConfig({
 
 			expect(existsSync("vite.config.ts")).toBe(false);
 			expect(existsSync("vite.config.js")).toBe(false);
+			expect(existsSync("vite.config.mts")).toBe(false);
 			expect(result.workerConfig).toEqual({
 				assets: {
 					notFoundHandling: "single-page-application",

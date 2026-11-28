@@ -27,7 +27,7 @@ export class TanstackStart extends Framework {
 				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
-			transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });
+			transformViteConfig(projectPath, { target, viteEnvironmentName: "ssr" });
 		}
 
 		return {

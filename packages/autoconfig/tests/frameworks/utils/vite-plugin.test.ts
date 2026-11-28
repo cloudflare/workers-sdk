@@ -33,7 +33,7 @@ describe("installCloudflareVitePlugin", () => {
 			expect(installSpy).toHaveBeenCalledWith(
 				"npm",
 				["@cloudflare/vite-plugin"],
-				expect.objectContaining({ dev: true })
+				expect.objectContaining({ dev: true, cwd: "/test/project" })
 			);
 		});
 

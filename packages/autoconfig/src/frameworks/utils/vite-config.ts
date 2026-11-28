@@ -1,14 +1,15 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parseFile, transformFile } from "@cloudflare/shared-ast-primitives";
-import { UserError } from "@cloudflare/workers-utils";
+import { parsePackageJSON, UserError } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import dedent from "ts-dedent";
-import type { AutoConfigContext } from "../../context";
+import type { AutoConfigContext, AutoConfigTarget } from "../../context";
 import type { types } from "recast";
 
 const b = recast.types.builders;
 const t = recast.types.namedTypes;
+const CLOUDFLARE_VITE_PLUGIN = "@cloudflare/vite-plugin";
 
 /**
  * Extracts the ObjectExpression from the first argument of defineConfig().
@@ -76,21 +77,11 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	}
 
 	let importsCloudflarePlugin = false;
-	let usesCloudflarePlugin = false;
+	let configuresCloudflarePlugin = false;
 
 	recast.visit(ast, {
 		visitProgram(n) {
-			if (
-				n.node.body.some(
-					(s) =>
-						s.type === "ImportDeclaration" &&
-						s.source.value === "@cloudflare/vite-plugin"
-				)
-			) {
-				importsCloudflarePlugin = true;
-				return this.traverse(n);
-			}
-
+			importsCloudflarePlugin = n.node.body.some(isCloudflarePluginImport);
 			this.traverse(n);
 		},
 		visitCallExpression: function (n) {
@@ -127,20 +118,54 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 			if (
 				pluginsProp.value.elements.some(
 					(el) =>
-						el?.type === "CallExpression" &&
-						el.callee.type === "Identifier" &&
-						el.callee.name === "cloudflare"
+						isDeferredCloudflarePlugin(el) ||
+						(importsCloudflarePlugin && isCloudflarePluginCall(el))
 				)
 			) {
-				usesCloudflarePlugin = true;
-				return this.traverse(n);
+				configuresCloudflarePlugin = true;
 			}
 
 			this.traverse(n);
 		},
 	});
 
-	return importsCloudflarePlugin && usesCloudflarePlugin;
+	return configuresCloudflarePlugin;
+}
+
+function isCloudflarePluginImport(node: types.ASTNode): boolean {
+	return (
+		t.ImportDeclaration.check(node) &&
+		node.source.value === CLOUDFLARE_VITE_PLUGIN
+	);
+}
+
+function isCloudflarePluginCall(node: types.ASTNode | null): boolean {
+	return (
+		t.CallExpression.check(node) &&
+		t.Identifier.check(node.callee) &&
+		node.callee.name === "cloudflare"
+	);
+}
+
+/** Recognizes the dynamic plugin import added to Vite configs loaded as CommonJS. */
+function isDeferredCloudflarePlugin(node: types.ASTNode | null): boolean {
+	if (
+		!t.CallExpression.check(node) ||
+		!t.MemberExpression.check(node.callee) ||
+		!t.Identifier.check(node.callee.property) ||
+		node.callee.property.name !== "then"
+	) {
+		return false;
+	}
+	const imported = node.callee.object;
+	const source = t.ImportExpression.check(imported)
+		? imported.source
+		: t.CallExpression.check(imported) && t.Import.check(imported.callee)
+			? imported.arguments[0]
+			: undefined;
+	return (
+		t.StringLiteral.check(source) && source.value === CLOUDFLARE_VITE_PLUGIN
+	);
 }
 
 // Match Vite's DEFAULT_CONFIG_FILES order so inspection and execution use the same file.
@@ -221,9 +246,11 @@ export function assertViteConfigCanBeTransformed(projectPath: string): void {
 	}
 }
 
+/** Adds the Cloudflare plugin while preserving the project's Vite config path and module type. */
 export function transformViteConfig(
 	projectPath: string,
 	options: {
+		target?: AutoConfigTarget;
 		viteEnvironmentName?: string;
 		incompatibleVitePlugins?: string[];
 	} = {}
@@ -231,31 +258,30 @@ export function transformViteConfig(
 	const filePath = getViteConfigPath(projectPath);
 	assertViteConfigCanBeTransformed(projectPath);
 	const removedIncompatiblePlugins = new Set<string>();
+	let deferPluginImport =
+		options.target === "cf" &&
+		[".js", ".ts"].includes(path.extname(filePath)) &&
+		!isModulePackage(projectPath);
 
 	transformFile(filePath, {
 		visitProgram(n) {
-			// Add an import of the @cloudflare/vite-plugin
-			// ```
-			// import {cloudflare} from "@cloudflare/vite-plugin";
-			// ```
-			const lastImportIndex = n.node.body.findLastIndex(
-				(statement) => statement.type === "ImportDeclaration"
-			);
-			const lastImport = n.get("body", lastImportIndex);
-			const importAst = b.importDeclaration(
-				[b.importSpecifier(b.identifier("cloudflare"))],
-				b.stringLiteral("@cloudflare/vite-plugin")
-			);
-
-			// Only import if not already imported
-			if (
-				!n.node.body.some(
-					(s) =>
-						s.type === "ImportDeclaration" &&
-						s.source.value === "@cloudflare/vite-plugin"
-				)
-			) {
-				lastImport.insertAfter(importAst);
+			if (n.node.body.some(isCloudflarePluginImport)) {
+				deferPluginImport = false;
+			} else if (!deferPluginImport) {
+				const lastImportIndex = n.node.body.findLastIndex(
+					(statement) => statement.type === "ImportDeclaration"
+				);
+				// Keep the config synchronous when the plugin can be imported directly:
+				// import { cloudflare } from "@cloudflare/vite-plugin";
+				const importAst = b.importDeclaration(
+					[b.importSpecifier(b.identifier("cloudflare"))],
+					b.stringLiteral(CLOUDFLARE_VITE_PLUGIN)
+				);
+				if (lastImportIndex === -1) {
+					n.get("body").unshift(importAst);
+				} else {
+					n.get("body", lastImportIndex).insertAfter(importAst);
+				}
 			}
 
 			this.traverse(n);
@@ -360,14 +386,16 @@ export function transformViteConfig(
 			// Only add the Cloudflare plugin if it's not already present
 			if (
 				!pluginsProp.value.elements.some(
-					(el) =>
-						el?.type === "CallExpression" &&
-						el.callee.type === "Identifier" &&
-						el.callee.name === "cloudflare"
+					(el) => isCloudflarePluginCall(el) || isDeferredCloudflarePlugin(el)
 				)
 			) {
-				pluginsProp.value.elements.push(
-					b.callExpression(b.identifier("cloudflare"), [
+				const plugin = b.identifier("plugin");
+				const cloudflare = b.identifier("cloudflare");
+				const pluginCall = b.callExpression(
+					deferPluginImport
+						? b.memberExpression(plugin, cloudflare)
+						: cloudflare,
+					[
 						...(options.viteEnvironmentName
 							? [
 									b.objectExpression([
@@ -383,7 +411,12 @@ export function transformViteConfig(
 									]),
 								]
 							: []),
-					])
+					]
+				);
+				pluginsProp.value.elements.push(
+					deferPluginImport
+						? deferCloudflarePlugin(plugin, pluginCall)
+						: pluginCall
 				);
 			}
 
@@ -407,6 +440,37 @@ export function transformViteConfig(
 			return false;
 		},
 	});
+}
+
+function isModulePackage(projectPath: string): boolean {
+	const manifestPath = path.join(projectPath, "package.json");
+	if (!existsSync(manifestPath)) {
+		return false;
+	}
+	const manifest = parsePackageJSON(
+		readFileSync(manifestPath, "utf8"),
+		manifestPath
+	);
+	return Boolean(
+		manifest &&
+		typeof manifest === "object" &&
+		"type" in manifest &&
+		manifest.type === "module"
+	);
+}
+
+/** Uses a promise in the plugins array so CommonJS Vite configs can load the ESM-only plugin. */
+function deferCloudflarePlugin(
+	plugin: types.namedTypes.Identifier,
+	pluginCall: types.namedTypes.CallExpression
+) {
+	return b.callExpression(
+		b.memberExpression(
+			b.importExpression(b.stringLiteral(CLOUDFLARE_VITE_PLUGIN)),
+			b.identifier("then")
+		),
+		[b.arrowFunctionExpression([plugin], pluginCall)]
+	);
 }
 
 function isPluginsProp(

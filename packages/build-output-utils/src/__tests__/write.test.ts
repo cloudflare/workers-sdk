@@ -7,6 +7,7 @@ import {
 	BuildOutputRootConfigSchema,
 	BuildOutputWorkerConfigSchema,
 } from "@cloudflare/config";
+import { createAssetsCopyFilter } from "@cloudflare/workers-utils";
 import { runInTempDir } from "@cloudflare/workers-utils/test-helpers";
 import { describe, it } from "vitest";
 import {
@@ -370,6 +371,137 @@ describe("writeAssets", () => {
 			fs.readFileSync(path.join(assetsDir, "linked/linked.html"), "utf8")
 		).toBe("linked");
 		expect(fs.existsSync(path.join(assetsDir, ".cloudflare"))).toBe(false);
+	});
+
+	it.for([".", "public"])(
+		"skips ignored assets and keeps metadata in %s",
+		async (directory, { expect }) => {
+			const root = process.cwd();
+			const sourceDirectory = path.resolve(root, directory);
+			const ignore =
+				"/node_modules/\n*.txt\n!keep.txt\n/_headers\n/_redirects\n";
+			fs.mkdirSync(path.join(sourceDirectory, "node_modules"), {
+				recursive: true,
+			});
+			fs.mkdirSync(path.join(sourceDirectory, "public-files"));
+			fs.writeFileSync(path.join(sourceDirectory, ".assetsignore"), ignore);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "_headers"),
+				"/*\n  X-Test: yes\n"
+			);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "_redirects"),
+				"/old /new 301\n"
+			);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "node_modules/package.json"),
+				"{}"
+			);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "public-files/drop.txt"),
+				"excluded"
+			);
+			fs.writeFileSync(
+				path.join(sourceDirectory, "public-files/keep.txt"),
+				"included"
+			);
+
+			await writeAssets({
+				root,
+				sourceDirectory,
+				filter: await createAssetsCopyFilter(sourceDirectory),
+			});
+
+			const assetsDir = getWorkerAssetsDir(root);
+			expect(fs.existsSync(path.join(assetsDir, "node_modules"))).toBe(false);
+			expect(fs.existsSync(path.join(assetsDir, "_headers"))).toBe(true);
+			expect(fs.existsSync(path.join(assetsDir, "_redirects"))).toBe(true);
+			expect(
+				fs.readFileSync(path.join(assetsDir, ".assetsignore"), "utf8")
+			).toBe(ignore);
+			expect(fs.readdirSync(path.join(assetsDir, "public-files"))).toEqual([
+				"keep.txt",
+			]);
+		}
+	);
+
+	it("copies nested HTML under a directory-only allowlist", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.mkdirSync(path.join(root, "docs/guide"), { recursive: true });
+		fs.writeFileSync(path.join(root, ".assetsignore"), "*\n!*/\n!*.html\n");
+		fs.writeFileSync(path.join(root, "docs/guide/index.html"), "included");
+		fs.writeFileSync(path.join(root, "docs/guide/notes.txt"), "ignored");
+		fs.writeFileSync(path.join(root, "notes.txt"), "ignored");
+
+		await writeAssets({
+			root,
+			sourceDirectory: root,
+			filter: await createAssetsCopyFilter(root),
+		});
+
+		const assetsDir = getWorkerAssetsDir(root);
+		expect(fs.readdirSync(path.join(assetsDir, "docs/guide"))).toEqual([
+			"index.html",
+		]);
+		expect(fs.existsSync(path.join(assetsDir, "notes.txt"))).toBe(false);
+	});
+
+	it.for([
+		{ asset: "index.html", type: "file", rules: "*\n!*.html\n" },
+		{ asset: "docs", type: "dir", rules: "*\n!/docs/\n!/docs/**\n" },
+		{ asset: "docs/guide/link.txt", type: "file", rules: "*\n!*/\n!*.html\n" },
+	] as const)(
+		"reports a missing target for a broken asset symlink ($asset)",
+		async ({ asset, type, rules }, { expect }) => {
+			const root = process.cwd();
+			const source = path.join(root, asset);
+			fs.mkdirSync(path.dirname(source), { recursive: true });
+			fs.writeFileSync(path.join(root, ".assetsignore"), rules);
+			fs.symlinkSync("not-generated", source, type);
+
+			await expect(
+				writeAssets({
+					root,
+					sourceDirectory: root,
+					filter: await createAssetsCopyFilter(root),
+				})
+			).rejects.toMatchObject({
+				code: "ENOENT",
+				path: source,
+			});
+		}
+	);
+
+	it("skips a broken symlink excluded as both a file and a directory", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.writeFileSync(path.join(root, ".assetsignore"), "/link\n");
+		fs.symlinkSync("not-generated", path.join(root, "link"), "file");
+
+		await writeAssets({
+			root,
+			sourceDirectory: root,
+			filter: await createAssetsCopyFilter(root),
+		});
+
+		expect(fs.readdirSync(getWorkerAssetsDir(root))).not.toContain("link");
+	});
+
+	it("copies without interpreting .assetsignore unless given a filter", async ({
+		expect,
+	}) => {
+		const root = process.cwd();
+		fs.writeFileSync(path.join(root, ".assetsignore"), "/index.html\n");
+		fs.writeFileSync(path.join(root, "index.html"), "included");
+
+		await writeAssets({ root, sourceDirectory: root });
+
+		expect(
+			fs.readFileSync(path.join(getWorkerAssetsDir(root), "index.html"), "utf8")
+		).toBe("included");
 	});
 
 	it("preserves files already generated in the build output", async ({

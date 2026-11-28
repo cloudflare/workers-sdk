@@ -37,6 +37,8 @@ type AutoConfigDetailsBase = {
 	commandError?: AutoConfigCommandError;
 	/** Application and enclosing workspace node_modules directories, nearest first. */
 	nodeModulesPaths?: readonly string[];
+	/** Root of the validated enclosing workspace, if any. */
+	workspaceRoot?: string;
 	/** Environment required when running the detected dev or build commands. */
 	env?: Readonly<Record<string, string>>;
 	/** The output directory (if no framework is used, points to the raw asset files) */
@@ -80,7 +82,8 @@ export type AutoConfigOptions = {
 	/**
 	 * Whether the confirmation prompts should be skipped (default: false)
 	 *
-	 * Note: When `dryRun` is `true` the the confirmation prompts are always skipped.
+	 * Prompts are also skipped in dry runs and when targeting cf in CI or other
+	 * non-interactive environments.
 	 */
 	skipConfirmations?: boolean;
 	/**

@@ -171,6 +171,150 @@ test("serves files from assets directory", async ({ expect }) => {
 	expect(await res.text()).toBe("hello from asset");
 });
 
+test("skips traversing directories excluded by .assetsignore", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const ignored = path.join(tmp, "node_modules");
+	const included = path.join(tmp, "public");
+	await fs.writeFile(path.join(tmp, ".assetsignore"), "/node_modules/\n");
+	await fs.mkdir(ignored);
+	await fs.mkdir(included);
+	await fs.writeFile(path.join(ignored, "test.txt"), "ignored asset");
+	await fs.writeFile(path.join(included, "test.txt"), "included asset");
+
+	const readDirectory = vi.spyOn(fs, "readdir");
+	const mf = new Miniflare(makeOptions(tmp));
+	useDispose(mf);
+	try {
+		const response = await mf.dispatchFetch(
+			"http://example.com/public/test.txt"
+		);
+		expect(await response.text()).toBe("included asset");
+		const missing = await mf.dispatchFetch(
+			"http://example.com/node_modules/test.txt"
+		);
+		await missing.arrayBuffer();
+		expect(missing.status).toBe(404);
+		expect(readDirectory).toHaveBeenCalledWith(included, {
+			withFileTypes: true,
+		});
+		expect(readDirectory).not.toHaveBeenCalledWith(ignored, {
+			withFileTypes: true,
+		});
+	} finally {
+		readDirectory.mockRestore();
+	}
+});
+
+test("serves nested HTML under a directory-only allowlist", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.mkdir(path.join(tmp, "docs/guide"), { recursive: true });
+	await fs.writeFile(path.join(tmp, ".assetsignore"), "*\n!*/\n!*.html\n");
+	await fs.writeFile(path.join(tmp, "docs/guide/page.html"), "included");
+	await fs.writeFile(path.join(tmp, "docs/guide/notes.txt"), "ignored");
+
+	const mf = new Miniflare(makeOptions(tmp));
+	useDispose(mf);
+	const included = await mf.dispatchFetch("http://example.com/docs/guide/page");
+	expect(await included.text()).toBe("included");
+	const ignored = await mf.dispatchFetch(
+		"http://example.com/docs/guide/notes.txt"
+	);
+	await ignored.arrayBuffer();
+	expect(ignored.status).toBe(404);
+});
+
+test("serves directory symlink aliases and applies ignore rules to their URL paths", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const assets = path.join(tmp, "public");
+	const target = path.join(tmp, "shared");
+	await fs.mkdir(assets);
+	await fs.mkdir(target);
+	await fs.writeFile(path.join(target, "asset.txt"), "included");
+	await fs.writeFile(
+		path.join(assets, ".assetsignore"),
+		"/ignored/\n/first/asset.txt\n"
+	);
+	for (const name of ["first", "second", "third", "ignored"]) {
+		await fs.symlink(target, path.join(assets, name), "junction");
+	}
+
+	const mf = new Miniflare(makeOptions(assets));
+	useDispose(mf);
+	for (const name of ["second", "third"]) {
+		const response = await mf.dispatchFetch(
+			`http://example.com/${name}/asset.txt`
+		);
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("included");
+	}
+	for (const name of ["first", "ignored"]) {
+		const response = await mf.dispatchFetch(
+			`http://example.com/${name}/asset.txt`
+		);
+		await response.arrayBuffer();
+		expect(response.status).toBe(404);
+	}
+});
+
+test("skips directory symlinks that point back to an ancestor", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	await fs.writeFile(path.join(tmp, "asset.txt"), "included");
+	await fs.symlink(tmp, path.join(tmp, "linked"), "junction");
+
+	const mf = new Miniflare(makeOptions(tmp));
+	useDispose(mf);
+	const included = await mf.dispatchFetch("http://example.com/asset.txt");
+	expect(await included.text()).toBe("included");
+	const ignored = await mf.dispatchFetch("http://example.com/linked/asset.txt");
+	await ignored.arrayBuffer();
+	expect(ignored.status).toBe(404);
+});
+
+test("skips an ancestor reached through a directory symlink's child", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const assets = path.join(tmp, "public");
+	await fs.mkdir(assets);
+	await fs.writeFile(path.join(assets, "asset.txt"), "included");
+	await fs.writeFile(path.join(tmp, "sibling.txt"), "sibling");
+	await fs.symlink(tmp, path.join(assets, "up"), "junction");
+
+	const mf = new Miniflare(makeOptions(assets));
+	useDispose(mf);
+	const included = await mf.dispatchFetch("http://example.com/asset.txt");
+	expect(await included.text()).toBe("included");
+	const sibling = await mf.dispatchFetch("http://example.com/up/sibling.txt");
+	expect(await sibling.text()).toBe("sibling");
+	const ignored = await mf.dispatchFetch(
+		"http://example.com/up/public/asset.txt"
+	);
+	await ignored.arrayBuffer();
+	expect(ignored.status).toBe(404);
+});
+
+test.skipIf(process.platform === "win32")(
+	"serves symlinked asset files",
+	async ({ expect }) => {
+		const tmp = await useTmp();
+		await fs.writeFile(path.join(tmp, "asset.txt"), "included");
+		await fs.symlink("asset.txt", path.join(tmp, "linked.txt"));
+
+		const mf = new Miniflare(makeOptions(tmp));
+		useDispose(mf);
+		const response = await mf.dispatchFetch("http://example.com/linked.txt");
+		expect(await response.text()).toBe("included");
+	}
+);
+
 test("reports an invalid .assetsignore encoding as a user validation error", async ({
 	expect,
 	onTestFinished,

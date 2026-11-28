@@ -22,6 +22,7 @@ export {
 } from "./parse";
 
 export * from "./errors";
+export { createAssetsCopyFilter } from "./assets-copy-filter";
 export { assertNever } from "./assert-never";
 
 export {
