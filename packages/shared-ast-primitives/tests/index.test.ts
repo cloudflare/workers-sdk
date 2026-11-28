@@ -197,3 +197,78 @@ const createObjectExpression = (
 		).declarations[0] as recast.types.namedTypes.VariableDeclarator
 	).init as recast.types.namedTypes.ObjectExpression;
 };
+
+describe("mergeObjectProperties with values that aren't literals", () => {
+	test("spreads a variable or a call to keep its settings", ({ expect }) => {
+		const sourceObj = parseObject(`{ vite, modules: getModules() }`);
+
+		mergeObjectProperties(
+			sourceObj,
+			parseObject(
+				`{ vite: { plugins: [cloudflare()] }, modules: ["nitro-cloudflare-dev"] }`
+			).properties as recast.types.namedTypes.ObjectProperty[]
+		);
+
+		expect(recast.print(sourceObj).code).toMatchInlineSnapshot(`
+			"{ vite: {
+			  ...vite,
+			  plugins: [...(vite?.plugins ?? []), cloudflare()]
+			}, modules: [...getModules(), "nitro-cloudflare-dev"] }"
+		`);
+	});
+
+	test("wraps a conditional value in parentheses to read its settings", ({
+		expect,
+	}) => {
+		const sourceObj = parseObject(`{ vite: isDev ? devConfig : prodConfig }`);
+
+		mergeObjectProperties(
+			sourceObj,
+			parseObject(`{ vite: { plugins: [cloudflare()] } }`)
+				.properties as recast.types.namedTypes.ObjectProperty[]
+		);
+
+		expect(recast.print(sourceObj).code).toMatchInlineSnapshot(`
+			"{ vite: {
+			  ...(isDev ? devConfig : prodConfig),
+			  plugins: [...((isDev ? devConfig : prodConfig)?.plugins ?? []), cloudflare()]
+			} }"
+		`);
+	});
+
+	test("spreads nested settings, including under keys that aren't identifiers", ({
+		expect,
+	}) => {
+		const sourceObj = parseObject(`{ vite: viteConfig }`);
+
+		mergeObjectProperties(
+			sourceObj,
+			parseObject(
+				`{ vite: { "build": { rollupOptions: { external: ["node:fs"] } } } }`
+			).properties as recast.types.namedTypes.ObjectProperty[]
+		);
+
+		expect(recast.print(sourceObj).code).toMatchInlineSnapshot(`
+			"{ vite: {
+			  ...viteConfig,
+
+			  "build": {
+			    ...viteConfig?.["build"],
+
+			    rollupOptions: {
+			      ...viteConfig?.["build"]?.rollupOptions,
+			      external: [...(viteConfig?.["build"]?.rollupOptions?.external ?? []), "node:fs"]
+			    }
+			  }
+			} }"
+		`);
+	});
+});
+
+function parseObject(code: string): recast.types.namedTypes.ObjectExpression {
+	const declaration = parseTs(`const obj = ${code};`).program
+		.body[0] as recast.types.namedTypes.VariableDeclaration;
+	return (
+		declaration.declarations[0] as recast.types.namedTypes.VariableDeclarator
+	).init as recast.types.namedTypes.ObjectExpression;
+}

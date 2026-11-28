@@ -258,10 +258,7 @@ export default { plugins: [cloudflare()] };`,
 		}
 	);
 
-	it.for([
-		["angular", "@angular/cli", "22"],
-		["nuxt", "nuxt", "4"],
-	] as const)(
+	it.for([["angular", "@angular/cli", "22"]] as const)(
 		"retains the cf support check for %s",
 		async ([id, pkg, version], { expect }) => {
 			await seedProject();
