@@ -128,6 +128,26 @@ serve({ fetch: app.fetch, port: 3000 });
 		);
 	});
 
+	it("refuses a build that combines several entry files", async ({
+		expect,
+	}) => {
+		await seed({
+			"src/cron.ts": "export default { scheduled() {} };\n",
+			"src/index.ts": HONO_APP,
+			"vite.config.ts": `import build from "@hono/vite-build/cloudflare-workers";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+	plugins: [build({ entry: ["./src/index.ts", "src/cron.ts"] })],
+});
+`,
+		});
+
+		await expect(configure({ dryRun: true })).rejects.toThrow(
+			"cf can't set up a Hono build that combines several entry files automatically yet: `src/index.ts`, `src/cron.ts`."
+		);
+	});
+
 	it("refuses HonoX", async ({ expect }) => {
 		await seed({
 			"app/server.ts": HONO_APP,

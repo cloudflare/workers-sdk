@@ -59,12 +59,28 @@ export class Hono extends Framework {
 		}
 		const honoVitePlugins = viteConfigExists
 			? readHonoVitePlugins(projectPath)
-			: { names: [], entries: [] };
-		const entrypoint = findEntrypoint(
-			projectPath,
-			wranglerConfig,
-			honoVitePlugins.entries
+			: { names: [], buildEntries: [], devServerEntries: [] };
+		// Hono's build plugin combines the handlers of every entry file into one Worker, which a
+		// single entry point can't do
+		const buildEntryFiles = new Set(
+			honoVitePlugins.buildEntries
+				.map((file) => resolve(projectPath, file))
+				.filter((file) => existsSync(file))
 		);
+		if (buildEntryFiles.size > 1) {
+			throw new AutoConfigFrameworkConfigurationError(
+				`cf can't set up a Hono build that combines several entry files automatically yet: ${[
+					...buildEntryFiles,
+				]
+					.map((file) => `\`${toProjectPath(projectPath, file)}\``)
+					.join(", ")}.`,
+				{ telemetryMessage: "autoconfig hono multiple build entries" }
+			);
+		}
+		const entrypoint = findEntrypoint(projectPath, wranglerConfig, [
+			...honoVitePlugins.buildEntries,
+			...honoVitePlugins.devServerEntries,
+		]);
 
 		if (!dryRun) {
 			// Vite+ provides Vite itself
@@ -104,11 +120,12 @@ export class Hono extends Framework {
  * project's Vite config.
  *
  * @param projectPath The project's path
- * @returns The plugins' local names, and the app entries they're given, the build's first
+ * @returns The plugins' local names, and the app entries given to each
  */
 function readHonoVitePlugins(projectPath: string): {
 	names: string[];
-	entries: string[];
+	buildEntries: string[];
+	devServerEntries: string[];
 } {
 	const ast = parseFile(getViteConfigPath(projectPath));
 	const devServerNames = new Set<string>();
@@ -116,7 +133,7 @@ function readHonoVitePlugins(projectPath: string): {
 	const devServerEntries: string[] = [];
 	const buildEntries: string[] = [];
 	if (!ast) {
-		return { names: [], entries: [] };
+		return { names: [], buildEntries: [], devServerEntries: [] };
 	}
 
 	for (const statement of ast.body) {
@@ -176,7 +193,8 @@ function readHonoVitePlugins(projectPath: string): {
 
 	return {
 		names: [...devServerNames, ...buildNames],
-		entries: [...buildEntries, ...devServerEntries],
+		buildEntries,
+		devServerEntries,
 	};
 }
 
@@ -216,7 +234,7 @@ function findEntrypoint(
 		);
 	}
 
-	const entrypoint = relative(projectPath, entry).split(sep).join(posix.sep);
+	const entrypoint = toProjectPath(projectPath, entry);
 	if (!hasDefaultExport(entry)) {
 		throw new AutoConfigFrameworkConfigurationError(
 			`\`${entrypoint}\` doesn't export the Hono app, so it can't run as a Worker. Export the app with \`export default app\`, and start any Node.js server from a separate file.`,
@@ -225,6 +243,10 @@ function findEntrypoint(
 	}
 
 	return entrypoint;
+}
+
+function toProjectPath(projectPath: string, file: string): string {
+	return relative(projectPath, file).split(sep).join(posix.sep);
 }
 
 function hasDefaultExport(file: string): boolean {
