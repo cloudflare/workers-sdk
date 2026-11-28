@@ -203,6 +203,34 @@ test("InspectorProxy: listens again after failing to move to another host on the
 	expect(res.status).toBe(200);
 });
 
+test("InspectorProxy: stops serving the old host when moving to another host fails", async ({
+	expect,
+	onTestFinished,
+}) => {
+	// Stands in for workerd's inspector, which lists no workers
+	const runtime = http.createServer((_req, res) => res.end("[]"));
+	const runtimePort = await listenOnRandomPort(runtime);
+	onTestFinished(() => closeServer(runtime));
+	const controller = new InspectorProxyController(
+		0,
+		"127.0.0.1",
+		new TestLog(),
+		new Set()
+	);
+	const { host } = await controller.getInspectorURL();
+
+	// The old host may be reachable from places the new one isn't, so it
+	// mustn't keep serving the restarted runtime's Workers
+	await expect(
+		controller.updateConnection(0, "192.0.2.1", runtimePort, new Set())
+	).rejects.toMatchObject({ address: "192.0.2.1", syscall: "listen" });
+	await expect(fetch(`http://${host}/json/version`)).rejects.toThrow();
+	await expect(controller.getInspectorURL()).rejects.toThrow(
+		"Unable to acquire a port"
+	);
+	await controller.dispose();
+});
+
 test("InspectorProxy: a failed inspector move doesn't block requests once the inspector is disabled", async ({
 	expect,
 }) => {

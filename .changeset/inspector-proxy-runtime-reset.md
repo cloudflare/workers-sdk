@@ -8,4 +8,4 @@ Miniflare kills workerd whenever it restarts or is disposed. This can reset the 
 
 `setOptions()` also no longer restarts the inspector proxy's server when `inspectorPort` is changed to the port the server already listens on, for example one it was given through port 0.
 
-When `setOptions()` fails to move the inspector proxy to a new port or host, the server keeps listening where it was, now serves the restarted workerd's Workers instead of the stopped ones, and no longer blocks requests once the inspector is disabled. A later `setOptions()` call tries the move again.
+When `setOptions()` fails to move the inspector proxy to a new port on the same host, the server keeps listening on the old port and now serves the restarted workerd's Workers instead of the stopped ones. A move to another host closes the old server first, so a failure leaves the inspector unavailable. Either way, a failed move no longer blocks requests once the inspector is disabled, and a later `setOptions()` call tries the move again.

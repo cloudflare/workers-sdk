@@ -79,10 +79,11 @@ export class InspectorProxyController {
 	/**
 	 * Moves the server to the current host and port options.
 	 *
-	 * The new server listens before the old one closes, so the inspector stays
-	 * reachable throughout, and port 0 can't be given the old port back. That
-	 * isn't possible when the new port is the old one on a different host: then
-	 * the old server closes first.
+	 * On the same host, the new server listens before the old one closes, so
+	 * the inspector stays reachable throughout, and port 0 can't be given the
+	 * old port back. When the host changes, the old server closes first: the
+	 * new port may be the old one, and if the new server fails to listen, the
+	 * old host, which may be reachable from the network, mustn't keep serving.
 	 *
 	 * If the new server can't listen, the old server and the options stay as
 	 * they were, so a later update tries again. The old server keeps serving
@@ -90,9 +91,7 @@ export class InspectorProxyController {
 	 */
 	async #restartServer(previousOptions: { port: number; host: string }) {
 		const oldServer = await this.#server.catch(() => undefined);
-		const oldPort = await this.#getListeningPort();
-		const closeFirst =
-			this.inspectorPortOption !== 0 && this.inspectorPortOption === oldPort;
+		const closeFirst = this.inspectorHostOption !== previousOptions.host;
 		if (oldServer !== undefined && closeFirst) {
 			await this.#closeServer(oldServer);
 		}
@@ -416,6 +415,10 @@ export class InspectorProxyController {
 		await Promise.all(this.#proxies.map((proxy) => proxy.dispose()));
 
 		const server = await this.#server;
+		// A failed move to another host leaves a server that has already closed
+		if (!server.listening) {
+			return;
+		}
 		// Force-close active connections so server.close() resolves immediately.
 		// Without this, active HTTP keep-alive or WebSocket connections prevent
 		// the close callback from firing, hanging the dispose.
