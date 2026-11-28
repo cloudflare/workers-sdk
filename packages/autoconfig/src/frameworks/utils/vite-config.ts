@@ -1,10 +1,16 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { parseFile, transformFile } from "@cloudflare/shared-ast-primitives";
-import { parsePackageJSON, UserError } from "@cloudflare/workers-utils";
+import { parseFile } from "@cloudflare/shared-ast-primitives";
+import {
+	parsePackageJSON,
+	readFileSync,
+	UserError,
+} from "@cloudflare/workers-utils";
+import { up } from "empathic/find";
 import * as recast from "recast";
 import dedent from "ts-dedent";
 import type { AutoConfigContext, AutoConfigTarget } from "../../context";
+import type { PackageJSON } from "@cloudflare/workers-utils";
 import type { types } from "recast";
 
 const b = recast.types.builders;
@@ -76,17 +82,36 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 		return false;
 	}
 
-	let importsCloudflarePlugin = false;
+	let pluginNames = new Set<string>();
+	let configNames = new Set<string>();
 	let configuresCloudflarePlugin = false;
+	let hasLegacyPluginImport = false;
+	let programScope: recast.types.NodePath["scope"];
 
 	recast.visit(ast, {
 		visitProgram(n) {
-			importsCloudflarePlugin = n.node.body.some(isCloudflarePluginImport);
+			programScope = n.scope;
+			pluginNames = getImportedNames(
+				n.node,
+				["@cloudflare/vite-plugin"],
+				"cloudflare"
+			);
+			hasLegacyPluginImport = n.node.body.some(
+				(statement) =>
+					t.ImportDeclaration.check(statement) &&
+					statement.source.value === "@cloudflare/vite-plugin"
+			);
+			configNames = getImportedNames(
+				n.node,
+				VITE_CONFIG_HELPER_MODULES,
+				"defineConfig"
+			);
+			configNames.add("defineConfig");
 			this.traverse(n);
 		},
 		visitCallExpression: function (n) {
 			const callee = n.node.callee as types.namedTypes.Identifier;
-			if (callee.name !== "defineConfig") {
+			if (!configNames.has(callee.name)) {
 				return this.traverse(n);
 			}
 
@@ -115,11 +140,16 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 				return this.traverse(n);
 			}
 
+			const configScope = n.get("arguments", 0).scope;
 			if (
 				pluginsProp.value.elements.some(
 					(el) =>
 						isDeferredCloudflarePlugin(el) ||
-						(importsCloudflarePlugin && isCloudflarePluginCall(el))
+						(el?.type === "CallExpression" &&
+							el.callee.type === "Identifier" &&
+							(pluginNames.has(el.callee.name)
+								? lookupBinding(configScope, el.callee.name) === programScope
+								: el.callee.name === "cloudflare" && hasLegacyPluginImport))
 				)
 			) {
 				configuresCloudflarePlugin = true;
@@ -132,19 +162,15 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 	return configuresCloudflarePlugin;
 }
 
-function isCloudflarePluginImport(node: types.ASTNode): boolean {
-	return (
-		t.ImportDeclaration.check(node) &&
-		node.source.value === CLOUDFLARE_VITE_PLUGIN
-	);
-}
-
-function isCloudflarePluginCall(node: types.ASTNode | null): boolean {
-	return (
-		t.CallExpression.check(node) &&
-		t.Identifier.check(node.callee) &&
-		node.callee.name === "cloudflare"
-	);
+function lookupBinding(scope: recast.types.NodePath["scope"], name: string) {
+	for (let current = scope; current; current = current.parent) {
+		if (t.CatchClause.check(current.node) && !current.node.param) {
+			continue;
+		}
+		if (current.declares(name)) {
+			return current;
+		}
+	}
 }
 
 /** Recognizes the dynamic plugin import added to Vite configs loaded as CommonJS. */
@@ -233,55 +259,379 @@ function hasIdentifierOutsideImport(
 	return hasIdentifier;
 }
 
-/** Checks unsupported CommonJS files before setup installs or changes any files. */
-export function assertViteConfigCanBeTransformed(projectPath: string): void {
+function readPackageScope(
+	projectPath: string
+): PackageJSON & { type?: string } {
+	const packagePath = up("package.json", { cwd: projectPath });
+	return packagePath
+		? parsePackageJSON(readFileSync(packagePath), packagePath)
+		: {};
+}
+
+/** Checks whether Vite's bundle loader treats ordinary .js and .ts configs as ESM. */
+export function hasEsmPackageScope(projectPath: string): boolean {
+	return readPackageScope(projectPath).type === "module";
+}
+
+/** Whether the project's dev and build scripts both load the default JS config natively. */
+export function usesNativeJsViteConfig(
+	projectPath: string,
+	target: AutoConfigTarget = "cf"
+): boolean {
+	const { type, scripts, dependencies, devDependencies } =
+		readPackageScope(projectPath);
+	const [major, minor] = process.versions.node.split(".").map(Number);
+	return (
+		type === undefined &&
+		(target === "wrangler" ||
+			(!dependencies?.["vite-plus"] && !devDependencies?.["vite-plus"])) &&
+		(major > 22 || (major === 22 && minor >= 7)) &&
+		usesNativeViteLoader(scripts?.dev, "dev") &&
+		usesNativeViteLoader(scripts?.build, "build")
+	);
+}
+
+function usesNativeViteLoader(
+	script: unknown,
+	command: "dev" | "build"
+): boolean {
+	if (
+		typeof script !== "string" ||
+		!/^[\w\t ./=:@,+-]+(?:&&[\w\t ./=:@,+-]+)*$/.test(script)
+	) {
+		return false;
+	}
+	const commands = script
+		.split("&&")
+		.map((part) => part.trim().split(/[ \t]+/));
+	const viteCommand = commands.pop();
+	if (
+		!viteCommand ||
+		!commands.every(isOneShotTypeScriptCommand) ||
+		viteCommand.shift() !== "vite"
+	) {
+		return false;
+	}
+	if (command === "build") {
+		if (viteCommand.shift() !== "build") {
+			return false;
+		}
+	} else if (["dev", "serve"].includes(viteCommand[0])) {
+		viteCommand.shift();
+	}
+	let native = false;
+	for (let index = 0; index < viteCommand.length; index++) {
+		const argument = viteCommand[index];
+		if (
+			argument === "--configLoader" ||
+			argument.startsWith("--configLoader=")
+		) {
+			if (
+				native ||
+				(argument === "--configLoader"
+					? viteCommand[++index] !== "native"
+					: argument !== "--configLoader=native")
+			) {
+				return false;
+			}
+			native = true;
+		} else if (
+			/^(?:--(?:base|debug|filter|logLevel|mode)|-[dflm])(?:=.+)?$/.test(
+				argument
+			) ||
+			(command === "dev"
+				? /^--(?:host|open|port)(?:=.+)?$/
+				: /^--(?:assetsDir|assetsInlineLimit|manifest|minify|outDir|sourcemap|ssr|ssrManifest|target)(?:=.+)?$/
+			).test(argument)
+		) {
+			if (
+				!argument.includes("=") &&
+				viteCommand[index + 1] &&
+				!viteCommand[index + 1].startsWith("-")
+			) {
+				index++;
+			}
+		} else if (
+			!/^--(?:clearScreen|profile)$/.test(argument) &&
+			!(
+				command === "dev"
+					? /^--(?:strictPort|force|cors)$/
+					: /^--(?:app|emptyOutDir)$/
+			).test(argument)
+		) {
+			return false;
+		}
+	}
+	return native;
+}
+
+function isOneShotTypeScriptCommand([name, ...args]: string[]): boolean {
+	if (
+		name !== "tsc" ||
+		args.some((argument) => /^@|^(?:--watch|-w)=/i.test(argument))
+	) {
+		return false;
+	}
+	const lastWatch = args.findLastIndex((argument) =>
+		/^(?:--watch|-w)$/i.test(argument)
+	);
+	return lastWatch === -1 || args[lastWatch + 1] === "false";
+}
+
+interface ViteConfigTransformOptions {
+	target?: AutoConfigTarget;
+	viteEnvironmentName?: string;
+	incompatibleVitePlugins?: string[];
+}
+export function transformViteConfig(
+	projectPath: string,
+	options: ViteConfigTransformOptions = {}
+) {
 	const filePath = getViteConfigPath(projectPath);
-	if ([".cjs", ".cts"].includes(path.extname(filePath))) {
-		// Vite bundles these extensions as CommonJS even when they use ESM syntax.
-		// The Cloudflare plugin only exposes an ESM import entry point.
+	const contents = renderViteConfig(filePath, options, {
+		target: options.target ?? "wrangler",
+	});
+	if (contents !== undefined) {
+		writeFileSync(filePath, contents);
+	}
+}
+
+/** Validates a plain Vite rewrite without writing files, unless apply is requested. */
+export function configureViteConfig(
+	projectPath: string,
+	apply: boolean,
+	target: AutoConfigTarget
+): void {
+	const filePath = getViteConfigPath(projectPath);
+	const contents = renderViteConfig(filePath, {}, { plainVite: true, target });
+	if (contents === undefined) {
+		throw unsupportedViteConfig();
+	}
+	if (apply) {
+		writeFileSync(filePath, contents);
+	}
+}
+
+function unsupportedViteConfig(): UserError {
+	return new UserError(
+		"Cannot modify Vite config: could not find a supported defineConfig() call as the default export. Export a Vite defineConfig() call with an inline config object or add the Cloudflare plugin manually.",
+		{ telemetryMessage: "autoconfig vite config object unsupported" }
+	);
+}
+
+function isValueImport(
+	specifier: types.ASTNode
+): specifier is types.namedTypes.ImportSpecifier {
+	return (
+		t.ImportSpecifier.check(specifier) &&
+		!("importKind" in specifier && specifier.importKind === "type")
+	);
+}
+
+const VITE_CONFIG_HELPER_MODULES = ["vite", "vite-plus", "vitest/config"];
+
+function getImportedNames(
+	program: types.namedTypes.Program,
+	modules: string[],
+	imported: string
+): Set<string> {
+	const imports = program.body.flatMap((statement) => {
+		if (
+			!t.ImportDeclaration.check(statement) ||
+			!modules.includes(String(statement.source.value)) ||
+			statement.importKind === "type"
+		) {
+			return [];
+		}
+		return (
+			statement.specifiers?.filter(
+				(specifier) =>
+					isValueImport(specifier) && specifier.imported.name === imported
+			) ?? []
+		);
+	});
+	return new Set(
+		imports.flatMap((specifier) =>
+			t.Identifier.check(specifier.local) ? [specifier.local.name] : []
+		)
+	);
+}
+
+function getExportedViteCall(program: types.namedTypes.Program) {
+	const names = getImportedNames(
+		program,
+		VITE_CONFIG_HELPER_MODULES,
+		"defineConfig"
+	);
+	const exported = program.body.find((statement) =>
+		t.ExportDefaultDeclaration.check(statement)
+	);
+	let expression = exported?.declaration;
+	while (
+		t.TSAsExpression.check(expression) ||
+		t.TSSatisfiesExpression.check(expression) ||
+		t.TSTypeAssertion.check(expression) ||
+		t.TSNonNullExpression.check(expression)
+	) {
+		expression = expression.expression;
+	}
+	if (
+		t.CallExpression.check(expression) &&
+		t.Identifier.check(expression.callee) &&
+		names.has(expression.callee.name)
+	) {
+		return expression;
+	}
+	throw unsupportedViteConfig();
+}
+
+function validateViteCallback(config: types.ASTNode): void {
+	if (
+		(t.ArrowFunctionExpression.check(config) ||
+			t.FunctionExpression.check(config)) &&
+		t.BlockStatement.check(config.body)
+	) {
+		let returnCount = 0;
+		recast.visit(config.body, {
+			visitFunction() {
+				return false;
+			},
+			visitReturnStatement() {
+				returnCount++;
+				return false;
+			},
+		});
+		if (returnCount > 1) {
+			throw new UserError(
+				"Cannot modify Vite config: the config callback has multiple return paths. Return a single config object or add the Cloudflare plugin manually.",
+				{ telemetryMessage: "autoconfig vite config object unsupported" }
+			);
+		}
+	}
+}
+
+function renderViteConfig(
+	filePath: string,
+	options: ViteConfigTransformOptions,
+	{ plainVite = false, target = "cf" as AutoConfigTarget } = {}
+): string | undefined {
+	const extension = path.extname(filePath);
+	const projectPath = path.dirname(filePath);
+	const bundleAsCommonJs =
+		[".js", ".ts"].includes(extension) &&
+		(plainVite
+			? !hasEsmPackageScope(projectPath)
+			: !isModulePackage(projectPath)) &&
+		!(
+			plainVite &&
+			extension === ".js" &&
+			usesNativeJsViteConfig(projectPath, target)
+		);
+	if (
+		[".cjs", ".cts"].includes(extension) ||
+		(plainVite && bundleAsCommonJs && target !== "cf")
+	) {
 		throw new UserError(
 			"Cannot automatically modify a CommonJS Vite configuration. Convert it to ESM (import/export) in vite.config.mjs or vite.config.mts before adding the Cloudflare plugin.",
 			{ telemetryMessage: "autoconfig CommonJS vite config unsupported" }
 		);
 	}
-}
-
-/** Adds the Cloudflare plugin while preserving the project's Vite config path and module type. */
-export function transformViteConfig(
-	projectPath: string,
-	options: {
-		target?: AutoConfigTarget;
-		viteEnvironmentName?: string;
-		incompatibleVitePlugins?: string[];
-	} = {}
-) {
-	const filePath = getViteConfigPath(projectPath);
-	assertViteConfigCanBeTransformed(projectPath);
+	let deferPluginImport = target === "cf" && bundleAsCommonJs;
+	const ast = parseFile(filePath);
+	if (!ast) {
+		return;
+	}
 	const removedIncompatiblePlugins = new Set<string>();
-	let deferPluginImport =
-		options.target === "cf" &&
-		[".js", ".ts"].includes(path.extname(filePath)) &&
-		!isModulePackage(projectPath);
+	let exportedCall: types.namedTypes.CallExpression | undefined;
+	let pluginName = "cloudflare";
+	let programScope: recast.types.NodePath["scope"];
 
-	transformFile(filePath, {
+	recast.visit(ast, {
 		visitProgram(n) {
-			if (n.node.body.some(isCloudflarePluginImport)) {
+			if (plainVite) {
+				programScope = n.scope;
+				exportedCall = getExportedViteCall(n.node);
+				validateViteCallback(exportedCall.arguments[0]);
+			}
+			// Add an import of the @cloudflare/vite-plugin
+			// ```
+			// import {cloudflare} from "@cloudflare/vite-plugin";
+			// ```
+			const lastImportIndex = n.node.body.findLastIndex(
+				(statement) => statement.type === "ImportDeclaration"
+			);
+
+			// Only import if not already imported
+			const pluginImports = n.node.body.filter(
+				(s): s is types.namedTypes.ImportDeclaration =>
+					t.ImportDeclaration.check(s) &&
+					s.source.value === "@cloudflare/vite-plugin" &&
+					(!plainVite ||
+						(s.importKind !== "type" &&
+							(s.specifiers ?? []).some(
+								(specifier) =>
+									!t.ImportSpecifier.check(specifier) ||
+									isValueImport(specifier)
+							)))
+			);
+			if (plainVite && deferPluginImport && pluginImports.length > 0) {
+				throw new UserError(
+					"Cannot automatically modify a CommonJS Vite configuration with a static Cloudflare plugin import. Convert it to ESM in vite.config.mjs or vite.config.mts before retrying.",
+					{
+						telemetryMessage:
+							"autoconfig CommonJS vite plugin import unsupported",
+					}
+				);
+			}
+			if (pluginImports.length > 0) {
 				deferPluginImport = false;
-			} else if (!deferPluginImport) {
-				const lastImportIndex = n.node.body.findLastIndex(
-					(statement) => statement.type === "ImportDeclaration"
-				);
-				// Keep the config synchronous when the plugin can be imported directly:
-				// import { cloudflare } from "@cloudflare/vite-plugin";
-				const importAst = b.importDeclaration(
-					[b.importSpecifier(b.identifier("cloudflare"))],
-					b.stringLiteral(CLOUDFLARE_VITE_PLUGIN)
-				);
-				if (lastImportIndex === -1) {
-					n.get("body").unshift(importAst);
-				} else {
-					n.get("body", lastImportIndex).insertAfter(importAst);
+			}
+			if (plainVite && pluginImports.length > 0) {
+				const existing = pluginImports
+					.flatMap((declaration) =>
+						declaration.importKind === "type"
+							? []
+							: (declaration.specifiers ?? [])
+					)
+					.find(
+						(specifier): specifier is types.namedTypes.ImportSpecifier =>
+							isValueImport(specifier) &&
+							specifier.imported.name === "cloudflare"
+					);
+				if (!t.Identifier.check(existing?.local)) {
+					throw new UserError(
+						"Cannot modify Vite config: use a named cloudflare import from @cloudflare/vite-plugin or add the plugin manually.",
+						{ telemetryMessage: "autoconfig vite plugin import unsupported" }
+					);
 				}
+				pluginName = existing.local.name;
+			}
+			if (pluginImports.length === 0 && !deferPluginImport) {
+				if (plainVite) {
+					const identifiers = new Set<string>();
+					recast.visit(n.node, {
+						visitIdentifier(identifier) {
+							identifiers.add(identifier.node.name);
+							return false;
+						},
+					});
+					for (let suffix = 2; identifiers.has(pluginName); suffix++) {
+						pluginName = `cloudflare${suffix}`;
+					}
+				}
+				n.node.body.splice(
+					lastImportIndex + 1,
+					0,
+					b.importDeclaration(
+						[
+							b.importSpecifier(
+								b.identifier("cloudflare"),
+								b.identifier(pluginName)
+							),
+						],
+						b.stringLiteral("@cloudflare/vite-plugin")
+					)
+				);
 			}
 
 			this.traverse(n);
@@ -321,7 +671,9 @@ export function transformViteConfig(
 			// }));
 			// ```
 			const callee = n.node.callee as types.namedTypes.Identifier;
-			if (callee.name !== "defineConfig") {
+			if (
+				plainVite ? n.node !== exportedCall : callee.name !== "defineConfig"
+			) {
 				return this.traverse(n);
 			}
 
@@ -349,10 +701,40 @@ export function transformViteConfig(
 					}
 				);
 			}
+			if (plainVite) {
+				const callback = n.get("arguments", 0);
+				const bindingScope = deferPluginImport
+					? undefined
+					: lookupBinding(callback.scope, pluginName);
+				if (bindingScope && bindingScope !== programScope) {
+					throw new UserError(
+						`Cannot modify Vite config: the config callback shadows the Cloudflare plugin import (${pluginName}). Rename the local binding or add the plugin manually.`,
+						{ telemetryMessage: "autoconfig vite plugin import shadowed" }
+					);
+				}
+			}
 
-			const pluginsProp = configObject.properties.findLast((prop) =>
+			let pluginsProp = configObject.properties.findLast((prop) =>
 				isPluginsProp(prop)
 			);
+			if (plainVite && !pluginsProp) {
+				if (
+					configObject.properties.some((prop) => {
+						const name = getStaticPropertyName(prop);
+						return name === undefined || name === "plugins";
+					})
+				) {
+					throw new UserError(
+						"Cannot modify Vite config: an existing property may supply plugins. Define an explicit plugins array after spreads and computed properties, or add the Cloudflare plugin manually.",
+						{ telemetryMessage: "autoconfig vite plugins array overridden" }
+					);
+				}
+				pluginsProp = b.objectProperty(
+					b.identifier("plugins"),
+					b.arrayExpression([])
+				);
+				configObject.properties.push(pluginsProp);
+			}
 			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
 				throw new UserError(
 					dedent`
@@ -386,11 +768,18 @@ export function transformViteConfig(
 			// Only add the Cloudflare plugin if it's not already present
 			if (
 				!pluginsProp.value.elements.some(
-					(el) => isCloudflarePluginCall(el) || isDeferredCloudflarePlugin(el)
+					(el) =>
+						isDeferredCloudflarePlugin(el) ||
+						(!deferPluginImport &&
+							el?.type === "CallExpression" &&
+							el.callee.type === "Identifier" &&
+							el.callee.name === pluginName)
 				)
 			) {
 				const plugin = b.identifier("plugin");
-				const cloudflare = b.identifier("cloudflare");
+				const cloudflare = b.identifier(
+					deferPluginImport ? "cloudflare" : pluginName
+				);
 				const pluginCall = b.callExpression(
 					deferPluginImport
 						? b.memberExpression(plugin, cloudflare)
@@ -440,6 +829,7 @@ export function transformViteConfig(
 			return false;
 		},
 	});
+	return recast.print(ast).code;
 }
 
 function isModulePackage(projectPath: string): boolean {
@@ -447,10 +837,7 @@ function isModulePackage(projectPath: string): boolean {
 	if (!existsSync(manifestPath)) {
 		return false;
 	}
-	const manifest = parsePackageJSON(
-		readFileSync(manifestPath, "utf8"),
-		manifestPath
-	);
+	const manifest = parsePackageJSON(readFileSync(manifestPath), manifestPath);
 	return Boolean(
 		manifest &&
 		typeof manifest === "object" &&

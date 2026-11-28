@@ -3,10 +3,9 @@ import { join } from "node:path";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from "./framework-class";
 import {
-	assertViteConfigCanBeTransformed,
 	checkIfViteConfigUsesCloudflarePlugin,
+	configureViteConfig,
 	hasViteConfig,
-	transformViteConfig,
 } from "./utils/vite-config";
 import { installCloudflareVitePlugin } from "./utils/vite-plugin";
 import { CF_VITE_PLUGIN_VERSION_RANGE } from "./utils/vite-plugin-version";
@@ -44,7 +43,7 @@ export class Vite extends Framework {
 		target,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (hasViteConfig(projectPath)) {
-			assertViteConfigCanBeTransformed(projectPath);
+			configureViteConfig(projectPath, false, target);
 		}
 		if (!dryRun) {
 			await installCloudflareVitePlugin({
@@ -55,7 +54,7 @@ export class Vite extends Framework {
 			});
 
 			if (hasViteConfig(projectPath)) {
-				transformViteConfig(projectPath, { target });
+				configureViteConfig(projectPath, true, target);
 			} else {
 				createViteConfig(projectPath, target);
 			}
@@ -91,5 +90,5 @@ export default defineConfig({
 \tplugins: [cloudflare()],
 });
 `;
-	writeFileSync(filePath, content);
+	writeFileSync(filePath, content, { flag: "wx" });
 }

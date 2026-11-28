@@ -23,8 +23,9 @@ const BASE_OPTIONS = {
 describe("Vite framework", () => {
 	runInTempDir();
 
-	beforeEach(() => {
+	beforeEach(async () => {
 		vi.spyOn(cliPackages, "installPackages").mockImplementation(async () => {});
+		await writeFile("package.json", '{"type":"module"}');
 	});
 
 	it("accepts Cloudflare modes", ({ expect }) => {
@@ -43,6 +44,7 @@ describe("Vite framework", () => {
 			"export default mergeConfig(base, defineConfig({ plugins: [cloudflare()] }));",
 			"export default () => defineConfig({ plugins: [cloudflare()] });",
 			"const config = defineConfig({ plugins: [cloudflare()] }); export { config as default };",
+			"export default () => { try { throw 0; } catch { return defineConfig({ plugins: [cloudflare()] }); } };",
 		])(
 			"preserves Wrangler detection of wrapped and indirect exports: %s",
 			async (config, { expect }) => {
@@ -67,6 +69,20 @@ describe("Vite framework", () => {
 			const framework = new Vite({ id: "vite", name: "Vite" });
 
 			expect(framework.isConfigured(".")).toBe(false);
+			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
+		});
+
+		it("preserves legacy Wrangler detection of a local plugin wrapper", async ({
+			expect,
+		}) => {
+			await writeFile(
+				"vite.config.ts",
+				`import * as cfVite from "@cloudflare/vite-plugin";
+import { defineConfig } from "vite";
+const cloudflare = () => cfVite.cloudflare();
+export default defineConfig({ plugins: [cloudflare()] });\n`
+			);
+			const framework = new Vite({ id: "vite", name: "Vite" });
 			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
 		});
 	});
@@ -209,6 +225,274 @@ export default defineConfig({
 					notFoundHandling: "single-page-application",
 				},
 			});
+		});
+
+		it("preflights and adds a missing plugins array without changing existing settings", async ({
+			expect,
+		}) => {
+			const filePath = "vite.config.ts";
+			const source =
+				'import { defineConfig } from "vite";\nexport default defineConfig(() => ({ server: { port: 3000 } }));\n';
+			await writeFile(filePath, source);
+			const framework = new Vite({ id: "vite", name: "Vite" });
+
+			await framework.configure({ ...BASE_OPTIONS, dryRun: true });
+			expect(readFileSync(filePath, "utf8")).toBe(source);
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
+
+			await framework.configure(BASE_OPTIONS);
+			const content = readFileSync(filePath, "utf8");
+			expect(content).toContain("server: { port: 3000 }");
+			expect(content).toContain("plugins: [cloudflare()]");
+		});
+
+		it.for([true, false])(
+			"uses the config on disk after installing (initially present: %s)",
+			async (initiallyPresent, { expect }) => {
+				const filePath = "vite.config.ts";
+				const prefix = 'import { defineConfig } from "vite";\n';
+				if (initiallyPresent) {
+					await writeFile(
+						filePath,
+						`${prefix}export default defineConfig({ server: { port: 3000 } });\n`
+					);
+				}
+				vi.mocked(cliPackages.installPackages).mockImplementation(async () => {
+					await writeFile(
+						filePath,
+						`${prefix}export default defineConfig({ server: { port: 4000 } });\n`
+					);
+				});
+				await new Vite({ id: "vite", name: "Vite" }).configure(BASE_OPTIONS);
+				const result = readFileSync(filePath, "utf8");
+				expect(result).toContain("server: { port: 4000 }");
+				expect(result).toContain("plugins: [cloudflare()]");
+			}
+		);
+
+		it("reuses an aliased Cloudflare import in the default export", async ({
+			expect,
+		}) => {
+			const filePath = "vite.config.ts";
+			await writeFile(
+				filePath,
+				`import { defineConfig as viteConfig } from "vite";
+import { cloudflare as workers } from "@cloudflare/vite-plugin";
+export default viteConfig(() => {
+  function getPort() { return 3000; }
+  return { server: { port: getPort() } };
+});\n`
+			);
+			const framework = new Vite({ id: "vite", name: "Vite" });
+			await framework.configure(BASE_OPTIONS);
+			expect(readFileSync(filePath, "utf8")).toContain("plugins: [workers()]");
+			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
+		});
+
+		it("detects the generated alias for a conflicting local name", async ({
+			expect,
+		}) => {
+			const filePath = "vite.config.ts";
+			await writeFile(
+				filePath,
+				'import { defineConfig } from "vite";\nconst cloudflare = 3000;\nexport default defineConfig({ server: { port: cloudflare } });\n'
+			);
+			const framework = new Vite({ id: "vite", name: "Vite" });
+			await framework.configure(BASE_OPTIONS);
+			expect(readFileSync(filePath, "utf8")).toContain(
+				"plugins: [cloudflare2()]"
+			);
+			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(true);
+		});
+
+		it.for([
+			["js", "{}"],
+			["ts", "{}"],
+		])(
+			"loads the plugin dynamically for a .%s config in a CommonJS package",
+			async ([extension, manifest], { expect }) => {
+				const filePath = `vite.config.${extension}`;
+				const source =
+					'import { defineConfig } from "vite";\nexport default defineConfig({});\n';
+				await writeFile("package.json", manifest);
+				await writeFile(filePath, source);
+				const framework = new Vite({ id: "vite", name: "Vite" });
+				await framework.configure(BASE_OPTIONS);
+				const editedConfig = readFileSync(filePath, "utf8");
+				expect(editedConfig).toContain(
+					'import("@cloudflare/vite-plugin").then('
+				);
+				await framework.configure(BASE_OPTIONS);
+				expect(readFileSync(filePath, "utf8")).toBe(editedConfig);
+			}
+		);
+
+		it("rejects reusing a static plugin import in a bundled CommonJS config before installing", async ({
+			expect,
+		}) => {
+			await writeFile("package.json", "{}");
+			const source = `import { defineConfig } from "vite";
+import { cloudflare as workers } from "@cloudflare/vite-plugin";
+export default defineConfig({});
+`;
+			await writeFile("vite.config.ts", source);
+			await expect(
+				new Vite({ id: "vite", name: "Vite" }).configure(BASE_OPTIONS)
+			).rejects.toThrow(
+				"CommonJS Vite configuration with a static Cloudflare plugin import"
+			);
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
+			expect(readFileSync("vite.config.ts", "utf8")).toBe(source);
+		});
+
+		it.for([
+			{ build: "vite build --configLoader=native", nativeBuild: true },
+			{ build: "vite build --app --configLoader native", nativeBuild: true },
+			{ build: "vite build --configLoader native -w", nativeBuild: false },
+			{ build: "vite build --configLoader native --watch", nativeBuild: false },
+			{
+				build: "tsc -b --watch && vite build --configLoader native",
+				nativeBuild: false,
+			},
+			{
+				build: "tsc -b -w && vite build --configLoader native",
+				nativeBuild: false,
+			},
+			{
+				build: "tsc -b --watch false -w && vite build --configLoader native",
+				nativeBuild: false,
+			},
+			{
+				build: "tsc @args.txt && vite build --configLoader native",
+				nativeBuild: false,
+			},
+			{
+				build: "vite build --configLoader native --profile=name",
+				nativeBuild: false,
+			},
+			{
+				build: "vite build --configLoader native --outDir dist",
+				nativeBuild: true,
+			},
+			{
+				build: "tsc -b && vite build --sourcemap --configLoader native",
+				nativeBuild: true,
+			},
+			{ build: "vite build", nativeBuild: false },
+			{
+				build: "vite build --configLoader native --config other.mjs",
+				nativeBuild: false,
+			},
+			{
+				build: "vite build --configLoader native --configLoader bundle",
+				nativeBuild: false,
+			},
+		])(
+			"requires native loading of the default config in both scripts ($build)",
+			async ({ build, nativeBuild }, { expect }) => {
+				const source =
+					'import { defineConfig } from "vite";\nexport default defineConfig({});\n';
+				await writeFile(
+					"package.json",
+					JSON.stringify({
+						scripts: {
+							dev: "vite --host 0.0.0.0 --configLoader native --cors --open /docs",
+							build,
+						},
+					})
+				);
+				await writeFile("vite.config.js", source);
+				const framework = new Vite({ id: "vite", name: "Vite" });
+				await framework.configure(BASE_OPTIONS);
+				const [major, minor] = process.versions.node.split(".").map(Number);
+				if (nativeBuild && (major > 22 || (major === 22 && minor >= 7))) {
+					expect(readFileSync("vite.config.js", "utf8")).toContain(
+						"plugins: [cloudflare()]"
+					);
+				} else {
+					expect(readFileSync("vite.config.js", "utf8")).toContain(
+						'import("@cloudflare/vite-plugin").then('
+					);
+				}
+			}
+		);
+
+		it("creates an explicitly ESM config under a CommonJS package", async ({
+			expect,
+		}) => {
+			await writeFile("package.json", "{}");
+			await new Vite({ id: "vite", name: "Vite" }).configure(BASE_OPTIONS);
+			expect(readFileSync("vite.config.mts", "utf8")).toContain(
+				"plugins: [cloudflare()]"
+			);
+		});
+
+		it.for([
+			'import type { Plugin } from "@cloudflare/vite-plugin";',
+			'import { type Plugin } from "@cloudflare/vite-plugin";',
+			'import "@cloudflare/vite-plugin";',
+		])(
+			"keeps %s while adding a separate plugin value import",
+			async (importLine, { expect }) => {
+				const filePath = "vite.config.ts";
+				await writeFile(
+					filePath,
+					`${importLine}\nimport { defineConfig } from "vite";\nexport default defineConfig({});\n`
+				);
+				await new Vite({ id: "vite", name: "Vite" }).configure(BASE_OPTIONS);
+				const result = readFileSync(filePath, "utf8");
+				expect(result).toContain(importLine);
+				expect(result).toContain("plugins: [cloudflare()]");
+			}
+		);
+
+		it("accepts a typed default export from vitest/config", async ({
+			expect,
+		}) => {
+			const filePath = "vite.config.ts";
+			await writeFile(
+				filePath,
+				'import { defineConfig } from "vitest/config";\nimport type { UserConfig } from "vite";\nexport default (defineConfig({}) as UserConfig) satisfies UserConfig;\n'
+			);
+			await new Vite({ id: "vite", name: "Vite" }).configure(BASE_OPTIONS);
+			const result = readFileSync(filePath, "utf8");
+			expect(result).toContain("plugins: [cloudflare()]");
+			expect(result).toContain("as UserConfig) satisfies UserConfig");
+		});
+
+		it("rejects a callback-local plugin that shadows an existing import", async ({
+			expect,
+		}) => {
+			const filePath = "vite.config.ts";
+			const source = `import { defineConfig } from "vite";
+import { cloudflare as workers } from "@cloudflare/vite-plugin";
+export default defineConfig(() => {
+  const workers = () => ({ name: "other" });
+  return { plugins: [workers()] };
+});\n`;
+			await writeFile(filePath, source);
+			const framework = new Vite({ id: "vite", name: "Vite" });
+			expect(framework.isConfigured(".", { target: "wrangler" })).toBe(false);
+			await expect(framework.configure(BASE_OPTIONS)).rejects.toThrow(
+				"shadows the Cloudflare plugin import (workers)"
+			);
+			expect(cliPackages.installPackages).not.toHaveBeenCalled();
+			expect(readFileSync(filePath, "utf8")).toBe(source);
+		});
+
+		it("preserves an unsupported config created during installation", async ({
+			expect,
+		}) => {
+			const filePath = "vite.config.ts";
+			const source = "export default { plugins: [] };\n";
+			vi.mocked(cliPackages.installPackages).mockImplementation(async () => {
+				await writeFile(filePath, source);
+			});
+			await expect(
+				new Vite({ id: "vite", name: "Vite" }).configure(BASE_OPTIONS)
+			).rejects.toThrow("could not find a supported defineConfig() call");
+			expect(readFileSync(filePath, "utf8")).toBe(source);
+			expect(existsSync("vite.config.js")).toBe(false);
 		});
 	});
 });

@@ -53,6 +53,7 @@ export function getViteProjectCommands({
 	| {
 			devCommand?: string;
 			buildCommand?: string;
+			runner: "vite" | "vite-plus";
 			error?: AutoConfigCommandError;
 	  }
 	| undefined {
@@ -91,6 +92,7 @@ export function getViteProjectCommands({
 	);
 	if (!plugin) {
 		return {
+			runner: packageName,
 			error: {
 				code: "vite-plugin-not-installed",
 				message: `@cloudflare/vite-plugin is declared in package.json but is not installed. ${requirement} Run ${install}.`,
@@ -103,6 +105,7 @@ export function getViteProjectCommands({
 		semiver(version.split("+")[0], "2.0.0-beta.v.13") < 0
 	) {
 		return {
+			runner: packageName,
 			error: {
 				code: "vite-plugin-incompatible",
 				message: `@cloudflare/vite-plugin@${plugin.packageJson.version ?? "unknown"} is installed, but it is not compatible with cf's local runtime. ${requirement} Run ${install}.`,
@@ -110,13 +113,14 @@ export function getViteProjectCommands({
 		};
 	}
 	if (!resolveCommands) {
-		return {};
+		return { runner: packageName };
 	}
 
 	const commandName = packageName === "vite-plus" ? "vp" : "vite";
 	const binary = resolveViteRunnerExecutable(nodeModulesPaths, packageName);
 	if (!binary) {
 		return {
+			runner: packageName,
 			error: {
 				code: "vite-tool-not-installed",
 				message: `@cloudflare/vite-plugin is installed, but the project's ${commandName} executable could not be found. ${requirement} Run ${install}.`,
@@ -131,6 +135,7 @@ export function getViteProjectCommands({
 			? `"${process.execPath}" "${binary}"`
 			: `'${binary.replaceAll("'", "'\\''")}'`;
 	return {
+		runner: packageName,
 		devCommand: `${executable} dev`,
 		buildCommand: `${executable} build`,
 	};

@@ -20,6 +20,7 @@ import {
 	FatalError,
 	isNodejsCompatDefaultOn,
 	parseJSONC,
+	readFileSync,
 	toValidWorkerName,
 } from "@cloudflare/workers-utils";
 import * as find from "empathic/find";
@@ -351,7 +352,7 @@ export async function runAutoConfig(
 
 	if (hasPackageJson) {
 		const existingPackageJson = JSON.parse(
-			await readFile(packageJsonPath, "utf8")
+			readFileSync(packageJsonPath)
 		) as PackageJSON;
 		const existingScripts = existingPackageJson.scripts ?? {};
 		const scriptsToAdd = Object.fromEntries(

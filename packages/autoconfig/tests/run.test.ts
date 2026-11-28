@@ -734,6 +734,150 @@ describe("runAutoConfig()", () => {
 		);
 	});
 
+	it.for(["", " --watch false", " -w false", " -w --watch false"])(
+		"runs the native-loader build script after rewriting a typeless Vite config (tsc suffix %j)",
+		async (watchFlags, { expect }) => {
+			const [major, minor] = process.versions.node.split(".").map(Number);
+			if (major < 22 || (major === 22 && minor < 7)) {
+				return;
+			}
+			vi.spyOn(cliPackages, "installPackages").mockResolvedValue();
+			const build = `tsc -b${watchFlags} && vite\tbuild\t--configLoader\tnative`;
+			const packageJson = JSON.stringify({
+				["__proto__"]: { retained: true },
+				name: "vite-app",
+				devDependencies: { vite: "^8.0.0" },
+				scripts: { dev: "vite --host --configLoader native", build },
+			});
+			await seed({
+				"package.json": packageJson,
+				"vite.config.js":
+					'import { defineConfig } from "vite";\nexport default defineConfig({});\n',
+			});
+			const context = createMockContext();
+			const details = await getDetailsForAutoConfig({ context });
+			await seed({ "package.json": `\uFEFF${packageJson}` });
+			await runAutoConfig(details, {
+				context,
+				skipConfirmations: true,
+				enableTargetCliInstallation: false,
+				runBuild: true,
+			});
+			expect(details.devCommand).toBe("npm run dev --");
+			expect(context.runCommand).toHaveBeenCalledWith(
+				"npm run build --",
+				details.projectPath,
+				"[build]"
+			);
+			expect(readFileSync("vite.config.js", "utf8")).toContain(
+				"plugins: [cloudflare()]"
+			);
+			const savedManifest = JSON.parse(readFileSync("package.json", "utf8"));
+			expect(Object.hasOwn(savedManifest, "__proto__")).toBe(true);
+			expect(savedManifest["__proto__"]).toEqual({ retained: true });
+			expect(savedManifest.scripts).toMatchObject({
+				build,
+				deploy: "cf deploy",
+			});
+		}
+	);
+
+	it.for([
+		[
+			"spread",
+			"defineConfig({ ...shared })",
+			"an existing property may supply plugins",
+		],
+		[
+			"computed key",
+			"defineConfig({ [key]: shared.plugins })",
+			"an existing property may supply plugins",
+		],
+		[
+			"accessor",
+			"defineConfig({ get plugins() { return shared.plugins; } })",
+			"an existing property may supply plugins",
+		],
+		[
+			"non-literal plugins",
+			"defineConfig({ plugins: shared.plugins })",
+			"could not find a valid plugins array",
+		],
+		[
+			"no defineConfig",
+			"shared",
+			"could not find a supported defineConfig() call",
+		],
+		[
+			"an overridden helper config",
+			"{ ...defineConfig({}), plugins: [] }",
+			"could not find a supported defineConfig() call",
+		],
+		[
+			"multiple return paths",
+			' defineConfig(({ command }) => { if (command === "build") return { base: "/app/" }; return { server: { port: 3000 } }; })',
+			"config callback has multiple return paths",
+		],
+	])(
+		"rejects a Vite config with %s without changing project files and allows retry",
+		async ([, config, error], { expect }) => {
+			const installPackages = vi
+				.spyOn(cliPackages, "installPackages")
+				.mockResolvedValue();
+			const packageJson = {
+				name: "vite-app",
+				type: "module",
+				devDependencies: { vite: "^8.0.0" },
+			};
+			const configPrefix = 'import { defineConfig } from "vite";\n';
+			const originalFiles = {
+				"package.json": JSON.stringify(packageJson),
+				"package-lock.json": JSON.stringify({
+					name: "vite-app",
+					lockfileVersion: 3,
+				}),
+				"vite.config.ts": `${configPrefix}const key = "plugins";\nconst shared = { plugins: [] };\nexport default ${config};\n`,
+			};
+			await seed(originalFiles);
+			const details = {
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "vite-app",
+				framework: new Vite({ id: "vite", name: "Vite" }),
+				outputDir: "dist",
+				packageJson,
+				packageManager: NpmPackageManager,
+			} as const;
+			const options = {
+				context: createMockContext(),
+				skipConfirmations: true,
+				runBuild: false,
+			};
+
+			await expect(runAutoConfig(details, options)).rejects.toThrow(error);
+			expect(installPackages).not.toHaveBeenCalled();
+			for (const [filePath, contents] of Object.entries(originalFiles)) {
+				expect(readFileSync(filePath)).toEqual(Buffer.from(contents));
+			}
+			expect(existsSync("cloudflare.config.ts")).toBe(false);
+			expect(existsSync("tsconfig.json")).toBe(false);
+
+			await seed({
+				"vite.config.ts": `${configPrefix}export default defineConfig({});\n`,
+			});
+			await runAutoConfig(details, options);
+			expect(installPackages).toHaveBeenCalledWith(
+				"npm",
+				["cf@latest", "typescript"],
+				expect.anything()
+			);
+			expect(readFileSync("vite.config.ts", "utf8")).toContain(
+				"plugins: [cloudflare()]"
+			);
+			expect(existsSync("cloudflare.config.ts")).toBe(true);
+		}
+	);
+
 	it("does not reinstall existing cf or TypeScript dependencies", async ({
 		expect,
 	}) => {
