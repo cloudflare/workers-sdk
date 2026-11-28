@@ -117,7 +117,7 @@ test.for([
 		const response = await mf.dispatchFetch("http://localhost");
 		expect(await response.json()).toMatchObject({
 			meta: {
-				served_by: "miniflare.db",
+				served_by: "workerd",
 				served_by_primary: true,
 				total_attempts: 1,
 				duration: expect.any(Number),
@@ -161,8 +161,11 @@ test("SQL errors propagate directly and convenience methods preserve their prefi
 		return Response.json(errors);
 	`);
 	const response = await mf.dispatchFetch("http://localhost");
+	// workerd's D1 leaves its errors named "Error": a caller without
+	// enhanced_error_serialization would see a "D1_ERROR" name folded into
+	// the message, which the binding prefixes again.
 	const backendError = {
-		name: "D1_ERROR",
+		name: "Error",
 		message: expect.stringMatching(/^no such table: missing_table/),
 	};
 	expect(await response.json()).toEqual([
@@ -321,7 +324,7 @@ test.for([
 	`);
 		const response = await mf.dispatchFetch("http://localhost");
 		expect(await response.json()).toEqual({
-			name: "D1_ERROR",
+			name: "Error",
 			message,
 		});
 		expect(response.status).toBe(500);
