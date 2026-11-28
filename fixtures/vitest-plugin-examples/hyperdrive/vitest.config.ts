@@ -16,9 +16,7 @@ export default mergeConfig(
 							ECHO_SERVER_HYPERDRIVE: `postgres://user:pass@127.0.0.1:${echoServerPort}/db`,
 						},
 					},
-					wrangler: {
-						configPath: "./wrangler.jsonc",
-					},
+					config: true,
 				};
 			}),
 		],

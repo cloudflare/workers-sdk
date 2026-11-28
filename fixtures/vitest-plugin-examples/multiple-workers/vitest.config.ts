@@ -64,9 +64,7 @@ export default mergeConfig(
 		plugins: [
 			cloudflareTest({
 				// Configuration for the test runner and "API service" Worker
-				wrangler: {
-					configPath: "./api-service/wrangler.jsonc",
-				},
+				config: "./api-service/cloudflare.config.ts",
 				miniflare: {
 					bindings: {
 						TEST_AUTH_PUBLIC_KEY: authKeypair.publicKey,

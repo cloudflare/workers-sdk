@@ -13,10 +13,7 @@ export default defineConfig(async () => {
 		defineProject({
 			plugins: [
 				cloudflareTest({
-					wrangler: {
-						configPath: "./wrangler.jsonc",
-						environment: "production",
-					},
+					config: true,
 					miniflare: {
 						// Add a test-only binding for migrations, so we can apply them in a
 						// setup file

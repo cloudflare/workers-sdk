@@ -7,9 +7,7 @@ export default mergeConfig(
 	defineProject({
 		plugins: [
 			cloudflareTest({
-				wrangler: {
-					configPath: "./wrangler.nodejs-optout.jsonc",
-				},
+				config: "./cloudflare.nodejs-optout.config.ts",
 			}),
 		],
 
