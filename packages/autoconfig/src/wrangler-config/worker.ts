@@ -1,0 +1,401 @@
+import {
+	CONFIGURATION_DOCS_URL,
+	createFollowUp,
+	followUpToComment,
+} from "../follow-ups";
+import { convertBindings } from "./bindings";
+import { convertExports } from "./exports";
+import {
+	addProperty,
+	camelObject,
+	getRecord,
+	getRecords,
+	hasOwn,
+	isRecord,
+	objectFromRecord,
+	optionsFromRecord,
+	toOutputValue,
+	type UnknownRecord,
+} from "./helpers";
+import { convertTriggers } from "./triggers";
+import type {
+	MigrationFollowUp,
+	OutputComment,
+	OutputObject,
+	OutputProperty,
+	OutputValue,
+} from "./types";
+
+const DEPENDENCIES_INSTRUMENTATION_ENV_VAR =
+	"CLOUDFLARE_DEPENDENCIES_INSTRUMENTATION";
+
+function isDependenciesInstrumentationConfig(
+	value: unknown
+): value is { enabled?: boolean; exclude_packages?: string[] } {
+	if (!isRecord(value)) {
+		return false;
+	}
+
+	return (
+		(value.enabled === undefined || typeof value.enabled === "boolean") &&
+		(value.exclude_packages === undefined ||
+			(Array.isArray(value.exclude_packages) &&
+				value.exclude_packages.every(
+					(packageName) => typeof packageName === "string"
+				)))
+	);
+}
+
+function createDependenciesInstrumentationFollowUp(
+	source: UnknownRecord,
+	sourcePrefix: string
+): MigrationFollowUp | undefined {
+	if (!hasOwn(source, "dependencies_instrumentation")) {
+		return;
+	}
+
+	const sourcePath = `${sourcePrefix ? `${sourcePrefix}.` : ""}dependencies_instrumentation`;
+	const instrumentation = source.dependencies_instrumentation;
+	if (!isDependenciesInstrumentationConfig(instrumentation)) {
+		return createFollowUp(
+			"unsupported-field",
+			"The dependency instrumentation configuration is invalid and was not migrated.",
+			{ sourcePath }
+		);
+	}
+
+	const hasExcludedPackages =
+		(instrumentation.exclude_packages?.length ?? 0) > 0;
+
+	if (instrumentation.enabled === false) {
+		return createFollowUp(
+			"dependencies-instrumentation-opt-out",
+			`Set ${DEPENDENCIES_INSTRUMENTATION_ENV_VAR}=false before deploying to keep package dependency metadata disabled.${hasExcludedPackages ? " The package exclusion list was not migrated; if dependency metadata is later enabled, those packages will be included." : ""}`,
+			{ sourcePath }
+		);
+	}
+
+	if (hasExcludedPackages) {
+		return createFollowUp(
+			"dependencies-instrumentation-exclusions",
+			`Package dependency exclusions cannot be migrated. ${DEPENDENCIES_INSTRUMENTATION_ENV_VAR} only enables or disables dependency metadata as a whole.`,
+			{ sourcePath }
+		);
+	}
+
+	return;
+}
+
+export function convertWorkerConfig(
+	source: UnknownRecord,
+	sourcePrefix: string,
+	imports: Set<string>,
+	followUps: MigrationFollowUp[]
+): OutputObject {
+	const properties: OutputProperty[] = [];
+	const comments: OutputComment[] = [];
+	// `inline` follow-ups are already attached as a comment to the generated
+	// value they concern, so they aren't repeated at the end of the Worker.
+	const report = (
+		followUp: MigrationFollowUp,
+		options: { inline?: boolean } = {}
+	) => {
+		followUps.push(followUp);
+		if (!options.inline) {
+			comments.push(followUpToComment(followUp));
+		}
+	};
+
+	if (typeof source.name === "string") {
+		properties.push({ key: "name", value: source.name });
+	} else {
+		const followUp = createFollowUp(
+			"missing-name",
+			"Wrangler config has no Worker name. Replace the generated placeholder.",
+			{ sourcePath: sourcePrefix ? `${sourcePrefix}.name` : "name" }
+		);
+		followUps.push(followUp);
+		properties.push({
+			comments: [followUpToComment(followUp)],
+			key: "name",
+			value: "TODO",
+		});
+	}
+
+	if (typeof source.compatibility_date === "string") {
+		properties.push({
+			key: "compatibilityDate",
+			value: source.compatibility_date,
+		});
+	} else {
+		const followUp = createFollowUp(
+			"missing-compatibility-date",
+			"Wrangler config has no compatibility date. Replace the generated placeholder.",
+			{
+				sourcePath: sourcePrefix
+					? `${sourcePrefix}.compatibility_date`
+					: "compatibility_date",
+			}
+		);
+		followUps.push(followUp);
+		properties.push({
+			comments: [followUpToComment(followUp)],
+			key: "compatibilityDate",
+			value: "YYYY-MM-DD",
+		});
+	}
+
+	addProperty(properties, source, "compatibility_flags", "compatibilityFlags");
+	addProperty(properties, source, "main", "entrypoint");
+	addProperty(properties, source, "workers_dev", "workersDev");
+	addProperty(properties, source, "preview_urls", "previewUrls");
+	addProperty(properties, source, "logpush");
+	addProperty(properties, source, "placement", "placement", (value) =>
+		isRecord(value) ? camelObject(value) : undefined
+	);
+	addProperty(properties, source, "limits", "limits", (value) =>
+		isRecord(value) ? camelObject(value) : undefined
+	);
+	addProperty(properties, source, "cache", "cache", (value) =>
+		isRecord(value) ? camelObject(value) : undefined
+	);
+	addProperty(properties, source, "observability", "observability", (value) =>
+		isRecord(value) ? camelObject(value) : undefined
+	);
+	addProperty(properties, source, "access");
+
+	const images = getRecord(source, "images");
+	const urlTransformations = images
+		? getRecord(images, "url_transformations")
+		: undefined;
+	if (urlTransformations) {
+		properties.push({
+			key: "images",
+			value: {
+				kind: "object",
+				properties: [
+					{
+						key: "urlTransformations",
+						value: camelObject(urlTransformations),
+					},
+				],
+			},
+		});
+	}
+
+	const assets = getRecord(source, "assets");
+	if (assets) {
+		const runtimeAssets = optionsFromRecord(assets, [
+			["html_handling", "htmlHandling"],
+			["not_found_handling", "notFoundHandling"],
+			["run_worker_first", "runWorkerFirst"],
+		]);
+		if (runtimeAssets.properties.length > 0) {
+			properties.push({ key: "assets", value: runtimeAssets });
+		}
+	}
+
+	const convertedTriggers = convertTriggers(
+		source,
+		sourcePrefix,
+		imports,
+		report
+	);
+	if (convertedTriggers.domains) {
+		properties.push({
+			key: "domains",
+			value: convertedTriggers.domains,
+		});
+	}
+	if (convertedTriggers.triggers) {
+		properties.push({
+			key: "triggers",
+			value: convertedTriggers.triggers,
+		});
+	}
+
+	const tailConsumers: OutputValue[] = [];
+	for (const [index, entry] of getRecords(source, "tail_consumers").entries()) {
+		let worker = entry.service;
+		if (typeof entry.environment === "string" && typeof worker === "string") {
+			worker = `${worker}-${entry.environment}`;
+			report(
+				createFollowUp(
+					"service-environment",
+					"A tail consumer used a legacy service environment. Verify the generated Worker name.",
+					{ sourcePath: `${sourcePrefix || "config"}.tail_consumers.${index}` }
+				)
+			);
+		}
+
+		const value = toOutputValue(worker);
+		if (value !== undefined) {
+			tailConsumers.push({
+				kind: "object",
+				properties: [
+					{
+						key: "worker",
+						value,
+					},
+				],
+			});
+		}
+	}
+	if (tailConsumers.length > 0) {
+		properties.push({
+			key: "tailConsumers",
+			value: tailConsumers,
+		});
+	}
+
+	const streamingTailConsumers: OutputValue[] = [];
+	for (const entry of getRecords(source, "streaming_tail_consumers")) {
+		if (typeof entry.service === "string") {
+			streamingTailConsumers.push({
+				kind: "object",
+				properties: [
+					{
+						key: "worker",
+						value: entry.service,
+					},
+				],
+			});
+		}
+	}
+	const experimental: OutputProperty[] = [];
+	if (streamingTailConsumers.length > 0) {
+		experimental.push({
+			key: "streamingTailConsumers",
+			value: streamingTailConsumers,
+		});
+	}
+	addProperty(experimental, source, "first_party_worker", "firstPartyWorker");
+	if (experimental.length > 0) {
+		properties.push({
+			key: "experimental",
+			value: { kind: "object", properties: experimental },
+		});
+	}
+
+	const bindings = convertBindings(source, sourcePrefix, imports, report);
+	if (bindings) {
+		properties.push({
+			key: "env",
+			value: bindings,
+		});
+	}
+	const configuredExports = convertExports(
+		source,
+		sourcePrefix,
+		imports,
+		report
+	);
+	if (configuredExports) {
+		properties.push({
+			key: "exports",
+			value: configuredExports,
+		});
+	}
+
+	const unsafe = getRecord(source, "unsafe");
+	if (unsafe) {
+		const runtimeUnsafe: OutputProperty[] = [];
+
+		const metadata = getRecord(unsafe, "metadata");
+		if (metadata) {
+			runtimeUnsafe.push({
+				key: "metadata",
+				value: objectFromRecord(metadata),
+			});
+		}
+
+		const capnp = getRecord(unsafe, "capnp");
+		if (capnp) {
+			runtimeUnsafe.push({
+				key: "capnp",
+				value: camelObject(capnp),
+			});
+		}
+
+		if (runtimeUnsafe.length > 0) {
+			properties.push({
+				key: "unsafe",
+				value: {
+					kind: "object",
+					properties: runtimeUnsafe,
+				},
+			});
+		}
+	}
+
+	if (Array.isArray(source.containers) && source.containers.length > 0) {
+		report(
+			createFollowUp(
+				"container-review",
+				"Containers require manual review and were not migrated.",
+				{ sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}containers` }
+			)
+		);
+	}
+	const dependenciesInstrumentationFollowUp =
+		createDependenciesInstrumentationFollowUp(source, sourcePrefix);
+	if (dependenciesInstrumentationFollowUp) {
+		report(dependenciesInstrumentationFollowUp);
+	}
+
+	const unsupportedFields: Array<[string, string]> = [
+		["cloudchamber", "Cloudchamber configuration"],
+		["keep_vars", "keep_vars"],
+		["pages_build_output_dir", "Pages configuration"],
+		["site", "Workers Sites configuration"],
+		["unsafe_hello_world", "unsafe_hello_world bindings"],
+	];
+	for (const [field, label] of unsupportedFields) {
+		if (hasOwn(source, field)) {
+			report(
+				createFollowUp(
+					"unsupported-field",
+					`The ${label} is not supported by the new config and was not migrated.`,
+					{
+						docsUrl: CONFIGURATION_DOCS_URL,
+						sourcePath: `${sourcePrefix ? `${sourcePrefix}.` : ""}${field}`,
+					}
+				)
+			);
+		}
+	}
+
+	return {
+		kind: "object",
+		properties,
+		trailingComments: comments.length > 0 ? comments : undefined,
+	};
+}
+
+export function convertRootConfig(
+	source: UnknownRecord,
+	sourcePrefix: string,
+	imports: Set<string>,
+	followUps: MigrationFollowUp[]
+): OutputObject {
+	const properties: OutputProperty[] = [];
+	if (typeof source.account_id === "string") {
+		properties.push({ key: "accountId", value: source.account_id });
+	}
+
+	if (source.compliance_region === "public") {
+		properties.push({ key: "complianceRegion", value: "public" });
+	} else if (source.compliance_region === "fedramp_high") {
+		properties.push({ key: "complianceRegion", value: "fedramp-high" });
+	}
+
+	properties.push({
+		key: "worker",
+		value: convertWorkerConfig(source, sourcePrefix, imports, followUps),
+	});
+
+	return {
+		kind: "object",
+		properties,
+	};
+}

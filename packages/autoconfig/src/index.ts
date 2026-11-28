@@ -29,6 +29,17 @@ export type {
 
 export { displayAutoConfigDetails, confirmAutoConfigDetails } from "./details";
 
+export {
+	migrateBundler,
+	migrateWranglerConfig,
+} from "./wrangler-config/migrate";
+export type {
+	BundlerMigrationOptions,
+	MigrationFollowUp,
+	MigrationResult,
+	WranglerConfigMigrationOptions,
+} from "./wrangler-config/types";
+
 export type {
 	AutoConfigDetails,
 	AutoConfigCommandError,

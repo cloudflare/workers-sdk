@@ -1,0 +1,39 @@
+import { describe, it } from "vitest";
+import { renderCloudflareConfig } from "../../src/cloudflare-config/render";
+import { convertWranglerConfig } from "../../src/wrangler-config/convert";
+import type { RawConfig } from "@cloudflare/workers-utils/config";
+
+describe("experimental Worker settings", () => {
+	it("moves `first_party_worker` under `experimental`", ({ expect }) => {
+		const converted = convertWranglerConfig(
+			{
+				compatibility_date: "2026-09-23",
+				name: "first-party",
+				first_party_worker: true,
+				streaming_tail_consumers: [{ service: "streaming-tail" }],
+			} satisfies RawConfig,
+			"wrangler",
+			[]
+		);
+
+		expect(renderCloudflareConfig(converted)).toMatchInlineSnapshot(`
+			"import { defineConfig } from "cf/config";
+
+			export default defineConfig({
+				worker: {
+					name: "first-party",
+					compatibilityDate: "2026-09-23",
+					experimental: {
+						streamingTailConsumers: [
+							{
+								worker: "streaming-tail",
+							},
+						],
+						firstPartyWorker: true,
+					},
+				},
+			});
+			"
+		`);
+	});
+});

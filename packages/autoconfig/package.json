@@ -19,6 +19,10 @@
 		".": {
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
+		},
+		"./wrangler-to-cf": {
+			"import": "./dist/wrangler-to-cf.js",
+			"types": "./dist/wrangler-to-cf.d.ts"
 		}
 	},
 	"scripts": {
@@ -39,6 +43,7 @@
 		"@netlify/build-info": "11.3.1",
 		"@types/esprima": "^4.0.3",
 		"@types/node": "catalog:default",
+		"@types/semver": "^7.5.1",
 		"chalk": "catalog:default",
 		"empathic": "^2.0.0",
 		"esbuild": "catalog:default",
@@ -46,6 +51,8 @@
 		"jsonc-parser": "catalog:default",
 		"recast": "0.23.11",
 		"semiver": "^1.1.0",
+		"semver": "^7.7.1",
+		"tinyglobby": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"tsdown": "catalog:default",
 		"typescript": "catalog:default",

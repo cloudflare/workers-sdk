@@ -359,7 +359,7 @@ export default defineConfig({
 		// findings after upgrading Oxlint and moving to the tsrs type checker.
 		{
 			files: [
-				"packages/codemods/test/wrangler-to-cf/stream-bindings.test.ts",
+				"packages/autoconfig/tests/wrangler-config/stream-bindings.test.ts",
 				"packages/deploy-helpers/src/deploy/deploy.ts",
 				"packages/deploy-helpers/src/deploy/versions-upload.ts",
 				"packages/miniflare/src/cf.ts",

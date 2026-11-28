@@ -411,6 +411,27 @@ export default defineWorkersProject({
 		);
 	});
 
+	it("migrates a Wrangler config in a dirty worktree when forced", async ({
+		expect,
+	}) => {
+		const cwd = await createProject({
+			"wrangler.jsonc": JSON.stringify({
+				compatibility_date: "2026-09-24",
+				main: "src/index.ts",
+				name: "runner-test",
+			}),
+		});
+		await execFileAsync("git", ["init", "--quiet"], { cwd });
+
+		const result = await runCodemod("wrangler-to-cf", {
+			cwd,
+			dryRun: false,
+			force: true,
+		});
+
+		expect(result.changedFiles).toEqual(["cloudflare.config.ts"]);
+	});
+
 	it("renames the package in package.json outside dependency groups", async ({
 		expect,
 	}) => {
