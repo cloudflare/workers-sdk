@@ -76,6 +76,9 @@
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
+	"engines": {
+		"node": ">=22.19.0"
+	},
 	"volta": {
 		"extends": "../../package.json"
 	},
