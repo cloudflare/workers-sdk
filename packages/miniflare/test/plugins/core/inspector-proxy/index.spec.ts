@@ -828,6 +828,45 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 	await testDebuggingWorkerOn(newHost);
 });
 
+test.for([
+	{ change: "port", inspectorHost: undefined },
+	{ change: "host", inspectorHost: "localhost" },
+])(
+	"InspectorProxy: moves the inspector to another $change while DevTools are attached",
+	async ({ inspectorHost }, { expect }) => {
+		const options: MiniflareOptions = {
+			workers: [
+				{
+					config: {
+						name: "",
+						compatibilityDate: "2025-05-01",
+						manifest: singleModuleManifest(
+							`export default { fetch() { return new Response("body"); } }`
+						),
+					},
+					dev: { unsafeInspectorProxy: true },
+				},
+			],
+		};
+		const mf = new Miniflare({ ...options, inspectorPort: 0 });
+		useDispose(mf);
+		const host = await useFixedInspectorPort(mf, options);
+
+		const ws = new WebSocket(`ws://${host}`);
+		const closed = new Promise((resolve) => ws.once("close", resolve));
+		await events.once(ws, "open");
+
+		// Retiring the old server waits for its connections to close, and
+		// upgraded DevTools connections don't close with the server
+		await mf.setOptions({ ...options, inspectorPort: 0, inspectorHost });
+		await closed;
+		const url = await mf.getInspectorURL();
+		expect(url.port).not.toBe(new URL(`http://${host}`).port);
+		const res = await mf.dispatchFetch("http://localhost");
+		expect(await res.text()).toBe("body");
+	}
+);
+
 test("InspectorProxy: should allow debugging multiple workers", async ({
 	expect,
 }) => {

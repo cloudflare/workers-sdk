@@ -22,6 +22,8 @@ export class InspectorProxyController {
 	#proxies: InspectorProxy[] = [];
 
 	#server: Promise<Server>;
+	/** The DevTools WebSocket server attached to each HTTP server */
+	#devtoolsWebSocketServers = new WeakMap<Server, WebSocketServer>();
 
 	async #getInspectorPort() {
 		// Rethrows the error if the server failed to listen
@@ -140,7 +142,7 @@ export class InspectorProxyController {
 	}
 
 	async #closeServer(server: Server) {
-		server.closeAllConnections();
+		this.#closeAllConnections(server);
 		return await new Promise<void>((resolve) => {
 			// We'll resolve whether or not the close had an error.
 			server.close((err) => {
@@ -152,8 +154,22 @@ export class InspectorProxyController {
 		});
 	}
 
+	/**
+	 * Closes the server's connections so `close()` doesn't wait for them.
+	 * `closeAllConnections()` doesn't close upgraded connections, so DevTools
+	 * WebSocket connections are terminated separately.
+	 */
+	#closeAllConnections(server: Server) {
+		server.closeAllConnections();
+		for (const devtoolsWs of this.#devtoolsWebSocketServers.get(server)
+			?.clients ?? []) {
+			devtoolsWs.terminate();
+		}
+	}
+
 	#initializeWebSocketServer(server: Server) {
 		const devtoolsWebSocketServer = new WebSocketServer({ server });
+		this.#devtoolsWebSocketServers.set(server, devtoolsWebSocketServer);
 		devtoolsWebSocketServer.on("error", (error) => this.log.error(error));
 
 		devtoolsWebSocketServer.on("connection", (devtoolsWs, upgradeRequest) => {
@@ -422,7 +438,7 @@ export class InspectorProxyController {
 		// Force-close active connections so server.close() resolves immediately.
 		// Without this, active HTTP keep-alive or WebSocket connections prevent
 		// the close callback from firing, hanging the dispose.
-		server.closeAllConnections();
+		this.#closeAllConnections(server);
 		return new Promise((resolve, reject) => {
 			server.close((err) => (err ? reject(err) : resolve()));
 		});
