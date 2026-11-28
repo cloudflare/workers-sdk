@@ -1,5 +1,6 @@
 import { inputPrompt } from "@cloudflare/cli-shared-helpers/interactive";
 import { describe, it, vi } from "vitest";
+import { confirmLatestDeploymentOverwriteAndGetLatest } from "../src/deploy/helpers/confirm-latest-deployment-overwrite";
 import {
 	fetchDeploymentVersions,
 	fetchLatestDeployment,
@@ -51,6 +52,53 @@ describe("confirmLatestDeploymentOverwrite public API", () => {
 					"test-cli versions deploy"
 				)
 			).toBe(confirmed);
+		}
+	);
+});
+
+describe("explicit traffic split replacement policy", () => {
+	it.for([
+		{ weights: [75, 25], approve: false, confirmed: false, asks: true },
+		{ weights: [75, 25], approve: true, confirmed: true, asks: true },
+		{ weights: [100, 0], approve: false, confirmed: true, asks: false },
+	])(
+		"handles weights $weights with approval $approve",
+		async (scenario, { expect }) => {
+			vi.clearAllMocks();
+			const deployment = {
+				id: "deployment",
+				source: "api",
+				strategy: "percentage" as const,
+				author_email: "",
+				created_on: "",
+				versions: scenario.weights.map((percentage, index) => ({
+					version_id: `version-${index}`,
+					percentage,
+				})),
+			};
+			vi.mocked(fetchLatestDeployment).mockResolvedValue(deployment);
+			const confirm = vi.fn().mockResolvedValue(scenario.approve);
+
+			const result = await confirmLatestDeploymentOverwriteAndGetLatest(
+				{} as Config,
+				"account",
+				"worker",
+				"cf deploy",
+				"cf workers deployments create",
+				confirm
+			);
+
+			expect(result).toEqual({
+				confirmed: scenario.confirmed,
+				latestDeployment: deployment,
+			});
+			if (scenario.asks) {
+				expect(confirm).toHaveBeenCalledExactlyOnceWith(deployment.versions);
+			} else {
+				expect(confirm).not.toHaveBeenCalled();
+			}
+			expect(inputPrompt).not.toHaveBeenCalled();
+			expect(fetchDeploymentVersions).not.toHaveBeenCalled();
 		}
 	);
 });

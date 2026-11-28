@@ -37,7 +37,11 @@ import {
 	printBundleSize,
 	type BundleSize,
 } from "./helpers/bundle-reporter";
-import { confirmLatestDeploymentOverwriteAndGetLatest } from "./helpers/confirm-latest-deployment-overwrite";
+import {
+	confirmLatestDeploymentOverwriteAndGetLatest,
+	getActiveTrafficSplit,
+	getLatestDeploymentForOverwrite,
+} from "./helpers/confirm-latest-deployment-overwrite";
 import {
 	getContainerMetadata,
 	getContainerMetadataForRolloutSkip,
@@ -93,6 +97,7 @@ import type {
 	WorkerBuildResult,
 } from "../shared/types";
 import type { AssetUploadStats } from "./helpers/assets";
+import type { ConfirmTrafficSplitReplacement } from "./helpers/confirm-latest-deployment-overwrite";
 import type { RetrieveSourceMapFunction } from "./helpers/sourcemap";
 import type {
 	ApiDeployment,
@@ -116,6 +121,8 @@ import type { FormData } from "undici";
 export type DeployOptions = {
 	deployCommand: string;
 	versionsDeployCommand: string;
+	/** Opt in to deciding whether to replace an active traffic split before deploy side effects. */
+	confirmTrafficSplitReplacement?: ConfirmTrafficSplitReplacement;
 	d1ListCommand: string;
 	d1DeleteCommand: string;
 	queueCreateCommand: (queueName: string) => string;
@@ -153,6 +160,7 @@ type DeployResult = {
 	sourceMapSize?: number;
 	versionId: string | null;
 	workerTag: string | null;
+	trafficSplitReplacementDeclined?: true;
 	assetUploadStats?: AssetUploadStats;
 	targets?: string[];
 	bundleSize?: BundleSize;
@@ -167,6 +175,9 @@ export default async function deploy(
 	// DO NOT put anything in this function, this is just a thin wrapper to call writeOutput at the end
 
 	const result = await deployWorker(props, config, buildResult, options);
+	if (result.trafficSplitReplacementDeclined) {
+		return result;
+	}
 
 	writeOutput({
 		type: "deploy",
@@ -201,6 +212,33 @@ async function deployWorker(
 
 	// Any validation that does not require API calls should go in validateWorkerProps()
 	const { name } = validateWorkerProps({ ...props, assetsOptions }, config);
+	const scriptName = name;
+	let latestDeployment: ApiDeployment | undefined;
+
+	if (
+		options.confirmTrafficSplitReplacement &&
+		!props.dryRun &&
+		!props.dispatchNamespace &&
+		accountId &&
+		scriptName
+	) {
+		const confirmation = await confirmLatestDeploymentOverwriteAndGetLatest(
+			config,
+			accountId,
+			scriptName,
+			options.deployCommand,
+			options.versionsDeployCommand,
+			options.confirmTrafficSplitReplacement
+		);
+		latestDeployment = confirmation.latestDeployment;
+		if (!confirmation.confirmed) {
+			return {
+				versionId: null,
+				workerTag: null,
+				trafficSplitReplacementDeclined: true,
+			};
+		}
+	}
 
 	// any validation that DOES require API calls should go in preUploadApiChecks()
 	const { workerTag, tags, workerExists, aborted } = await preUploadApiChecks(
@@ -216,7 +254,6 @@ async function deployWorker(
 	let versionId: string | null = null;
 	// A Worker's first upload creates its tag, so the upload response has it.
 	let uploadedWorkerTag = workerTag;
-	const scriptName = name;
 
 	const start = Date.now();
 	const workerName = scriptName;
@@ -227,8 +264,12 @@ async function deployWorker(
 	const { format } = entry;
 	const { projectRoot } = entry;
 
-	let latestDeployment: ApiDeployment | undefined;
-	if (!props.dispatchNamespace && accountId && scriptName) {
+	if (
+		!options.confirmTrafficSplitReplacement &&
+		!props.dispatchNamespace &&
+		accountId &&
+		scriptName
+	) {
 		const confirmation = await confirmLatestDeploymentOverwriteAndGetLatest(
 			config,
 			accountId,
@@ -498,6 +539,24 @@ async function deployWorker(
 		});
 	} else {
 		assert(accountId, "Missing accountId");
+		async function verifyTrafficSplitHasNotChanged(targetAccountId: string) {
+			const currentDeployment = await getLatestDeploymentForOverwrite(
+				config,
+				targetAccountId,
+				scriptName
+			);
+			if (
+				getActiveTrafficSplit(currentDeployment) &&
+				currentDeployment?.id !== latestDeployment?.id
+			) {
+				throw new UserError(
+					`A different traffic split became active while deploying. No traffic was changed by this deploy. Rerun \`${options.deployCommand}\` to review the current rollout.`,
+					{ telemetryMessage: "deploy active traffic split changed" }
+				);
+			}
+		}
+		const shouldRecheckTrafficSplit =
+			options.confirmTrafficSplitReplacement && !props.dispatchNamespace;
 		let provisionBindingsResult:
 			| Awaited<ReturnType<typeof provisionBindings>>
 			| undefined;
@@ -575,6 +634,9 @@ async function deployWorker(
 					"code_update_strategy" in unsafeMetadata
 						? unsafeMetadata.code_update_strategy
 						: props.durableObjectsCodeUpdateStrategy;
+				if (shouldRecheckTrafficSplit) {
+					await verifyTrafficSplitHasNotChanged(accountId);
+				}
 				await createDeployment(
 					config,
 					accountId,
@@ -612,37 +674,38 @@ async function deployWorker(
 					startup_time_ms: versionResult.startup_time_ms,
 				};
 			} else {
-				const uploadResult = await retryOnAPIFailure(
-					async () =>
-						fetchResult<{
-							id: string | null;
-							etag: string | null;
-							pipeline_hash: string | null;
-							mutable_pipeline_id: string | null;
-							deployment_id: string | null;
-							startup_time_ms: number;
-							tag?: string;
-							exports_reconciliation?: ExportsReconciliationResult;
-						}>(
-							config,
-							workerUrl,
-							{
-								method: "PUT",
-								body: workerBundle,
-								headers: {
-									...exportsHeaders,
-									...(props.sendMetrics && { metricsEnabled: "true" }),
-								},
+				const uploadResult = await retryOnAPIFailure(async () => {
+					if (shouldRecheckTrafficSplit) {
+						await verifyTrafficSplitHasNotChanged(accountId);
+					}
+					return fetchResult<{
+						id: string | null;
+						etag: string | null;
+						pipeline_hash: string | null;
+						mutable_pipeline_id: string | null;
+						deployment_id: string | null;
+						startup_time_ms: number;
+						tag?: string;
+						exports_reconciliation?: ExportsReconciliationResult;
+					}>(
+						config,
+						workerUrl,
+						{
+							method: "PUT",
+							body: workerBundle,
+							headers: {
+								...exportsHeaders,
+								...(props.sendMetrics && { metricsEnabled: "true" }),
 							},
-							new URLSearchParams({
-								// pass excludeScript so the whole body of the
-								// script doesn't get included in the response
-								excludeScript: "true",
-								bindings_inherit: "strict",
-							})
-						),
-					logger
-				);
+						},
+						new URLSearchParams({
+							// pass excludeScript so the whole body of the
+							// script doesn't get included in the response
+							excludeScript: "true",
+							bindings_inherit: "strict",
+						})
+					);
+				}, logger);
 				result = uploadResult;
 				uploadedWorkerTag ??= uploadResult.tag ?? null;
 				if (uploadResult.exports_reconciliation) {
