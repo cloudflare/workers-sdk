@@ -74,13 +74,13 @@ export class Vite extends Framework {
 
 /**
  * Creates a minimal `vite.config` file with the Cloudflare plugin already
- * configured. Used when a Vite project has no config file (e.g. projects
- * scaffolded with `npm create vite@latest --template vanilla`).
+ * configured. Used when a project that builds with Vite has no config file (e.g. projects
+ * scaffolded with `npm create vite@latest --template vanilla`, or a Hono app).
  *
  * The file extension (`.ts` or `.js`) is chosen based on whether the project
  * has a `tsconfig.json`.
  */
-function createViteConfig(projectPath: string): void {
+export function createViteConfig(projectPath: string): void {
 	const ext = usesTypescript(projectPath) ? "ts" : "js";
 	const filePath = join(projectPath, `vite.config.${ext}`);
 	const content = `import { cloudflare } from "@cloudflare/vite-plugin";

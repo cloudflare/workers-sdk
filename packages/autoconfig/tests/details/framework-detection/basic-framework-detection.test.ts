@@ -92,6 +92,26 @@ describe("detectFramework() / basic framework detection", () => {
 		});
 	});
 
+	it("does not run the build script of a framework without a build command when targeting cf", async ({
+		expect,
+	}) => {
+		await seed({
+			"package.json": JSON.stringify({
+				scripts: { build: "cf build", dev: "cf dev" },
+				dependencies: { hono: "4" },
+			}),
+			"package-lock.json": JSON.stringify({ lockfileVersion: 3 }),
+		});
+
+		const result = await detectFramework(process.cwd(), context);
+
+		expect(result.detectedFramework).toMatchObject({
+			framework: { id: "hono" },
+			buildCommand: undefined,
+			devCommand: undefined,
+		});
+	});
+
 	it("preserves command inference for an unsupported framework when targeting Wrangler", async ({
 		expect,
 	}) => {

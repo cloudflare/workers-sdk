@@ -25,13 +25,13 @@ describe("getFrameworkClassInstance()", () => {
 		expect(framework.name).toBe("Next.js");
 	});
 
-	it("should return a NoOpFramework for an unsupported framework (hono)", ({
+	it("should return a NoOpFramework for an unsupported framework (hydrogen)", ({
 		expect,
 	}) => {
-		const framework = getFrameworkClassInstance("hono", "cf");
+		const framework = getFrameworkClassInstance("hydrogen", "cf");
 
 		expect(framework).toBeInstanceOf(NoOpFramework);
-		expect(framework.id).toBe("hono");
-		expect(framework.name).toBe("Hono");
+		expect(framework.id).toBe("hydrogen");
+		expect(framework.name).toBe("Hydrogen");
 	});
 });

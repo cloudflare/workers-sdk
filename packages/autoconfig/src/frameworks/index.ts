@@ -97,7 +97,8 @@ export type FrameworkInfo = {
 } & (
 	| { supported: false }
 	| {
-			supported: true;
+			/** Whether autoconfig can set the framework up for the configuration target */
+			supported: boolean;
 			supportsCf: boolean;
 			class: typeof Framework;
 			frameworkPackageInfo: AutoConfigFrameworkPackageInfo;

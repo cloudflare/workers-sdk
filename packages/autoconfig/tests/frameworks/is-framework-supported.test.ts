@@ -9,7 +9,7 @@ describe("isFrameworkSupported()", () => {
 	it("should return false for a known but unsupported framework id", ({
 		expect,
 	}) => {
-		expect(isFrameworkSupported("hono")).toBe(false);
+		expect(isFrameworkSupported("hydrogen")).toBe(false);
 	});
 
 	it("should throw for an unknown framework id", ({ expect }) => {

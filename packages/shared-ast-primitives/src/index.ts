@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import * as recast from "recast";
 import * as babelParser from "recast/parsers/babel";
+import * as babelTsParser from "recast/parsers/babel-ts";
 import * as typescriptParser from "recast/parsers/typescript";
 import type { Program } from "esprima";
 
@@ -65,7 +66,13 @@ export function parseTs(src: string): recast.types.namedTypes.File {
 // Selects the correct parser based on the file extension
 export function parseFile(filePath: string) {
 	const lang = path.extname(filePath).slice(1);
-	const parser = lang === "js" ? babelParser : typescriptParser;
+	// The TypeScript parser doesn't accept JSX, which `.jsx` and `.tsx` files can contain
+	const parser =
+		lang === "js" || lang === "jsx"
+			? babelParser
+			: lang === "tsx"
+				? babelTsParser
+				: typescriptParser;
 
 	try {
 		const fileContents = readFileSync(path.resolve(filePath), "utf-8");

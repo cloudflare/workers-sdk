@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { Hono } from "./hono";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
 import { Qwik } from "./qwik";
@@ -76,7 +77,15 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
 		{
 			id: "hono",
 			name: "Hono",
-			supported: false,
+			class: Hono,
+			frameworkPackageInfo: {
+				name: "hono",
+				minimumVersion: "4.0.0",
+				maximumKnownMajorVersion: "4",
+			},
+			supportsCf: true,
+			// Only cf sets up Hono, by keeping the Worker that Wrangler already deploys
+			supported: target === "cf",
 		},
 		{
 			id: "next",
@@ -273,7 +282,7 @@ export function getAllKnownFrameworks(target: AutoConfigTarget) {
  * It is supported by autoconfig but, unlike all other frameworks, it doesn't have a package associated to it
  */
 type StaticFrameworkInfo = Omit<
-	Extract<FrameworkInfo, { supported: true }>,
+	Exclude<FrameworkInfo, { supported: false }>,
 	"frameworkPackageInfo"
 >;
 

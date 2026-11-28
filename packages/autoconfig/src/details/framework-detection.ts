@@ -138,9 +138,15 @@ export async function detectFramework(
 					.get(maybeDetectedFramework.baseDirectory ?? "")
 					?.find(({ id }) => id === frameworkId)
 			: undefined;
+		const buildCommand = detectedFrameworkSettings?.build?.command;
 		maybeDetectedFramework.devCommand = detectedFrameworkSettings?.dev?.command;
+		// A framework without a build command of its own, such as Hono, gets the generic
+		// `<package manager> run build` script from @netlify/build-info, which cf must not run either
 		maybeDetectedFramework.buildCommand =
-			detectedFrameworkSettings?.build?.command;
+			buildCommand ===
+			`${project.packageManager?.runCommand ?? "npm run"} build`
+				? undefined
+				: buildCommand;
 	}
 
 	if (
