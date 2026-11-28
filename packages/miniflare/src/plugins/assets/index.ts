@@ -392,6 +392,10 @@ const walk = async (dir: string) => {
 		realDirectory: string,
 		ancestors: ReadonlySet<string>
 	): Promise<void> {
+		if (ancestors.has(realDirectory)) {
+			return;
+		}
+		const nextAncestors = new Set(ancestors).add(realDirectory);
 		const entries = await fs.readdir(directory, { withFileTypes: true });
 		await Promise.all(
 			entries.map(async (entry) => {
@@ -401,11 +405,7 @@ const walk = async (dir: string) => {
 				const realChild = path.join(realDirectory, entry.name);
 				if (entry.isDirectory()) {
 					if (!assetsIgnoreFunction(`${assetPath}/`)) {
-						await walkDirectory(
-							filepath,
-							realChild,
-							new Set(ancestors).add(realChild)
-						);
+						await walkDirectory(filepath, realChild, nextAncestors);
 					}
 					return;
 				}
@@ -420,13 +420,7 @@ const walk = async (dir: string) => {
 				if (isSymlink && filestat.isDirectory()) {
 					if (!ignoredAsDirectory) {
 						const target = await fs.realpath(filepath);
-						if (!ancestors.has(target)) {
-							await walkDirectory(
-								filepath,
-								target,
-								new Set(ancestors).add(target)
-							);
-						}
+						await walkDirectory(filepath, target, nextAncestors);
 					}
 					return;
 				}
@@ -494,7 +488,7 @@ const walk = async (dir: string) => {
 		);
 	}
 	const realRoot = await fs.realpath(dir);
-	await walkDirectory(dir, realRoot, new Set([realRoot]));
+	await walkDirectory(dir, realRoot, new Set());
 	if (counter > MAX_ASSET_COUNT) {
 		throw new Error(
 			`Maximum number of assets exceeded.\n` +

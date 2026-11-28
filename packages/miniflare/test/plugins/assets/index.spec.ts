@@ -278,6 +278,29 @@ test("skips directory symlinks that point back to an ancestor", async ({
 	expect(ignored.status).toBe(404);
 });
 
+test("skips an ancestor reached through a directory symlink's child", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const assets = path.join(tmp, "public");
+	await fs.mkdir(assets);
+	await fs.writeFile(path.join(assets, "asset.txt"), "included");
+	await fs.writeFile(path.join(tmp, "sibling.txt"), "sibling");
+	await fs.symlink(tmp, path.join(assets, "up"), "junction");
+
+	const mf = new Miniflare(makeOptions(assets));
+	useDispose(mf);
+	const included = await mf.dispatchFetch("http://example.com/asset.txt");
+	expect(await included.text()).toBe("included");
+	const sibling = await mf.dispatchFetch("http://example.com/up/sibling.txt");
+	expect(await sibling.text()).toBe("sibling");
+	const ignored = await mf.dispatchFetch(
+		"http://example.com/up/public/asset.txt"
+	);
+	await ignored.arrayBuffer();
+	expect(ignored.status).toBe(404);
+});
+
 test.skipIf(process.platform === "win32")(
 	"serves symlinked asset files",
 	async ({ expect }) => {
