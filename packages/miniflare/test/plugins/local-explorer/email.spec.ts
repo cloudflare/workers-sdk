@@ -3,9 +3,8 @@ import { mkdtempSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { removeDirSync } from "@cloudflare/workers-utils";
-import { fetch, getWorkerRegistry, LogLevel, Miniflare } from "miniflare";
+import { getWorkerRegistry, LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { Client } from "undici";
 import {
 	afterAll,
 	beforeAll,
@@ -2775,7 +2774,16 @@ describe("Local Explorer email API", () => {
 		"retains all received emails and paginates results",
 		{ retry: 0 },
 		async ({ expect }) => {
+			const startedAt = performance.now();
+			const reportProgress = (stage: string) => {
+				if (process.env.CI && process.platform === "win32") {
+					const elapsed = Math.round(performance.now() - startedAt);
+					process.stderr.write(`[email pagination +${elapsed}ms] ${stage}\n`);
+				}
+			};
+			reportProgress("Clearing email store");
 			await clearEmailStore(mf);
+			reportProgress("Seeding 201 emails");
 			const messageIds: string[] = [];
 			for (let index = 0; index < 201; index++) {
 				const messageId = `<retention-${index}@example.com>`;
@@ -2788,41 +2796,44 @@ describe("Local Explorer email API", () => {
 					).toISOString(),
 				});
 				messageIds.push(messageId);
-			}
-
-			const url = new URL(
-				`${CorePaths.EXPLORER}/api/local/email/routing`,
-				await mf.ready
-			);
-			url.searchParams.set("per_page", "100");
-			const dispatcher = new Client(url.origin, { pipelining: 0 });
-			const receivedMessageIds: string[] = [];
-			try {
-				for (const count of [100, 100, 1]) {
-					const page = await expectValidResponse(
-						await fetch(url, { dispatcher }),
-						zEmailListRoutingResponse,
-						expect
-					);
-					const items = getListResult(page.result);
-					const hasMore = count === 100;
-					expect(items).toHaveLength(count);
-					expect(page.result_info).toMatchObject({
-						count,
-						per_page: 100,
-						has_more: hasMore,
-					});
-					const cursor = page.result_info?.cursor;
-					if (hasMore) {
-						expect(cursor).toEqual(expect.any(String));
-						url.searchParams.set("cursor", String(cursor));
-					} else {
-						expect(cursor).toBeUndefined();
-					}
-					receivedMessageIds.push(...items.map(({ messageId }) => messageId));
+				if (messageIds.length % 50 === 0) {
+					reportProgress(`Seeded ${messageIds.length} emails`);
 				}
-			} finally {
-				await dispatcher.destroy();
+			}
+			reportProgress("Seeded all 201 emails");
+
+			const url = new URL(`${BASE_URL}/local/email/routing`);
+			url.searchParams.set("per_page", "100");
+			const receivedMessageIds: string[] = [];
+			for (const [index, count] of [100, 100, 1].entries()) {
+				const pageNumber = index + 1;
+				reportProgress(`Requesting page ${pageNumber}`);
+				const response = await mf.dispatchFetch(url.toString());
+				reportProgress(
+					`Page ${pageNumber} responded with HTTP ${response.status}`
+				);
+				const page = await expectValidResponse(
+					response,
+					zEmailListRoutingResponse,
+					expect
+				);
+				const items = getListResult(page.result);
+				const hasMore = count === 100;
+				expect(items).toHaveLength(count);
+				expect(page.result_info).toMatchObject({
+					count,
+					per_page: 100,
+					has_more: hasMore,
+				});
+				const cursor = page.result_info?.cursor;
+				if (hasMore) {
+					expect(cursor).toEqual(expect.any(String));
+					url.searchParams.set("cursor", String(cursor));
+				} else {
+					expect(cursor).toBeUndefined();
+				}
+				receivedMessageIds.push(...items.map(({ messageId }) => messageId));
+				reportProgress(`Validated page ${pageNumber}`);
 			}
 			expect(receivedMessageIds).toEqual(messageIds.toReversed());
 		}
