@@ -104,7 +104,10 @@ function readAssetsIgnoreFile(filePath: string): string | undefined {
  * The generated filter returns true if a path relative to the asset directory
  * should be ignored.
  */
-export async function createAssetsIgnoreFunction(dir: string) {
+export async function createAssetsIgnoreFunction(
+	dir: string,
+	fallbackPatterns: readonly string[] = []
+) {
 	const cfAssetIgnorePath = resolve(dir, CF_ASSETS_IGNORE_FILENAME);
 
 	const ignorePatterns = [
@@ -120,6 +123,8 @@ export async function createAssetsIgnoreFunction(dir: string) {
 	if (assetsIgnore !== undefined) {
 		assetsIgnoreFilePresent = true;
 		ignorePatterns.push(...assetsIgnore.split(/\r?\n/));
+	} else {
+		ignorePatterns.push(...fallbackPatterns);
 	}
 
 	return {
@@ -129,8 +134,14 @@ export async function createAssetsIgnoreFunction(dir: string) {
 }
 
 /** Create a copy filter that honors `.assetsignore` and preserves root asset metadata. */
-export async function createAssetsCopyFilter(dir: string) {
-	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(dir);
+export async function createAssetsCopyFilter(
+	dir: string,
+	fallbackPatterns?: readonly string[]
+) {
+	const { assetsIgnoreFunction } = await createAssetsIgnoreFunction(
+		dir,
+		fallbackPatterns
+	);
 	return async (relativePath: string): Promise<boolean> => {
 		if (
 			[

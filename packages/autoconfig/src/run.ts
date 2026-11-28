@@ -23,6 +23,7 @@ import {
 	toValidWorkerName,
 } from "@cloudflare/workers-utils";
 import * as find from "empathic/find";
+import { getScaffoldedProjectAssetsIgnoreEntries } from "./assets-ignore";
 import {
 	assertNonConfigured,
 	assertProjectCommandsAvailable,
@@ -450,16 +451,7 @@ export async function runAutoConfig(
 			`${autoConfigDetails.projectPath}/.assetsignore`,
 			{
 				additionalEntries: scaffold
-					? [
-							...PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
-							"/.cloudflare",
-							"/.gitignore",
-							"/cloudflare.config.ts",
-							"/wrangler.config.ts",
-							"/package.json",
-							"/tsconfig.json",
-							...packageManager.lockFiles.map((lockFile) => `/${lockFile}`),
-						]
+					? getScaffoldedProjectAssetsIgnoreEntries(packageManager.lockFiles)
 					: PROJECT_ROOT_ASSETS_IGNORE_ENTRIES,
 				requireEnvWildcard: true,
 			}

@@ -358,7 +358,13 @@ describe("writeAssets", () => {
 			buildContext: { isPreview: false, mode: undefined },
 		});
 
-		await writeAssets({ root, sourceDirectory: root });
+		const skipped: string[] = [];
+		await writeAssets({
+			root,
+			sourceDirectory: root,
+			onSkip: (relativePath) => skipped.push(relativePath),
+		});
+		expect(skipped).toEqual([".cloudflare"]);
 
 		const assetsDir = getWorkerAssetsDir(root);
 		expect(fs.readFileSync(path.join(assetsDir, "index.html"), "utf8")).toBe(
@@ -447,6 +453,38 @@ describe("writeAssets", () => {
 		]);
 		expect(fs.existsSync(path.join(assetsDir, "notes.txt"))).toBe(false);
 	});
+
+	it.for([undefined, "", "/notes.txt\n"])(
+		"applies fallback rules only if .assetsignore is absent (%j)",
+		async (ignore, { expect }) => {
+			const root = process.cwd();
+			const sourceDirectory = path.join(root, "public");
+			fs.mkdirSync(path.join(sourceDirectory, "cache"), { recursive: true });
+			fs.writeFileSync(path.join(sourceDirectory, "cache/item.txt"), "item");
+			fs.writeFileSync(path.join(sourceDirectory, "notes.txt"), "notes");
+			if (ignore !== undefined) {
+				fs.writeFileSync(path.join(sourceDirectory, ".assetsignore"), ignore);
+			}
+			const skipped: string[] = [];
+
+			await writeAssets({
+				root,
+				sourceDirectory,
+				filter: await createAssetsCopyFilter(sourceDirectory, ["/cache/"]),
+				onSkip: (relativePath) => skipped.push(relativePath),
+			});
+
+			expect(skipped).toEqual(
+				ignore === undefined ? ["cache"] : ignore ? ["notes.txt"] : []
+			);
+			expect(fs.existsSync(path.join(sourceDirectory, ".assetsignore"))).toBe(
+				ignore !== undefined
+			);
+			expect(
+				fs.existsSync(path.join(getWorkerAssetsDir(root), "cache/item.txt"))
+			).toBe(ignore !== undefined);
+		}
+	);
 
 	it.for([
 		{ asset: "index.html", type: "file", rules: "*\n!*.html\n" },
