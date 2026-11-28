@@ -9,6 +9,12 @@ export interface WranglerConfigMigrationOptions {
 export interface BundlerMigrationOptions {
 	bundler?: MigrationBundler;
 	dryRun?: boolean;
+	/**
+	 * The project's build output folder, relative to the Wrangler config, as detection reports it
+	 * (`outputDir`). Detection uses the framework's default folder, not the one in its config. With
+	 * Vite, a Wrangler assets directory that is this folder needs no follow-up.
+	 */
+	outputDir?: string;
 	/** Whether to install cf and install or upgrade Vite plugin and Wrangler dependencies when needed. Required dependency changes become blocking follow-ups when false. */
 	installDependencies?: boolean;
 }

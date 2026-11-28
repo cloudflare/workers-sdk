@@ -176,6 +176,7 @@ export async function runAutoConfig(
 			dryRun: true,
 			packageManager,
 			context,
+			wranglerConfig: autoConfigDetails.wranglerConfig,
 		});
 	const dryRunWorkerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
@@ -343,6 +344,7 @@ export async function runAutoConfig(
 		dryRun: false,
 		packageManager,
 		context,
+		wranglerConfig: autoConfigDetails.wranglerConfig,
 	});
 	const workerConfig = mergeWorkerConfig(
 		defaultWorkerConfig,
@@ -766,7 +768,8 @@ export async function saveWranglerJsonc(
 }
 
 /**
- * Writes the Worker configuration used by `cf`.
+ * Writes the Worker configuration used by `cf`, unless the project already has one, such as
+ * one migrated from a Wrangler config.
  *
  * @param projectPath The project directory
  * @param workerConfig The Worker configuration to write
@@ -775,10 +778,12 @@ async function saveCloudflareConfig(
 	projectPath: string,
 	workerConfig: WorkerConfig
 ): Promise<void> {
-	await writeFile(
-		resolve(projectPath, "cloudflare.config.ts"),
-		renderCloudflareConfig(workerConfig)
-	);
+	const configPath = resolve(projectPath, "cloudflare.config.ts");
+	if (existsSync(configPath)) {
+		return;
+	}
+
+	await writeFile(configPath, renderCloudflareConfig(workerConfig));
 }
 
 /**
@@ -873,6 +878,7 @@ export async function buildOperationsSummary(
 			: {
 					workerConfig: workerConfig ?? undefined,
 					buildConfig: configurationResults.buildConfig,
+					buildTool: configurationResults.buildTool,
 				}),
 		outputDir: autoConfigDetails.outputDir,
 		frameworkId: autoConfigDetails.framework.id,

@@ -10,6 +10,7 @@ import {
 	parsePackageJSON,
 	readFileSync,
 } from "@cloudflare/workers-utils";
+import { isPagesConfig } from "@cloudflare/workers-utils/config";
 import {
 	AutoConfigDetectionError,
 	AutoConfigFrameworkConfigurationError,
@@ -19,17 +20,18 @@ import {
 	getAllFrameworksInfos,
 	staticFramework,
 } from "../frameworks/all-frameworks";
+import { readWranglerConfig } from "../wrangler-config/read";
 import { detectFramework } from "./framework-detection";
 import { getViteProjectCommands, usesVitePlus } from "./vite-commands";
 import type { AutoConfigContext, AutoConfigTarget } from "../context";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
+	WranglerConfig,
 } from "../types";
 import type { DetectedFramework } from "./framework-detection";
 import type { PackageManager } from "@cloudflare/workers-utils";
 import type { PackageJSON } from "@cloudflare/workers-utils";
-import type { Config } from "@cloudflare/workers-utils/config";
 
 const CLOUDFLARE_CONFIG_FILE = "cloudflare.config.ts";
 
@@ -137,15 +139,22 @@ function normalizeOutputDir(projectPath: string, outputDir: string): string {
  */
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
-	wranglerConfig,
+	wranglerConfig: providedWranglerConfig,
+	wranglerConfigPath,
 	target = "cf",
 	outputDir: requestedOutputDir,
 	context,
 }: {
 	/** The path to the project, defaults to cwd. */
 	projectPath?: string;
-	/** The parsed wrangler configuration for the project (if any). */
-	wranglerConfig?: Config;
+	/** The project's Wrangler configuration, if the caller has already read it. */
+	wranglerConfig?: WranglerConfig;
+	/**
+	 * The project's Wrangler configuration file, for example one with a custom name. Without a
+	 * `wranglerConfig`, detection reads this file, or else the one in the project folder, if any.
+	 * Relative paths are resolved against `projectPath`.
+	 */
+	wranglerConfigPath?: string;
 	/** The configuration target, defaults to cf. */
 	target?: AutoConfigTarget;
 	/**
@@ -167,13 +176,18 @@ export async function getDetailsForAutoConfig({
 
 	const hasCloudflareConfig =
 		target === "cf" && existsSync(resolve(projectPath, CLOUDFLARE_CONFIG_FILE));
+	const wranglerConfig =
+		providedWranglerConfig ??
+		(wranglerConfigPath === undefined
+			? readProjectWranglerConfig(projectPath)
+			: readWranglerConfigFile(resolve(projectPath, wranglerConfigPath)));
 
 	if (
 		target === "wrangler" &&
 		// If a real Wrangler config has been found the project is already configured for Workers
 		wranglerConfig?.configPath &&
 		// Unless `pages_build_output_dir` is set, since that indicates that the project is a Pages one instead
-		!wranglerConfig.pages_build_output_dir
+		!isPagesConfig(wranglerConfig)
 	) {
 		return {
 			configured: true,
@@ -181,6 +195,7 @@ export async function getDetailsForAutoConfig({
 			workerName: getWorkerName(wranglerConfig.name, projectPath),
 			// Fall back to npm when already configured since we don't need to run package manager commands
 			packageManager: NpmPackageManager,
+			wranglerConfig,
 		};
 	}
 
@@ -286,6 +301,7 @@ export async function getDetailsForAutoConfig({
 				),
 		env: framework.env,
 		workerName: getWorkerName(packageJson?.name, projectPath),
+		wranglerConfig,
 	};
 
 	if (configured) {
@@ -315,6 +331,35 @@ export async function getDetailsForAutoConfig({
 		configured: false,
 		isWorkspaceRoot,
 	};
+}
+
+/**
+ * Reads a Wrangler configuration file, keeping its path.
+ *
+ * @param configPath The Wrangler configuration file
+ * @returns The Wrangler configuration with its file's path
+ */
+function readWranglerConfigFile(configPath: string): WranglerConfig {
+	return { ...readWranglerConfig(configPath), configPath };
+}
+
+/**
+ * Reads the Wrangler configuration file in the project folder itself, not one in a parent
+ * folder such as the workspace root.
+ *
+ * @param projectPath The project folder
+ * @returns The Wrangler configuration with its file's path, if the project has one
+ */
+function readProjectWranglerConfig(
+	projectPath: string
+): WranglerConfig | undefined {
+	const configPath = ["wrangler.json", "wrangler.jsonc", "wrangler.toml"]
+		.map((fileName) => resolve(projectPath, fileName))
+		.find((filePath) => existsSync(filePath));
+
+	return configPath === undefined
+		? undefined
+		: readWranglerConfigFile(configPath);
 }
 
 /**

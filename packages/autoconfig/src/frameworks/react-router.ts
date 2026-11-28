@@ -481,6 +481,7 @@ export class ReactRouter extends Framework {
 		isWorkspaceRoot,
 		context,
 		target,
+		wranglerConfig,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const useMiddlewarePattern = hasV8MiddlewareFlag(
 			projectPath,
@@ -494,18 +495,21 @@ export class ReactRouter extends Framework {
 				version: target === "cf" ? CF_VITE_PLUGIN_VERSION_RANGE : undefined,
 			});
 
-			mkdirSync("workers");
+			// A Wrangler config's `main` is the project's own Worker entry, which already renders the app
+			if (wranglerConfig?.main === undefined) {
+				mkdirSync("workers");
 
-			writeAppTs(useMiddlewarePattern);
+				writeAppTs(useMiddlewarePattern);
 
-			await installPackages(packageManager.type, ["isbot"], {
-				dev: true,
-				startText: "Installing the isbot package",
-				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
-				isWorkspaceRoot,
-			});
+				await installPackages(packageManager.type, ["isbot"], {
+					dev: true,
+					startText: "Installing the isbot package",
+					doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
+					isWorkspaceRoot,
+				});
 
-			writeEntryServerTsx(useMiddlewarePattern, context);
+				writeEntryServerTsx(useMiddlewarePattern, context);
+			}
 
 			transformViteConfig(projectPath, {
 				target,

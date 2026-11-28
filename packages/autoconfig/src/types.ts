@@ -18,6 +18,9 @@ export type AutoConfigCommandError = {
 	message: string;
 };
 
+/** A Wrangler configuration as written in its file, with the file's path */
+export type WranglerConfig = RawConfig & { configPath?: string };
+
 type AutoConfigDetailsBase = {
 	/** The name of the worker */
 	workerName: string;
@@ -47,6 +50,8 @@ type AutoConfigDetailsBase = {
 	packageManager: PackageManager;
 	/** Whether the current path is at the root of a workspace */
 	isWorkspaceRoot?: boolean;
+	/** The project's Wrangler configuration (if any) */
+	wranglerConfig?: WranglerConfig;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<
@@ -96,6 +101,8 @@ export type AutoConfigSummary = {
 	scripts: Record<string, string>;
 	workerConfig?: WorkerConfig;
 	buildConfig?: BuildConfig;
+	/** The tool the framework's setup chose for cf to build the project with. */
+	buildTool?: "vite" | "wrangler";
 	wranglerConfig?: RawConfig;
 	frameworkConfiguration?: string;
 	outputDir: string;
