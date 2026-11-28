@@ -143,13 +143,26 @@ export function constructHeaders({
 
 	const rules: MetadataHeaders = {};
 	for (const rule of headers.rules) {
-		const configuredRule: MetadataHeaders[string] = {};
+		// The same path may start more than one block. Rules are keyed by path,
+		// so merge such blocks into one rule rather than letting the last block
+		// replace the earlier ones, combining a repeated header name as a single
+		// block does.
+		const configuredRule: MetadataHeaders[string] = rules[rule.path] ?? {};
+		const set = { ...configuredRule.set };
 
-		if (Object.keys(rule.headers).length) {
-			configuredRule.set = rule.headers;
-		}
 		if (rule.unsetHeaders.length) {
-			configuredRule.unset = rule.unsetHeaders;
+			configuredRule.unset = [
+				...(configuredRule.unset ?? []),
+				...rule.unsetHeaders,
+			];
+		}
+		for (const [name, value] of Object.entries(rule.headers)) {
+			const existingValue = set[name];
+			set[name] = existingValue ? `${existingValue}, ${value}` : value;
+		}
+
+		if (Object.keys(set).length) {
+			configuredRule.set = set;
 		}
 
 		rules[rule.path] = configuredRule;
