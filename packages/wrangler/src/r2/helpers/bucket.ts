@@ -1,6 +1,7 @@
 import prettyBytes from "pretty-bytes";
 import { fetchGraphqlResult, fetchResult } from "../../cfetch";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
+import type Cloudflare from "cloudflare";
 import type { HeadersInit } from "undici";
 
 /**
@@ -35,24 +36,53 @@ export interface R2BucketMetricsGraphQLResponse {
 }
 
 /**
- * Fetch a list of all the buckets under the given `accountId`.
+ * Fetch every bucket under the given `accountId` through the Cloudflare SDK.
  *
- * Keep in sync with the local provisioning copy in
- * packages/deploy-helpers/src/deploy/helpers/provision-bindings.ts.
+ * The SDK returns one page at a time, so continue from the last bucket name
+ * until the API returns a partial page.
  */
 export async function listR2Buckets(
-	complianceConfig: ComplianceConfig,
+	sdk: Cloudflare,
 	accountId: string,
 	jurisdiction?: string
 ): Promise<R2BucketInfo[]> {
-	const headers: HeadersInit = {};
-	if (jurisdiction !== undefined) {
-		headers["cf-r2-jurisdiction"] = jurisdiction;
+	const pageSize = 100;
+	const results: R2BucketInfo[] = [];
+	let startAfter: string | undefined;
+	const requestOptions =
+		jurisdiction === undefined
+			? undefined
+			: { headers: { "cf-r2-jurisdiction": jurisdiction } };
+
+	while (true) {
+		const response = await sdk.r2.buckets.list(
+			{
+				account_id: accountId,
+				direction: "asc",
+				order: "name",
+				per_page: pageSize,
+				start_after: startAfter,
+			},
+			requestOptions
+		);
+		const buckets = response.buckets;
+		if (buckets === undefined || buckets.length === 0) {
+			return results;
+		}
+
+		results.push(...(buckets as R2BucketInfo[]));
+		if (buckets.length < pageSize) {
+			return results;
+		}
+
+		const nextStartAfter = buckets.at(-1)?.name;
+		if (nextStartAfter === undefined || nextStartAfter === startAfter) {
+			throw new Error(
+				"Unable to list every R2 bucket because API pagination did not advance. Retry the command."
+			);
+		}
+		startAfter = nextStartAfter;
 	}
-	const results = await fetchResult<{
-		buckets: R2BucketInfo[];
-	}>(complianceConfig, `/accounts/${accountId}/r2/buckets`, { headers });
-	return results.buckets;
 }
 
 export function tableFromR2BucketsListResponse(buckets: R2BucketInfo[]): {
